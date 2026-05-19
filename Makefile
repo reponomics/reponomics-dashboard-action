@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install pre-commit-install pre-commit-run test coverage complexity lint lint-python lint-types lint-action lint-workflows lint-action-pins lint-vendored-assets verify release-notice-verify fixture-collect fixture-publish fixture-rotate-key clean
+.PHONY: help install pre-commit-install pre-commit-run test coverage complexity lint lint-python lint-types lint-action lint-workflows lint-action-pins lint-vendored-assets verify ci-verify release-notice-verify fixture-collect fixture-publish fixture-rotate-key clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -56,6 +56,8 @@ lint-vendored-assets: install ## Verify vendored third-party assets
 	$(PYTHON) scripts/validate_vendored_assets.py
 
 verify: lint coverage ## Run all local verification
+
+ci-verify: lint-python lint-types lint-action lint-workflows coverage ## Run matrixed CI checks
 
 release-notice-verify: install ## Validate release notice tooling
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v

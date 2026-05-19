@@ -17,6 +17,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  supply-chain-policy:
+    name: Supply-chain policy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Validate GitHub Action SHA pins
+        run: make lint-action-pins
+
+      - name: Validate release notice tooling
+        run: make release-notice-verify
+
+      - name: Validate vendored third-party assets
+        run: make lint-vendored-assets
+
   verify:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
@@ -36,7 +59,7 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Verify
-        run: make verify
+        run: make ci-verify
 
       - name: Upload coverage report
         if: always()

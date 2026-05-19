@@ -1,4 +1,15 @@
-"""Validate vendored third-party assets against recorded upstream artifacts."""
+"""Validate vendored third-party assets against recorded upstream artifacts.
+
+Vendored browser assets are shipped inside the composite action so dashboards do
+not depend on a CDN at render time. Each asset has a manifest recording the npm
+package, exact version, registry tarball, SRI value, source path, local path, and
+license hash. This validator verifies the local files, confirms registry
+metadata still matches the recorded tarball and integrity, checks OSV for known
+vulnerabilities in the pinned package version, and compares the vendored bytes
+with the published tarball contents.
+
+Policy details: docs/SECURITY_CHECKS.md.
+"""
 
 from __future__ import annotations
 

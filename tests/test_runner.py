@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 import json
 import os
@@ -211,6 +212,22 @@ def _copy_fixture(name: str, tmp_path: Path) -> Path:
     return dst
 
 
+def _response(
+    status: int,
+    *,
+    text: str = "",
+    headers: dict[str, str] | None = None,
+    payload: Any | None = None,
+) -> requests.Response:
+    response = requests.Response()
+    response.status_code = status
+    response.headers.update(headers or {})
+    body = json.dumps(payload) if payload is not None else text
+    response._content = body.encode("utf-8")
+    response.url = "https://api.github.test/example"
+    return response
+
+
 def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("REPONOMICS_MODE", "collect")
     monkeypatch.setenv("REPONOMICS_TRAFFIC_TOKEN", "ghp_traffic")
@@ -277,6 +294,26 @@ def test_commit_outputs_stages_only_readme(
     assert ["git", "add", config.readme_path.as_posix()] in calls
     assert all(config.dashboard_path.as_posix() not in call for call in calls)
     assert all((config.dashboard_path.parent / "assets").as_posix() not in call for call in calls)
+
+
+def test_bootstrap_creates_empty_data_files_and_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(run.bootstrap, "DATA_DIR", data_dir.as_posix())
+
+    run.bootstrap.bootstrap()
+    run.bootstrap.bootstrap()
+
+    assert (data_dir / "manifest.json").exists()
+    for filename, (fieldnames, _date_field) in run.storage.CSV_REGISTRY.items():
+        path = data_dir / filename
+        assert path.exists()
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.reader(handle)
+            assert next(reader) == fieldnames
+            assert list(reader) == []
 
 
 def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -508,6 +545,93 @@ def test_release_notice_validation_cli_rejects_malformed_block(tmp_path: Path) -
     assert "unsupported reponomics-update key(s): markdown" in result.stderr
 
 
+def test_release_notice_validation_reports_compatibility_errors() -> None:
+    body = "\n".join([
+        "<!-- reponomics-update {",
+        "\"title\":\"Upgrade available\",",
+        "\"summary\":\"Compatible runtime and artifact migration update.\",",
+        "\"min_runtime_version\":\"0.3.0\",",
+        "\"max_runtime_version\":\"0.2.0\",",
+        "\"action_repository\":\"elsewhere/action\",",
+        "\"action_refs\":[]",
+        "} -->",
+    ])
+
+    errors = run.release_notice.validate_update_block(body)
+
+    assert "min_runtime_version must not exceed max_runtime_version" in errors
+    assert "action_repository must be reponomics/reponomics-dashboard-action when present" in errors
+    assert "action_refs must be '*' or a non-empty list of action ref strings" in errors
+
+
+def test_release_notice_validation_allows_absent_optional_block() -> None:
+    assert run.release_notice.validate_update_block("plain release notes", require_block=False) == []
+    assert run.release_notice.validate_update_block("plain release notes") == [
+        "missing reponomics-update block"
+    ]
+
+
+def test_release_notice_selects_first_compatible_newer_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    releases = [
+        {
+            "tag_name": "v0.5.0",
+            "draft": False,
+            "prerelease": False,
+            "body": (
+                "<!-- reponomics-update {"
+                "\"title\":\"Future runtime only\","
+                "\"summary\":\"Not for this runtime.\","
+                "\"min_runtime_version\":\"0.5.0\""
+                "} -->"
+            ),
+        },
+        {
+            "tag_name": "v0.4.0",
+            "draft": True,
+            "prerelease": False,
+            "body": (
+                "<!-- reponomics-update {"
+                "\"title\":\"Draft\","
+                "\"summary\":\"Draft releases are ignored.\""
+                "} -->"
+            ),
+        },
+        {
+            "tag_name": "v0.3.0",
+            "draft": False,
+            "prerelease": False,
+            "html_url": "https://malicious.example/release",
+            "body": (
+                "<!-- reponomics-update {"
+                "\"title\":\"Compatible <b>release</b>\","
+                "\"summary\":\"Use the minor floating tag.\","
+                "\"action_refs\":[\"v0.2\"]"
+                "} -->"
+            ),
+        },
+    ]
+
+    def fake_fetch_releases(_token: str):
+        return releases
+
+    monkeypatch.setattr(run.release_notice, "_fetch_releases", fake_fetch_releases)
+    notice = run.release_notice.find_update_notice(
+        token="",
+        current_version="0.2.0",
+        action_ref="v0.2",
+        action_repository="reponomics/reponomics-dashboard-action",
+    )
+
+    assert notice == {
+        "version": "v0.3.0",
+        "title": "Compatible release",
+        "summary": "Use the minor floating tag.",
+        "url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.3.0",
+    }
+
+
 def test_release_notice_disabled_mode_does_not_call_api(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -589,6 +713,56 @@ def test_publish_renders_sanitized_release_notice(
     assert "alert(1)" not in dashboard
     assert "<script>alert(1)</script>" not in readme
     assert "<script>alert(1)</script>" not in dashboard
+
+
+def test_private_readme_renders_disabled_metrics_with_notice(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "README.md"
+    asset_dir = tmp_path / "docs" / "assets"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "old.js").write_text("stale", encoding="utf-8")
+    monkeypatch.setattr(run.render_private_readme, "OUTPUT_PATH", output_path)
+    monkeypatch.setattr(run.render_private_readme, "ASSET_DIR", asset_dir)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/reponomics")
+    monkeypatch.setenv("PAGES_DASHBOARD", "plain")
+    monkeypatch.setenv("ARTIFACT_SECURITY_MODE", "encrypted")
+    monkeypatch.setenv(
+        "REPONOMICS_UPDATE_NOTICE_JSON",
+        json.dumps({
+            "version": "v0.3.0",
+            "title": "Upgrade <now>",
+            "summary": "No **markdown** is rendered.",
+            "url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.3.0",
+        }),
+    )
+
+    run.render_private_readme.render()
+
+    readme = output_path.read_text(encoding="utf-8")
+    assert not asset_dir.exists()
+    assert "README analytics summary: disabled" in readme
+    assert "Plain dashboard: `https://demo.github.io/reponomics/`" in readme
+    assert "Actions data artifact: encrypted" in readme
+    assert "Upgrade &lt;now&gt;" in readme
+    assert "No **markdown** is rendered." in readme
+    assert "View v0.3.0" in readme
+
+
+def test_dashboard_placeholder_renders_disabled_pages_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "docs" / "index.html"
+    monkeypatch.setattr(run.render_dashboard_placeholder, "OUTPUT_PATH", output_path)
+
+    run.render_dashboard_placeholder.render()
+
+    html = output_path.read_text(encoding="utf-8")
+    assert "<title>GitHub Traffic Dashboard Disabled</title>" in html
+    assert "Dashboard disabled" in html
+    assert "No traffic metrics are published here." in html
 
 
 def test_rotate_key_fixture_reencrypts_with_next_secret(
@@ -718,6 +892,174 @@ def test_repo_metrics_are_mapped_from_detail_without_watchers_count() -> None:
             "schema_version": run.storage.SCHEMA_VERSION,
         }
     ]
+
+
+def test_collect_retry_after_parses_delta_and_http_date() -> None:
+    future = datetime.now(timezone.utc) + timedelta(seconds=30)
+    http_date = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    assert run.collect_mod._parse_retry_after_seconds("2.2") == 3
+    parsed_date = run.collect_mod._parse_retry_after_seconds(http_date)
+    assert parsed_date is not None
+    assert 0 <= parsed_date <= 30
+    assert run.collect_mod._parse_retry_after_seconds("not a date") is None
+
+
+def test_collect_fetch_json_raises_secondary_limit_with_retry_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _response(
+        403,
+        text="You have exceeded a secondary rate limit",
+        headers={"Retry-After": "7"},
+    )
+
+    def fake_get(
+        url: str,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return response
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(run.collect_mod.SecondaryRateLimitError) as exc_info:
+        run.collect_mod.fetch_json("https://api.github.test/traffic", {})
+
+    exc = exc_info.value
+    assert exc.retry_after_seconds == 7
+    assert exc.retry_source == "Retry-After"
+    assert exc.url == "https://api.github.test/traffic"
+
+
+def test_collect_fetch_json_retries_transient_throttles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    responses = [
+        _response(429, text="slow down"),
+        _response(500, text="server error"),
+        _response(200, payload={"ok": True}),
+    ]
+    sleeps: list[float] = []
+
+    def fake_get(
+        url: str,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return responses.pop(0)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+    monkeypatch.setattr(run.collect_mod.time, "sleep", sleeps.append)
+
+    assert run.collect_mod.fetch_json("https://api.github.test/repos", {}) == {"ok": True}
+    assert len(sleeps) == 2
+
+
+def test_collect_fetch_json_confirms_not_found_before_skipping(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = 0
+
+    def fake_get(
+        url: str,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        nonlocal attempts
+        attempts += 1
+        return _response(404, text="missing")
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+    monkeypatch.setattr(run.collect_mod.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(run.collect_mod.RepoUnavailableError) as exc_info:
+        run.collect_mod.fetch_json(
+            "https://api.github.test/repos/demo/repo/traffic/views",
+            {},
+            allow_not_found=True,
+        )
+
+    assert attempts == run.collect_mod.NOT_FOUND_RETRIES + 1
+    assert exc_info.value.attempts == attempts
+
+
+def test_resolve_repositories_applies_stable_auto_selection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    discovered: list[run.collect_mod.RepoMetadata] = [
+        {
+            "full_name": "demo/manual",
+            "created_at": "2025-01-01T00:00:00Z",
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/current",
+            "created_at": "2025-02-01T00:00:00Z",
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/new",
+            "created_at": "2026-02-01T00:00:00Z",
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/private",
+            "created_at": "2025-03-01T00:00:00Z",
+            "private": True,
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/old-a",
+            "created_at": "2025-04-01T00:00:00Z",
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/old-b",
+            "created_at": "2025-03-01T00:00:00Z",
+            "permissions": {"push": True},
+        },
+        {
+            "full_name": "demo/fork",
+            "created_at": "2025-05-01T00:00:00Z",
+            "fork": True,
+            "permissions": {"push": True},
+        },
+    ]
+
+    def fake_discover(_headers: run.collect_mod.Headers) -> list[run.collect_mod.RepoMetadata]:
+        return discovered
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/current")
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", fake_discover)
+    config: dict[str, Any] = {
+        "include_only": [],
+        "include": ["demo/manual", "demo/missing"],
+        "exclude": [],
+        "max_repos": 3,
+        "include_others": True,
+        "include_private": False,
+        "include_new": False,
+    }
+    manifest: dict[str, Any] = {
+        "selection_state": {
+            "auto_seeded_at": "2026-01-01T00:00:00Z",
+            "auto_cutoff_created_at": "",
+        }
+    }
+
+    resolved, updated_manifest, metadata = run.collect_mod.resolve_repositories(
+        {},
+        config,
+        manifest,
+    )
+
+    assert resolved == ["demo/manual", "demo/old-a", "demo/old-b"]
+    assert sorted(metadata) == resolved
+    assert updated_manifest["selection_state"] == {
+        "auto_seeded_at": "2026-01-01T00:00:00Z",
+        "auto_cutoff_created_at": "2025-03-01T00:00:00Z",
+    }
 
 
 def test_growth_analytics_totals_deltas_and_visitor_conversion() -> None:

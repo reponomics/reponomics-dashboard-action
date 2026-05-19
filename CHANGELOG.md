@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.1.0...v0.1.0) (2026-05-19)
+## [0.1.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.0.0...v0.1.0) (2026-05-19)
 
 
 ### Miscellaneous Chores

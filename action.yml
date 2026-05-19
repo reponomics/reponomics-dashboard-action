@@ -135,7 +135,7 @@ runs:
 
     - name: Upload standalone dashboard artifact
       if: ${{ steps.runtime.outputs.dashboard-mode == 'plain' && inputs.mode == 'publish' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-standalone
         path: dist/dashboard-standalone.html
@@ -143,7 +143,7 @@ runs:
 
     - name: Upload encrypted traffic data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: traffic-data
         path: .traffic-artifact/traffic-data.enc
@@ -152,7 +152,7 @@ runs:
 
     - name: Upload traffic data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: traffic-data
         path: ${{ inputs.data-dir }}

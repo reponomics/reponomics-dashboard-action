@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Validate Reponomics release-note update notice blocks."""
+"""Validate Reponomics release-note update notice blocks.
+
+Release notes can advertise compatible action upgrades to dashboards rendered by
+older pinned versions of this action. The notice is deliberately constrained to
+a single HTML comment containing a small JSON object; the runtime parses that
+metadata and never renders arbitrary remote release Markdown into user output.
+This CLI validates those blocks before maintainers publish release notes.
+
+Policy details: README.md#maintainer-release-policy and docs/SECURITY_CHECKS.md.
+"""
 
 from __future__ import annotations
 

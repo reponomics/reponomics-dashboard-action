@@ -1,4 +1,14 @@
-"""Validate that imported GitHub Actions are pinned to full commit SHAs."""
+"""Validate that imported GitHub Actions are pinned to full commit SHAs.
+
+This is a defense-in-depth CI check for the repository's workflow supply chain.
+GitHub repository settings may also require SHA-pinned actions, but this script
+keeps the policy visible in pull requests and in the public CI result. It scans
+workflow and action YAML for third-party ``uses: owner/repo@ref`` imports and
+rejects anything other than a full 40-character lowercase commit SHA. Local
+actions and Docker image references are intentionally out of scope.
+
+Policy details: docs/SECURITY_CHECKS.md.
+"""
 
 from __future__ import annotations
 

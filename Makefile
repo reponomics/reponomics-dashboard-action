@@ -1,6 +1,10 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install pre-commit-install pre-commit-run test coverage complexity lint lint-python lint-types lint-action lint-workflows lint-action-pins lint-vendored-assets verify ci-verify release-notice-verify fixture-collect fixture-publish fixture-rotate-key clean
+.PHONY: help install pre-commit-install pre-commit-run ci
+.PHONY: test coverage complexity
+.PHONY: lint type-check
+.PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
+.PHONY: fixture-collect fixture-publish fixture-rotate-key clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -26,7 +30,7 @@ pre-commit-install: install ## Install local pre-commit hooks
 pre-commit-run: install ## Run pre-commit hooks against all files
 	$(PRE_COMMIT) run --all-files
 
-test: install ## Run action-local tests
+test: install ## Run tests
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests -v
 
 coverage: install ## Run tests with coverage report
@@ -35,32 +39,30 @@ coverage: install ## Run tests with coverage report
 complexity: install ## Run complexity metrics
 	$(ANTIPASTA) metrics --directory traffic_report_action
 
-lint: lint-python lint-types lint-action lint-workflows lint-action-pins lint-vendored-assets ## Run all lint checks
-
-lint-python: install ## Run Python lint checks
+lint: install ## Run lint checks
 	$(PYTHON) -m ruff check traffic_report_action tests scripts
 
-lint-types: install ## Run static type checks
+type-check: install ## Run static type checks
 	$(PYTHON) -m mypy
 
-lint-action: install ## Parse action.yml
+validate: validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice ## Run validation checks
+
+validate-action: install ## Validate action.yml
 	$(PYTHON) -c "import pathlib, yaml; data = yaml.safe_load(pathlib.Path('action.yml').read_text()); assert data['runs']['using'] == 'composite'"
 
-lint-workflows: install ## Parse GitHub workflow YAML
+validate-workflows: install ## Validate GitHub workflow YAML
 	$(PYTHON) -c "import pathlib, yaml; [yaml.safe_load(path.read_text()) for path in pathlib.Path('.github/workflows').glob('*.yml')]"
 
-lint-action-pins: install ## Require imported GitHub Actions to use full SHAs
+validate-action-pins: install ## Validate imported GitHub Action SHA pins
 	$(PYTHON) scripts/validate_action_pins.py action.yml .github
 
-lint-vendored-assets: install ## Verify vendored third-party assets
+validate-vendored-assets: install ## Validate vendored third-party assets
 	$(PYTHON) scripts/validate_vendored_assets.py
 
-verify: lint coverage ## Run all local verification
-
-ci-verify: lint-python lint-types lint-action lint-workflows coverage ## Run matrixed CI checks
-
-release-notice-verify: install ## Validate release notice tooling
+validate-release-notice: install ## Validate release notice tooling
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v
+
+ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-release-notice validate-vendored-assets ## Run CI checks
 
 fixture-collect: install ## Run collect fixture without live GitHub API calls
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_collect_fixture_updates_artifact_without_rendering_outputs -v

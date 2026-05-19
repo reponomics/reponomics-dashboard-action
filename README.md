@@ -104,8 +104,11 @@ The weak-secret override bypasses only the entropy policy gate. It does not bypa
 ```bash
 make install
 make pre-commit-install
-make verify
+make ci
 ```
+
+Individual targets include `make lint`, `make type-check`, `make validate`,
+`make test`, and `make coverage`.
 
 Run the configured commit hooks across the full tree with:
 
@@ -135,7 +138,7 @@ Validate release-note files before publication:
 
 ```bash
 venv/bin/python scripts/validate_release_notice.py path/to/release-notes.md
-make release-notice-verify
+make validate-release-notice
 ```
 
 Compatibility fixtures are part of the action CI policy. For each supported prior artifact/config shape, keep deterministic tests that run old config plus old retained artifact data through `collect`, `publish`, and encrypted `rotate-key` where encryption applies. These checks must verify migrated artifact schema, preserved historical data, rendered output compatibility, and that normal modes do not silently mutate user-owned `config.yaml`.

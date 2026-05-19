@@ -18,7 +18,7 @@ also called by the aggregate `.github/workflows/ci.yml` workflow.
 Run it locally with:
 
 ```bash
-make lint-action-pins
+make validate-action-pins
 ```
 
 GitHub repository settings may also enforce SHA-pinned actions. The script keeps
@@ -38,7 +38,7 @@ entry. For each vendored asset it checks:
 Run it locally with:
 
 ```bash
-make lint-vendored-assets
+make validate-vendored-assets
 ```
 
 This check requires network access to the npm registry and OSV API.
@@ -67,5 +67,5 @@ venv/bin/python scripts/validate_release_notice.py path/to/release-notes.md
 Run the release-notice fixture tests with:
 
 ```bash
-make release-notice-verify
+make validate-release-notice
 ```

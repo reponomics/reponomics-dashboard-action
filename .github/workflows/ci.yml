@@ -17,8 +17,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  supply-chain-policy:
-    name: Supply-chain policy
+  validate-action-pins:
+    name: Validate action pins
+    uses: ./.github/workflows/validate-action-pins.yml
+
+  validate-vendored-assets:
+    name: Validate vendored assets
+    uses: ./.github/workflows/validate-vendored-assets.yml
+
+  validate-release-notice:
+    name: Validate release notice
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -31,14 +39,8 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Validate GitHub Action SHA pins
-        run: make lint-action-pins
-
       - name: Validate release notice tooling
         run: make release-notice-verify
-
-      - name: Validate vendored third-party assets
-        run: make lint-vendored-assets
 
   verify:
     name: Python ${{ matrix.python-version }}

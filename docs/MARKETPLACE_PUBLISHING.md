@@ -13,6 +13,6 @@ Marketplace publication checklist:
 - Keep a single root `action.yml` metadata file.
 - Keep the repository public before publishing.
 - Keep `action.yml` metadata complete: `name`, `description`, `author`, `inputs`, `outputs`, `runs`, and `branding`.
-- Release immutable SemVer tags and maintain major-line tags such as `v1`.
+- Release immutable exact SemVer tags such as `v1.2.3`; maintain plain floating compatibility tags such as `v1` and `v1.2`.
 - Publish from a GitHub release with the Marketplace option enabled.
 - Review the current GitHub Marketplace repository constraints before publication; GitHub's current docs say Marketplace action repositories should not contain workflow files, which conflicts with in-repository CI/CD.

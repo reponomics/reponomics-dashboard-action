@@ -25,4 +25,4 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Validate GitHub Action SHA pins
-        run: make lint-action-pins
+        run: make validate-action-pins

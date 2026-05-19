@@ -27,4 +27,4 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Validate vendored third-party assets
-        run: make lint-vendored-assets
+        run: make validate-vendored-assets

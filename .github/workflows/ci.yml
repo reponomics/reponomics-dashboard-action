@@ -40,9 +40,9 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Validate release notice tooling
-        run: make release-notice-verify
+        run: make validate-release-notice
 
-  verify:
+  python:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
     strategy:
@@ -60,8 +60,23 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Verify
-        run: make ci-verify
+      - name: Lint
+        run: make lint
+
+      - name: Type check
+        run: make type-check
+
+      - name: Validate action metadata
+        run: make validate-action
+
+      - name: Validate workflow YAML
+        run: make validate-workflows
+
+      - name: Test
+        run: make test
+
+      - name: Coverage
+        run: make coverage
 
       - name: Upload coverage report
         if: always()

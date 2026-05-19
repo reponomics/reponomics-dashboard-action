@@ -11,18 +11,18 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 ANTIPASTA := $(VENV)/bin/antipasta
 PRE_COMMIT := $(VENV)/bin/pre-commit
+INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: $(VENV)/bin/activate ## Create venv and install dependencies
-	$(PYTHON) -c "import antipasta, complexipy, cryptography, mypy, pre_commit, pytest, pytest_cov, requests, yaml" && $(PYTHON) -m ruff --version >/dev/null || $(PIP) install -e '.[dev]'
+install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
-$(VENV)/bin/activate: pyproject.toml
+$(INSTALL_STAMP): pyproject.toml
 	python3 -m venv $(VENV)
 	$(PIP) install -e '.[dev]'
-	touch $(VENV)/bin/activate
+	touch $(INSTALL_STAMP)
 
 pre-commit-install: install ## Install local pre-commit hooks
 	GIT_CONFIG_GLOBAL=/dev/null $(PRE_COMMIT) install --install-hooks

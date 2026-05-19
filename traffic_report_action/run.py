@@ -182,7 +182,7 @@ def load_config_from_env() -> RuntimeConfig:
         config_path=Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml")),
         data_dir=Path(_env("REPONOMICS_DATA_DIR", "data")),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
-        commit_outputs=_parse_bool(_env("REPONOMICS_COMMIT_OUTPUTS", "true"), name="commit-outputs"),
+        commit_outputs=_parse_bool(_env("REPONOMICS_COMMIT_OUTPUTS", "false"), name="commit-outputs"),
         dashboard_path=Path(_env("REPONOMICS_DASHBOARD_PATH", "docs/index.html")),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         allow_weak_dashboard_secret=_parse_bool(
@@ -381,13 +381,10 @@ def _render_outputs(config: RuntimeConfig) -> None:
         render_private_readme.render()
 
 
-def _git_commit_outputs(config: RuntimeConfig, message: str) -> None:
+def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
     if not config.commit_outputs:
         return
-    paths = [config.readme_path.as_posix(), config.dashboard_path.as_posix()]
-    assets_dir = config.dashboard_path.parent / "assets"
-    if assets_dir.exists():
-        paths.append(assets_dir.as_posix())
+    paths = [config.readme_path.as_posix()]
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
     subprocess.run(
         ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
@@ -430,6 +427,7 @@ def _write_outputs(config: RuntimeConfig, before: dict[str, str]) -> None:
         "collected-at": _manifest_value(config.data_dir, "last_updated"),
         "artifact-mode": config.resolved_artifact_mode,
         "dashboard-mode": config.normalized_pages_dashboard,
+        "pages-path": config.dashboard_path.parent.as_posix(),
         "readme-updated": str(before.get("readme") != after.get("readme")).lower(),
         "dashboard-updated": str(before.get("dashboard") != after.get("dashboard")).lower(),
         "schema-version": storage.SCHEMA_VERSION,
@@ -495,7 +493,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
     _prepare_data_schema(config)
     _set_update_notice_env(config)
     _render_outputs(config)
-    _git_commit_outputs(config, "chore: publish traffic dashboard [skip ci]")
+    _git_commit_readme(config, "chore: publish Reponomics README dashboard [skip ci]")
     _write_outputs(config, before)
 
 
@@ -510,7 +508,7 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     _set_runtime_env(config, next_key=True)
     _render_outputs(config)
     _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_NEXT_SECRET")
-    _git_commit_outputs(config, "chore: rotate dashboard key [skip ci]")
+    _git_commit_readme(config, "chore: rotate Reponomics README dashboard key [skip ci]")
     _summarize_rotation()
     _write_outputs(config, before)
 

@@ -1,6 +1,6 @@
 name: Reponomics Dashboard Action
-author: Reponomics
-description: Collect GitHub traffic data, publish dashboard outputs, and rotate encrypted state.
+author: Reponomics Contributors
+description: Collect GitHub repository traffic and growth data, generate data dashboards, and handle rotation of encryption secrets.
 branding:
   icon: bar-chart-2
   color: blue
@@ -55,9 +55,9 @@ inputs:
     required: false
     default: "90"
   commit-outputs:
-    description: Commit generated README/dashboard outputs back to the caller repository.
+    description: Commit generated README output back to the caller repository.
     required: false
-    default: "true"
+    default: "false"
   dashboard-path:
     description: Published dashboard output path.
     required: false
@@ -90,6 +90,12 @@ outputs:
   dashboard-updated:
     description: Whether the dashboard output changed.
     value: ${{ steps.runtime.outputs.dashboard-updated }}
+  pages-path:
+    description: Directory uploaded for GitHub Pages deployment.
+    value: ${{ steps.runtime.outputs.pages-path }}
+  page-url:
+    description: Deployed GitHub Pages URL when a Pages dashboard is published.
+    value: ${{ steps.deploy-pages.outputs.page_url }}
   schema-version:
     description: Runtime canonical CSV schema version.
     value: ${{ steps.runtime.outputs.schema-version }}
@@ -132,6 +138,21 @@ runs:
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
       run: python "$GITHUB_ACTION_PATH/traffic_report_action/run.py"
+
+    - name: Configure GitHub Pages
+      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+    - name: Upload GitHub Pages artifact
+      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+      with:
+        path: ${{ steps.runtime.outputs.pages-path }}
+
+    - name: Deploy GitHub Pages
+      id: deploy-pages
+      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
     - name: Upload standalone dashboard artifact
       if: ${{ steps.runtime.outputs.dashboard-mode == 'plain' && inputs.mode == 'publish' }}

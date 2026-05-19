@@ -12,6 +12,9 @@ for imported GitHub Actions. Third-party `uses:` references must be pinned to a
 full 40-character lowercase commit SHA. Local actions and Docker image
 references are not checked by this script.
 
+CI runs this check through `.github/workflows/validate-action-pins.yml`, which is
+also called by the aggregate `.github/workflows/ci.yml` workflow.
+
 Run it locally with:
 
 ```bash
@@ -39,6 +42,11 @@ make lint-vendored-assets
 ```
 
 This check requires network access to the npm registry and OSV API.
+
+CI runs this check through `.github/workflows/validate-vendored-assets.yml`,
+which is also called by the aggregate `.github/workflows/ci.yml` workflow. The
+workflow has a weekly scheduled run so newly disclosed OSV vulnerabilities can
+fail the badge even when the vendored file has not changed.
 
 ## Release Notice Blocks
 

@@ -1,5 +1,9 @@
 # Reponomics Dashboard Action
 
+[![CI](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml)
+[![Action pins](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml)
+[![Vendored assets](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml)
+
 GitHub Action for Reponomics dashboards.
 
 This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, publishes README/HTML dashboard outputs from retained data, and supports dashboard/artifact key rotation.

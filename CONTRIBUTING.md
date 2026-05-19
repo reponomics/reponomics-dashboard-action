@@ -62,7 +62,7 @@ The repository validates this convention with:
 make lint-action-pins
 ```
 
-Use least-privilege workflow permissions. The default token permission should remain read-only at the organization/repository level. Workflow-level permissions should also default to read-only or narrower, and write scopes should be assigned at the specific job that needs them whenever GitHub Actions supports that shape. For example, the Release Please job needs `contents: write` and `pull-requests: write`, while ordinary CI jobs should only need `contents: read`.
+Use least-privilege workflow permissions. The default token permission should remain read-only at the organization/repository level. Prefer job-level `permissions:` blocks for jobs that need elevated access. In GitHub Actions, once any `permissions:` map is present, every unspecified token scope is set to `none`; `write` includes `read`. Use `permissions: {}` at the workflow level when the workflow should grant no default token scopes, then assign only the required job-level scopes. For example, the Release Please job needs `contents: write`, `issues: write`, and `pull-requests: write`, while ordinary CI jobs should only need `contents: read`.
 
 ## Security-Sensitive Changes
 
@@ -102,6 +102,8 @@ Release-As: 0.2.0
 ```
 
 Do not manually edit generated Release Please pull request content unless the release automation requires it.
+
+Exact SemVer tags are immutable release identities. `vMAJOR.MINOR.PATCH` tags, such as `v0.2.0`, must point permanently at the released commit and should be associated with the GitHub Release. Floating compatibility tags are plain Git tags, not GitHub Releases. Move `vMAJOR`, such as `v0`, and `vMAJOR.MINOR`, such as `v0.2`, only after Release Please creates a new exact release. Chore-only commits may merge without producing a release and must not advance floating action tags.
 
 ## Dependency Updates
 

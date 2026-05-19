@@ -236,6 +236,49 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert config.resolved_artifact_mode == "plain"
 
 
+def test_commit_outputs_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("REPONOMICS_COMMIT_OUTPUTS", raising=False)
+
+    config = run.load_config_from_env()
+
+    assert config.commit_outputs is False
+
+
+def test_runtime_outputs_include_pages_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "github-output.txt"
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+
+    run._write_outputs(config, {"readme": "", "dashboard": ""})
+
+    output = output_path.read_text(encoding="utf-8")
+    assert f"pages-path={config.dashboard_path.parent.as_posix()}" in output
+
+
+def test_commit_outputs_stages_only_readme(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[list[str]] = []
+    config = _config(tmp_path, commit_outputs=True)
+
+    def fake_run(args, **kwargs):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+
+    run._git_commit_readme(config, "chore: test")
+
+    assert ["git", "add", config.readme_path.as_posix()] in calls
+    assert all(config.dashboard_path.as_posix() not in call for call in calls)
+    assert all((config.dashboard_path.parent / "assets").as_posix() not in call for call in calls)
+
+
 def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REPONOMICS_MODE", "setup")
 

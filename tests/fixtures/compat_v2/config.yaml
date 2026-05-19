@@ -1,0 +1,4 @@
+repos:
+  - demo/reponomics
+exclude_repos: []
+max_repos: 5

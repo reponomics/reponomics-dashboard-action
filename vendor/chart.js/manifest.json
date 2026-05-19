@@ -1,0 +1,14 @@
+{
+  "package": "chart.js",
+  "ecosystem": "npm",
+  "version": "4.5.1",
+  "registry": "https://registry.npmjs.org/",
+  "tarball": "https://registry.npmjs.org/chart.js/-/chart.js-4.5.1.tgz",
+  "tarball_integrity": "sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw==",
+  "source_path": "package/dist/chart.umd.min.js",
+  "vendored_path": "vendor/chart.js/chart.umd.min.js",
+  "sha256": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
+  "license_source_path": "package/LICENSE.md",
+  "license_path": "vendor/chart.js/LICENSE.md",
+  "license_sha256": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce"
+}

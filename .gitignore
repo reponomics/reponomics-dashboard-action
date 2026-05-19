@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+.traffic-artifact/
+data/
+!tests/fixtures/**/data/
+!tests/fixtures/**/data/**
+dist/
+docs/assets/
+docs/index.html
+README.generated.md

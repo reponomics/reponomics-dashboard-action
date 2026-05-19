@@ -1,0 +1,160 @@
+name: Reponomics Dashboard Action
+author: Reponomics
+description: Collect GitHub traffic data, publish dashboard outputs, and rotate encrypted state.
+branding:
+  icon: bar-chart-2
+  color: blue
+
+inputs:
+  mode:
+    description: "Runtime mode: collect, publish, or rotate-key."
+    required: true
+    default: collect
+  traffic-token:
+    description: Token used for GitHub traffic/repository APIs.
+    required: false
+    default: ""
+  github-token:
+    description: Token used for GitHub artifact/repository workflow operations.
+    required: false
+    default: ""
+  dashboard-secret:
+    description: Current dashboard/artifact encryption secret.
+    required: false
+    default: ""
+  dashboard-next-secret:
+    description: Next dashboard/artifact encryption secret for rotate-key mode.
+    required: false
+    default: ""
+  allow-weak-dashboard-secret:
+    description: Explicitly bypass the dashboard secret entropy gate for encrypted modes.
+    required: false
+    default: "false"
+  readme-dashboard:
+    description: "README dashboard mode: disabled or enabled."
+    required: false
+    default: disabled
+  pages-dashboard:
+    description: "Pages dashboard mode: disabled, plain, or encrypted."
+    required: false
+    default: encrypted
+  artifact-security-mode:
+    description: "Artifact security mode: plain, encrypted, or auto."
+    required: false
+    default: auto
+  config-path:
+    description: Repository selection config path.
+    required: false
+    default: config.yaml
+  data-dir:
+    description: Canonical CSV data directory.
+    required: false
+    default: data
+  retention-days:
+    description: GitHub Actions artifact retention period.
+    required: false
+    default: "90"
+  commit-outputs:
+    description: Commit generated README/dashboard outputs back to the caller repository.
+    required: false
+    default: "true"
+  dashboard-path:
+    description: Published dashboard output path.
+    required: false
+    default: docs/index.html
+  readme-path:
+    description: README output path.
+    required: false
+    default: README.md
+  update-notices:
+    description: "Best-effort metadata-only update notices from constrained Reponomics GitHub Release blocks: true or false."
+    required: false
+    default: "true"
+
+outputs:
+  tracked-repos:
+    description: Comma-separated repositories observed in canonical data.
+    value: ${{ steps.runtime.outputs.tracked-repos }}
+  collected-at:
+    description: Latest manifest update timestamp.
+    value: ${{ steps.runtime.outputs.collected-at }}
+  artifact-mode:
+    description: Resolved artifact security mode.
+    value: ${{ steps.runtime.outputs.artifact-mode }}
+  dashboard-mode:
+    description: Resolved Pages dashboard mode.
+    value: ${{ steps.runtime.outputs.dashboard-mode }}
+  readme-updated:
+    description: Whether the README output changed.
+    value: ${{ steps.runtime.outputs.readme-updated }}
+  dashboard-updated:
+    description: Whether the dashboard output changed.
+    value: ${{ steps.runtime.outputs.dashboard-updated }}
+  schema-version:
+    description: Runtime canonical CSV schema version.
+    value: ${{ steps.runtime.outputs.schema-version }}
+  runtime-version:
+    description: Reponomics action runtime version.
+    value: ${{ steps.runtime.outputs.runtime-version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: "3.13"
+
+    - name: Install runtime dependencies
+      shell: bash
+      run: python -m pip install "$GITHUB_ACTION_PATH"
+
+    - name: Run Reponomics runtime
+      id: runtime
+      shell: bash
+      env:
+        REPONOMICS_MODE: ${{ inputs.mode }}
+        REPONOMICS_TRAFFIC_TOKEN: ${{ inputs.traffic-token }}
+        REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
+        REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
+        REPONOMICS_ALLOW_WEAK_DASHBOARD_SECRET: ${{ inputs.allow-weak-dashboard-secret }}
+        REPONOMICS_README_DASHBOARD: ${{ inputs.readme-dashboard }}
+        REPONOMICS_PAGES_DASHBOARD: ${{ inputs.pages-dashboard }}
+        REPONOMICS_ARTIFACT_SECURITY_MODE: ${{ inputs.artifact-security-mode }}
+        REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
+        REPONOMICS_DATA_DIR: ${{ inputs.data-dir }}
+        REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_COMMIT_OUTPUTS: ${{ inputs.commit-outputs }}
+        REPONOMICS_DASHBOARD_PATH: ${{ inputs.dashboard-path }}
+        REPONOMICS_README_PATH: ${{ inputs.readme-path }}
+        REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
+        REPONOMICS_ACTION_REF: ${{ github.action_ref }}
+        REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
+      run: python "$GITHUB_ACTION_PATH/traffic_report_action/run.py"
+
+    - name: Upload standalone dashboard artifact
+      if: ${{ steps.runtime.outputs.dashboard-mode == 'plain' && inputs.mode == 'publish' }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: dashboard-standalone
+        path: dist/dashboard-standalone.html
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload encrypted traffic data artifact
+      if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: traffic-data
+        path: .traffic-artifact/traffic-data.enc
+        retention-days: ${{ inputs.retention-days }}
+        overwrite: true
+
+    - name: Upload traffic data artifact
+      if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: traffic-data
+        path: ${{ inputs.data-dir }}
+        retention-days: ${{ inputs.retention-days }}
+        overwrite: true

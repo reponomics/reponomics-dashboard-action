@@ -1,0 +1,1168 @@
+from __future__ import annotations
+
+import csv
+from html.parser import HTMLParser
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+import pytest
+import requests
+
+from traffic_report_action import run
+
+
+OLD_KEY = "old-dashboard-secret-" + ("x" * 40)
+NEXT_KEY = "next-dashboard-secret-" + ("y" * 40)
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+class DashboardHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.scripts: list[dict[str, str | None]] = []
+        self.canvases: set[str] = set()
+        self.forms: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        if tag == "script":
+            self.scripts.append(attributes)
+        elif tag == "canvas" and attributes.get("id"):
+            self.canvases.add(str(attributes["id"]))
+        elif tag == "form" and attributes.get("id"):
+            self.forms.add(str(attributes["id"]))
+
+
+def _parse_dashboard_html(html: str) -> DashboardHtmlParser:
+    parser = DashboardHtmlParser()
+    parser.feed(html)
+    return parser
+
+
+def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
+    values: dict[str, Any] = {
+        "mode": "collect",
+        "traffic_token": "ghp_traffic",
+        "github_token": "ghp_test",
+        "dashboard_secret": OLD_KEY,
+        "dashboard_next_secret": "",
+        "readme_dashboard": "enabled",
+        "pages_dashboard": "encrypted",
+        "artifact_security_mode": "encrypted",
+        "config_path": tmp_path / "config.yaml",
+        "data_dir": tmp_path / "data",
+        "retention_days": 90,
+        "commit_outputs": False,
+        "dashboard_path": tmp_path / "docs" / "index.html",
+        "readme_path": tmp_path / "README.md",
+        "allow_weak_dashboard_secret": False,
+        "update_notices": False,
+        "action_ref": "v0.1.0",
+        "action_repository": "reponomics/reponomics-dashboard-action",
+    }
+    values.update(overrides)
+    return run.RuntimeConfig(**values)
+
+
+def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _seed_log(data_dir: Path) -> None:
+    _write_csv(
+        data_dir / "traffic-log.csv",
+        run.storage.LOG_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "ts": "2026-05-01",
+                "views_count": "12",
+                "views_uniques": "7",
+                "clones_count": "3",
+                "clones_uniques": "2",
+                "captured_at": "2026-05-01T12:00:00Z",
+                "source": "fixture",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    _write_csv(
+        data_dir / "traffic-referrers.csv",
+        run.storage.REFERRER_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "captured_at": "2026-05-01T12:00:00Z",
+                "referrer": "github.com",
+                "count": "5",
+                "uniques": "3",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    _write_csv(
+        data_dir / "traffic-paths.csv",
+        run.storage.PATH_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "captured_at": "2026-05-01T12:00:00Z",
+                "path": "/demo/reponomics",
+                "title": "Repository overview",
+                "count": "8",
+                "uniques": "4",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    _write_csv(
+        data_dir / "repo-metrics.csv",
+        run.storage.REPO_METRIC_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "repo_id": "123",
+                "node_id": "R_123",
+                "ts": "2026-05-01",
+                "captured_at": "2026-05-01T12:00:00Z",
+                "stargazers_count": "11",
+                "subscribers_count": "2",
+                "forks_count": "1",
+                "open_issues_count": "4",
+                "size_kb": "512",
+                "created_at": "2025-01-01T00:00:00Z",
+                "pushed_at": "2026-05-01T11:00:00Z",
+                "updated_at": "2026-05-01T11:30:00Z",
+                "language": "Python",
+                "visibility": "public",
+                "default_branch": "main",
+                "has_pages": "False",
+                "has_discussions": "True",
+                "archived": "False",
+                "disabled": "False",
+                "source": "fixture",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+
+def _daily_row(repo: str, ts: str, views: int, visitors: int, clones: int = 0) -> dict[str, str]:
+    return {
+        "repo": repo,
+        "ts": ts,
+        "views_count": str(views),
+        "views_uniques": str(visitors),
+        "clones_count": str(clones),
+        "clones_uniques": str(min(clones, visitors)),
+        "captured_at": f"{ts}T12:00:00Z",
+        "source": "fixture",
+        "schema_version": run.storage.SCHEMA_VERSION,
+    }
+
+
+def _metric_row(
+    repo: str,
+    ts: str,
+    stars: int,
+    subscribers: int,
+    forks: int,
+    captured_suffix: str = "12:00:00Z",
+) -> dict[str, str]:
+    return {
+        "repo": repo,
+        "repo_id": "",
+        "node_id": "",
+        "ts": ts,
+        "captured_at": f"{ts}T{captured_suffix}",
+        "stargazers_count": str(stars),
+        "subscribers_count": str(subscribers),
+        "forks_count": str(forks),
+        "open_issues_count": "",
+        "size_kb": "",
+        "created_at": "",
+        "pushed_at": "",
+        "updated_at": "",
+        "language": "",
+        "visibility": "",
+        "default_branch": "",
+        "has_pages": "",
+        "has_discussions": "",
+        "archived": "",
+        "disabled": "",
+        "source": "fixture",
+        "schema_version": run.storage.SCHEMA_VERSION,
+    }
+
+
+def _copy_fixture(name: str, tmp_path: Path) -> Path:
+    src = FIXTURES_DIR / name
+    dst = tmp_path / name
+    shutil.copytree(src, dst)
+    return dst
+
+
+def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("REPONOMICS_MODE", "collect")
+    monkeypatch.setenv("REPONOMICS_TRAFFIC_TOKEN", "ghp_traffic")
+    monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
+    monkeypatch.setenv("REPONOMICS_README_DASHBOARD", "enabled")
+    monkeypatch.setenv("REPONOMICS_PAGES_DASHBOARD", "encrypted")
+    monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "auto")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    monkeypatch.setenv("REPONOMICS_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
+    monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
+    monkeypatch.setenv("REPONOMICS_DASHBOARD_PATH", str(tmp_path / "docs" / "index.html"))
+    monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
+
+    config = run.load_config_from_env()
+
+    assert config.mode == "collect"
+    assert config.traffic_token == "ghp_traffic"
+    assert config.github_token == "ghp_test"
+    assert config.retention_days == 30
+    assert config.commit_outputs is False
+    assert config.resolved_artifact_mode == "plain"
+
+
+def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REPONOMICS_MODE", "setup")
+
+    with pytest.raises(run.ActionError):
+        run.load_config_from_env()
+
+
+def test_deprecated_input_aliases_are_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REPONOMICS_MODE", "publish")
+    monkeypatch.setenv("REPONOMICS_README_DASHBOARD", "metrics_summary")
+    monkeypatch.setenv("REPONOMICS_PAGES_DASHBOARD", "public")
+
+    config = run.load_config_from_env()
+
+    assert config.readme_dashboard == "enabled"
+    assert config.pages_dashboard == "plain"
+
+
+def test_auto_artifact_mode_public_repo_encrypts_unless_pages_plain(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+
+    encrypted_config = _config(
+        tmp_path,
+        artifact_security_mode="auto",
+        pages_dashboard="encrypted",
+    )
+    plain_pages_config = _config(
+        tmp_path,
+        artifact_security_mode="auto",
+        pages_dashboard="plain",
+    )
+
+    assert encrypted_config.resolved_artifact_mode == "encrypted"
+    assert plain_pages_config.resolved_artifact_mode == "plain"
+
+
+def test_secret_validation_for_encrypted_collect(tmp_path: Path) -> None:
+    config = _config(tmp_path, dashboard_secret="too-short")
+
+    with pytest.raises(run.ActionError):
+        run.validate_config(config)
+
+
+def test_weak_secret_override_allows_encrypted_collect(tmp_path: Path) -> None:
+    config = _config(
+        tmp_path,
+        dashboard_secret="too-short",
+        allow_weak_dashboard_secret=True,
+    )
+
+    run.validate_config(config)
+
+
+def test_secret_validation_for_rotate_key(tmp_path: Path) -> None:
+    config = _config(tmp_path, mode="rotate-key", dashboard_next_secret="")
+
+    with pytest.raises(run.ActionError):
+        run.validate_config(config)
+
+
+def test_collect_fixture_updates_artifact_without_rendering_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_collect(config, restore_artifact=False, execute_collect=False)
+
+    assert (tmp_path / ".traffic-artifact" / "traffic-data.enc").exists()
+    assert not config.readme_path.exists()
+    assert not config.dashboard_path.exists()
+
+
+def test_publish_fixture_renders_outputs_without_live_api(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    assert config.readme_path.exists()
+    assert config.dashboard_path.exists()
+    assert "demo/reponomics" in config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    assert "encrypted-payload" in dashboard
+    assert "validateEncryptedPayload" in dashboard
+    assert "EXPECTED_KDF_ITERATIONS = 300000" in dashboard
+    assert 'src="assets/chart.umd.min.js"' in dashboard
+    assert "cdn.jsdelivr.net" not in dashboard
+    assert (config.dashboard_path.parent / "assets" / "chart.umd.min.js").exists()
+
+
+def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+
+    assert "Growth (14d)" in readme
+    assert "interest **+0 stars** / **+0 watchers** (now 11 / 2)" in readme
+    assert "adoption **3 clones** / **+0 forks** (now 1)" in readme
+    assert "Repository Growth" in readme
+    assert "Repository Growth Dashboard" in dashboard
+    assert 'src="assets/chart.umd.min.js"' in dashboard
+    assert "cdn.jsdelivr.net" not in dashboard
+    assert "Attention" in dashboard
+    assert "Interest" in dashboard
+    assert "Adoption" in dashboard
+    assert "Star Growth" in dashboard
+    assert "Watcher Growth" in dashboard
+    assert "Fork Growth" in dashboard
+    assert '"total_subscribers":2' in dashboard
+    assert '"total_forks_delta":0' in dashboard
+
+
+def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    published = _parse_dashboard_html(config.dashboard_path.read_text(encoding="utf-8"))
+    script_sources = [script.get("src") for script in published.scripts if script.get("src")]
+    assert script_sources == ["assets/chart.umd.min.js"]
+    assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
+    assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
+    assert "unlockForm" not in published.forms
+
+    standalone = _parse_dashboard_html(
+        (tmp_path / "dist" / "dashboard-standalone.html").read_text(encoding="utf-8")
+    )
+    assert [script.get("src") for script in standalone.scripts if script.get("src")] == []
+    assert {"dailyChart", "weekdayChart", "stackedChart"} <= standalone.canvases
+
+
+def test_release_notice_semver_comparison() -> None:
+    compare = run.release_notice.compare_semver
+
+    assert compare("v1.2.4", "1.2.3") == 1
+    assert compare("1.2.3", "1.2.3") == 0
+    assert compare("1.2.3-alpha.2", "1.2.3-alpha.10") == -1
+    assert compare("1.2.3", "1.2.3-rc.1") == 1
+
+
+def test_release_notice_parses_only_constrained_update_block() -> None:
+    body = """
+    Regular release notes with **markdown**.
+    <!-- reponomics-update {"title":"Update <b>now</b>","summary":"Use v0.2.0","min_runtime_version":"0.1.0"} -->
+    More arbitrary markdown that must not be rendered.
+    """
+
+    parsed = run.release_notice.parse_update_block(body)
+
+    assert parsed == {
+        "title": "Update <b>now</b>",
+        "summary": "Use v0.2.0",
+        "min_runtime_version": "0.1.0",
+    }
+    assert run.release_notice.parse_update_block("<!-- other {\"title\":\"no\"} -->") is None
+
+
+def test_release_notice_validation_cli_accepts_valid_block(tmp_path: Path) -> None:
+    notes = tmp_path / "release.md"
+    notes.write_text(
+        "\n".join([
+            "# v0.2.0",
+            "",
+            "<!-- reponomics-update {"
+            "\"title\":\"Upgrade available\","
+            "\"summary\":\"Compatible runtime and artifact migration update.\","
+            "\"min_runtime_version\":\"0.1.0\","
+            "\"action_refs\":[\"v0.1.0\"]"
+            "} -->",
+        ]),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, "scripts/validate_release_notice.py", str(notes)],
+        check=False,
+        cwd=Path(__file__).resolve().parents[1],
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0
+    assert "ok" in result.stdout
+
+
+def test_release_notice_validation_cli_rejects_malformed_block(tmp_path: Path) -> None:
+    notes = tmp_path / "release.md"
+    notes.write_text(
+        "<!-- reponomics-update {\"title\":\"Missing summary\",\"markdown\":\"**no**\"} -->",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, "scripts/validate_release_notice.py", str(notes)],
+        check=False,
+        cwd=Path(__file__).resolve().parents[1],
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 1
+    assert "summary is required" in result.stderr
+    assert "unsupported reponomics-update key(s): markdown" in result.stderr
+
+
+def test_release_notice_disabled_mode_does_not_call_api(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    called = False
+
+    def fail_if_called(_token: str):
+        nonlocal called
+        called = True
+        raise AssertionError("release API should not be called")
+
+    monkeypatch.setattr(run.release_notice, "_fetch_releases", fail_if_called)
+    config = _config(tmp_path, mode="publish", update_notices=False)
+
+    run._set_update_notice_env(config)
+
+    assert called is False
+    assert "REPONOMICS_UPDATE_NOTICE_JSON" not in os.environ
+
+
+def test_release_notice_api_failure_is_non_fatal(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def raise_failure(_token: str):
+        raise requests.RequestException("boom")
+
+    monkeypatch.setattr(run.release_notice, "_fetch_releases", raise_failure)
+    config = _config(tmp_path, mode="publish", update_notices=True)
+
+    run._set_update_notice_env(config)
+
+    assert "REPONOMICS_UPDATE_NOTICE_JSON" not in os.environ
+
+
+def test_publish_renders_sanitized_release_notice(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def fake_releases(_token: str):
+        return [
+            {
+                "tag_name": "v0.2.0",
+                "name": "Remote **markdown** <script>alert(1)</script>",
+                "html_url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.2.0",
+                "draft": False,
+                "prerelease": False,
+                "body": (
+                    "ignored **markdown**\n"
+                    "<!-- reponomics-update {"
+                    "\"title\":\"Update <script>alert(1)</script>\","
+                    "\"summary\":\"Safe metadata only; no **markdown**\","
+                    "\"min_runtime_version\":\"0.1.0\""
+                    "} -->"
+                ),
+            }
+        ]
+
+    monkeypatch.setattr(run.release_notice, "_fetch_releases", fake_releases)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        pages_dashboard="plain",
+        update_notices=True,
+    )
+    _seed_log(config.data_dir)
+
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    assert "View v0.2.0" in readme
+    assert "View v0.2.0" in dashboard
+    assert "Safe metadata only; no markdown" in readme
+    assert "ignored **markdown**" not in readme
+    assert "alert(1)" not in readme
+    assert "alert(1)" not in dashboard
+    assert "<script>alert(1)</script>" not in readme
+    assert "<script>alert(1)</script>" not in dashboard
+
+
+def test_rotate_key_fixture_reencrypts_with_next_secret(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    run.run_collect(config, restore_artifact=False, execute_collect=False)
+
+    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
+    config.data_dir.mkdir(exist_ok=True)
+    for path in config.data_dir.iterdir():
+        path.unlink()
+    (config.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    rotated = _config(
+        tmp_path,
+        mode="rotate-key",
+        dashboard_next_secret=NEXT_KEY,
+    )
+    run.validate_config(rotated)
+    run.run_rotate_key(rotated, restore_artifact=False)
+
+    for path in rotated.data_dir.iterdir():
+        path.unlink()
+    (rotated.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    os.environ["TRAFFIC_DASHBOARD_SECRET"] = NEXT_KEY
+    run.crypto_artifact.decrypt(
+        rotated.data_dir / "traffic-data.enc",
+        rotated.data_dir,
+        "TRAFFIC_DASHBOARD_SECRET",
+    )
+    assert (rotated.data_dir / "traffic-daily.csv").exists()
+
+    run.crypto_artifact.encrypt(rotated.data_dir, encrypted_path, "TRAFFIC_DASHBOARD_SECRET")
+    for path in rotated.data_dir.iterdir():
+        path.unlink()
+    (rotated.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    os.environ["TRAFFIC_DASHBOARD_SECRET"] = OLD_KEY
+    with pytest.raises(Exception):
+        run.crypto_artifact.decrypt(
+            rotated.data_dir / "traffic-data.enc",
+            rotated.data_dir,
+            "TRAFFIC_DASHBOARD_SECRET",
+        )
+
+
+def test_repo_metrics_registry_creates_growth_snapshot_header(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+
+    changed = run.storage.migrate_schema(data_dir.as_posix())
+
+    assert changed is True
+    header = (data_dir / "repo-metrics.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header.split(",") == run.storage.REPO_METRIC_FIELDS
+    assert run.storage.REPO_METRIC_FIELDS == [
+        "repo", "repo_id", "node_id", "ts", "captured_at",
+        "stargazers_count", "subscribers_count", "forks_count",
+        "open_issues_count", "size_kb", "created_at", "pushed_at",
+        "updated_at", "language", "visibility", "default_branch",
+        "has_pages", "has_discussions", "archived", "disabled",
+        "source", "schema_version",
+    ]
+
+
+def test_repo_metrics_are_mapped_from_detail_without_watchers_count() -> None:
+    rows = run.collect_mod.collect_repo_metrics(
+        "demo/reponomics",
+        {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 42,
+            "watchers_count": 999,
+            "subscribers_count": 7,
+            "forks_count": 3,
+            "open_issues_count": 4,
+            "size": 512,
+            "created_at": "2025-01-01T00:00:00Z",
+            "pushed_at": "2026-05-16T10:00:00Z",
+            "updated_at": "2026-05-16T10:30:00Z",
+            "language": "Python",
+            "visibility": "public",
+            "default_branch": "main",
+            "has_pages": False,
+            "has_discussions": True,
+            "archived": False,
+            "disabled": False,
+        },
+        "2026-05-16T12:00:00Z",
+    )
+
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "repo_id": 123,
+            "node_id": "R_123",
+            "ts": "2026-05-16",
+            "captured_at": "2026-05-16T12:00:00Z",
+            "stargazers_count": 42,
+            "subscribers_count": 7,
+            "forks_count": 3,
+            "open_issues_count": 4,
+            "size_kb": 512,
+            "created_at": "2025-01-01T00:00:00Z",
+            "pushed_at": "2026-05-16T10:00:00Z",
+            "updated_at": "2026-05-16T10:30:00Z",
+            "language": "Python",
+            "visibility": "public",
+            "default_branch": "main",
+            "has_pages": False,
+            "has_discussions": True,
+            "archived": False,
+            "disabled": False,
+            "source": "repo-detail",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
+def test_growth_analytics_totals_deltas_and_visitor_conversion() -> None:
+    daily_rows = [
+        _daily_row("demo/high", "2026-05-01", 40, 10, 4),
+        _daily_row("demo/high", "2026-05-02", 60, 15, 6),
+        _daily_row("demo/fallback", "2026-05-02", 12, 0, 1),
+    ]
+    metric_rows = [
+        _metric_row("demo/high", "2026-05-01", 10, 2, 1),
+        _metric_row("demo/high", "2026-05-02", 15, 5, 2),
+        _metric_row("demo/fallback", "2026-05-01", 1, 0, 0),
+        _metric_row("demo/fallback", "2026-05-02", 3, 0, 0),
+    ]
+
+    growth = run.load_data.growth_analytics(daily_rows, metric_rows, recent_days=2)
+
+    assert growth["totals"]["total_stargazers"] == 18
+    assert growth["totals"]["total_subscribers"] == 5
+    assert growth["totals"]["total_forks"] == 2
+    assert growth["totals"]["total_stargazers_delta"] == 7
+    assert growth["totals"]["total_subscribers_delta"] == 3
+    assert growth["totals"]["total_forks_delta"] == 1
+    assert growth["per_repo"]["demo/high"]["conversion"]["stargazers"] == {
+        "value": 0.2,
+        "denominator": 25,
+        "denominator_metric": "visitors",
+    }
+    assert growth["per_repo"]["demo/fallback"]["conversion"]["stargazers"] == {
+        "value": 2 / 12,
+        "denominator": 12,
+        "denominator_metric": "views",
+    }
+
+
+def test_growth_series_uses_latest_repo_per_day_snapshot() -> None:
+    metric_rows = [
+        _metric_row("demo/reponomics", "2026-05-01", 10, 2, 1, "09:00:00Z"),
+        _metric_row("demo/reponomics", "2026-05-01", 12, 3, 1, "18:00:00Z"),
+        _metric_row("demo/reponomics", "2026-05-02", 13, 3, 2),
+    ]
+
+    series = run.load_data.repo_growth_series(metric_rows)
+
+    assert series["demo/reponomics"]["dates"] == ["2026-05-01", "2026-05-02"]
+    assert series["demo/reponomics"]["stargazers"] == [12, 13]
+    assert series["demo/reponomics"]["subscribers"] == [3, 3]
+    assert series["demo/reponomics"]["forks"] == [1, 2]
+
+
+def test_growth_missing_history_has_zero_deltas_and_no_ratio() -> None:
+    daily_rows = [_daily_row("demo/new", "2026-05-02", 4, 2)]
+    metric_rows = [_metric_row("demo/new", "2026-05-02", 10, 1, 0)]
+
+    growth = run.load_data.growth_analytics(daily_rows, metric_rows, recent_days=14)
+    repo = growth["per_repo"]["demo/new"]
+
+    assert repo["deltas"]["sample_count"] == 1
+    assert repo["deltas"]["stargazers_delta"] == 0
+    assert repo["deltas"]["subscribers_delta"] == 0
+    assert repo["deltas"]["forks_delta"] == 0
+    assert repo["conversion"]["stargazers"] == {
+        "value": None,
+        "denominator": 0,
+        "denominator_metric": None,
+    }
+    assert run.load_data.actionable_insights(daily_rows, metric_rows) == []
+
+
+def test_growth_deltas_ignore_migrated_blank_counter_baselines() -> None:
+    daily_rows = [_daily_row("demo/reponomics", "2026-05-16", 80, 20, 4)]
+    migrated = _metric_row("demo/reponomics", "2026-05-03", 43895, 0, 3751)
+    migrated["subscribers_count"] = ""
+    current = _metric_row("demo/reponomics", "2026-05-16", 43967, 298, 3766)
+
+    growth = run.load_data.growth_analytics(daily_rows, [migrated, current], recent_days=14)
+    repo = growth["per_repo"]["demo/reponomics"]
+
+    assert repo["deltas"]["stars_delta"] == 72
+    assert repo["deltas"]["subscribers_delta"] == 0
+    assert repo["deltas"]["forks_delta"] == 15
+    assert repo["deltas"]["current_subscribers"] == 298
+    assert growth["totals"]["total_subscribers"] == 298
+    assert growth["totals"]["total_subscribers_delta"] == 0
+
+
+def test_growth_insights_select_top_defensible_candidate() -> None:
+    daily_rows = []
+    metric_rows = []
+    for day in range(1, 5):
+        ts = f"2026-05-0{day}"
+        daily_rows.append(_daily_row("demo/attention", ts, 35, 12, 4))
+        daily_rows.append(_daily_row("demo/tiny", ts, 1, 1, 0))
+    metric_rows.extend([
+        _metric_row("demo/attention", "2026-05-01", 10, 2, 1),
+        _metric_row("demo/attention", "2026-05-04", 10, 2, 1),
+        _metric_row("demo/tiny", "2026-05-01", 0, 0, 0),
+        _metric_row("demo/tiny", "2026-05-04", 1, 0, 0),
+    ])
+
+    insights = run.load_data.actionable_insights_structured(
+        daily_rows,
+        metric_rows,
+        limit=1,
+    )
+
+    assert len(insights) == 1
+    assert insights[0]["repo"] == "demo/attention"
+    assert insights[0]["subtype"] in {
+        "high_attention_low_interest",
+        "traffic_without_downstream_growth",
+    }
+
+
+def test_collect_requests_one_detail_per_selected_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "include_only:\n  - demo/one\n  - demo/two\nmax_repos: 2\n",
+        encoding="utf-8",
+    )
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/one",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        },
+        {
+            "full_name": "demo/two",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-02T00:00:00Z",
+        },
+    ]
+    detail_calls: list[str] = []
+
+    def fake_fetch_json(url: str, headers, allow_not_found: bool = False):
+        assert allow_not_found is False
+        detail_calls.append(url)
+        repo = url.removeprefix("https://api.github.com/repos/")
+        return {
+            "id": 100 + len(detail_calls),
+            "node_id": f"R_{repo}",
+            "stargazers_count": 10 + len(detail_calls),
+            "watchers_count": 900 + len(detail_calls),
+            "subscribers_count": 20 + len(detail_calls),
+            "forks_count": 30 + len(detail_calls),
+        }
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    assert detail_calls == [
+        "https://api.github.com/repos/demo/one",
+        "https://api.github.com/repos/demo/two",
+    ]
+    with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["repo"] for row in rows] == ["demo/one", "demo/two"]
+    assert [row["subscribers_count"] for row in rows] == ["21", "22"]
+    assert [row["source"] for row in rows] == ["repo-detail", "repo-detail"]
+
+
+def test_detail_failure_falls_back_without_losing_traffic(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "id": 123,
+            "node_id": "R_123",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+            "stargazers_count": 15,
+            "watchers_count": 999,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        }
+    ]
+
+    def raise_detail_error(repo: str, headers):
+        raise requests.HTTPError("detail unavailable")
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(run.collect_mod, "collect_repo_detail", raise_detail_error)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_views_clones",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "ts": "2026-05-16",
+                "views_count": 5,
+                "views_uniques": 4,
+                "clones_count": 3,
+                "clones_uniques": 2,
+                "captured_at": captured_at,
+                "source": "api",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "traffic-log.csv").open(newline="", encoding="utf-8") as handle:
+        traffic_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        metric_rows = list(csv.DictReader(handle))
+    assert traffic_rows[-1]["repo"] == "demo/reponomics"
+    assert traffic_rows[-1]["views_count"] == "5"
+    assert metric_rows[-1]["source"] == "discovery-fallback"
+    assert metric_rows[-1]["subscribers_count"] == "3"
+    assert metric_rows[-1]["stargazers_count"] == "15"
+
+
+def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
+    tmp_path: Path,
+) -> None:
+    fixture = _copy_fixture("compat_v2", tmp_path)
+    data_dir = fixture / "data"
+
+    run.storage.DATA_DIR = data_dir.as_posix()
+    run.merge.DATA_DIR = data_dir.as_posix()
+    run.storage.migrate_schema(data_dir.as_posix())
+    run.merge.dedup_all()
+    run.merge.trim_all()
+    manifest = run.storage.read_manifest(data_dir.as_posix())
+    run.storage.write_manifest(manifest, data_dir.as_posix())
+
+    with (data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "repo_id": "",
+            "node_id": "",
+            "ts": "2026-05-01",
+            "captured_at": "2026-05-01T12:00:00Z",
+            "stargazers_count": "11",
+            "subscribers_count": "2",
+            "forks_count": "1",
+            "open_issues_count": "",
+            "size_kb": "",
+            "created_at": "",
+            "pushed_at": "",
+            "updated_at": "",
+            "language": "",
+            "visibility": "",
+            "default_branch": "",
+            "has_pages": "",
+            "has_discussions": "",
+            "archived": "",
+            "disabled": "",
+            "source": "fixture",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    assert manifest["files"] == list(run.storage.CSV_REGISTRY.keys())
+    assert manifest["created_at"] == "2026-05-01T12:00:00Z"
+
+
+def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    fixture = _copy_fixture("compat_v2", tmp_path)
+    config = _config(
+        tmp_path,
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+    )
+    before_config = config.config_path.read_text(encoding="utf-8")
+    assert "repo_growth" not in before_config
+    assert "data_families" not in before_config
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "discover_repositories",
+        lambda headers: [
+            {
+                "full_name": "demo/reponomics",
+                "id": 123,
+                "node_id": "R_123",
+                "permissions": {"push": True},
+                "fork": False,
+                "archived": False,
+                "disabled": False,
+                "private": False,
+                "created_at": "2025-01-01T00:00:00Z",
+                "stargazers_count": 1,
+                "watchers_count": 999,
+                "subscribers_count": 1,
+                "forks_count": 1,
+            }
+        ],
+    )
+    detail_calls: list[str] = []
+
+    def fake_fetch_json(url: str, headers, allow_not_found: bool = False):
+        assert url == "https://api.github.com/repos/demo/reponomics"
+        assert allow_not_found is False
+        detail_calls.append(url)
+        return {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "watchers_count": 999,
+            "subscribers_count": 3,
+            "forks_count": 2,
+            "open_issues_count": 4,
+            "size": 512,
+            "created_at": "2025-01-01T00:00:00Z",
+            "pushed_at": "2026-05-16T10:00:00Z",
+            "updated_at": "2026-05-16T10:30:00Z",
+            "language": "Python",
+            "visibility": "public",
+            "default_branch": "main",
+            "has_pages": False,
+            "has_discussions": True,
+            "archived": False,
+            "disabled": False,
+        }
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    assert config.config_path.read_text(encoding="utf-8") == before_config
+    with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert detail_calls == ["https://api.github.com/repos/demo/reponomics"]
+    assert rows[-1]["repo_id"] == "123"
+    assert rows[-1]["stargazers_count"] == "15"
+    assert rows[-1]["subscribers_count"] == "3"
+    assert rows[-1]["forks_count"] == "2"
+    assert rows[-1]["open_issues_count"] == "4"
+    assert rows[-1]["size_kb"] == "512"
+    assert rows[-1]["default_branch"] == "main"
+    assert rows[-1]["source"] == "repo-detail"
+    assert rows[-1]["schema_version"] == run.storage.SCHEMA_VERSION
+    assert (tmp_path / ".traffic-artifact" / "traffic-data.enc").exists()
+
+
+def test_publish_from_v2_fixture_migrates_without_config_rewrite(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    fixture = _copy_fixture("compat_v2", tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+    )
+    before_config = config.config_path.read_text(encoding="utf-8")
+
+    run.run_publish(config, restore_artifact=False)
+
+    assert config.config_path.read_text(encoding="utf-8") == before_config
+    assert config.readme_path.exists()
+    assert config.dashboard_path.exists()
+    manifest = json.loads((config.data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    header = (config.data_dir / "repo-metrics.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header.split(",") == run.storage.REPO_METRIC_FIELDS
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    assert "Growth (14d)" in readme
+    assert "now 11 / 2" in readme
+    assert "Repository Growth Dashboard" in dashboard
+    assert "encrypted-payload" in dashboard
+
+
+def test_rotate_key_from_v2_encrypted_fixture_migrates_without_config_rewrite(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    fixture = _copy_fixture("compat_v2", tmp_path)
+    config = _config(
+        tmp_path,
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+    )
+    before_config = config.config_path.read_text(encoding="utf-8")
+
+    run._patch_runtime_paths(config)
+    run._set_runtime_env(config)
+    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
+    run.crypto_artifact.encrypt(config.data_dir, encrypted_path, "TRAFFIC_DASHBOARD_SECRET")
+    for path in config.data_dir.iterdir():
+        path.unlink()
+    (config.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    rotated = _config(
+        tmp_path,
+        mode="rotate-key",
+        config_path=config.config_path,
+        data_dir=config.data_dir,
+        dashboard_next_secret=NEXT_KEY,
+    )
+    run.validate_config(rotated)
+    run.run_rotate_key(rotated, restore_artifact=False)
+
+    assert rotated.config_path.read_text(encoding="utf-8") == before_config
+    assert encrypted_path.exists()
+
+    for path in rotated.data_dir.iterdir():
+        path.unlink()
+    (rotated.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    os.environ["TRAFFIC_DASHBOARD_SECRET"] = NEXT_KEY
+    run.crypto_artifact.decrypt(
+        rotated.data_dir / "traffic-data.enc",
+        rotated.data_dir,
+        "TRAFFIC_DASHBOARD_SECRET",
+    )
+
+    manifest = json.loads((rotated.data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    assert rotated.config_path.read_text(encoding="utf-8") == before_config
+    header = (rotated.data_dir / "repo-metrics.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header.split(",") == run.storage.REPO_METRIC_FIELDS
+
+
+def test_publish_degrades_when_repo_metrics_history_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    _seed_log(config.data_dir)
+    (config.data_dir / "repo-metrics.csv").unlink()
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    assert config.readme_path.exists()
+    assert config.dashboard_path.exists()
+    assert "Growth (14d)" not in readme
+    assert "Repository Growth Dashboard" in dashboard
+    assert '"total_stars":0' in dashboard

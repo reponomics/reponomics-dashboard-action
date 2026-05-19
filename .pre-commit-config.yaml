@@ -1,0 +1,37 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: Ruff
+        entry: make lint-python
+        language: system
+        pass_filenames: false
+        types_or: [python]
+
+      - id: mypy
+        name: mypy
+        entry: make lint-types
+        language: system
+        pass_filenames: false
+        types_or: [python]
+
+      - id: action-yaml
+        name: action.yml parse
+        entry: make lint-action
+        language: system
+        pass_filenames: false
+        files: ^action\.yml$
+
+      - id: workflow-yaml
+        name: GitHub workflow YAML parse
+        entry: make lint-workflows
+        language: system
+        pass_filenames: false
+        files: ^\.github/workflows/.*\.ya?ml$
+
+      - id: action-pins
+        name: GitHub Action SHA pins
+        entry: make lint-action-pins
+        language: system
+        pass_filenames: false
+        files: ^(action\.yml|\.github/.*\.ya?ml|scripts/validate_action_pins\.py)$

@@ -1,20 +1,12 @@
 # Contributing
 
-Reponomics Dashboard Action is in a public pre-release hardening period. The
-repository is visible so its security posture, workflows, dependency handling,
-and release process can be reviewed in the open, but it is not yet being
-promoted for general use and is not currently seeking outside contributors.
+Reponomics Dashboard Action is in a public pre-release hardening period. The repository is visible so its security posture, workflows, dependency handling, and release process can be reviewed in the open, but it is not yet being promoted for general use and is not currently seeking outside contributors.
 
-Security reports are welcome. For security issues, follow `SECURITY.md` instead
-of opening a public issue with exploit details.
+Security reports are welcome. For security issues, follow `SECURITY.md` instead of opening a public issue with exploit details.
 
 ## Current Contribution Policy
 
-During this stage, maintainers may close or defer unsolicited feature requests,
-support requests, broad refactors, or pull requests that are not aligned with the
-current stabilization work. This is not a judgment on the quality of the idea; it
-is a scope control measure while the action, generated dashboard surface, and
-release process are being finalized.
+During this stage, maintainers may close or defer unsolicited feature requests, support requests, broad refactors, or pull requests that are not aligned with the current stabilization work. This is not a judgment on the quality of the idea; it is a scope control measure while the action, generated dashboard surface, and release process are being finalized.
 
 Issues and pull requests that are most likely to be useful during pre-release:
 
@@ -23,14 +15,11 @@ Issues and pull requests that are most likely to be useful during pre-release:
 - reproducible CI, packaging, or release-process failures;
 - narrowly scoped fixes for behavior that is already documented.
 
-Please do not submit speculative integrations, large rewrites, new product
-features, formatting-only changes, or dependency churn unless a maintainer has
-asked for them.
+Please do not submit speculative integrations, large rewrites, new product features, formatting-only changes, or dependency churn unless a maintainer has asked for them.
 
 ## Development Setup
 
-Use the project Makefile for local development. The repository expects a local
-`venv` virtual environment.
+Use the project Makefile for local development. The repository expects a local `venv` virtual environment.
 
 ```bash
 make install
@@ -56,8 +45,7 @@ make fixture-publish
 make fixture-rotate-key
 ```
 
-Do not commit generated local state such as `venv`, coverage reports, caches,
-rendered dashboard output, or local traffic artifacts.
+Do not commit generated local state such as `venv`, coverage reports, caches, rendered dashboard output, or local traffic artifacts.
 
 ## Markdown Formatting
 
@@ -75,9 +63,7 @@ Be conservative with changes to:
 - release notice parsing and rendering;
 - release tags and generated release notes.
 
-All imported GitHub Actions in workflows and in `action.yml` must be pinned to
-full-length commit SHAs. Vendored browser assets must remain verifiable from
-their recorded upstream package metadata.
+All imported GitHub Actions in workflows and in `action.yml` must be pinned to full-length commit SHAs. Vendored browser assets must remain verifiable from their recorded upstream package metadata.
 
 ## Pull Request Expectations
 
@@ -88,13 +74,11 @@ If a maintainer asks you to open a pull request, keep it small and include:
 - tests or a clear reason tests are not needed;
 - the exact verification command you ran.
 
-For action input/output changes, update `README.md`, `action.yml`, and tests
-together.
+For action input/output changes, update `README.md`, `action.yml`, and tests together.
 
 ## Releases
 
-Release Please manages releases. Use conventional commit messages for
-maintainer-authored changes:
+Release Please manages releases. Use conventional commit messages for maintainer-authored changes:
 
 ```text
 feat: add new behavior
@@ -104,5 +88,4 @@ ci: update workflow behavior
 chore: maintain tooling
 ```
 
-Exact SemVer tags are immutable release identities. Floating compatibility tags
-such as `v1` and `v1.2` should move only as part of the release process.
+Exact SemVer tags are immutable release identities. Floating compatibility tags such as `v1` and `v1.2` should move only as part of the release process.

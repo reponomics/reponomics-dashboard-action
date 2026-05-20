@@ -59,6 +59,10 @@ make fixture-rotate-key
 Do not commit generated local state such as `venv`, coverage reports, caches,
 rendered dashboard output, or local traffic artifacts.
 
+## Markdown Formatting
+
+Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so future edits produce smaller diffs. The `LICENSE` file is the exception and may keep conventional license-text wrapping.
+
 ## Security-Sensitive Areas
 
 Be conservative with changes to:

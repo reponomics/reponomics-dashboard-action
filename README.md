@@ -6,6 +6,9 @@
 
 GitHub Action for Reponomics dashboards.
 
+> [!WARNING]
+> Public pre-release: this repository is visible for review and hardening, but it is not yet promoted for general use. Do not expect stable behavior or seamless upgrades before `v1`.
+
 This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, publishes README/HTML dashboard outputs from retained data, and supports dashboard/artifact key rotation.
 
 ## Upgrade Model

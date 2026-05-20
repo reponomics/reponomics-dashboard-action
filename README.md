@@ -10,6 +10,8 @@ This action collects GitHub traffic data, keeps retained CSV data in a GitHub Ac
 
 ## Upgrade Model
 
+Before `v1`, users should not expect seamless updates between versions. Pre-release versions may change action inputs, generated dashboard structure, retained artifact schema, or migration behavior while the project is being hardened. Pin exact refs and review release notes before moving between pre-`v1` versions.
+
 Use normal GitHub Action refs to choose the upgrade cadence:
 
 - `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.

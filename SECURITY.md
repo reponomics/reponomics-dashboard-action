@@ -6,6 +6,8 @@ Reponomics Dashboard Action is in a public pre-release hardening period. The pro
 
 No stable production version is supported yet. Until the first stable release, security fixes will generally land on `main` and then be included in the next pre-release or release tag.
 
+Before `v1`, users should not expect seamless updates between versions. Security fixes may be released together with incompatible pre-release changes, and migration guidance may require manual review.
+
 After stable release, this policy will be updated with the supported major version line and expected fix process.
 
 ## Reporting a Vulnerability

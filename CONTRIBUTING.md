@@ -63,7 +63,7 @@ Be conservative with changes to:
 - release notice parsing and rendering;
 - release tags and generated release notes.
 
-All imported GitHub Actions in workflows and in `action.yml` must be pinned to full-length commit SHAs. Vendored browser assets must remain verifiable from their recorded upstream package metadata.
+All imported GitHub Actions in workflows and in `action.yml` must be pinned to full-length commit SHAs. New workflows or action imports must also fit the repository Actions allowlist; if a new non-GitHub, non-`reponomics` action or reusable workflow is required, update the repository allowlist at the same time or document why the workflow is expected to be covered by the default policy. Vendored browser assets must remain verifiable from their recorded upstream package metadata.
 
 ## Pull Request Expectations
 

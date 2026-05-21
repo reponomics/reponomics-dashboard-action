@@ -14,7 +14,7 @@
         },
         {
           "type": "generic",
-          "path": "traffic_report_action/run.py"
+          "path": "dashboard_action/run.py"
         }
       ]
     }

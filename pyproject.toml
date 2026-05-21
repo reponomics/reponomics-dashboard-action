@@ -30,12 +30,12 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["traffic_report_action*"]
+include = ["dashboard_action*"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["traffic_report_action/run.py", "scripts", "tests"]
-mypy_path = "traffic_report_action/runtime/scripts"
+files = ["dashboard_action/run.py", "scripts", "tests"]
+mypy_path = "dashboard_action/runtime/scripts"
 warn_unused_configs = true
 
 [tool.ruff]

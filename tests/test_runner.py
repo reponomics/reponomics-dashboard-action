@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 import requests
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 OLD_KEY = "old-dashboard-secret-" + ("x" * 40)

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:

@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 release_notice = run.release_notice

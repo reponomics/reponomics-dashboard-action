@@ -34,13 +34,13 @@ test: install ## Run tests
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests -v
 
 coverage: install ## Run tests with coverage report
-	$(PYTHON) -m pytest tests -v --cov=traffic_report_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)
+	$(PYTHON) -m pytest tests -v --cov=dashboard_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)
 
 complexity: install ## Run complexity metrics
-	$(ANTIPASTA) metrics --directory traffic_report_action
+	$(ANTIPASTA) metrics --directory dashboard_action
 
 lint: install ## Run lint checks
-	$(PYTHON) -m ruff check traffic_report_action tests scripts
+	$(PYTHON) -m ruff check dashboard_action tests scripts
 
 type-check: install ## Run static type checks
 	$(PYTHON) -m mypy

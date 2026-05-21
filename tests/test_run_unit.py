@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 def test_repo_is_public_reads_event_payload(

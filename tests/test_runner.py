@@ -237,10 +237,8 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     monkeypatch.setenv("REPONOMICS_PAGES_DASHBOARD", "encrypted")
     monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "auto")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
-    monkeypatch.setenv("REPONOMICS_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
-    monkeypatch.setenv("REPONOMICS_DASHBOARD_PATH", str(tmp_path / "docs" / "index.html"))
     monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
 
     config = run.load_config_from_env()
@@ -248,6 +246,8 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert config.mode == "collect"
     assert config.traffic_token == "ghp_traffic"
     assert config.github_token == "ghp_test"
+    assert config.data_dir == Path("data")
+    assert config.dashboard_path == Path("docs/index.html")
     assert config.retention_days == 30
     assert config.commit_outputs is False
     assert config.resolved_artifact_mode == "plain"

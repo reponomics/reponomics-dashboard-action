@@ -180,10 +180,10 @@ def load_config_from_env() -> RuntimeConfig:
         pages_dashboard=pages_dashboard,
         artifact_security_mode=artifact_mode,
         config_path=Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml")),
-        data_dir=Path(_env("REPONOMICS_DATA_DIR", "data")),
+        data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         commit_outputs=_parse_bool(_env("REPONOMICS_COMMIT_OUTPUTS", "false"), name="commit-outputs"),
-        dashboard_path=Path(_env("REPONOMICS_DASHBOARD_PATH", "docs/index.html")),
+        dashboard_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         allow_weak_dashboard_secret=_parse_bool(
             _env("REPONOMICS_ALLOW_WEAK_DASHBOARD_SECRET", "false"),

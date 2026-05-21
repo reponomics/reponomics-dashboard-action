@@ -46,10 +46,6 @@ inputs:
     description: Repository selection config path.
     required: false
     default: config.yaml
-  data-dir:
-    description: Canonical CSV data directory.
-    required: false
-    default: data
   retention-days:
     description: GitHub Actions artifact retention period.
     required: false
@@ -58,10 +54,6 @@ inputs:
     description: Commit generated README output back to the caller repository.
     required: false
     default: "false"
-  dashboard-path:
-    description: Published dashboard output path.
-    required: false
-    default: docs/index.html
   readme-path:
     description: README output path.
     required: false
@@ -97,7 +89,7 @@ outputs:
     description: Deployed GitHub Pages URL when a Pages dashboard is published.
     value: ${{ steps.deploy-pages.outputs.page_url }}
   schema-version:
-    description: Runtime canonical CSV schema version.
+    description: Retained traffic artifact schema version.
     value: ${{ steps.runtime.outputs.schema-version }}
   runtime-version:
     description: Reponomics action runtime version.
@@ -129,10 +121,8 @@ runs:
         REPONOMICS_PAGES_DASHBOARD: ${{ inputs.pages-dashboard }}
         REPONOMICS_ARTIFACT_SECURITY_MODE: ${{ inputs.artifact-security-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
-        REPONOMICS_DATA_DIR: ${{ inputs.data-dir }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_COMMIT_OUTPUTS: ${{ inputs.commit-outputs }}
-        REPONOMICS_DASHBOARD_PATH: ${{ inputs.dashboard-path }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
@@ -176,6 +166,6 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: traffic-data
-        path: ${{ inputs.data-dir }}
+        path: data
         retention-days: ${{ inputs.retention-days }}
         overwrite: true

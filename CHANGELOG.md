@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.2.0...v0.3.0) (2026-05-21)
+
+
+### Features
+
+* apply reponomics dashboard branding ([67966cd](https://github.com/reponomics/reponomics-dashboard-action/commit/67966cd6730979452e224f1583f4f0ae213849ce))
+
 ## [0.2.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.1.0...v0.2.0) (2026-05-19)
 
 

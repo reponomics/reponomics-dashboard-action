@@ -79,6 +79,17 @@ The action emits metadata for workflow summaries and later automation:
 
 `collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, renders the README and dashboard shell from retained data, and then deploys the dashboard during the publish run. When `pages-dashboard` is not `disabled`, the composite action uploads the rendered dashboard directory as a GitHub Pages artifact and deploys it with GitHub Pages Actions. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output, and redeploys the hosted dashboard when enabled.
 
+## Offline Viewing
+
+Generated dashboard files are not committed to the repository. This keeps traffic history out of git, but it means offline viewing starts from a workflow artifact rather than from `docs/index.html` in the repo.
+
+After a successful `publish` run, open the workflow run's **Summary** page and download the relevant artifact before it expires:
+
+- For `pages-dashboard: plain`, download `dashboard-standalone`. It contains `dashboard-standalone.html`, a single-file dashboard with Chart.js bundled for offline use.
+- For `pages-dashboard: encrypted`, download the GitHub Pages artifact from the publish run, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
+
+Artifact availability follows `retention-days`; the default is 90 days.
+
 ## Dashboard Secret Guidance
 
 For encrypted dashboards, use a generated high-entropy secret and store it in a secret manager or GitHub Actions secret. Prefer a shell-safe 256-bit hex secret:

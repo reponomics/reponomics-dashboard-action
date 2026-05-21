@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.4.0...v0.5.0) (2026-05-21)
+
+
+### Features
+
+* remove dashboard path inputs ([291df06](https://github.com/reponomics/reponomics-dashboard-action/commit/291df065db3398e9710c7886fd1049ad994fe0b3))
+
 ## [0.4.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.3.0...v0.4.0) (2026-05-21)
 
 

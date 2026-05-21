@@ -440,6 +440,16 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
     assert 'h1 class="brand">reponomics<span class="accent">.</span></h1>' in dashboard
     assert "data:font/woff2;base64," in dashboard
     assert "fonts.googleapis.com" not in dashboard
+    assert '"window_presets":[7,14,30,90,"all"]' in dashboard
+    assert '"default_window":"14"' in dashboard
+    assert 'data-window="7"' in dashboard
+    assert 'data-window="14"' in dashboard
+    assert 'data-window="30"' in dashboard
+    assert 'data-window="90"' in dashboard
+    assert 'data-window="all"' in dashboard
+    assert "params.set('window', getSelectedWindow())" in dashboard
+    assert "range === 'recent'" in dashboard
+    assert "range === 'all'" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert "Attention" in dashboard

@@ -1160,9 +1160,11 @@ APP_RUNTIME_JS = """
       subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#1f6feb', growth: true },
       forks:    { key: 'forks_delta',   label: 'Fork Growth',   color: '#3fb950', growth: true }
     };
+    const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
+    const DEFAULT_WINDOW = '14';
     const state = {
       payload: null,
-      range: 'recent',
+      window: DEFAULT_WINDOW,
       minActivity: 1,
       selectedRepo: null,
       compareRepos: [],
@@ -1415,14 +1417,33 @@ APP_RUNTIME_JS = """
       return state.compareRepos.length >= 2;
     }
 
-    function getRecentWindowDays() {
-      return state.payload?.meta?.recent_window_days || 14;
+    function normalizeWindow(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'recent') return DEFAULT_WINDOW;
+      if (WINDOW_PRESETS.includes(raw)) return raw;
+      return null;
+    }
+
+    function getDefaultWindow() {
+      return (
+        normalizeWindow(state.payload?.meta?.default_window) ||
+        normalizeWindow(state.payload?.meta?.default_range) ||
+        DEFAULT_WINDOW
+      );
+    }
+
+    function getSelectedWindow() {
+      return normalizeWindow(state.window) || getDefaultWindow();
+    }
+
+    function getWindowDays() {
+      const selected = getSelectedWindow();
+      return selected === 'all' ? null : Number(selected);
     }
 
     function getRangeLabel() {
-      return state.range === 'recent'
-        ? 'Recent (last ' + getRecentWindowDays() + ' days)'
-        : 'Since tracking began';
+      const days = getWindowDays();
+      return days === null ? 'All retained data' : 'Last ' + days + ' collected days';
     }
 
     function parseIsoDate(value) {
@@ -1440,7 +1461,11 @@ APP_RUNTIME_JS = """
       return date.toISOString().slice(0, 10);
     }
 
-    function getRecentCutoffDate() {
+    function getWindowCutoffDate() {
+      const days = getWindowDays();
+      if (days === null) {
+        return null;
+      }
       const dates = state.payload?.daily?.dates || [];
       if (!dates.length) {
         return null;
@@ -1450,7 +1475,7 @@ APP_RUNTIME_JS = """
         return null;
       }
       const cutoff = new Date(latest.getTime());
-      cutoff.setUTCDate(cutoff.getUTCDate() - (getRecentWindowDays() - 1));
+      cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
       return formatIsoDate(cutoff);
     }
 
@@ -1467,49 +1492,56 @@ APP_RUNTIME_JS = """
           forks_delta: []
         };
       }
-      if (state.range !== 'recent') {
+      if (getSelectedWindow() === 'all') {
         return series;
       }
 
-      const cutoff = getRecentCutoffDate();
+      const cutoff = getWindowCutoffDate();
       if (!cutoff) {
         return series;
       }
 
-      const dates = [];
-      const views = [];
-      const uniques = [];
-      const clones = [];
-      const cloneUniques = [];
+      const windowed = {};
+      Object.keys(series).forEach((key) => {
+        windowed[key] = Array.isArray(series[key]) ? [] : series[key];
+      });
       (series.dates || []).forEach((date, idx) => {
         if (date >= cutoff) {
-          dates.push(date);
-          views.push(series.views[idx] || 0);
-          uniques.push(series.uniques[idx] || 0);
-          clones.push(series.clones[idx] || 0);
-          cloneUniques.push(series.clone_uniques[idx] || 0);
+          Object.keys(windowed).forEach((key) => {
+            if (!Array.isArray(windowed[key])) return;
+            windowed[key].push(key === 'dates' ? date : (series[key] || [])[idx] || 0);
+          });
         }
       });
-      return {
-        dates,
-        views,
-        uniques,
-        clones,
-        clone_uniques: cloneUniques,
-        stars_delta: [],
-        subscribers_delta: [],
-        forks_delta: []
-      };
+      if ('samples' in windowed) {
+        windowed.samples = (windowed.dates || []).length;
+      }
+      return windowed;
+    }
+
+    function latestSeriesValue(series, key, fallback) {
+      const values = (series && series[key]) || [];
+      if (!values.length) return Number(fallback || 0);
+      return Number(values[values.length - 1] || 0);
+    }
+
+    function seriesDelta(series, key, fallback) {
+      const values = (series && series[key]) || [];
+      if (values.length < 2) {
+        return values.length === 1 ? 0 : Number(fallback || 0);
+      }
+      return Number(values[values.length - 1] || 0) - Number(values[0] || 0);
     }
 
     function buildRepoMetrics(repoName) {
       const series = seriesForRange(state.payload?.repo_series?.[repoName]);
       const growthRow = state.payload?.growth?.per_repo?.[repoName] || {};
       const deltas = growthRow.deltas || {};
+      const growthSeries = seriesForRange(growthRow.series || {});
       const sum = (values) => (values || []).reduce((total, value) => total + Number(value || 0), 0);
-      const starsDelta = Number(deltas.stars_delta || deltas.stargazers_delta || 0);
-      const subscribersDelta = Number(deltas.subscribers_delta || 0);
-      const forksDelta = Number(deltas.forks_delta || 0);
+      const starsDelta = seriesDelta(growthSeries, 'stargazers', deltas.stars_delta || deltas.stargazers_delta);
+      const subscribersDelta = seriesDelta(growthSeries, 'subscribers', deltas.subscribers_delta);
+      const forksDelta = seriesDelta(growthSeries, 'forks', deltas.forks_delta);
       return {
         name: repoName,
         views: sum(series.views),
@@ -1519,9 +1551,9 @@ APP_RUNTIME_JS = """
         stars_delta: starsDelta,
         subscribers_delta: subscribersDelta,
         forks_delta: forksDelta,
-        stars: Number(deltas.current_stars || deltas.current_stargazers || 0),
-        subscribers: Number(deltas.current_subscribers || 0),
-        forks: Number(deltas.current_forks || 0),
+        stars: latestSeriesValue(growthSeries, 'stargazers', deltas.current_stars || deltas.current_stargazers),
+        subscribers: latestSeriesValue(growthSeries, 'subscribers', deltas.current_subscribers),
+        forks: latestSeriesValue(growthSeries, 'forks', deltas.current_forks),
         days: (series.dates || []).length,
         activity: sum(series.views) + sum(series.clones),
         series
@@ -1683,9 +1715,7 @@ APP_RUNTIME_JS = """
       const base = 'Last updated: ' + (payload.generated_at || 'unknown');
       const rangeText = 'Window: ' + getRangeLabel();
       const repoText = 'Showing ' + formatNumber(windowData.totals.repo_count || 0) + ' repositories';
-      const daysText = state.range === 'recent'
-        ? 'Tracking span: ' + formatNumber(payload.totals.days_tracked || 0) + ' collected days total'
-        : formatNumber(payload.totals.days_tracked || 0) + ' days since tracking began';
+      const daysText = 'Tracking span: ' + formatNumber(payload.totals.days_tracked || 0) + ' collected days total';
       return [base, rangeText, repoText, daysText].join(' | ');
     }
 
@@ -1884,26 +1914,29 @@ APP_RUNTIME_JS = """
     }
 
     function updateControls() {
-      const recentBtn = document.getElementById('rangeRecentBtn');
-      const allBtn = document.getElementById('rangeAllBtn');
       const thresholdInput = document.getElementById('thresholdInput');
       const thresholdValue = document.getElementById('thresholdValue');
       const rangeHint = document.getElementById('rangeHint');
 
-      recentBtn.classList.toggle('active', state.range === 'recent');
-      allBtn.classList.toggle('active', state.range === 'all');
+      document.querySelectorAll('[data-window]').forEach((button) => {
+        const isActive = button.dataset.window === getSelectedWindow();
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
       thresholdInput.value = String(state.minActivity);
       thresholdValue.textContent = formatNumber(state.minActivity);
-      rangeHint.textContent = state.range === 'recent'
-        ? 'Recent shows the latest ' + getRecentWindowDays() + ' collected days. Switch to All time for everything since tracking began.'
-        : 'All time covers everything captured since this dashboard started collecting. It does not backfill GitHub traffic from before that.';
+      const days = getWindowDays();
+      rangeHint.textContent = days === null
+        ? 'All shows all data since dashboard collection began.'
+        : 'Showing up to the latest ' + days + ' collected days. Switch to All for everything collected so far.';
     }
 
-    function setRange(nextRange) {
-      if (!['recent', 'all'].includes(nextRange) || state.range === nextRange) {
+    function setWindow(nextWindow) {
+      const normalized = normalizeWindow(nextWindow);
+      if (!normalized || state.window === normalized) {
         return;
       }
-      state.range = nextRange;
+      state.window = normalized;
       sanitizeSelection();
       updateDashboard();
     }
@@ -2892,7 +2925,7 @@ APP_RUNTIME_JS = """
       try {
         const params = new URLSearchParams();
         if (state.metric && state.metric !== 'views') params.set('metric', state.metric);
-        if (state.range && state.range !== (state.payload?.meta?.default_range || 'recent')) params.set('range', state.range);
+        if (getSelectedWindow() !== getDefaultWindow()) params.set('window', getSelectedWindow());
         if (state.minActivity && state.minActivity !== (state.payload?.meta?.default_min_activity || 1)) params.set('min', String(state.minActivity));
         if (state.selectedRepo) params.set('focus', getShortName(state.selectedRepo));
         if (state.compareRepos.length >= 2) params.set('compare', state.compareRepos.map(getShortName).join(','));
@@ -2912,8 +2945,11 @@ APP_RUNTIME_JS = """
         const params = new URLSearchParams(raw);
         const metric = params.get('metric');
         if (metric && METRICS[metric]) state.metric = metric;
+        const windowParam = normalizeWindow(params.get('window'));
+        if (windowParam) state.window = windowParam;
         const range = params.get('range');
-        if (range === 'recent' || range === 'all') state.range = range;
+        if (!windowParam && range === 'recent') state.window = DEFAULT_WINDOW;
+        if (!windowParam && range === 'all') state.window = 'all';
         const min = Number(params.get('min'));
         if (Number.isFinite(min) && min >= 0) state.minActivity = Math.floor(min);
 
@@ -2964,7 +3000,7 @@ APP_RUNTIME_JS = """
 
     function renderDashboard(payload) {
       state.payload = payload;
-      state.range = payload.meta?.default_range || 'recent';
+      state.window = getDefaultWindow();
       state.minActivity = payload.meta?.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
@@ -2977,12 +3013,9 @@ APP_RUNTIME_JS = """
           document.getElementById('thresholdValue').textContent = formatNumber(Math.max(0, Math.floor(Number(thresholdInput.value || 0))));
         });
       }
-      const recentBtn = document.getElementById('rangeRecentBtn');
-      const allBtn = document.getElementById('rangeAllBtn');
-      if (recentBtn && allBtn) {
-        recentBtn.addEventListener('click', function() { setRange('recent'); });
-        allBtn.addEventListener('click', function() { setRange('all'); });
-      }
+      document.querySelectorAll('[data-window]').forEach((btn) => {
+        btn.addEventListener('click', function() { setWindow(btn.dataset.window); });
+      });
       document.querySelectorAll('.metric-tab').forEach((btn) => {
         btn.addEventListener('click', function() { setMetric(btn.dataset.metric); });
       });
@@ -3318,6 +3351,8 @@ def _build_payload(
     return {
         "meta": {
             "recent_window_days": 14,
+            "window_presets": [7, 14, 30, 90, "all"],
+            "default_window": "14",
             "default_range": "recent",
             "default_min_activity": 1,
         },
@@ -3511,10 +3546,13 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
       <div class="controls-group">
         <div class="controls-label">Window</div>
         <div class="segmented-control">
-          <button class="segmented-button" id="rangeRecentBtn" type="button">Recent</button>
-          <button class="segmented-button" id="rangeAllBtn" type="button">All time</button>
+          <button class="segmented-button" data-window="7" type="button">7d</button>
+          <button class="segmented-button" data-window="14" type="button">14d</button>
+          <button class="segmented-button" data-window="30" type="button">30d</button>
+          <button class="segmented-button" data-window="90" type="button">90d</button>
+          <button class="segmented-button" data-window="all" type="button">All</button>
         </div>
-        <p class="controls-hint" id="rangeHint">All time covers everything captured since this dashboard started collecting. It does not backfill GitHub traffic from before that.</p>
+        <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
       </div>
       <div class="controls-group">
         <div class="controls-label">Visibility threshold</div>

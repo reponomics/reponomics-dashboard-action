@@ -9,7 +9,7 @@ GitHub Action for Reponomics dashboards.
 > [!WARNING]
 > Public pre-release: this repository is visible for review and hardening, but it is not yet promoted for general use. Do not expect stable behavior or seamless upgrades before `v1`.
 
-This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, publishes README/HTML dashboard outputs from retained data, and supports dashboard/artifact key rotation.
+This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, renders the dashboard shell during `publish`, and supports dashboard/artifact key rotation.
 
 ## Upgrade Model
 
@@ -57,10 +57,8 @@ steps:
 | `pages-dashboard` | `encrypted` | `disabled`, `plain`, or `encrypted`. |
 | `artifact-security-mode` | `auto` | `plain`, `encrypted`, or `auto`. In `auto`, public repositories use encrypted artifact storage unless `pages-dashboard` is `plain`; private repositories use plain artifact storage. |
 | `config-path` | `config.yaml` | Repository selection config in the caller repo. |
-| `data-dir` | `data` | Canonical CSV data directory. |
 | `retention-days` | `90` | Artifact retention, 1-90 days. |
 | `commit-outputs` | `false` | Commit rendered README output. Generated Pages dashboard files are deployed as GitHub Pages artifacts instead of committed. |
-| `dashboard-path` | `docs/index.html` | Published dashboard output path. |
 | `readme-path` | `README.md` | README output path. |
 | `update-notices` | `true` | Best-effort metadata-only update notices from constrained Reponomics GitHub Release metadata. Set `false` to disable. |
 
@@ -79,7 +77,7 @@ The action emits metadata for workflow summaries and later automation:
 - `schema-version`
 - `runtime-version`
 
-`collect` updates only the retained `traffic-data` artifact. `publish` renders README, dashboard, and chart assets from retained data. When `pages-dashboard` is not `disabled`, the composite action uploads the rendered dashboard directory as a GitHub Pages artifact and deploys it with GitHub Pages Actions. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output, and redeploys the hosted dashboard when enabled.
+`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, renders the README and dashboard shell from retained data, and then deploys the dashboard during the publish run. When `pages-dashboard` is not `disabled`, the composite action uploads the rendered dashboard directory as a GitHub Pages artifact and deploys it with GitHub Pages Actions. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output, and redeploys the hosted dashboard when enabled.
 
 ## Dashboard Secret Guidance
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.3.0...v0.4.0) (2026-05-21)
+
+
+### Features
+
+* add dashboard window presets ([d0ee2be](https://github.com/reponomics/reponomics-dashboard-action/commit/d0ee2be349372c43d3881af4d25efa49e6dec36d))
+
 ## [0.3.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.2.0...v0.3.0) (2026-05-21)
 
 

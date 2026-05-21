@@ -88,6 +88,40 @@ Portability remains part of the product, but it moves to an explicit workflow:
 users export plaintext CSV artifacts when they want to move data elsewhere.
 Those artifacts are temporary disclosure events, not durable storage.
 
+## Credential Boundary
+
+This proposal may increase the number of credentials users need to understand.
+The original setup model was attractive because it could be described as one
+GitHub token plus one dashboard secret. A stricter encrypted-storage and
+export/destroy model creates clearer data boundaries, but it may also reveal
+that the product has at least two separate API permission boundaries:
+
+- collection access to the repositories whose traffic data is being read;
+- dashboard-repository access for setup, workflow management, Pages deployment,
+  export artifact cleanup, and any committed README output.
+
+Those boundaries should not be conflated if the secure setup can avoid it. A
+collection token may need broad read access across source repositories. A
+dashboard-repository token, if needed, should be restricted to the dashboard
+repository and should not grant traffic access to the user's wider repository
+graph.
+
+The likely credential model is:
+
+- `TRAFFIC_TOKEN`: reads GitHub traffic and repository metadata for tracked
+  repositories; used by `collect`.
+- a dashboard repository token, if the default `GITHUB_TOKEN` is insufficient:
+  manages setup, Pages, export artifact deletion, and optional README commits in
+  the dashboard repository only.
+- `TRAFFIC_DASHBOARD_SECRET`: encrypts/decrypts retained traffic data and
+  encrypted dashboard payloads.
+
+The product should avoid proliferating personal access tokens where possible.
+Use `GITHUB_TOKEN` for dashboard-repository operations whenever it has adequate
+permissions. If a stronger dashboard-repository credential is required, the docs
+should explain why it exists, how to scope it narrowly, and how it differs from
+the collection token.
+
 ## Implementation Notes
 
 Action runtime changes:
@@ -133,4 +167,7 @@ Test changes:
 - Should the action continue accepting `artifact-security-mode` as a deprecated
   no-op before `v1`, or remove it immediately while the project is still in
   public pre-release?
-
+- Which setup/export/destroy operations can rely on the default `GITHUB_TOKEN`,
+  and which, if any, require a dashboard-repository-scoped token?
+- What should the dashboard repository token be called if it is needed, and can
+  a GitHub App eventually replace that PAT-shaped credential?

@@ -436,7 +436,10 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
     assert "interest **+0 stars** / **+0 watchers** (now 11 / 2)" in readme
     assert "adoption **3 clones** / **+0 forks** (now 1)" in readme
     assert "Repository Growth" in readme
-    assert "Repository Growth Dashboard" in dashboard
+    assert "Reponomics Dashboard" in dashboard
+    assert 'h1 class="brand">reponomics<span class="accent">.</span></h1>' in dashboard
+    assert "data:font/woff2;base64," in dashboard
+    assert "fonts.googleapis.com" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert "Attention" in dashboard
@@ -1471,7 +1474,7 @@ def test_publish_from_v2_fixture_migrates_without_config_rewrite(
     dashboard = config.dashboard_path.read_text(encoding="utf-8")
     assert "Growth (14d)" in readme
     assert "now 11 / 2" in readme
-    assert "Repository Growth Dashboard" in dashboard
+    assert "Reponomics Dashboard" in dashboard
     assert "encrypted-payload" in dashboard
 
 
@@ -1549,5 +1552,5 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     assert config.readme_path.exists()
     assert config.dashboard_path.exists()
     assert "Growth (14d)" not in readme
-    assert "Repository Growth Dashboard" in dashboard
+    assert "Reponomics Dashboard" in dashboard
     assert '"total_stars":0' in dashboard

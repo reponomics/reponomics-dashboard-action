@@ -38,6 +38,10 @@ OUTPUT_PATH = "docs/index.html"
 STANDALONE_OUTPUT_PATH = "dist/dashboard-standalone.html"
 ACTION_ROOT = Path(__file__).resolve().parents[3]
 VENDORED_CHART_JS_PATH = ACTION_ROOT / "vendor" / "chart.js" / "chart.umd.min.js"
+VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
+VENDORED_MONO_FONT_PATH = (
+    ACTION_ROOT / "vendor" / "jetbrains-mono" / "jetbrains-mono-latin-wght-normal.woff2"
+)
 PUBLISHED_CHART_JS_PATH = "assets/chart.umd.min.js"
 
 ACCESS_MODE_ENV = "DASHBOARD_ACCESS_MODE"
@@ -55,29 +59,31 @@ UPDATE_NOTICE_ENV = "REPONOMICS_UPDATE_NOTICE_JSON"
 
 BASE_STYLES = """
     :root {
-      --bg: #0b0e13;
-      --bg-raised: #11161d;
-      --bg-card: #151b24;
-      --bg-card-2: #0f141b;
-      --border: #262d38;
-      --border-soft: #1e242d;
+      /* Surfaces: three-step ladder so cards visibly lift from the canvas. */
+      --bg: #0a0e14;
+      --bg-raised: #1c2128;
+      --bg-card: #1c2128;
+      --bg-card-2: #14191f;
+      --border: #30363d;
+      --border-soft: #21262d;
       --text: #e6edf3;
       --text-muted: #8b949e;
-      --text-dim: #6b7280;
-      --accent: #7c6aff;
-      --accent-2: #ff9d6a;
+      --text-dim: #6e7681;
+      /* Brand accents: flat blue plus warm amber for stars/forks. */
+      --accent: #1f6feb;
+      --accent-2: #bf6a02;
       --c-views: #58a6ff;
       --c-uniques: #3fb950;
-      --c-clones: #a371f7;
+      --c-clones: #CC79A7;
       --c-cloners: #ffa657;
       --c-positive: #3fb950;
       --c-negative: #f85149;
-      --hero-glow-1: rgba(124, 106, 255, 0.10);
-      --hero-glow-2: rgba(255, 157, 106, 0.06);
-      --chart-grid: rgba(38, 45, 56, 0.4);
-      --chart-axis: rgba(38, 45, 56, 0.7);
-      --chart-tooltip-bg: rgba(17, 22, 29, 0.96);
-      --chart-tooltip-border: #262d38;
+      --hero-glow-1: rgba(31, 111, 235, 0.10);
+      --hero-glow-2: rgba(31, 111, 235, 0.04);
+      --chart-grid: rgba(48, 54, 61, 0.4);
+      --chart-axis: rgba(48, 54, 61, 0.7);
+      --chart-tooltip-bg: rgba(22, 27, 34, 0.96);
+      --chart-tooltip-border: #30363d;
       --inset-highlight: rgba(255, 255, 255, 0.03);
       --card-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
       --card-shadow-hover: 0 18px 36px rgba(0, 0, 0, 0.45);
@@ -85,25 +91,25 @@ BASE_STYLES = """
       --radius-lg: 18px;
     }
     [data-theme="light"] {
-      --bg: #f7f8fb;
+      --bg: #ffffff;
       --bg-raised: #ffffff;
       --bg-card: #ffffff;
-      --bg-card-2: #f9fafc;
-      --border: #e2e7ee;
-      --border-soft: #ecf0f5;
-      --text: #1a1d23;
+      --bg-card-2: #f6f8fa;
+      --border: #d0d7de;
+      --border-soft: #d8dee4;
+      --text: #1f2328;
       --text-muted: #57606a;
-      --text-dim: #8b94a3;
-      --accent: #6356e0;
-      --accent-2: #ea7235;
-      --c-views: #1f6feb;
-      --c-uniques: #1f883d;
-      --c-clones: #6f42c1;
+      --text-dim: #6e7781;
+      --accent: #0969da;
+      --accent-2: #9a6700;
+      --c-views: #0969da;
+      --c-uniques: #1a7f37;
+      --c-clones: #af3aa6;
       --c-cloners: #bf6a02;
-      --c-positive: #1f883d;
+      --c-positive: #1a7f37;
       --c-negative: #cf222e;
-      --hero-glow-1: rgba(99, 86, 224, 0.10);
-      --hero-glow-2: rgba(234, 114, 53, 0.07);
+      --hero-glow-1: rgba(9, 105, 218, 0.08);
+      --hero-glow-2: rgba(9, 105, 218, 0.03);
       --chart-grid: rgba(140, 149, 159, 0.18);
       --chart-axis: rgba(140, 149, 159, 0.5);
       --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
@@ -142,11 +148,31 @@ BASE_STYLES = """
       font-weight: 700;
       letter-spacing: -0.025em;
     }
-    h1 .accent {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+    /* Brand wordmark: Inter Black, lowercase, tight tracking, blue period. */
+    h1.brand {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+      font-weight: 900;
+      letter-spacing: -0.055em;
+      line-height: 0.95;
+      text-transform: lowercase;
+      margin: 0;
+    }
+    h1.brand .accent { color: var(--accent); }
+    .brand-lockup {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 0.4rem;
+    }
+    .brand-eyebrow {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.55rem;
     }
     h2 {
       color: var(--text);
@@ -1031,6 +1057,14 @@ BASE_STYLES = """
       justify-content: center;
     }
     footer .dot { color: var(--border); }
+    footer .footer-promises {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    footer .footer-promises b {
+      color: var(--text);
+      font-weight: 600;
+    }
     footer a {
       color: var(--text-muted);
       text-decoration: none;
@@ -1120,10 +1154,10 @@ APP_RUNTIME_JS = """
     const METRICS = {
       views:    { key: 'views',         label: 'Views',         color: '#58a6ff' },
       uniques:  { key: 'uniques',       label: 'Visitors',      color: '#3fb950' },
-      clones:   { key: 'clones',        label: 'Clones',        color: '#a371f7' },
+      clones:   { key: 'clones',        label: 'Clones',        color: '#CC79A7' },
       cloners:  { key: 'clone_uniques', label: 'Unique Clones', color: '#ffa657' },
-      stars:    { key: 'stars_delta',   label: 'Star Growth',   color: '#ff9d6a', growth: true },
-      subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#7c6aff', growth: true },
+      stars:    { key: 'stars_delta',   label: 'Star Growth',   color: '#bf6a02', growth: true },
+      subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#1f6feb', growth: true },
       forks:    { key: 'forks_delta',   label: 'Fork Growth',   color: '#3fb950', growth: true }
     };
     const state = {
@@ -2082,11 +2116,11 @@ APP_RUNTIME_JS = """
       renderDelta('deltaCloneUniques', computeDelta(split, 'clone_uniques'));
 
       const src = sparkSource || { views: [], uniques: [], clones: [], clone_uniques: [] };
-      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], 'rgba(124, 106, 255, 0.9)');
-      renderSparkline('sparkViews', src.views || [], '#58a6ff');
-      renderSparkline('sparkUniques', src.uniques || [], '#3fb950');
-      renderSparkline('sparkClones', src.clones || [], '#a371f7');
-      renderSparkline('sparkCloneUniques', src.clone_uniques || [], '#ffa657');
+      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], getThemeColor('--accent', '#1f6feb'));
+      renderSparkline('sparkViews', src.views || [], getThemeColor('--c-views', '#58a6ff'));
+      renderSparkline('sparkUniques', src.uniques || [], getThemeColor('--c-uniques', '#3fb950'));
+      renderSparkline('sparkClones', src.clones || [], getThemeColor('--c-clones', '#CC79A7'));
+      renderSparkline('sparkCloneUniques', src.clone_uniques || [], getThemeColor('--c-cloners', '#ffa657'));
     }
 
     function ensureCharts() {
@@ -3112,6 +3146,27 @@ def _load_vendored_chart_js():
         return f.read().replace("</script", "<\\/script")
 
 
+def _font_face_rule(family: str, path: Path, weight_range: str) -> str:
+    data = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"""
+    @font-face {{
+      font-family: '{family}';
+      font-style: normal;
+      font-weight: {weight_range};
+      font-display: swap;
+      src: url('data:font/woff2;base64,{data}') format('woff2');
+    }}"""
+
+
+def _build_font_face_styles() -> str:
+    """Return self-contained @font-face rules for vendored dashboard fonts."""
+    return (
+        _font_face_rule("Inter", VENDORED_INTER_FONT_PATH, "100 900")
+        + "\n"
+        + _font_face_rule("JetBrains Mono", VENDORED_MONO_FONT_PATH, "100 800")
+    )
+
+
 def _publish_vendored_chart_js(output_path: str) -> str:
     """Copy vendored Chart.js beside the published dashboard."""
     asset_path = Path(output_path).parent / PUBLISHED_CHART_JS_PATH
@@ -3371,8 +3426,11 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
   <div id="dashboard-app"{hidden_attr}>
     <div class="hero">
       <div class="hero-copy">
-        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>Attention, interest, and adoption across your repos</span></p>
-        <h1>Repository Growth <span class="accent">Dashboard</span></h1>
+        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>A traffic report for your repos</span></p>
+        <div class="brand-lockup">
+          <h1 class="brand">reponomics<span class="accent">.</span></h1>
+          <div class="brand-eyebrow">Dashboard</div>
+        </div>
         <p class="updated" id="updated-text">{updated_text}</p>
       </div>
       <div class="hero-toolbar">
@@ -3581,10 +3639,11 @@ def _wrap_html(body, chart_loader, runtime_js, extra_head=""):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Repository Growth Dashboard</title>
+  <title>Reponomics Dashboard</title>
   {extra_head}
   {chart_loader}
   <style>
+{_build_font_face_styles()}
 {BASE_STYLES}
   </style>
   <script>
@@ -3604,13 +3663,19 @@ def _wrap_html(body, chart_loader, runtime_js, extra_head=""):
 {_render_update_notice()}
 
   <footer>
-    <div class="footer-line">
-      <span>Built with</span>
-      <a href="https://github.com/hesreallyhim/github-traffic-report-template">GitHub Traffic Report Template</a>
+    <div class="footer-line footer-promises">
+      <span><b>Free</b> for any user</span>
       <span class="dot">·</span>
-      <span>self-hosted, no trackers, no cost</span>
+      <span><b>No third parties</b></span>
+      <span class="dot">·</span>
+      <span>Rich <b>personalized insights</b></span>
+      <span class="dot">·</span>
+      <span>Private hosting on <b>GitHub Pages</b></span>
     </div>
     <div class="footer-line">
+      <span>Built with</span>
+      <a href="https://github.com/hesreallyhim/github-traffic-report-template">Reponomics</a>
+      <span class="dot">·</span>
       <span>Made for indie hackers shipping across many repos</span>
     </div>
   </footer>
@@ -3653,7 +3718,10 @@ def _build_encrypted_html(encrypted_payload, chart_loader):
     """Build the encrypted published dashboard HTML."""
     auth_card = """
   <div id="auth-shell">
-    <h1>Repository Growth Dashboard</h1>
+    <div class="brand-lockup">
+      <h1 class="brand">reponomics<span class="accent">.</span></h1>
+      <div class="brand-eyebrow">Dashboard</div>
+    </div>
     <p class="updated">Encrypted Pages mode for private growth analytics.</p>
 
     <div class="card" id="unlock-card">

@@ -67,22 +67,22 @@ class Theme:
 DARK = Theme(
     # Aligned with the HTML dashboard's dark tokens
     # (--bg, --bg-card, --border, --text, --text-muted, --c-views, etc.)
-    bg="#0b0e13",
-    surface="#151b24",
-    border="#262d38",
-    border_subtle="rgba(38,45,56,0.6)",
+    bg="#0a0e14",
+    surface="#1c2128",
+    border="#30363d",
+    border_subtle="rgba(48,54,61,0.6)",
     text_primary="#e6edf3",
     text_secondary="#c9d1d9",
     text_muted="#8b949e",
-    text_faint="#5b6471",
+    text_faint="#6e7681",
     accent_blue="#58a6ff",      # views
-    accent_purple="#a371f7",    # clones
+    accent_purple="#CC79A7",    # clones
     accent_green="#3fb950",     # visitors / positives
     accent_yellow="#ffa657",    # cloners (warmer than #d29922 for the new palette)
     accent_red="#f85149",
-    accent_cyan="#7c6aff",      # accent / brand
-    grid="#1e242d",
-    heatmap_empty="#11161d",
+    accent_cyan="#1f6feb",      # accent / brand
+    grid="#21262d",
+    heatmap_empty="#14191f",
     # Keep the GitHub contribution-graph green palette — this is one of the
     # few visual assets that already reads as "GitHub-native".
     heatmap_scale=["#0e4429", "#006d32", "#26a641", "#39d353"],
@@ -90,21 +90,21 @@ DARK = Theme(
 
 LIGHT = Theme(
     # Aligned with the HTML dashboard's [data-theme="light"] tokens.
-    bg="#f7f8fb",
+    bg="#ffffff",
     surface="#ffffff",
-    border="#e2e7ee",
-    border_subtle="rgba(226,231,238,0.7)",
-    text_primary="#1a1d23",
-    text_secondary="#1a1d23",
+    border="#d0d7de",
+    border_subtle="rgba(208,215,222,0.7)",
+    text_primary="#1f2328",
+    text_secondary="#1f2328",
     text_muted="#57606a",
-    text_faint="#8b94a3",
-    accent_blue="#1f6feb",      # views
-    accent_purple="#6f42c1",    # clones
-    accent_green="#1f883d",     # visitors / positives
+    text_faint="#6e7781",
+    accent_blue="#0969da",      # views
+    accent_purple="#af3aa6",    # clones
+    accent_green="#1a7f37",     # visitors / positives
     accent_yellow="#bf6a02",    # cloners
     accent_red="#cf222e",
-    accent_cyan="#6356e0",      # accent / brand
-    grid="#ecf0f5",
+    accent_cyan="#0969da",      # accent / brand
+    grid="#d8dee4",
     heatmap_empty="#ebedf0",
     heatmap_scale=["#9be9a8", "#40c463", "#30a14e", "#216e39"],
 )
@@ -192,8 +192,8 @@ def svg_hero_stats(
     col_w = width // 4
     metrics = [
         ("VIEWS", total_views, t.accent_blue),
-        ("VISITORS", total_uniques, t.accent_purple),
-        ("CLONES", total_clones, t.accent_green),
+        ("VISITORS", total_uniques, t.accent_green),
+        ("CLONES", total_clones, t.accent_purple),
         ("CLONERS", total_clone_uniques, t.accent_yellow),
     ]
 

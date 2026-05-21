@@ -1,0 +1,14 @@
+{
+  "package": "@fontsource-variable/inter",
+  "ecosystem": "npm",
+  "version": "5.2.8",
+  "registry": "https://registry.npmjs.org/",
+  "tarball": "https://registry.npmjs.org/@fontsource-variable/inter/-/inter-5.2.8.tgz",
+  "tarball_integrity": "sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==",
+  "source_path": "package/files/inter-latin-wght-normal.woff2",
+  "vendored_path": "vendor/inter/inter-latin-wght-normal.woff2",
+  "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+  "license_source_path": "package/LICENSE",
+  "license_path": "vendor/inter/LICENSE",
+  "license_sha256": "3b0a5fca3d17942cde889069889dedbbbd075e9b599968c82a95f4d944e9b345"
+}

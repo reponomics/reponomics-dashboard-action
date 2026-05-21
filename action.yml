@@ -137,7 +137,7 @@ runs:
         REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
-      run: python "$GITHUB_ACTION_PATH/traffic_report_action/run.py"
+      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
 
     - name: Configure GitHub Pages
       if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}

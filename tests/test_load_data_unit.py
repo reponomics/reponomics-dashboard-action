@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 load_data = run.load_data

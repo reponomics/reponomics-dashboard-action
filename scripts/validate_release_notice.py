@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = ROOT / "traffic_report_action" / "runtime" / "scripts"
+SCRIPTS_DIR = ROOT / "dashboard_action" / "runtime" / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import release_notice  # noqa: E402

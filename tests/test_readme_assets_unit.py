@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from traffic_report_action import run
+from dashboard_action import run
 
 
 import readme_assets as assets  # noqa: E402

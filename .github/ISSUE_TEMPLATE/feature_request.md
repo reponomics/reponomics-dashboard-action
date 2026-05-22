@@ -8,7 +8,7 @@ type: Feature
 
 ---
 
-> [!INFO]
+> [!NOTE]
 > This product is currently in a public pre-release stage. As such, it is not recommended for public use or adoption, and no assurances about compatibility or stability can be made. Nevertheless, you are welcome to file an issue regarding feature support or future enhancements.
 
 

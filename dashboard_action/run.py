@@ -141,7 +141,8 @@ def _repo_is_public() -> bool:
             if isinstance(private, bool):
                 return not private
         except (OSError, ValueError):
-            pass
+            # Treat unreadable or malformed event payloads as non-public by default.
+            return False
     return False
 
 

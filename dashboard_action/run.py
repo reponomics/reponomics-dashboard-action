@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 
-VERSION = "0.6.1"  # x-release-please-version
+VERSION = "0.6.2"  # x-release-please-version
 ROOT = Path(__file__).resolve().parent
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_SECRET_LENGTH = 40

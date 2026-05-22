@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.1...v0.6.2) (2026-05-22)
+
+
+### Bug Fixes
+
+* make list string concatenation explicit for CodeQL ([b4e3018](https://github.com/reponomics/reponomics-dashboard-action/commit/b4e301868ae5c1e6f358577413bd43cd62edafbc))
+
 ## [0.6.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.0...v0.6.1) (2026-05-22)
 
 

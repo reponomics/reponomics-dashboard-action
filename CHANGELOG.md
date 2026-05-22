@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.5.0...v0.6.0) (2026-05-22)
+
+
+### Features
+
+* simplify privacy mode surface ([0025a69](https://github.com/reponomics/reponomics-dashboard-action/commit/0025a696591c0bd86c016f94075d053bb6eb28f7))
+
 ## [0.5.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.4.0...v0.5.0) (2026-05-21)
 
 

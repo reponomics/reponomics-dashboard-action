@@ -565,8 +565,8 @@ def resolve_repositories(
         if missing_include_only:
             print(
                 "Warning: some configured include_only repos were not eligible "
-                "for tracking (missing access, archived, forked, disabled, or "
-                "no push access): "
+                + "for tracking (missing access, archived, forked, disabled, or "
+                + "no push access): "
                 + ", ".join(missing_include_only)
             )
         resolved = [repo["full_name"] for repo in include_only_repos[:max_repos]]
@@ -588,8 +588,8 @@ def resolve_repositories(
     if missing_include:
         print(
             "Warning: some configured include repos were not eligible for "
-            "tracking (missing access, archived, forked, disabled, or no push "
-            "access): "
+            + "tracking (missing access, archived, forked, disabled, or no push "
+            + "access): "
             + ", ".join(missing_include)
         )
 
@@ -636,8 +636,8 @@ def resolve_repositories(
         print("Error: no eligible repositories found for traffic collection.")
         print(
             "Check your config or token access. Explicit includes must be "
-            "accessible, and automatic tracking excludes forks, archived repos, "
-            "disabled repos, and repos without push access."
+            + "accessible, and automatic tracking excludes forks, archived repos, "
+            + "disabled repos, and repos without push access."
         )
         sys.exit(1)
 

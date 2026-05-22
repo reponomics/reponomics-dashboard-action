@@ -8,7 +8,7 @@ type: Bug
 
 ---
 
-> [!INFO]
+> [!NOTE]
 > This product is currently in public pre-release stage. As such, it is not recommended for public use or adoption, and no assurances about compatibility or stability can be made. Nevertheless, you are welcome to report any bugs you may encounter if you do use this action. For security/privacy issues, please file a private disclosure report.
 
 

@@ -21,8 +21,6 @@ def _pages_line(pages_dashboard: str) -> str:
             f"Encrypted dashboard: `https://{owner}.github.io/{name}/` "
             "(requires your dashboard key)"
         )
-    if pages_dashboard == "plain":
-        return f"Plain dashboard: `https://{owner}.github.io/{name}/`"
     return "Pages dashboard: disabled"
 
 

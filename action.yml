@@ -19,29 +19,17 @@ inputs:
     required: false
     default: ""
   dashboard-secret:
-    description: Current dashboard/artifact encryption secret.
+    description: Current dashboard/artifact encryption secret. Required when privacy-mode is strong or casual.
     required: false
     default: ""
   dashboard-next-secret:
-    description: Next dashboard/artifact encryption secret for rotate-key mode.
+    description: Next dashboard/artifact encryption secret for strong or casual rotate-key mode.
     required: false
     default: ""
-  allow-weak-dashboard-secret:
-    description: Explicitly bypass the dashboard secret entropy gate for encrypted modes.
+  privacy-mode:
+    description: "Privacy model: strong, casual, or plain. Strong requires a high-entropy dashboard secret; casual encrypts with any non-empty dashboard secret for non-targeted access control; plain stores retained CSV artifacts without encryption for private-repository use."
     required: false
-    default: "false"
-  readme-dashboard:
-    description: "README dashboard mode: disabled or enabled."
-    required: false
-    default: disabled
-  pages-dashboard:
-    description: "Pages dashboard mode: disabled, plain, or encrypted."
-    required: false
-    default: encrypted
-  artifact-security-mode:
-    description: "Artifact security mode: plain, encrypted, or auto."
-    required: false
-    default: auto
+    default: strong
   config-path:
     description: Repository selection config path.
     required: false
@@ -116,10 +104,7 @@ runs:
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
-        REPONOMICS_ALLOW_WEAK_DASHBOARD_SECRET: ${{ inputs.allow-weak-dashboard-secret }}
-        REPONOMICS_README_DASHBOARD: ${{ inputs.readme-dashboard }}
-        REPONOMICS_PAGES_DASHBOARD: ${{ inputs.pages-dashboard }}
-        REPONOMICS_ARTIFACT_SECURITY_MODE: ${{ inputs.artifact-security-mode }}
+        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_COMMIT_OUTPUTS: ${{ inputs.commit-outputs }}
@@ -143,14 +128,6 @@ runs:
       id: deploy-pages
       if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
       uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
-
-    - name: Upload standalone dashboard artifact
-      if: ${{ steps.runtime.outputs.dashboard-mode == 'plain' && inputs.mode == 'publish' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: dashboard-standalone
-        path: dist/dashboard-standalone.html
-        retention-days: ${{ inputs.retention-days }}
 
     - name: Upload encrypted traffic data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}

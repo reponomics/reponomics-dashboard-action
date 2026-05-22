@@ -90,14 +90,25 @@ GitHub.
 
 ## Accepted Decision
 
-Keep the two-track product model, but replace workflow export with
-dashboard-local export for the encrypted track.
+Keep the product model focused on explicit privacy modes, but replace workflow
+export with dashboard-local export for encrypted modes.
 
-The primary track is the encrypted privacy model:
+The action should expose three privacy modes:
+
+- `strong`: encrypted retained artifacts and encrypted hosted dashboards, with a
+  high-entropy dashboard secret required.
+- `casual`: encrypted retained artifacts and encrypted hosted dashboards, with
+  any non-empty dashboard secret accepted. This prevents casual viewing and
+  accidental discovery, but is not target-resistant.
+- `plain`: plaintext retained CSV artifacts with no dashboard secret. This is
+  only supported for private dashboard repositories.
+
+The encrypted privacy modes are `strong` and `casual`:
 
 - retained collection data is stored in encrypted artifacts;
-- GitHub Pages publication, when enabled, publishes an encrypted dashboard;
-- the user decides whether to publish plaintext README dashboard summaries;
+- `publish` renders an encrypted GitHub Pages dashboard;
+- README dashboard summaries are rendered only when the dashboard repository is
+  private;
 - plaintext CSV portability is provided by the unlocked dashboard in the
   browser.
 
@@ -106,12 +117,12 @@ The secondary track is the plaintext private-repository model:
 - retained collection data is stored as plaintext CSV artifacts;
 - README dashboard summaries are allowed because the repository is already
   treated as private;
-- the user may optionally publish a plaintext GitHub Pages dashboard;
+- GitHub Pages dashboard publication is disabled;
 - no dashboard secret is required.
 
-Remove `auto`. The setup flow should ask users to choose between the encrypted
-privacy track and the plaintext private-repository track. It should not expose a
-general-purpose matrix of storage and publication modes.
+Remove `auto`, separate README dashboard inputs, and separate Pages dashboard
+inputs. The setup flow should ask users to choose the privacy mode. It should
+not expose a general-purpose matrix of storage and publication modes.
 
 Do not ship export/destroy workflows as part of the product surface. For the
 plaintext private-repository track, retained CSV artifacts are already
@@ -122,19 +133,20 @@ decryption.
 ## Consequences
 
 The product becomes simpler without pretending every user has the same privacy
-requirements. The encrypted track gives public/free-tier users a coherent
-default: retained artifacts are encrypted, hosted dashboards are encrypted, and
-the only deliberate plaintext surface is the optional README summary. The
-plaintext track gives private-repository users a low-friction CSV collection
-path without fake secrets or weak keys.
+requirements. `strong` gives public/free-tier users a coherent default:
+retained artifacts are encrypted, hosted dashboards are encrypted, and plaintext
+README metrics are suppressed when the dashboard repository is public. `casual`
+serves users who want to prevent drive-by viewing without claiming
+target-resistant privacy. `plain` gives private-repository users a low-friction
+CSV collection path without fake secrets.
 
 This removes the least explainable state: `auto`. It also avoids mixed-mode
 configuration as a primary user experience. Plaintext storage remains supported,
-but only as part of an explicit private-repository track.
+but only as an explicit private-repository mode.
 
-The encrypted track makes key loss serious. If the dashboard key is lost,
-retained history cannot be recovered from encrypted artifacts. Documentation and
-setup summaries must say this plainly.
+The `strong` and `casual` modes make key loss serious. If the dashboard key is
+lost, retained history cannot be recovered from encrypted artifacts.
+Documentation and setup summaries must say this plainly.
 
 Portability remains part of the encrypted track, but it belongs inside the
 dashboard. Users export plaintext CSV from the unlocked dashboard after local
@@ -143,9 +155,9 @@ as part of the normal product surface.
 
 ## Credential Boundary
 
-This decision preserves the core credential story. The encrypted track should
-require one collection token plus one dashboard secret. The plaintext track
-should require one collection token and no dashboard secret.
+This decision preserves the core credential story. `strong` and `casual` should
+require one collection token plus one dashboard secret. `plain` should require
+one collection token and no dashboard secret.
 
 The product still has two separate API permission boundaries:
 
@@ -164,7 +176,7 @@ The credential model is:
 - `GITHUB_TOKEN`: manages dashboard-repository operations such as Pages
   deployment and optional README commits, with workflow permissions set in the
   generated workflows.
-- `TRAFFIC_DASHBOARD_SECRET`: used only in the encrypted track to
+- `TRAFFIC_DASHBOARD_SECRET`: used only in `strong` and `casual` modes to
   encrypt/decrypt retained traffic data and encrypted dashboard payloads.
 
 Dashboard-local export does not require another personal access token. It also
@@ -175,30 +187,34 @@ artifacts.
 
 Action runtime changes:
 
-- replace `artifact-security-mode` with an explicit two-track input, or otherwise
-  expose an equivalent setup contract without `auto`;
-- keep encrypted retained artifact read/write behavior for the encrypted track;
-- keep plaintext retained artifact read/write behavior for the plaintext private
-  repository track;
-- require `dashboard-secret` for encrypted-track `collect`, `publish`, and
+- replace `artifact-security-mode` with `privacy-mode`;
+- support `privacy-mode: strong`, `privacy-mode: casual`, and
+  `privacy-mode: plain`;
+- reject `privacy-mode: plain` when the dashboard repository is public;
+- keep encrypted retained artifact read/write behavior for `strong` and
+  `casual`;
+- keep plaintext retained artifact read/write behavior for private-repository
+  `plain`;
+- require a high-entropy `dashboard-secret` for `strong` `collect`, `publish`,
+  and `rotate-key` runs;
+- require a non-empty `dashboard-secret` for `casual` `collect`, `publish`, and
   `rotate-key` runs;
-- do not require `dashboard-secret` for plaintext-track collection or plaintext
+- do not require `dashboard-secret` for private-repository `plain` collection or
   publication;
+- derive README rendering from repository visibility;
+- derive Pages publication from runtime mode and privacy mode;
 - do not add workflow modes that upload plaintext CSV export artifacts for the
-  encrypted track.
+  encrypted modes.
 
 Generated template changes:
 
-- ask users to choose the encrypted privacy track or plaintext private-repository
-  track;
-- for the encrypted track, require and validate `TRAFFIC_DASHBOARD_SECRET`;
-- for the encrypted track, publish only encrypted Pages dashboards when Pages is
-  enabled;
-- for the encrypted track, ask whether to publish plaintext README summaries;
-- for the plaintext track, store plaintext CSV artifacts and allow README
-  summaries;
-- for the plaintext track, allow optional plaintext Pages publication;
-- document that encrypted-track CSV export happens from the unlocked dashboard,
+- ask users to choose `strong`, `casual`, or `plain`;
+- for `strong`, require and validate a high-entropy
+  `TRAFFIC_DASHBOARD_SECRET`;
+- for `casual`, require a non-empty `TRAFFIC_DASHBOARD_SECRET` and document the
+  weaker threat model;
+- for `plain`, require a private dashboard repository;
+- document that encrypted-mode CSV export happens from the unlocked dashboard,
   not from a plaintext GitHub artifact.
 
 Dashboard generator changes:
@@ -211,19 +227,17 @@ Dashboard generator changes:
 
 Test changes:
 
-- remove tests for `auto` resolution;
-- add tests for encrypted-track retained storage and encrypted Pages payloads;
-- keep or add tests for plaintext-track retained artifact upload;
+- remove tests for `auto` resolution and plaintext Pages publication;
+- add tests for `strong` and `casual` retained storage and encrypted Pages
+  payloads;
+- keep or add tests for private-repository `plain` retained artifact upload;
+- add tests that public repositories reject `plain`;
 - add dashboard generator tests for local CSV export from decrypted dashboard
   data.
 
 ## Open Questions
 
-- Should the action continue accepting `artifact-security-mode` as a deprecated
-  alias before `v1`, or remove it immediately while the project is still in
-  public pre-release?
-- What should the explicit two-track input be called in the action, if any?
-- Should plaintext Pages publication be included in the template setup surface
-  or remain an action-level capability for users who wire workflows manually?
 - Should dashboard-local export produce one combined CSV, one CSV per canonical
   table, or a ZIP containing the canonical CSV files?
+- Should legacy `artifact-security-mode` be accepted as an alias before `v1`, or
+  removed immediately while the project is still in public pre-release?

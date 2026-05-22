@@ -17,11 +17,10 @@ VERSION = "0.5.0"  # x-release-please-version
 ROOT = Path(__file__).resolve().parent
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_SECRET_LENGTH = 40
+MIN_MASK_LENGTH = 3
 
 VALID_MODES = {"collect", "publish", "rotate-key"}
-VALID_README_DASHBOARDS = {"disabled", "enabled", "metrics_summary"}
-VALID_PAGES_DASHBOARDS = {"disabled", "plain", "public", "encrypted"}
-VALID_ARTIFACT_MODES = {"plain", "encrypted", "auto"}
+VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
 
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -51,35 +50,33 @@ class RuntimeConfig:
     github_token: str
     dashboard_secret: str
     dashboard_next_secret: str
-    readme_dashboard: str
-    pages_dashboard: str
-    artifact_security_mode: str
+    privacy_mode: str
+    repo_is_public: bool
     config_path: Path
     data_dir: Path
     retention_days: int
     commit_outputs: bool
     dashboard_path: Path
     readme_path: Path
-    allow_weak_dashboard_secret: bool
     update_notices: bool
     action_ref: str
     action_repository: str
 
     @property
     def resolved_artifact_mode(self) -> str:
-        if self.artifact_security_mode != "auto":
-            return self.artifact_security_mode
-        if _repo_is_public() and self.pages_dashboard != "plain":
-            return "encrypted"
-        return "plain"
+        return "plain" if self.privacy_mode == "plain" else "encrypted"
 
     @property
     def normalized_readme_dashboard(self) -> str:
-        return "enabled" if self.readme_dashboard == "metrics_summary" else self.readme_dashboard
+        return "disabled" if self.repo_is_public else "enabled"
 
     @property
     def normalized_pages_dashboard(self) -> str:
-        return "plain" if self.pages_dashboard == "public" else self.pages_dashboard
+        return "disabled" if self.privacy_mode == "plain" else "encrypted"
+
+    @property
+    def pages_dashboard(self) -> str:
+        return self.normalized_pages_dashboard
 
 
 def _env(name: str, default: str = "") -> str:
@@ -111,14 +108,13 @@ def _choice(value: str, choices: set[str], *, name: str) -> str:
     return normalized
 
 
-def _normalize_readme_dashboard(value: str) -> str:
-    normalized = _choice(value, VALID_README_DASHBOARDS, name="readme-dashboard")
-    return "enabled" if normalized == "metrics_summary" else normalized
-
-
-def _normalize_pages_dashboard(value: str) -> str:
-    normalized = _choice(value, VALID_PAGES_DASHBOARDS, name="pages-dashboard")
-    return "plain" if normalized == "public" else normalized
+def _normalize_privacy_mode(value: str, *, repo_is_public: bool) -> str:
+    normalized = value.strip().lower()
+    if normalized == "encrypted":
+        return "strong"
+    if normalized == "auto":
+        return "strong" if repo_is_public else "plain"
+    return _choice(normalized, VALID_PRIVACY_MODES, name="privacy-mode")
 
 
 def _parse_retention_days(raw: str) -> int:
@@ -151,16 +147,10 @@ def _repo_is_public() -> bool:
 
 def load_config_from_env() -> RuntimeConfig:
     mode = _choice(_env("REPONOMICS_MODE", "collect"), VALID_MODES, name="mode")
-    readme_dashboard = _normalize_readme_dashboard(
-        _env("REPONOMICS_README_DASHBOARD", "disabled"),
-    )
-    pages_dashboard = _normalize_pages_dashboard(
-        _env("REPONOMICS_PAGES_DASHBOARD", "encrypted"),
-    )
-    artifact_mode = _choice(
-        _env("REPONOMICS_ARTIFACT_SECURITY_MODE", "auto"),
-        VALID_ARTIFACT_MODES,
-        name="artifact-security-mode",
+    repo_is_public = _repo_is_public()
+    privacy_mode = _normalize_privacy_mode(
+        _first_env("REPONOMICS_PRIVACY_MODE", "REPONOMICS_ARTIFACT_SECURITY_MODE") or "strong",
+        repo_is_public=repo_is_public,
     )
     return RuntimeConfig(
         mode=mode,
@@ -176,19 +166,14 @@ def load_config_from_env() -> RuntimeConfig:
             "REPONOMICS_DASHBOARD_NEXT_SECRET",
             "TRAFFIC_DASHBOARD_NEXT_SECRET",
         ),
-        readme_dashboard=readme_dashboard,
-        pages_dashboard=pages_dashboard,
-        artifact_security_mode=artifact_mode,
+        privacy_mode=privacy_mode,
+        repo_is_public=repo_is_public,
         config_path=Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml")),
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         commit_outputs=_parse_bool(_env("REPONOMICS_COMMIT_OUTPUTS", "false"), name="commit-outputs"),
         dashboard_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
-        allow_weak_dashboard_secret=_parse_bool(
-            _env("REPONOMICS_ALLOW_WEAK_DASHBOARD_SECRET", "false"),
-            name="allow-weak-dashboard-secret",
-        ),
         update_notices=_parse_bool(
             _env("REPONOMICS_UPDATE_NOTICES", "true"),
             name="update-notices",
@@ -201,21 +186,17 @@ def load_config_from_env() -> RuntimeConfig:
 def validate_config(config: RuntimeConfig) -> None:
     if config.mode == "collect" and not config.traffic_token:
         raise ActionError("traffic-token, TRAFFIC_TOKEN, or GH_TOKEN is required for collect mode.")
-    if config.mode in {"collect", "publish"} and config.resolved_artifact_mode == "encrypted":
+    if config.repo_is_public and config.privacy_mode == "plain":
+        raise ActionError("privacy-mode plain is only supported for private repositories.")
+    if config.mode in {"collect", "publish"} and config.privacy_mode in {"strong", "casual"}:
         _validate_secret(
             config.dashboard_secret,
             "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
-            allow_weak=config.allow_weak_dashboard_secret,
-        )
-    if config.mode == "publish" and config.pages_dashboard == "encrypted":
-        _validate_secret(
-            config.dashboard_secret,
-            "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
-            allow_weak=config.allow_weak_dashboard_secret,
+            allow_weak=config.privacy_mode == "casual",
         )
     if config.mode == "rotate-key":
-        if config.resolved_artifact_mode != "encrypted" and config.pages_dashboard != "encrypted":
-            raise ActionError("rotate-key requires encrypted artifact storage or encrypted Pages.")
+        if config.privacy_mode == "plain":
+            raise ActionError("rotate-key requires strong or casual privacy mode.")
         _validate_secret(
             config.dashboard_secret,
             "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
@@ -224,7 +205,7 @@ def validate_config(config: RuntimeConfig) -> None:
         _validate_secret(
             config.dashboard_next_secret,
             "dashboard-next-secret or TRAFFIC_DASHBOARD_NEXT_SECRET",
-            allow_weak=config.allow_weak_dashboard_secret,
+            allow_weak=config.privacy_mode == "casual",
         )
 
 
@@ -237,6 +218,19 @@ def _validate_secret(value: str, label: str, *, allow_weak: bool) -> None:
             "Use a generated random secret, or set allow-weak-dashboard-secret "
             "to true if you explicitly accept the disclosure and brute-force risk."
         )
+
+
+def _mask_secret(value: str) -> None:
+    for line in value.splitlines():
+        if len(line) >= MIN_MASK_LENGTH:
+            print(f"::add-mask::{line}", flush=True)
+
+
+def _mask_config_secrets(config: RuntimeConfig) -> None:
+    _mask_secret(config.traffic_token)
+    _mask_secret(config.github_token)
+    _mask_secret(config.dashboard_secret)
+    _mask_secret(config.dashboard_next_secret)
 
 
 def _patch_runtime_paths(config: RuntimeConfig) -> None:
@@ -516,6 +510,7 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
     try:
         config = loader()
+        _mask_config_secrets(config)
         validate_config(config)
         if config.mode == "collect":
             run_collect(config)

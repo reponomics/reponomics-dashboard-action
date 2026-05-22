@@ -26,7 +26,7 @@ New metrics can appear after a compatible upgrade once collection has run with t
 
 ## Usage
 
-Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts, so publish and rotate-key workflows that enable `pages-dashboard` need `pages: write` and `id-token: write`. Workflows only need `contents: write` when `commit-outputs: true` is used to commit README output.
+Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. Workflows only need `contents: write` when `commit-outputs: true` is used to commit README output.
 
 ```yaml
 steps:
@@ -38,9 +38,7 @@ steps:
       traffic-token: ${{ secrets.TRAFFIC_TOKEN }}
       github-token: ${{ github.token }}
       dashboard-secret: ${{ secrets.TRAFFIC_DASHBOARD_SECRET }}
-      readme-dashboard: enabled
-      pages-dashboard: encrypted
-      artifact-security-mode: auto
+      privacy-mode: strong
 ```
 
 ## Inputs
@@ -52,10 +50,7 @@ steps:
 | `github-token` | empty | Token for artifact/repository workflow operations. Falls back to `GITHUB_TOKEN` or `GH_TOKEN`. |
 | `dashboard-secret` | empty | Current dashboard/artifact encryption key. Falls back to `TRAFFIC_DASHBOARD_SECRET`. |
 | `dashboard-next-secret` | empty | Next key for `rotate-key`. Falls back to `TRAFFIC_DASHBOARD_NEXT_SECRET`. |
-| `allow-weak-dashboard-secret` | `false` | Explicitly bypass the dashboard secret entropy gate for encrypted modes. |
-| `readme-dashboard` | `disabled` | `disabled` or `enabled`. |
-| `pages-dashboard` | `encrypted` | `disabled`, `plain`, or `encrypted`. |
-| `artifact-security-mode` | `auto` | `plain`, `encrypted`, or `auto`. In `auto`, public repositories use encrypted artifact storage unless `pages-dashboard` is `plain`; private repositories use plain artifact storage. |
+| `privacy-mode` | `strong` | `strong`, `casual`, or `plain`. Public repositories may use `strong` or `casual`; `plain` is private-repository only. |
 | `config-path` | `config.yaml` | Repository selection config in the caller repo. |
 | `retention-days` | `90` | Artifact retention, 1-90 days. |
 | `commit-outputs` | `false` | Commit rendered README output. Generated Pages dashboard files are deployed as GitHub Pages artifacts instead of committed. |
@@ -77,30 +72,33 @@ The action emits metadata for workflow summaries and later automation:
 - `schema-version`
 - `runtime-version`
 
-`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, renders the README and dashboard shell from retained data, and then deploys the dashboard during the publish run. When `pages-dashboard` is not `disabled`, the composite action uploads the rendered dashboard directory as a GitHub Pages artifact and deploys it with GitHub Pages Actions. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output, and redeploys the hosted dashboard when enabled.
+`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, renders any allowed README summary and dashboard shell from retained data, and deploys an encrypted dashboard for `strong` and `casual` privacy modes. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output.
+
+README metrics are derived from repository visibility: private dashboard repositories may render README metrics, while public dashboard repositories render a non-metric README status block. Plain mode stores plaintext CSV artifacts and is rejected in public repositories.
 
 ## Offline Viewing
 
 Generated dashboard files are not committed to the repository. This keeps traffic history out of git, but it means offline viewing starts from a workflow artifact rather than from `docs/index.html` in the repo.
 
-After a successful `publish` run, open the workflow run's **Summary** page and download the relevant artifact before it expires:
-
-- For `pages-dashboard: plain`, download `dashboard-standalone`. It contains `dashboard-standalone.html`, a single-file dashboard with Chart.js bundled for offline use.
-- For `pages-dashboard: encrypted`, download the GitHub Pages artifact from the publish run, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
+After a successful encrypted `publish` run, open the workflow run's **Summary** page, download the GitHub Pages artifact before it expires, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
 
 Artifact availability follows `retention-days`; the default is 90 days.
 
-## Dashboard Secret Guidance
+## Privacy Modes
 
-For encrypted dashboards, use a generated high-entropy secret and store it in a secret manager or GitHub Actions secret. Prefer a shell-safe 256-bit hex secret:
+`strong` mode encrypts retained artifacts and hosted dashboards with a generated high-entropy secret. Store the secret in a secret manager or GitHub Actions secret. Prefer a shell-safe 256-bit hex secret:
 
 ```bash
 openssl rand -hex 32
 ```
 
-Base64 secrets with the same entropy are also acceptable, but characters such as `+`, `/`, and `=` are easier to mishandle in shells, URLs, and copy/paste flows. Encrypted Pages protects the static payload from disclosure without the key, but browser-side crypto cannot defend against malicious JavaScript, compromised CI/deployment, malicious browser extensions, endpoint compromise, or accidental secret leakage.
+Base64 secrets with the same entropy are also acceptable, but characters such as `+`, `/`, and `=` are easier to mishandle in shells, URLs, and copy/paste flows.
 
-`artifact-security-mode` controls the retained `traffic-data` artifact, not just the rendered dashboard. Set it to `encrypted` to always encrypt retained traffic data before upload, or `plain` to upload the retained CSV directory as-is. The default `auto` mode encrypts retained artifacts for public repositories unless `pages-dashboard` is `plain`, and leaves artifacts plain for private repositories. The explicit `plain` choice is therefore the opt-out when a public repository intentionally publishes an unencrypted dashboard/data surface.
+`casual` mode also encrypts retained artifacts and hosted dashboards, but accepts any non-empty dashboard secret. It prevents casual viewing, crawling, and accidental discovery. It is not target-resistant because a weak or shared secret can be brute-forced offline from the encrypted payload.
+
+`plain` mode stores retained CSV artifacts without encryption and does not require a dashboard secret. It is only supported for private dashboard repositories. Public repositories must use `strong` or `casual`.
+
+Encrypted Pages protects the static payload from disclosure without the key, but browser-side crypto cannot defend against malicious JavaScript, compromised CI/deployment, malicious browser extensions, endpoint compromise, or accidental secret leakage.
 
 ## Growth Metrics
 
@@ -110,8 +108,6 @@ Repository growth metrics use the GitHub repository detail API fields with their
 - Watchers are GitHub repository subscribers from `subscribers_count`.
 - Forks are `forks_count`.
 - GitHub's `watchers_count` field is not used as true watchers because that field mirrors stargazers on GitHub repository responses.
-
-The weak-secret override bypasses only the entropy policy gate. It does not bypass required secret presence, decryptability, encryptability, or rotation correctness checks. In public repositories the override can itself become a signal that encrypted traffic data may be easier to brute force.
 
 ## Local Development
 

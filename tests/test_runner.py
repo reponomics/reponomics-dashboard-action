@@ -52,16 +52,14 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "github_token": "ghp_test",
         "dashboard_secret": OLD_KEY,
         "dashboard_next_secret": "",
-        "readme_dashboard": "enabled",
-        "pages_dashboard": "encrypted",
-        "artifact_security_mode": "encrypted",
+        "privacy_mode": "strong",
+        "repo_is_public": False,
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "commit_outputs": False,
         "dashboard_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
-        "allow_weak_dashboard_secret": False,
         "update_notices": False,
         "action_ref": "v0.1.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
@@ -233,9 +231,8 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     monkeypatch.setenv("REPONOMICS_TRAFFIC_TOKEN", "ghp_traffic")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
-    monkeypatch.setenv("REPONOMICS_README_DASHBOARD", "enabled")
-    monkeypatch.setenv("REPONOMICS_PAGES_DASHBOARD", "encrypted")
-    monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "auto")
+    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
@@ -248,9 +245,13 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert config.github_token == "ghp_test"
     assert config.data_dir == Path("data")
     assert config.dashboard_path == Path("docs/index.html")
+    assert config.privacy_mode == "strong"
+    assert config.repo_is_public is True
+    assert config.resolved_artifact_mode == "encrypted"
+    assert config.normalized_pages_dashboard == "encrypted"
+    assert config.normalized_readme_dashboard == "disabled"
     assert config.retention_days == 30
     assert config.commit_outputs is False
-    assert config.resolved_artifact_mode == "plain"
 
 
 def test_commit_outputs_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -323,36 +324,24 @@ def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         run.load_config_from_env()
 
 
-def test_deprecated_input_aliases_are_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("REPONOMICS_MODE", "publish")
-    monkeypatch.setenv("REPONOMICS_README_DASHBOARD", "metrics_summary")
-    monkeypatch.setenv("REPONOMICS_PAGES_DASHBOARD", "public")
+def test_legacy_privacy_mode_aliases_are_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "encrypted")
 
     config = run.load_config_from_env()
 
-    assert config.readme_dashboard == "enabled"
-    assert config.pages_dashboard == "plain"
+    assert config.privacy_mode == "strong"
+    assert config.resolved_artifact_mode == "encrypted"
 
 
-def test_auto_artifact_mode_public_repo_encrypts_unless_pages_plain(
+def test_public_plain_privacy_mode_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    config = _config(tmp_path, privacy_mode="plain", repo_is_public=True)
 
-    encrypted_config = _config(
-        tmp_path,
-        artifact_security_mode="auto",
-        pages_dashboard="encrypted",
-    )
-    plain_pages_config = _config(
-        tmp_path,
-        artifact_security_mode="auto",
-        pages_dashboard="plain",
-    )
-
-    assert encrypted_config.resolved_artifact_mode == "encrypted"
-    assert plain_pages_config.resolved_artifact_mode == "plain"
+    with pytest.raises(run.ActionError, match="plain is only supported for private repositories"):
+        run.validate_config(config)
 
 
 def test_secret_validation_for_encrypted_collect(tmp_path: Path) -> None:
@@ -362,11 +351,11 @@ def test_secret_validation_for_encrypted_collect(tmp_path: Path) -> None:
         run.validate_config(config)
 
 
-def test_weak_secret_override_allows_encrypted_collect(tmp_path: Path) -> None:
+def test_casual_privacy_mode_allows_low_entropy_secret(tmp_path: Path) -> None:
     config = _config(
         tmp_path,
         dashboard_secret="too-short",
-        allow_weak_dashboard_secret=True,
+        privacy_mode="casual",
     )
 
     run.validate_config(config)
@@ -418,12 +407,12 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert (config.dashboard_path.parent / "assets" / "chart.umd.min.js").exists()
 
 
-def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
+def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    config = _config(tmp_path, mode="publish")
     _seed_log(config.data_dir)
 
     run.validate_config(config)
@@ -436,12 +425,11 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
     assert "interest **+0 stars** / **+0 watchers** (now 11 / 2)" in readme
     assert "adoption **3 clones** / **+0 forks** (now 1)" in readme
     assert "Repository Growth" in readme
+    assert "encrypted-payload" in dashboard
     assert "Reponomics Dashboard" in dashboard
     assert 'h1 class="brand">reponomics<span class="accent">.</span></h1>' in dashboard
     assert "data:font/woff2;base64," in dashboard
     assert "fonts.googleapis.com" not in dashboard
-    assert '"window_presets":[7,14,30,90,"all"]' in dashboard
-    assert '"default_window":"14"' in dashboard
     assert 'data-window="7"' in dashboard
     assert 'data-window="14"' in dashboard
     assert 'data-window="30"' in dashboard
@@ -458,13 +446,13 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_plain_dashboard(
     assert "Star Growth" in dashboard
     assert "Watcher Growth" in dashboard
     assert "Fork Growth" in dashboard
-    assert '"total_subscribers":2' in dashboard
-    assert '"total_forks_delta":0' in dashboard
+    assert '"total_subscribers":2' not in dashboard
+    assert '"total_forks_delta":0' not in dashboard
 
 
 def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    config = _config(tmp_path, mode="publish")
     _seed_log(config.data_dir)
 
     run.validate_config(config)
@@ -475,7 +463,7 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert script_sources == ["assets/chart.umd.min.js"]
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
-    assert "unlockForm" not in published.forms
+    assert "unlock-form" in published.forms
 
     standalone = _parse_dashboard_html(
         (tmp_path / "dist" / "dashboard-standalone.html").read_text(encoding="utf-8")
@@ -709,7 +697,6 @@ def test_publish_renders_sanitized_release_notice(
     config = _config(
         tmp_path,
         mode="publish",
-        pages_dashboard="plain",
         update_notices=True,
     )
     _seed_log(config.data_dir)
@@ -739,7 +726,7 @@ def test_private_readme_renders_disabled_metrics_with_notice(
     monkeypatch.setattr(run.render_private_readme, "OUTPUT_PATH", output_path)
     monkeypatch.setattr(run.render_private_readme, "ASSET_DIR", asset_dir)
     monkeypatch.setenv("GITHUB_REPOSITORY", "demo/reponomics")
-    monkeypatch.setenv("PAGES_DASHBOARD", "plain")
+    monkeypatch.setenv("PAGES_DASHBOARD", "encrypted")
     monkeypatch.setenv("ARTIFACT_SECURITY_MODE", "encrypted")
     monkeypatch.setenv(
         "REPONOMICS_UPDATE_NOTICE_JSON",
@@ -756,7 +743,7 @@ def test_private_readme_renders_disabled_metrics_with_notice(
     readme = output_path.read_text(encoding="utf-8")
     assert not asset_dir.exists()
     assert "README analytics summary: disabled" in readme
-    assert "Plain dashboard: `https://demo.github.io/reponomics/`" in readme
+    assert "Encrypted dashboard: `https://demo.github.io/reponomics/`" in readme
     assert "Actions data artifact: encrypted" in readme
     assert "Upgrade &lt;now&gt;" in readme
     assert "No **markdown** is rendered." in readme
@@ -1550,7 +1537,7 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish", pages_dashboard="plain")
+    config = _config(tmp_path, mode="publish")
     _seed_log(config.data_dir)
     (config.data_dir / "repo-metrics.csv").unlink()
 
@@ -1563,4 +1550,4 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     assert config.dashboard_path.exists()
     assert "Growth (14d)" not in readme
     assert "Reponomics Dashboard" in dashboard
-    assert '"total_stars":0' in dashboard
+    assert "encrypted-payload" in dashboard

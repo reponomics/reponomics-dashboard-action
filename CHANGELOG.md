@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.0...v0.6.1) (2026-05-22)
+
+
+### Bug Fixes
+
+* avoid CodeQL clear-text alert for add-mask command ([eb31d9b](https://github.com/reponomics/reponomics-dashboard-action/commit/eb31d9b7647ea40f7ab129d9ee9c86d9eb9beaf8))
+
 ## [0.6.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.5.0...v0.6.0) (2026-05-22)
 
 

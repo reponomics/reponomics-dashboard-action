@@ -126,12 +126,12 @@ def validate_manifest(root: Path, manifest_path: Path) -> None:
     published_dist = package_metadata["versions"][manifest["version"]]["dist"]
     if published_dist["tarball"] != manifest["tarball"]:
         raise ValueError(
-            f"registry tarball mismatch: expected {manifest['tarball']}, "
+            f"registry tarball mismatch: expected {manifest['tarball']}, " +
             f"got {published_dist['tarball']}"
         )
     if published_dist["integrity"] != manifest["tarball_integrity"]:
         raise ValueError(
-            "registry integrity mismatch: expected "
+            "registry integrity mismatch: expected " +
             f"{manifest['tarball_integrity']}, got {published_dist['integrity']}"
         )
     _verify_no_known_vulnerabilities(manifest)
@@ -143,7 +143,7 @@ def validate_manifest(root: Path, manifest_path: Path) -> None:
     source_sha256 = _hash_bytes("sha256", source_data)
     if source_sha256 != manifest["sha256"]:
         raise ValueError(
-            f"{manifest['source_path']} sha256 mismatch: "
+            f"{manifest['source_path']} sha256 mismatch: " +
             f"expected {manifest['sha256']}, got {source_sha256}"
         )
 
@@ -151,7 +151,7 @@ def validate_manifest(root: Path, manifest_path: Path) -> None:
     license_sha256 = _hash_bytes("sha256", license_data)
     if license_sha256 != manifest["license_sha256"]:
         raise ValueError(
-            f"{manifest['license_source_path']} sha256 mismatch: "
+            f"{manifest['license_source_path']} sha256 mismatch: " +
             f"expected {manifest['license_sha256']}, got {license_sha256}"
         )
 

@@ -33,10 +33,10 @@ def _picture(dark_src: str, alt: str) -> str:
     stem, ext = dark_src.rsplit(".", 1)
     light_src = f"{stem}{LIGHT_SUFFIX}.{ext}"
     return (
-        f"<picture>\n"
-        f'  <source media="(prefers-color-scheme: light)" srcset="{light_src}">\n'
-        f'  <img src="{dark_src}" alt="{alt}">\n'
-        f"</picture>"
+        "<picture>\n" +
+        f'  <source media="(prefers-color-scheme: light)" srcset="{light_src}">\n' +
+        f'  <img src="{dark_src}" alt="{alt}">\n' +
+        "</picture>"
     )
 
 
@@ -65,11 +65,11 @@ def _update_notice_lines():
         return []
     summary = f" {html.escape(notice['summary'])}" if notice["summary"] else ""
     return [
-        "<sub>"
-        f"<strong>{html.escape(notice['title'])}</strong>"
-        f"{summary} "
-        f"<a href=\"{html.escape(notice['url'], quote=True)}\">"
-        f"View {html.escape(notice['version'])}</a>."
+        "<sub>" +
+        f"<strong>{html.escape(notice['title'])}</strong>" +
+        f"{summary} " +
+        f"<a href=\"{html.escape(notice['url'], quote=True)}\">" +
+        f"View {html.escape(notice['version'])}</a>." +
         "</sub>",
         "",
     ]
@@ -82,10 +82,10 @@ def _repo_table_lines(rows):
     ]
     for row in rows:
         lines.append(
-            f"| {row['repo']} "
-            f"| {row['total_views']:,} "
-            f"| {row['total_uniques']:,} "
-            f"| {row['total_clones']:,} "
+            f"| {row['repo']} " +
+            f"| {row['total_views']:,} " +
+            f"| {row['total_uniques']:,} " +
+            f"| {row['total_clones']:,} " +
             f"| {row['total_clone_uniques']:,} |"
         )
     return lines
@@ -100,14 +100,14 @@ def _growth_line(growth):
     totals = growth.get("totals", {})
     window = growth.get("window_days", 14)
     return (
-        f"**Growth ({window}d):** "
-        f"attention **{totals.get('total_views', 0):,} views** / "
-        f"**{totals.get('total_uniques', 0):,} visitors**; "
-        f"interest **{_format_delta(totals.get('total_stars_delta', 0))} stars** / "
-        f"**{_format_delta(totals.get('total_subscribers_delta', 0))} watchers** "
-        f"(now {totals.get('total_stars', 0):,} / {totals.get('total_subscribers', 0):,}); "
-        f"adoption **{totals.get('total_clones', 0):,} clones** / "
-        f"**{_format_delta(totals.get('total_forks_delta', 0))} forks** "
+        f"**Growth ({window}d):** " +
+        f"attention **{totals.get('total_views', 0):,} views** / " +
+        f"**{totals.get('total_uniques', 0):,} visitors**; " +
+        f"interest **{_format_delta(totals.get('total_stars_delta', 0))} stars** / " +
+        f"**{_format_delta(totals.get('total_subscribers_delta', 0))} watchers** " +
+        f"(now {totals.get('total_stars', 0):,} / {totals.get('total_subscribers', 0):,}); " +
+        f"adoption **{totals.get('total_clones', 0):,} clones** / " +
+        f"**{_format_delta(totals.get('total_forks_delta', 0))} forks** " +
         f"(now {totals.get('total_forks', 0):,})."
     )
 
@@ -144,10 +144,10 @@ def _repo_growth_table_lines(per_repo_rows, growth):
     ]
     for row in rows[:DEFAULT_REPO_TABLE_LIMIT]:
         lines.append(
-            f"| `{row['repo']}` "
-            f"| {row['views']:,} views / {row['visitors']:,} visitors "
-            f"| {_format_delta(row['stars_delta'])} stars ({row['stars']:,}) / "
-            f"{_format_delta(row['subscribers_delta'])} watchers ({row['subscribers']:,}) "
+            f"| `{row['repo']}` " +
+            f"| {row['views']:,} views / {row['visitors']:,} visitors " +
+            f"| {_format_delta(row['stars_delta'])} stars ({row['stars']:,}) / " +
+            f"{_format_delta(row['subscribers_delta'])} watchers ({row['subscribers']:,}) " +
             f"| {row['clones']:,} clones / {_format_delta(row['forks_delta'])} forks ({row['forks']:,}) |"
         )
     return lines
@@ -293,7 +293,7 @@ def render():
         remaining_rows = per_repo[DEFAULT_REPO_TABLE_LIMIT:]
 
         lines.extend([
-            f"<details><summary><strong>Repositories</strong> "
+            "<details><summary><strong>Repositories</strong> " +
             f"&mdash; top {len(default_rows)} of {len(per_repo)}</summary>",
             "",
         ])
@@ -320,7 +320,7 @@ def render():
     growth_table_rows = _growth_table_source(per_repo, growth)
     if metric_rows and growth_table_rows:
         lines.extend([
-            "<details><summary><strong>Repository Growth</strong> "
+            "<details><summary><strong>Repository Growth</strong> " +
             f"&mdash; top {min(DEFAULT_REPO_TABLE_LIMIT, len(growth_table_rows))} by growth</summary>",
             "",
         ])
@@ -330,7 +330,7 @@ def render():
     # --- Referrers (disclosure) ---
     if ref_list:
         lines.extend([
-            f"<details><summary><strong>Top Referrers</strong> "
+            "<details><summary><strong>Top Referrers</strong> " +
             f"&mdash; {len(ref_list)} sources</summary>",
             "",
             "| Referrer | Views | Uniques |",
@@ -349,7 +349,7 @@ def render():
     # --- Popular Content (disclosure) ---
     if path_list:
         lines.extend([
-            f"<details><summary><strong>Popular Content</strong> "
+            "<details><summary><strong>Popular Content</strong> " +
             f"&mdash; top {len(path_list)} paths</summary>",
             "",
             "| Repository | Content | Views | Uniques |",
@@ -386,9 +386,9 @@ def render():
     with open(OUTPUT_PATH, "w") as f:
         f.write("\n".join(lines))
 
-    print(f"README.md updated ({len(daily_rows)} daily rows, "
-          f"{len(totals['repos'])} repos, "
-          f"{len(ref_list)} referrers, {len(path_list)} paths, "
+    print(f"README.md updated ({len(daily_rows)} daily rows, " +
+          f"{len(totals['repos'])} repos, " +
+          f"{len(ref_list)} referrers, {len(path_list)} paths, " +
           f"{len(asset_files)} SVG assets)")
 
 

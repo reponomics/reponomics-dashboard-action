@@ -46,12 +46,12 @@ def load_repo_config(config_path: str = CONFIG_PATH) -> dict[str, Any]:
 
     if len(include_only) > max_repos:
         raise ValueError(
-            f"'{config_path}' key 'include_only' contains {len(include_only)} "
+            f"'{config_path}' key 'include_only' contains {len(include_only)} " +
             f"repositories but 'max_repos' is {max_repos}."
         )
     if len(include) > max_repos:
         raise ValueError(
-            f"'{config_path}' key 'include' contains {len(include)} "
+            f"'{config_path}' key 'include' contains {len(include)} " +
             f"repositories but 'max_repos' is {max_repos}."
         )
 
@@ -92,7 +92,7 @@ def _normalize_repo_list(config_path: str, key: str, value) -> list[str]:
             continue
         if "/" not in repo:
             raise ValueError(
-                f"invalid repository entry {raw_repo!r} under '{key}' in "
+                f"invalid repository entry {raw_repo!r} under '{key}' in " +
                 f"{config_path}; use the 'owner/repo' format."
             )
         if repo not in seen:
@@ -114,7 +114,7 @@ def _normalize_positive_int(config_path: str, key: str, value: Any) -> int:
     """Validate a positive integer setting."""
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError(
-            f"'{config_path}' key '{key}' must be a positive integer, "
+            f"'{config_path}' key '{key}' must be a positive integer, " +
             f"got {value!r}."
         )
     return value

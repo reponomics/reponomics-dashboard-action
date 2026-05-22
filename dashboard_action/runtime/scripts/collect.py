@@ -80,9 +80,9 @@ class SecondaryRateLimitError(requests.HTTPError):
         self.retry_at_utc = retry_at_utc
         self.retry_source = source
         message = (
-            "GitHub secondary rate limit encountered for "
-            f"{url}. Do not retry until after "
-            f"{retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')} "
+            "GitHub secondary rate limit encountered for " +
+            f"{url}. Do not retry until after " +
+            f"{retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')} " +
             f"({retry_after_seconds}s, source: {source})."
         )
         super().__init__(message, response=response)
@@ -101,8 +101,8 @@ class RepoUnavailableError(requests.HTTPError):
         self.response = response
         self.attempts = attempts
         message = (
-            "Repository traffic endpoint remained unavailable after "
-            f"{attempts} attempt(s): {url}. The repo may have been deleted, "
+            "Repository traffic endpoint remained unavailable after " +
+            f"{attempts} attempt(s): {url}. The repo may have been deleted, " +
             "renamed, transferred, or may no longer be accessible."
         )
         super().__init__(message, response=response)
@@ -177,8 +177,8 @@ def _write_step_summary(
         ])
         for warning in _NETWORK_WARNINGS:
             lines.append(
-                "- Attempt "
-                f"{warning['attempt']} for `{warning['url']}` failed with "
+                "- Attempt " +
+                f"{warning['attempt']} for `{warning['url']}` failed with " +
                 f"`{warning['error_type']}`: {warning['message']}"
             )
 
@@ -368,7 +368,7 @@ def fetch_json(
             if attempt < MAX_RETRIES:
                 wait = _retry_delay_with_jitter(attempt)
                 print(
-                    f"  Retry {attempt}/{MAX_RETRIES} after network error: {exc} "
+                    f"  Retry {attempt}/{MAX_RETRIES} after network error: {exc} " +
                     f"(sleeping {wait:.2f}s)"
                 )
                 time.sleep(wait)
@@ -433,8 +433,8 @@ def discover_repositories(headers: Headers) -> list[RepoMetadata]:
     discovered = []
     while True:
         url = (
-            f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member"
-            f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}"
+            f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member" +
+            f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}" +
             f"&page={page}"
         )
         page_rows = fetch_json(url, headers)
@@ -574,8 +574,8 @@ def resolve_repositories(
             print("Error: no eligible repositories remain in 'include_only'.")
             sys.exit(1)
         print(
-            "Repository discovery: "
-            f"{len(discovered)} accessible, {len(eligible)} eligible after filters, "
+            "Repository discovery: " +
+            f"{len(discovered)} accessible, {len(eligible)} eligible after filters, " +
             f"tracking {len(resolved)} from include_only."
         )
         return resolved, manifest, {
@@ -626,9 +626,9 @@ def resolve_repositories(
         state["auto_cutoff_created_at"] = ""
 
     print(
-        "Repository discovery: "
-        f"{len(discovered)} accessible, {len(eligible)} eligible after filters, "
-        f"tracking {len(resolved)} "
+        "Repository discovery: " +
+        f"{len(discovered)} accessible, {len(eligible)} eligible after filters, " +
+        f"tracking {len(resolved)} " +
         f"({explicit_count} explicit, {auto_count} automatic)."
     )
 
@@ -785,7 +785,7 @@ def collect_repo_metrics(
 
 def _fallback_repo_detail_warning(repo: str, exc: Exception) -> str:
     return (
-        f"{repo}: repository detail request failed ({exc}); "
+        f"{repo}: repository detail request failed ({exc}); " +
         "traffic collection continued and repo metrics used discovery fallback."
     )
 
@@ -847,7 +847,7 @@ def main() -> None:
             )
 
             print(
-                f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), "
+                f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), " +
                 f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s)"
             )
         except SecondaryRateLimitError as exc:

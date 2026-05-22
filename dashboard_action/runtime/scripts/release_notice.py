@@ -43,10 +43,10 @@ def parse_semver(value: str) -> SemVer | None:
     """Parse a constrained semver string with an optional leading v."""
     match = re.match(
         r"^\s*v?(?P<major>0|[1-9]\d*)\."
-        r"(?P<minor>0|[1-9]\d*)\."
-        r"(?P<patch>0|[1-9]\d*)"
-        r"(?:-(?P<prerelease>[0-9A-Za-z.-]+))?"
-        r"(?:\+[0-9A-Za-z.-]+)?\s*$",
+        + r"(?P<minor>0|[1-9]\d*)\."
+        + r"(?P<patch>0|[1-9]\d*)"
+        + r"(?:-(?P<prerelease>[0-9A-Za-z.-]+))?"
+        + r"(?:\+[0-9A-Za-z.-]+)?\s*$",
         value,
     )
     if not match:

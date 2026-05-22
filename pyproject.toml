@@ -43,4 +43,17 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "ISC"]
+
+[tool.ruff.lint.flake8-implicit-str-concat]
+allow-multiline = false
+
+[tool.ruff.lint.per-file-ignores]
+"dashboard_action/runtime/scripts/collect.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/load_data.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/readme_assets.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/render_dashboard.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/render_private_readme.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/render_readme.py" = ["ISC002"]
+"dashboard_action/runtime/scripts/repo_config.py" = ["ISC002"]
+"scripts/validate_vendored_assets.py" = ["ISC002"]

@@ -215,8 +215,8 @@ def _validate_secret(value: str, label: str, *, allow_weak: bool) -> None:
     if len(value) < MIN_SECRET_LENGTH and not allow_weak:
         raise ActionError(
             f"{label} is below the Reponomics dashboard secret entropy policy. "
-            "Use a generated random secret, or set allow-weak-dashboard-secret "
-            "to true if you explicitly accept the disclosure and brute-force risk."
+            + "Use a generated random secret, or set allow-weak-dashboard-secret "
+            + "to true if you explicitly accept the disclosure and brute-force risk."
         )
 
 

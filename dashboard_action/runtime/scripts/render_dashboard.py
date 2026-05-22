@@ -3217,7 +3217,7 @@ def _load_access_mode():
         mode = ACCESS_MODE_ENCRYPTED
     if mode not in {ACCESS_MODE_PUBLIC, ACCESS_MODE_ENCRYPTED}:
         raise ValueError(
-            f"Unsupported {ACCESS_MODE_ENV}={mode!r}. "
+            f"Unsupported {ACCESS_MODE_ENV}={mode!r}. " +
             f"Use {ACCESS_MODE_PUBLIC!r} or {ACCESS_MODE_ENCRYPTED!r}."
         )
     return mode
@@ -3445,11 +3445,11 @@ def _render_update_notice():
         return ""
     summary = f" {html.escape(notice['summary'])}" if notice["summary"] else ""
     return (
-        '\n  <div class="update-notice" role="note">'
-        f"<strong>{html.escape(notice['title'])}</strong>"
-        f"{summary} "
-        f'<a href="{html.escape(notice["url"], quote=True)}">'
-        f'View {html.escape(notice["version"])}</a>.'
+        '\n  <div class="update-notice" role="note">' +
+        f"<strong>{html.escape(notice['title'])}</strong>" +
+        f"{summary} " +
+        f'<a href="{html.escape(notice["url"], quote=True)}">' +
+        f'View {html.escape(notice["version"])}</a>.' +
         "</div>\n"
     )
 
@@ -3731,8 +3731,8 @@ def _build_public_html(payload, chart_loader):
     totals = payload["totals"]
     shell = _build_dashboard_shell(
         (
-            f"Last updated: {payload['generated_at']} | "
-            f"Tracking {totals['repo_count']} repositories | "
+            f"Last updated: {payload['generated_at']} | " +
+            f"Tracking {totals['repo_count']} repositories | " +
             f"{totals['days_tracked']} days of data"
         ),
         {
@@ -3870,7 +3870,7 @@ def render():
         )
         if not dashboard_key:
             raise ValueError(
-                f"{DASHBOARD_KEY_ENV} must be set when "
+                f"{DASHBOARD_KEY_ENV} must be set when " +
                 f"{ACCESS_MODE_ENV}={ACCESS_MODE_ENCRYPTED!r}."
             )
         published_html = _build_encrypted_html(
@@ -3897,8 +3897,8 @@ def render():
         f.write(standalone_html)
 
     print(
-        f"Dashboards written to {OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} "
-        f"(mode={access_mode}, {len(daily_rows)} daily rows, {len(dates)} dates, "
+        f"Dashboards written to {OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} " +
+        f"(mode={access_mode}, {len(daily_rows)} daily rows, {len(dates)} dates, " +
         f"{len(ref_list)} referrers, {len(path_list)} paths)"
     )
 

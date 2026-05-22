@@ -120,8 +120,8 @@ def _responsive_svg(inner: str, width: int, height: int) -> str:
     narrower than the designed width.
     """
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'viewBox="0 0 {width} {height}" '
+        '<svg xmlns="http://www.w3.org/2000/svg" ' +
+        f'viewBox="0 0 {width} {height}" ' +
         f'width="{width}" height="{height}">\n'
     ) + inner + "\n</svg>"
 
@@ -203,7 +203,7 @@ def svg_hero_stats(
         arrow_text, arrow_color = _trend_arrow(trend_views, prev_views, theme=t)
         if arrow_text:
             trend_svg = (
-                f'<text x="{col_w // 2 + 48}" y="58" font-size="11" '
+                f'<text x="{col_w // 2 + 48}" y="58" font-size="11" ' +
                 f'fill="{arrow_color}" font-weight="600">{arrow_text}</text>'
             )
 
@@ -212,27 +212,27 @@ def svg_hero_stats(
         cx = col_w * i + col_w // 2
         bar_w = 32
         metric_blocks.append(
-            f'<rect x="{cx - bar_w // 2}" y="16" width="{bar_w}" height="3" '
+            f'<rect x="{cx - bar_w // 2}" y="16" width="{bar_w}" height="3" ' +
             f'fill="{color}" rx="1.5" opacity="0.7"/>'
         )
         delay = f"{i * 0.12:.2f}s"
         metric_blocks.append(
-            f'<text x="{cx}" y="56" text-anchor="middle" '
-            f'font-size="26" font-weight="700" fill="{color}" '
-            f'letter-spacing="-0.03em" opacity="0">{_format_compact(value)}'
-            f'<animate attributeName="opacity" values="0;1;1;0" '
-            f'keyTimes="0;0.03;0.92;1" dur="12s" '
+            f'<text x="{cx}" y="56" text-anchor="middle" ' +
+            f'font-size="26" font-weight="700" fill="{color}" ' +
+            f'letter-spacing="-0.03em" opacity="0">{_format_compact(value)}' +
+            '<animate attributeName="opacity" values="0;1;1;0" ' +
+            'keyTimes="0;0.03;0.92;1" dur="12s" ' +
             f'begin="{delay}" repeatCount="indefinite"/></text>'
         )
         metric_blocks.append(
-            f'<text x="{cx}" y="76" text-anchor="middle" '
-            f'font-size="10" fill="{t.text_muted}" font-weight="600" '
+            f'<text x="{cx}" y="76" text-anchor="middle" ' +
+            f'font-size="10" fill="{t.text_muted}" font-weight="600" ' +
             f'letter-spacing="0.08em">{label}</text>'
         )
 
     footer_text = f"{repo_count} repos \u00b7 {days_tracked} days"
     footer_svg = (
-        f'<text x="{width // 2}" y="104" text-anchor="middle" '
+        f'<text x="{width // 2}" y="104" text-anchor="middle" ' +
         f'font-size="11" fill="{t.text_faint}">{footer_text}</text>'
     )
 
@@ -285,7 +285,7 @@ def svg_sparkline(
 
     polyline_points = " ".join(f"{x:.1f},{y:.1f}" for x, y, _ in points)
     fill_points = (
-        f"{left_pad},{height - bottom_pad} {polyline_points} "
+        f"{left_pad},{height - bottom_pad} {polyline_points} " +
         f"{width - right_pad},{height - bottom_pad}"
     )
 
@@ -297,7 +297,7 @@ def svg_sparkline(
     for frac in (0.25, 0.5, 0.75):
         gy = top_pad + usable_height * (1 - frac)
         grid_lines.append(
-            f'<line x1="{left_pad}" y1="{gy:.1f}" x2="{width - right_pad}" '
+            f'<line x1="{left_pad}" y1="{gy:.1f}" x2="{width - right_pad}" ' +
             f'y2="{gy:.1f}" stroke="{t.grid}" stroke-width="1"/>'
         )
 
@@ -306,21 +306,21 @@ def svg_sparkline(
     px, py, pv = points[peak_idx]
     peak_label = _format_compact(int(pv))
     peak_svg = (
-        f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{stroke_color}" opacity="0">'
-        f'<animate attributeName="opacity" values="0;0;1;1;0" '
-        f'keyTimes="0;0.08;0.1;0.92;1" dur="12s" repeatCount="indefinite"/></circle>'
-        f'<text x="{px:.1f}" y="{py - 8:.1f}" text-anchor="middle" '
-        f'font-size="10" fill="{t.text_primary}" font-weight="600" opacity="0">{peak_label}'
-        f'<animate attributeName="opacity" values="0;0;1;1;0" '
-        f'keyTimes="0;0.09;0.11;0.92;1" dur="12s" repeatCount="indefinite"/></text>'
+        f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{stroke_color}" opacity="0">' +
+        '<animate attributeName="opacity" values="0;0;1;1;0" ' +
+        'keyTimes="0;0.08;0.1;0.92;1" dur="12s" repeatCount="indefinite"/></circle>' +
+        f'<text x="{px:.1f}" y="{py - 8:.1f}" text-anchor="middle" ' +
+        f'font-size="10" fill="{t.text_primary}" font-weight="600" opacity="0">{peak_label}' +
+        '<animate attributeName="opacity" values="0;0;1;1;0" ' +
+        'keyTimes="0;0.09;0.11;0.92;1" dur="12s" repeatCount="indefinite"/></text>'
     )
 
     # Latest value annotation (right edge)
     last_x, last_y, last_v = points[-1]
     last_label = _format_compact(int(last_v))
     last_svg = (
-        f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.5" fill="{t.text_muted}"/>'
-        f'<text x="{last_x - 6:.1f}" y="{last_y - 7:.1f}" text-anchor="end" '
+        f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.5" fill="{t.text_muted}"/>' +
+        f'<text x="{last_x - 6:.1f}" y="{last_y - 7:.1f}" text-anchor="end" ' +
         f'font-size="9" fill="{t.text_muted}">{last_label}</text>'
     )
 
@@ -328,9 +328,9 @@ def svg_sparkline(
     date_labels = ""
     if dates and len(dates) >= 2:
         date_labels = (
-            f'<text x="{left_pad}" y="{height - 4}" font-size="9" '
-            f'fill="{t.text_faint}">{dates[0]}</text>'
-            f'<text x="{width - right_pad}" y="{height - 4}" text-anchor="end" '
+            f'<text x="{left_pad}" y="{height - 4}" font-size="9" ' +
+            f'fill="{t.text_faint}">{dates[0]}</text>' +
+            f'<text x="{width - right_pad}" y="{height - 4}" text-anchor="end" ' +
             f'font-size="9" fill="{t.text_faint}">{dates[-1]}</text>'
         )
 
@@ -398,23 +398,23 @@ def svg_bar_chart(
 
         # Subtle track behind bar
         bars.append(
-            f'<rect x="{label_width}" y="{y}" width="{bar_area_width}" '
+            f'<rect x="{label_width}" y="{y}" width="{bar_area_width}" ' +
             f'height="{bar_height}" fill="{t.surface}" rx="4"/>'
         )
         # Actual bar
         bars.append(
-            f'<rect x="{label_width}" y="{y}" width="{bar_w:.1f}" '
+            f'<rect x="{label_width}" y="{y}" width="{bar_w:.1f}" ' +
             f'height="{bar_height}" fill="{bar_color}" rx="4" opacity="0.85"/>'
         )
         # Label
         bars.append(
-            f'<text x="{label_width - 8}" y="{y + bar_height // 2 + 4}" '
+            f'<text x="{label_width - 8}" y="{y + bar_height // 2 + 4}" ' +
             f'text-anchor="end" font-size="{label_font}" fill="{t.text_secondary}">{label}</text>'
         )
         # Value + percentage
         bars.append(
-            f'<text x="{label_width + bar_area_width + 8}" '
-            f'y="{y + bar_height // 2 + 4}" font-size="{value_font}" fill="{t.text_primary}">'
+            f'<text x="{label_width + bar_area_width + 8}" ' +
+            f'y="{y + bar_height // 2 + 4}" font-size="{value_font}" fill="{t.text_primary}">' +
             f'{value_str} <tspan fill="{t.text_faint}">{pct_str}</tspan></text>'
         )
 
@@ -484,7 +484,7 @@ def svg_activity_graph(
     for d_idx in (1, 3, 5):  # Mon, Wed, Fri
         dy = grid_y + d_idx * (cell_size + gap) + cell_size // 2 + 3
         day_labels.append(
-            f'<text x="{day_label_width}" y="{dy}" text-anchor="end" '
+            f'<text x="{day_label_width}" y="{dy}" text-anchor="end" ' +
             f'font-size="9" fill="{t.text_faint}">{day_names[d_idx]}</text>'
         )
 
@@ -500,7 +500,7 @@ def svg_activity_graph(
             mx = grid_x + week_idx * (cell_size + gap)
             month_name = week_start.strftime("%b")
             month_labels.append(
-                f'<text x="{mx}" y="{month_label_height}" '
+                f'<text x="{mx}" y="{month_label_height}" ' +
                 f'font-size="9" fill="{t.text_faint}">{month_name}</text>'
             )
 
@@ -519,11 +519,11 @@ def svg_activity_graph(
         fade_in = f"{anim_offset / 14:.3f}"
         fade_in_end = f"{min((anim_offset + 0.3) / 14, 0.15):.3f}"
         cells.append(
-            f'<rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" '
-            f'fill="{color}" rx="2" opacity="0">'
-            f'<animate attributeName="opacity" values="0;0;1;1;0" '
-            f'keyTimes="0;{fade_in};{fade_in_end};0.92;1" dur="14s" '
-            f'repeatCount="indefinite"/>'
+            f'<rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" ' +
+            f'fill="{color}" rx="2" opacity="0">' +
+            '<animate attributeName="opacity" values="0;0;1;1;0" ' +
+            f'keyTimes="0;{fade_in};{fade_in_end};0.92;1" dur="14s" ' +
+            'repeatCount="indefinite"/>' +
             f"<title>{current_date.isoformat()}: {value:,} views</title></rect>"
         )
 
@@ -596,28 +596,28 @@ def svg_donut_chart(
         large_arc = 1 if angle > 180 else 0
         color = palette[i % len(palette)]
         path = (
-            f"M {x1:.1f} {y1:.1f} "
-            f"A {radius} {radius} 0 {large_arc} 1 {x2:.1f} {y2:.1f} "
-            f"L {x3:.1f} {y3:.1f} "
+            f"M {x1:.1f} {y1:.1f} " +
+            f"A {radius} {radius} 0 {large_arc} 1 {x2:.1f} {y2:.1f} " +
+            f"L {x3:.1f} {y3:.1f} " +
             f"A {inner_radius} {inner_radius} 0 {large_arc} 0 {x4:.1f} {y4:.1f} Z"
         )
         slice_delay = i * 0.08 / 12  # fraction of 12s cycle
         paths.append(
-            f'<path d="{path}" fill="{color}" opacity="0">'
-            f'<animate attributeName="opacity" values="0;0.9;0.9;0" '
-            f'keyTimes="0;{slice_delay + 0.03:.3f};0.92;1" dur="12s" '
-            f'repeatCount="indefinite"/>'
+            f'<path d="{path}" fill="{color}" opacity="0">' +
+            '<animate attributeName="opacity" values="0;0.9;0.9;0" ' +
+            f'keyTimes="0;{slice_delay + 0.03:.3f};0.92;1" dur="12s" ' +
+            'repeatCount="indefinite"/>' +
             f"<title>{labels[i]}: {value:,.0f} ({pct:.1%})</title></path>"
         )
         # Legend row: color dot + percentage + name
         ly = i * legend_row_height + 10
         pct_str = f"{pct:.1%}" if pct >= 0.01 else "&lt;1%"
         legend_items.append(
-            f'<circle cx="{legend_x + 6}" cy="{ly + 4}" r="5" fill="{color}"/>'
-            f'<text x="{legend_x + 18}" y="{ly + 8}" font-size="10" '
-            f'fill="{t.text_primary}" font-weight="600" '
-            f'font-variant-numeric="tabular-nums">{pct_str}</text>'
-            f'<text x="{legend_x + 56}" y="{ly + 8}" font-size="{legend_font}" '
+            f'<circle cx="{legend_x + 6}" cy="{ly + 4}" r="5" fill="{color}"/>' +
+            f'<text x="{legend_x + 18}" y="{ly + 8}" font-size="10" ' +
+            f'fill="{t.text_primary}" font-weight="600" ' +
+            f'font-variant-numeric="tabular-nums">{pct_str}</text>' +
+            f'<text x="{legend_x + 56}" y="{ly + 8}" font-size="{legend_font}" ' +
             f'fill="{t.text_muted}">{label}</text>'
         )
         start_angle = end_angle
@@ -625,9 +625,9 @@ def svg_donut_chart(
     # Center label — total
     center_label = _format_compact(int(total))
     center_svg = (
-        f'<text x="{center}" y="{center - 2}" text-anchor="middle" '
-        f'font-size="18" font-weight="700" fill="{t.text_primary}">{center_label}</text>'
-        f'<text x="{center}" y="{center + 14}" text-anchor="middle" '
+        f'<text x="{center}" y="{center - 2}" text-anchor="middle" ' +
+        f'font-size="18" font-weight="700" fill="{t.text_primary}">{center_label}</text>' +
+        f'<text x="{center}" y="{center + 14}" text-anchor="middle" ' +
         f'font-size="9" fill="{t.text_faint}">total views</text>'
     )
 

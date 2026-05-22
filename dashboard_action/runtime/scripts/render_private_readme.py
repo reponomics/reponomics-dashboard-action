@@ -18,7 +18,7 @@ def _pages_line(pages_dashboard: str) -> str:
     owner, _, name = repo.partition("/")
     if pages_dashboard == "encrypted":
         return (
-            f"Encrypted dashboard: `https://{owner}.github.io/{name}/` "
+            f"Encrypted dashboard: `https://{owner}.github.io/{name}/` " +
             "(requires your dashboard key)"
         )
     return "Pages dashboard: disabled"
@@ -49,11 +49,11 @@ def _update_notice_lines():
         return []
     summary = f" {html.escape(notice['summary'])}" if notice["summary"] else ""
     return [
-        "<sub>"
-        f"<strong>{html.escape(notice['title'])}</strong>"
-        f"{summary} "
-        f"<a href=\"{html.escape(notice['url'], quote=True)}\">"
-        f"View {html.escape(notice['version'])}</a>."
+        "<sub>" +
+        f"<strong>{html.escape(notice['title'])}</strong>" +
+        f"{summary} " +
+        f"<a href=\"{html.escape(notice['url'], quote=True)}\">" +
+        f"View {html.escape(notice['version'])}</a>." +
         "</sub>",
         "",
     ]

@@ -797,8 +797,8 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 visitors=visitors,
                 downstream_delta=downstream,
                 text=(
-                    f"`{repo}` drew {views:,} views and {visitors:,} visitors "
-                    f"without downstream growth in the selected window."
+                    f"`{repo}` drew {views:,} views and {visitors:,} visitors " +
+                    "without downstream growth in the selected window."
                 ),
             )
 
@@ -813,7 +813,7 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 traffic=views,
                 downstream_delta=downstream,
                 text=(
-                    f"`{repo}` added {downstream:+,} downstream signals on only "
+                    f"`{repo}` added {downstream:+,} downstream signals on only " +
                     f"{views:,} views."
                 ),
             )
@@ -831,7 +831,7 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 clones=clones,
                 stargazers_delta=star_delta,
                 text=(
-                    f"`{repo}` is clone-heavy but star-light "
+                    f"`{repo}` is clone-heavy but star-light " +
                     f"({clones:,} clones, {star_delta:+,} stars)."
                 ),
             )
@@ -872,8 +872,8 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 delta=subscriber_delta,
                 denominator=denom,
                 text=(
-                    f"`{repo}` watchers rose {subscriber_delta:+,} "
-                    f"in the selected window."
+                    f"`{repo}` watchers rose {subscriber_delta:+,} " +
+                    "in the selected window."
                 ),
             )
 
@@ -888,8 +888,8 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 traffic=views,
                 downstream_delta=downstream,
                 text=(
-                    f"`{repo}` had a traffic spike shape ({views:,} views) "
-                    f"without stars, watchers, or forks moving."
+                    f"`{repo}` had a traffic spike shape ({views:,} views) " +
+                    "without stars, watchers, or forks moving."
                 ),
             )
 
@@ -904,7 +904,7 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
                 traffic=views,
                 downstream_delta=downstream,
                 text=(
-                    f"`{repo}` gained {downstream:+,} downstream signals without "
+                    f"`{repo}` gained {downstream:+,} downstream signals without " +
                     f"a matching traffic spike ({views:,} views)."
                 ),
             )
@@ -971,7 +971,7 @@ def _window_change_candidate(repo, metric, values, min_floor):
         "delta": delta,
         "pct": pct_value,
         "text": (
-            f"`{repo}` {metric} {pct_text} over the last {window}d "
+            f"`{repo}` {metric} {pct_text} over the last {window}d " +
             f"({prev:,} -> {curr:,}, {delta:+,})."
         ),
     }
@@ -1013,7 +1013,7 @@ def _spike_candidate(repo, metric, values):
         "baseline": median,
         "delta": delta,
         "text": (
-            f"`{repo}` {metric} {direction} versus baseline "
+            f"`{repo}` {metric} {direction} versus baseline " +
             f"(latest {latest:,} vs trailing median {median:.0f})."
         ),
     }

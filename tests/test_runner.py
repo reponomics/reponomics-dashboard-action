@@ -505,11 +505,11 @@ def test_release_notice_validation_cli_accepts_valid_block(tmp_path: Path) -> No
             "# v0.2.0",
             "",
             "<!-- reponomics-update {"
-            "\"title\":\"Upgrade available\","
-            "\"summary\":\"Compatible runtime and artifact migration update.\","
-            "\"min_runtime_version\":\"0.1.0\","
-            "\"action_refs\":[\"v0.1.0\"]"
-            "} -->",
+            + "\"title\":\"Upgrade available\","
+            + "\"summary\":\"Compatible runtime and artifact migration update.\","
+            + "\"min_runtime_version\":\"0.1.0\","
+            + "\"action_refs\":[\"v0.1.0\"]"
+            + "} -->",
         ]),
         encoding="utf-8",
     )
@@ -582,10 +582,10 @@ def test_release_notice_selects_first_compatible_newer_release(
             "prerelease": False,
             "body": (
                 "<!-- reponomics-update {"
-                "\"title\":\"Future runtime only\","
-                "\"summary\":\"Not for this runtime.\","
-                "\"min_runtime_version\":\"0.5.0\""
-                "} -->"
+                + "\"title\":\"Future runtime only\","
+                + "\"summary\":\"Not for this runtime.\","
+                + "\"min_runtime_version\":\"0.5.0\""
+                + "} -->"
             ),
         },
         {
@@ -594,9 +594,9 @@ def test_release_notice_selects_first_compatible_newer_release(
             "prerelease": False,
             "body": (
                 "<!-- reponomics-update {"
-                "\"title\":\"Draft\","
-                "\"summary\":\"Draft releases are ignored.\""
-                "} -->"
+                + "\"title\":\"Draft\","
+                + "\"summary\":\"Draft releases are ignored.\""
+                + "} -->"
             ),
         },
         {
@@ -606,10 +606,10 @@ def test_release_notice_selects_first_compatible_newer_release(
             "html_url": "https://malicious.example/release",
             "body": (
                 "<!-- reponomics-update {"
-                "\"title\":\"Compatible <b>release</b>\","
-                "\"summary\":\"Use the minor floating tag.\","
-                "\"action_refs\":[\"v0.2\"]"
-                "} -->"
+                + "\"title\":\"Compatible <b>release</b>\","
+                + "\"summary\":\"Use the minor floating tag.\","
+                + "\"action_refs\":[\"v0.2\"]"
+                + "} -->"
             ),
         },
     ]
@@ -684,11 +684,11 @@ def test_publish_renders_sanitized_release_notice(
                 "prerelease": False,
                 "body": (
                     "ignored **markdown**\n"
-                    "<!-- reponomics-update {"
-                    "\"title\":\"Update <script>alert(1)</script>\","
-                    "\"summary\":\"Safe metadata only; no **markdown**\","
-                    "\"min_runtime_version\":\"0.1.0\""
-                    "} -->"
+                    + "<!-- reponomics-update {"
+                    + "\"title\":\"Update <script>alert(1)</script>\","
+                    + "\"summary\":\"Safe metadata only; no **markdown**\","
+                    + "\"min_runtime_version\":\"0.1.0\""
+                    + "} -->"
                 ),
             }
         ]

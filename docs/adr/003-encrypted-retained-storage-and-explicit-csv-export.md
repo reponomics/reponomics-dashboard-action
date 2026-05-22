@@ -1,4 +1,4 @@
-# ADR 003: Two-Track Privacy Model And Explicit CSV Export
+# ADR 003: Two-Track Privacy Model And Dashboard-Local CSV Export
 
 Date: 2026-05-21
 
@@ -33,10 +33,10 @@ internal combination as a first-class setup choice.
 
 Portability remains important. The product pitch includes the idea that the
 retained history is still ordinary CSV data that users can move elsewhere. When
-retained storage is encrypted, portability must be a first-class workflow rather
-than a manual decryption recipe.
+retained storage is encrypted, portability must be available without requiring
+manual decryption commands.
 
-## Proposed Decision
+## Initial Proposal
 
 Replace the flexible `encrypted`/`plain`/`auto` mode surface with two explicit
 tracks.
@@ -57,32 +57,67 @@ The secondary track is the plaintext private-repository model:
 - the user may optionally publish a plaintext GitHub Pages dashboard;
 - no dashboard secret is required.
 
-Remove `auto`. The setup flow should ask users to choose between the encrypted
-privacy track and the plaintext private-repository track. It should not expose a
+The setup flow should ask users to choose between the encrypted privacy track
+and the plaintext private-repository track. It should not expose a
 general-purpose matrix of storage and publication modes.
 
-Add explicit export and cleanup workflows for plaintext CSV portability:
+The initial export proposal added two manual workflows for encrypted-track CSV
+portability:
 
 - `export` restores and decrypts the retained `traffic-data` artifact, packages
   the canonical CSV files, and uploads a separate plaintext export artifact.
 - `destroy-exports` deletes plaintext export artifacts created by `export`.
 
-Plaintext export artifacts should use a distinct name or prefix, for example:
+Export artifacts would have used a distinct name or prefix, short retention by
+default, and cleanup through a separate workflow.
 
-```text
-reponomics-csv-export-<run-id>
-```
+## Concern
 
-The generated template should provide manual workflows for the encrypted track
-such as:
+The export/destroy workflow creates a temporary plaintext artifact in GitHub
+Actions. In a public repository, workflow artifacts are available to users with
+repository read access while the artifact exists. A short retention period and a
+cleanup workflow reduce the exposure window, but they cannot prove that no one
+downloaded the plaintext artifact before deletion.
 
-- **Export Reponomics CSV**
-- **Destroy Reponomics CSV exports**
+That means export/destroy is not a privacy-preserving portability path for
+public-repository users. It is a disclosure workflow.
 
-The export artifact should have short retention by default, initially one day.
-Users who need a weekly export for investors, backups, or downstream analysis
-can schedule export runs deliberately, then either download the artifact and run
-cleanup or let artifact retention expire.
+The dashboard already has the data after unlock. For the encrypted track, the
+browser receives encrypted dashboard data, the user enters the dashboard secret,
+and the dashboard decrypts locally. Once that has happened, the dashboard can
+generate CSV downloads in the browser without uploading plaintext back to
+GitHub.
+
+## Accepted Decision
+
+Keep the two-track product model, but replace workflow export with
+dashboard-local export for the encrypted track.
+
+The primary track is the encrypted privacy model:
+
+- retained collection data is stored in encrypted artifacts;
+- GitHub Pages publication, when enabled, publishes an encrypted dashboard;
+- the user decides whether to publish plaintext README dashboard summaries;
+- plaintext CSV portability is provided by the unlocked dashboard in the
+  browser.
+
+The secondary track is the plaintext private-repository model:
+
+- retained collection data is stored as plaintext CSV artifacts;
+- README dashboard summaries are allowed because the repository is already
+  treated as private;
+- the user may optionally publish a plaintext GitHub Pages dashboard;
+- no dashboard secret is required.
+
+Remove `auto`. The setup flow should ask users to choose between the encrypted
+privacy track and the plaintext private-repository track. It should not expose a
+general-purpose matrix of storage and publication modes.
+
+Do not ship export/destroy workflows as part of the product surface. For the
+plaintext private-repository track, retained CSV artifacts are already
+plaintext, so no special export workflow is necessary. For the encrypted track,
+CSV export should happen from the unlocked dashboard after browser-side
+decryption.
 
 ## Consequences
 
@@ -101,12 +136,10 @@ The encrypted track makes key loss serious. If the dashboard key is lost,
 retained history cannot be recovered from encrypted artifacts. Documentation and
 setup summaries must say this plainly.
 
-Portability remains part of the encrypted track, but it moves to an explicit
-workflow: users export plaintext CSV artifacts when they want to move data
-elsewhere. Those artifacts are temporary disclosure events, not durable storage.
-This is acceptable for public/free-tier users only if the export workflow is
-manual, clearly labeled, short-lived by default, and paired with a cleanup
-workflow.
+Portability remains part of the encrypted track, but it belongs inside the
+dashboard. Users export plaintext CSV from the unlocked dashboard after local
+decryption. Plaintext data should not be uploaded back to GitHub as an artifact
+as part of the normal product surface.
 
 ## Credential Boundary
 
@@ -118,7 +151,7 @@ The product still has two separate API permission boundaries:
 
 - collection access to the repositories whose traffic data is being read;
 - dashboard-repository access for setup, workflow management, Pages deployment,
-  export artifact cleanup, and any committed README output.
+  and any committed README output.
 
 Those boundaries should not be conflated in documentation. A collection token
 may need read access across source repositories. Dashboard-repository operations
@@ -129,15 +162,14 @@ The credential model is:
 - `TRAFFIC_TOKEN`: reads GitHub traffic and repository metadata for tracked
   repositories; used by `collect`.
 - `GITHUB_TOKEN`: manages dashboard-repository operations such as Pages
-  deployment, export artifact upload, export artifact deletion, and optional
-  README commits, with workflow permissions set in the generated workflows.
+  deployment and optional README commits, with workflow permissions set in the
+  generated workflows.
 - `TRAFFIC_DASHBOARD_SECRET`: used only in the encrypted track to
   encrypt/decrypt retained traffic data and encrypted dashboard payloads.
 
-The export/destroy workflows should not require a second personal access token.
-`export` can upload a plaintext export artifact with a short retention period.
-`destroy-exports` can use `GITHUB_TOKEN` with `actions: write` permission in the
-dashboard repository to delete export artifacts created by Reponomics.
+Dashboard-local export does not require another personal access token. It also
+avoids requiring `actions: write` permission solely to clean up plaintext export
+artifacts.
 
 ## Implementation Notes
 
@@ -148,14 +180,12 @@ Action runtime changes:
 - keep encrypted retained artifact read/write behavior for the encrypted track;
 - keep plaintext retained artifact read/write behavior for the plaintext private
   repository track;
-- require `dashboard-secret` for encrypted-track `collect`, `publish`,
-  `rotate-key`, and `export` runs;
+- require `dashboard-secret` for encrypted-track `collect`, `publish`, and
+  `rotate-key` runs;
 - do not require `dashboard-secret` for plaintext-track collection or plaintext
   publication;
-- add `export` mode that restores/decrypts encrypted retained state and writes a
-  plaintext CSV export artifact payload with short retention;
-- add `destroy-exports` mode that deletes export artifacts by name prefix and
-  does not require the dashboard secret.
+- do not add workflow modes that upload plaintext CSV export artifacts for the
+  encrypted track.
 
 Generated template changes:
 
@@ -168,28 +198,32 @@ Generated template changes:
 - for the plaintext track, store plaintext CSV artifacts and allow README
   summaries;
 - for the plaintext track, allow optional plaintext Pages publication;
-- add manual export and destroy workflows for encrypted-track CSV portability;
-- document that export artifacts are plaintext and should be downloaded,
-  deleted, or left to expire according to retention.
+- document that encrypted-track CSV export happens from the unlocked dashboard,
+  not from a plaintext GitHub artifact.
+
+Dashboard generator changes:
+
+- add an export control to the unlocked dashboard;
+- generate CSV from the decrypted retained data already available to the
+  dashboard;
+- perform the export entirely in the browser;
+- ensure plaintext CSV is never uploaded to GitHub by this export path.
 
 Test changes:
 
 - remove tests for `auto` resolution;
 - add tests for encrypted-track retained storage and encrypted Pages payloads;
 - keep or add tests for plaintext-track retained artifact upload;
-- add export tests proving the exported artifact contains the canonical CSV
-  files and manifest;
-- add destroy tests proving only Reponomics CSV export artifacts are deleted.
+- add dashboard generator tests for local CSV export from decrypted dashboard
+  data.
 
 ## Open Questions
 
-- Should export artifacts use a stable name with overwrite behavior, or a
-  per-run name with a shared prefix?
-- Should `destroy-exports` delete every matching export artifact by default, or
-  accept an optional age/run-id filter?
 - Should the action continue accepting `artifact-security-mode` as a deprecated
   alias before `v1`, or remove it immediately while the project is still in
   public pre-release?
 - What should the explicit two-track input be called in the action, if any?
 - Should plaintext Pages publication be included in the template setup surface
   or remain an action-level capability for users who wire workflows manually?
+- Should dashboard-local export produce one combined CSV, one CSV per canonical
+  table, or a ZIP containing the canonical CSV files?

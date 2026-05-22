@@ -111,6 +111,38 @@ def test_summarize_rotation_writes_github_step_summary(
     assert "TRAFFIC_DASHBOARD_NEXT_SECRET" in summary
 
 
+def test_mask_secret_emits_escaped_add_mask_commands(capfd: pytest.CaptureFixture[str]) -> None:
+    run._mask_secret("xy\nabc%123\nzztop")
+
+    captured = capfd.readouterr()
+    assert captured.out == "::add-mask::abc%25123\n::add-mask::zztop\n"
+    assert captured.err == ""
+
+
+def test_mask_config_secrets_masks_each_secret_line(
+    capfd: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    config = _config_for_run_tests(
+        tmp_path,
+        traffic_token="ghp_traffic",
+        github_token="ghp_github",
+        dashboard_secret="dashboard%secret",
+        dashboard_next_secret="next-secret",
+    )
+
+    run._mask_config_secrets(config)
+
+    captured = capfd.readouterr()
+    assert captured.out.splitlines() == [
+        "::add-mask::ghp_traffic",
+        "::add-mask::ghp_github",
+        "::add-mask::dashboard%25secret",
+        "::add-mask::next-secret",
+    ]
+    assert captured.err == ""
+
+
 def test_main_dispatches_modes_and_reports_action_errors(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,

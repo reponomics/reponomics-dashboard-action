@@ -1124,10 +1124,7 @@ BASE_STYLES = """
       margin-bottom: 1.5rem;
     }
     .auth-hero-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
+      display: block;
     }
     .auth-hero .brand-lockup {
       margin-bottom: 1rem;
@@ -1145,6 +1142,10 @@ BASE_STYLES = """
       max-width: 52ch;
     }
     .auth-theme-toggle {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 1rem);
+      right: calc(env(safe-area-inset-right, 0px) + 1rem);
+      z-index: 30;
       border: 1px solid var(--border);
       border-radius: 999px;
       background: var(--bg-raised);
@@ -1159,6 +1160,7 @@ BASE_STYLES = """
       font-weight: 600;
       line-height: 1.2;
       cursor: pointer;
+      box-shadow: 0 1px 0 var(--inset-highlight) inset, var(--card-shadow);
       transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
       white-space: nowrap;
     }
@@ -1173,6 +1175,27 @@ BASE_STYLES = """
     .auth-card {
       padding: 1.5rem;
     }
+    .auth-card-heading {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 1.1rem;
+    }
+    .auth-card-icon {
+      width: 2.15rem;
+      height: 2.15rem;
+      margin-top: 0.05rem;
+      border: 1px solid rgba(31, 111, 235, 0.28);
+      border-radius: 11px;
+      background: rgba(31, 111, 235, 0.10);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .auth-card-copy {
+      min-width: 0;
+    }
     .auth-card-title {
       color: var(--text);
       font-size: 1.1rem;
@@ -1184,7 +1207,7 @@ BASE_STYLES = """
       color: var(--text-muted);
       font-size: 0.98rem;
       line-height: 1.5;
-      margin-bottom: 1.1rem;
+      margin-bottom: 0;
     }
     .auth-hidden-username {
       position: absolute;
@@ -1217,7 +1240,7 @@ BASE_STYLES = """
       border: 1px solid var(--border);
       border-radius: 12px;
       color: var(--text);
-      padding: 0.85rem 3rem 0.85rem 1rem;
+      padding: 0.85rem 1rem;
       font-family: 'Inter', sans-serif;
       font-size: 1rem;
       transition: border-color 150ms ease, box-shadow 150ms ease;
@@ -1232,14 +1255,6 @@ BASE_STYLES = """
     }
     .auth-input::placeholder {
       color: var(--text-dim);
-    }
-    .auth-mark {
-      position: absolute;
-      right: 12px;
-      display: grid;
-      place-items: center;
-      pointer-events: none;
-      color: var(--accent);
     }
     .auth-button {
       border: none;
@@ -1443,13 +1458,12 @@ BASE_STYLES = """
     }
     @media (max-width: 720px) {
       body { padding: 1rem; }
-      .auth-hero-head {
-        align-items: flex-start;
-      }
       .auth-hero h1 {
         font-size: clamp(3.4rem, 15vw, 5.6rem);
       }
       .auth-theme-toggle {
+        top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+        right: calc(env(safe-area-inset-right, 0px) + 0.75rem);
         padding: 0.5rem 0.68rem;
       }
       .auth-theme-toggle .theme-label {
@@ -4521,11 +4535,23 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         </div>
 
         <div class="card auth-card" id="unlock-card">
-          <h2 class="auth-card-title">Unlock Dashboard</h2>
-          <p class="auth-card-sub">
-            Enter your dashboard key to decrypt the latest dashboard snapshot
-            in this browser.
-          </p>
+          <div class="auth-card-heading">
+            <span class="auth-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" width="22" height="22" focusable="false">
+                <g transform="rotate(45 16 16)">
+                  <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
+                </g>
+                <path d="M9 19 L13 15 L17 18 L23 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </span>
+            <div class="auth-card-copy">
+              <h2 class="auth-card-title">Unlock Dashboard</h2>
+              <p class="auth-card-sub">
+                Enter your dashboard key to decrypt the latest dashboard snapshot
+                in this browser.
+              </p>
+            </div>
+          </div>
 
           <form class="auth-form" id="unlock-form" autocomplete="off">
             <label class="auth-hidden-username" aria-hidden="true">
@@ -4548,14 +4574,6 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
                 placeholder="Enter dashboard key"
                 aria-label="Dashboard key"
               >
-              <span class="auth-mark" aria-hidden="true">
-                <svg viewBox="0 0 32 32" width="22" height="22" focusable="false">
-                  <g transform="rotate(45 16 16)">
-                    <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
-                  </g>
-                  <path d="M9 19 L13 15 L17 18 L23 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-              </span>
             </div>
             <button class="auth-button" id="unlock-button" type="submit">Unlock</button>
           </form>

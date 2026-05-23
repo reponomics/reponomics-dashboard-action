@@ -1179,6 +1179,11 @@ BASE_STYLES = """
       .hero-toolbar {
         justify-content: flex-start;
         width: 100%;
+        gap: 0.45rem;
+      }
+      .toolbar-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.82rem;
       }
       .controls-card { flex-direction: column; }
       .auth-form { flex-direction: column; align-items: stretch; }
@@ -1204,13 +1209,12 @@ BASE_STYLES = """
       .momentum-cell { padding: 0.5rem 0; border-left: none; border-top: 1px solid var(--border-soft); }
       .momentum-cell:first-child { padding-top: 0; border-top: none; }
       .export-verify-popover {
-        position: fixed;
-        left: 1rem;
-        right: 1rem;
-        top: auto;
-        bottom: 1rem;
+        position: absolute;
+        top: calc(100% + 0.45rem);
+        left: 0;
+        right: 0;
         width: auto;
-        max-height: min(55vh, 22rem);
+        max-height: min(50vh, 20rem);
         overflow: auto;
       }
       .export-verify-popover code {
@@ -1220,10 +1224,10 @@ BASE_STYLES = """
       }
     }
     @media (max-width: 480px) {
-      .hero-toolbar { gap: 0.45rem; }
+      .hero-toolbar { gap: 0.4rem; }
       .toolbar-button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.82rem;
+        padding: 0.48rem 0.68rem;
+        font-size: 0.8rem;
       }
     }
     @media (prefers-reduced-motion: reduce) {

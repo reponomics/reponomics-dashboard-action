@@ -1319,6 +1319,31 @@ BASE_STYLES = """
       background: var(--c-positive);
       flex: 0 0 auto;
     }
+    .auth-help-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-soft);
+      font-size: 0.92rem;
+    }
+    .auth-help-row a,
+    .auth-footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      border-bottom: 1px dotted transparent;
+      transition: color 150ms ease, border-color 150ms ease;
+    }
+    .auth-help-row a {
+      color: var(--accent);
+      font-weight: 600;
+      border-bottom-color: rgba(31, 111, 235, 0.35);
+    }
+    .auth-help-row a:hover,
+    .auth-footer a:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
     .auth-footer {
       width: 100%;
       margin-top: 2rem;
@@ -4584,12 +4609,16 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
             <span class="meta-item"><span class="glyph"></span>AES-GCM &middot; PBKDF2-SHA256 &middot; {PBKDF2_ITERATIONS:,} iterations</span>
             <span class="meta-item"><span class="glyph"></span>Decryption is strictly client-side</span>
           </div>
+
+          <div class="auth-help-row">
+            <a href="https://github.com/reponomics">Forgot your password?</a>
+          </div>
         </div>
 
         <footer class="auth-footer">
           <div class="footer-line">
             <span>Built with</span>
-            <span class="brand-name">Reponomics</span>
+            <a class="brand-name" href="https://github.com/reponomics">Reponomics</a>
             <span class="dot">&middot;</span>
             <span>self-hosted, no trackers, no cost</span>
           </div>

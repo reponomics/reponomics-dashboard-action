@@ -87,7 +87,8 @@ ZIP of retained CSV files. Export delivery is browser-local: ciphertext is
 fetched from a published encrypted asset and decrypted in memory before
 download. The runtime verifies both encrypted-asset and decrypted-bundle
 digests before download. Plaintext export data is not uploaded back to GitHub
-by this path.
+by this path. Export scope is canonical retained history, including repos that
+are currently excluded from dashboard rendering.
 
 Local-file browser restrictions can block `fetch()` for `file://` origins in
 some environments. When that happens, use the hosted Pages dashboard or serve

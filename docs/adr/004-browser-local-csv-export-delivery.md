@@ -129,6 +129,50 @@ avoiding plaintext workflow artifacts.
 - The encrypted export asset path should be cache-safe (content-addressed
   filename) so dashboard pages and export assets stay aligned across deploys.
 
+## Open Questions Resolved
+
+1. Should export include excluded repos from retained canonical history, or only
+   currently visible dashboard scope?
+   Answer: canonical retained scope. Export includes the full canonical retained
+   fileset (including excluded repos) to preserve portability and deterministic
+   parity with retained artifacts.
+
+2. Is offline `file://` export support mandatory or best-effort?
+   Answer: best-effort. Hosted Pages and local HTTP serving are supported paths.
+   Direct `file://` export may fail due to browser fetch/CORS behavior; runtime
+   must fail closed with explicit user-facing errors and no partial plaintext
+   output.
+
+3. Do we require performance budgets in ADR acceptance?
+   Answer: yes, with layered enforcement:
+   - Hard budget: export ciphertext bytes in initial HTML must be zero.
+   - Hard budget: export fetch/decrypt work must happen only on explicit export
+     click (not during first-load render path).
+   - Operational target: for a reference profile of 50 repos, 90 retained days,
+     and one effective collect per day, export click-to-download should remain
+     within a practical desktop interactive range. This is a release target, not
+     a CI gate, until browser-runtime benchmark automation is added.
+
+## Integrity Model Clarification
+
+- `ciphertext_sha256` detects transport/cache corruption before decrypt.
+- AES-GCM decryption success/failure provides keyed ciphertext
+  integrity/authenticity checks at decrypt time.
+- `plaintext_sha256` verifies the decrypted bytes match the publish-time
+  canonical ZIP bundle before download.
+- These controls do not replace trust in the build/deploy pipeline itself.
+
+## Caveat Status
+
+- Cache-safe asset versioning: addressed with content-addressed export asset
+  filenames (`assets/export-data-<digest>.enc`) and strict manifest asset-path
+  validation.
+- Offline compatibility criteria: addressed with explicit best-effort policy for
+  `file://`, fail-closed runtime behavior, and documented hosted/local-HTTP
+  fallback.
+- Integrity language precision: addressed by distinguishing ciphertext digest,
+  AEAD decrypt integrity/authenticity checks, and decrypted-bytes digest parity.
+
 ## Security Requirements
 
 - no plaintext export upload to GitHub artifacts, repository commits, or API;
@@ -186,6 +230,8 @@ Privacy modes:
   metadata;
 - crypto tests: round-trip decrypt of export asset reproduces canonical files;
 - browser-runtime tests: export is unavailable pre-unlock and works post-unlock;
+- browser compatibility checks: `file://` export limitations fail closed with
+  explicit error messaging and no partial plaintext output;
 - negative tests: digest mismatch and wrong key are handled safely without
   partial plaintext output.
 

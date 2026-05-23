@@ -225,10 +225,17 @@ BASE_STYLES = """
     .hero-copy { min-width: 0; }
     .hero-toolbar {
       display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.15rem;
+    }
+    .hero-toolbar-controls {
+      display: flex;
       gap: 0.6rem;
       flex-wrap: wrap;
       justify-content: flex-end;
       align-items: center;
+      width: 100%;
     }
     .controls-card {
       display: flex;
@@ -318,6 +325,7 @@ BASE_STYLES = """
       font-size: 0.86rem;
       font-weight: 500;
       display: none;
+      white-space: nowrap;
       transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
     }
     .toolbar-button.visible { display: inline-flex; }
@@ -385,13 +393,12 @@ BASE_STYLES = """
       border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
-      flex: 1 0 100%;
-      order: 98;
+      width: 100%;
       overflow-wrap: anywhere;
       word-break: break-word;
       display: none;
     }
-    #export-status.visible { display: inline-flex; align-items: center; }
+    #export-status.visible { display: block; }
     #export-status.pending {
       color: #d29922;
       border-color: rgba(210, 153, 34, 0.34);
@@ -1177,13 +1184,27 @@ BASE_STYLES = """
       body { padding: 1rem; }
       .hero { flex-direction: column; }
       .hero-toolbar {
-        justify-content: flex-start;
+        align-items: stretch;
         width: 100%;
-        gap: 0.45rem;
+        gap: 0.12rem;
+      }
+      .hero-toolbar-controls {
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        gap: 0.42rem;
       }
       .toolbar-button {
         padding: 0.5rem 0.75rem;
         font-size: 0.82rem;
+      }
+      .theme-toggle .theme-label { display: none; }
+      .status-badge {
+        max-width: 6.5rem;
+        font-size: 0.74rem;
+        padding: 0.34rem 0.52rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .controls-card { flex-direction: column; }
       .auth-form { flex-direction: column; align-items: stretch; }
@@ -1212,8 +1233,10 @@ BASE_STYLES = """
         position: absolute;
         top: calc(100% + 0.45rem);
         left: 0;
-        right: 0;
-        width: auto;
+        right: auto;
+        width: min(24rem, calc(100vw - 2rem));
+        min-width: 16rem;
+        max-width: calc(100vw - 2rem);
         max-height: min(50vh, 20rem);
         overflow: auto;
       }
@@ -1224,7 +1247,7 @@ BASE_STYLES = """
       }
     }
     @media (max-width: 480px) {
-      .hero-toolbar { gap: 0.4rem; }
+      .hero-toolbar-controls { gap: 0.36rem; }
       .toolbar-button {
         padding: 0.48rem 0.68rem;
         font-size: 0.8rem;
@@ -3885,22 +3908,24 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         <p class="updated" id="updated-text">{updated_text}</p>
       </div>
       <div class="hero-toolbar">
-        <span class="status-badge active" id="activeBadge"></span>
-        <span class="status-badge compare" id="compareBadge"></span>
-        <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
-        <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
-        <details class="export-verify-tip">
-          <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
-          <div class="export-verify-popover" role="note">
-            <p><strong>Automatic in-browser checks:</strong> on export, the dashboard verifies encrypted asset size + SHA-256, decrypts with your key, then verifies decrypted ZIP SHA-256 against this page's embedded <code>export-manifest</code> before download.</p>
-            <p><strong>Optional manual verification:</strong> <code>Copy SHA-256</code> copies <code>&lt;sha256&gt;&nbsp;&nbsp;&lt;filename&gt;</code> for checksum-file format. Use <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> to compare manually, or save the copied line and run <code>shasum -a 256 -c &lt;checksums.txt&gt;</code>.</p>
-          </div>
-        </details>
-        <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
-        <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
-          <span class="theme-icon" aria-hidden="true">◐</span>
-          <span class="theme-label">Theme</span>
-        </button>
+        <div class="hero-toolbar-controls">
+          <span class="status-badge active" id="activeBadge"></span>
+          <span class="status-badge compare" id="compareBadge"></span>
+          <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
+          <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
+          <details class="export-verify-tip">
+            <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
+            <div class="export-verify-popover" role="note">
+              <p><strong>Automatic in-browser checks:</strong> on export, the dashboard verifies encrypted asset size + SHA-256, decrypts with your key, then verifies decrypted ZIP SHA-256 against this page's embedded <code>export-manifest</code> before download.</p>
+              <p><strong>Optional manual verification:</strong> <code>Copy SHA-256</code> copies <code>&lt;sha256&gt;&nbsp;&nbsp;&lt;filename&gt;</code> for checksum-file format. Use <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> to compare manually, or save the copied line and run <code>shasum -a 256 -c &lt;checksums.txt&gt;</code>.</p>
+            </div>
+          </details>
+          <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
+          <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+            <span class="theme-icon" aria-hidden="true">◐</span>
+            <span class="theme-label">Theme</span>
+          </button>
+        </div>
         <p class="auth-status" id="export-status" aria-live="polite" aria-atomic="true"></p>
       </div>
     </div>

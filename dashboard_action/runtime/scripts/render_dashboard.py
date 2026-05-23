@@ -14,9 +14,12 @@ The published dashboard supports two modes:
 
 import base64
 import html
+import hashlib
+import io
 import json
 import os
 import shutil
+import zipfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +28,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+import storage
 from load_data import (
     load_daily, load_referrers, load_paths, load_repo_metrics,
     aggregate_totals, aggregate_by_date, aggregate_per_repo,
@@ -56,6 +60,10 @@ PBKDF2_SALT_BYTES = 16
 AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 UPDATE_NOTICE_ENV = "REPONOMICS_UPDATE_NOTICE_JSON"
+EXPORT_ASSET_PREFIX = "export-data-"
+EXPORT_ASSET_SUFFIX = ".enc"
+EXPORT_MANIFEST_VERSION = 1
+EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 BASE_STYLES = """
     :root {
@@ -310,8 +318,21 @@ BASE_STYLES = """
     .toolbar-button.visible { display: inline-flex; }
     .toolbar-button:hover { border-color: var(--accent); color: var(--accent); background: rgba(124, 106, 255, 0.08); }
     .toolbar-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .toolbar-button:disabled {
+      cursor: not-allowed;
+      color: var(--text-dim);
+      border-color: var(--border-soft);
+      background: var(--bg-raised);
+    }
     .theme-toggle { gap: 0.4rem; }
     .theme-toggle .theme-icon { font-size: 1rem; line-height: 1; }
+    #export-status {
+      margin: 0;
+      min-height: 0;
+      font-size: 0.82rem;
+      display: none;
+    }
+    #export-status.visible { display: inline-flex; }
     @media (max-width: 480px) {
       .theme-toggle .theme-label { display: none; }
     }
@@ -1014,6 +1035,7 @@ BASE_STYLES = """
     }
     .auth-status.pending { color: #d29922; }
     .auth-status.error { color: #f85149; }
+    .auth-status.success { color: #3fb950; }
     .update-notice {
       max-width: 980px;
       margin: 2rem auto 0;
@@ -3055,15 +3077,30 @@ SECURE_RUNTIME_JS = """
     const encryptedPayload = JSON.parse(
       document.getElementById('encrypted-payload').textContent
     );
+    const exportManifestNode = document.getElementById('export-manifest');
+    const exportManifestPayload = exportManifestNode
+      ? JSON.parse(exportManifestNode.textContent)
+      : null;
     const authShell = document.getElementById('auth-shell');
     const unlockForm = document.getElementById('unlock-form');
     const dashboardKeyInput = document.getElementById('dashboard-key');
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
+    const exportButton = document.getElementById('export-button');
+    const exportStatus = document.getElementById('export-status');
+    let unlockedDashboardKey = '';
 
     function setUnlockStatus(message, type) {
       unlockStatus.textContent = message;
       unlockStatus.className = 'auth-status' + (type ? ' ' + type : '');
+    }
+
+    function setExportStatus(message, type) {
+      if (!exportStatus) return;
+      exportStatus.textContent = message;
+      exportStatus.className = 'auth-status'
+        + (type ? ' ' + type : '')
+        + (message ? ' visible' : '');
     }
 
     function b64ToBytes(value) {
@@ -3076,6 +3113,22 @@ SECURE_RUNTIME_JS = """
         bytes[i] = binary.charCodeAt(i);
       }
       return bytes;
+    }
+
+    function bytesToHex(bytes) {
+      return Array.from(bytes)
+        .map((value) => value.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function buildExportFilename(prefix) {
+      const now = new Date();
+      const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}Z$/, 'Z');
+      const safePrefix = String(prefix || 'reponomics-export')
+        .replace(/\\.zip$/i, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'reponomics-export';
+      return safePrefix + '-' + stamp + '.zip';
     }
 
     function validateEncryptedPayload(payload) {
@@ -3106,8 +3159,45 @@ SECURE_RUNTIME_JS = """
       return { salt, iv, ciphertext };
     }
 
-    async function decryptDashboardPayload(dashboardKey, payload) {
-      const validatedPayload = validateEncryptedPayload(payload);
+    function validateEncryptedExportManifest(manifest) {
+      if (!manifest || manifest.version !== 1) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (manifest.cipher !== EXPECTED_CIPHER) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (
+        !manifest.kdf ||
+        manifest.kdf.name !== EXPECTED_KDF_NAME ||
+        manifest.kdf.hash !== EXPECTED_KDF_HASH ||
+        manifest.kdf.iterations !== EXPECTED_KDF_ITERATIONS
+      ) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (typeof manifest.asset !== 'string' || !manifest.asset) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (typeof manifest.filename !== 'string' || !manifest.filename) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (!Number.isInteger(manifest.ciphertext_size) || manifest.ciphertext_size <= 0) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (
+        typeof manifest.ciphertext_sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(manifest.ciphertext_sha256)
+      ) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      const salt = b64ToBytes(manifest.salt);
+      const iv = b64ToBytes(manifest.iv);
+      if (salt.length !== EXPECTED_SALT_BYTES || iv.length !== EXPECTED_IV_BYTES) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      return { ...manifest, salt, iv };
+    }
+
+    async function deriveAesKey(dashboardKey, salt) {
       const encoder = new TextEncoder();
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
@@ -3116,10 +3206,10 @@ SECURE_RUNTIME_JS = """
         false,
         ['deriveKey']
       );
-      const key = await crypto.subtle.deriveKey(
+      return crypto.subtle.deriveKey(
         {
           name: EXPECTED_KDF_NAME,
-          salt: validatedPayload.salt,
+          salt,
           iterations: EXPECTED_KDF_ITERATIONS,
           hash: EXPECTED_KDF_HASH
         },
@@ -3128,16 +3218,118 @@ SECURE_RUNTIME_JS = """
         false,
         ['decrypt']
       );
-      const plaintext = await crypto.subtle.decrypt(
-        { name: EXPECTED_CIPHER, iv: validatedPayload.iv },
+    }
+
+    async function decryptBytes(dashboardKey, salt, iv, ciphertext) {
+      const key = await deriveAesKey(dashboardKey, salt);
+      return crypto.subtle.decrypt(
+        { name: EXPECTED_CIPHER, iv },
         key,
+        ciphertext
+      );
+    }
+
+    async function decryptDashboardPayload(dashboardKey, payload) {
+      const validatedPayload = validateEncryptedPayload(payload);
+      const plaintext = await decryptBytes(
+        dashboardKey,
+        validatedPayload.salt,
+        validatedPayload.iv,
         validatedPayload.ciphertext
       );
       return JSON.parse(new TextDecoder().decode(plaintext));
     }
 
+    async function sha256Hex(bytes) {
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return bytesToHex(new Uint8Array(digest));
+    }
+
+    function triggerDownload(filename, bytes) {
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      anchor.rel = 'noopener';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(function() { URL.revokeObjectURL(objectUrl); }, 0);
+    }
+
+    function enableExport() {
+      if (!exportButton || !exportManifestPayload) {
+        return;
+      }
+      let validatedManifest = null;
+      try {
+        validatedManifest = validateEncryptedExportManifest(exportManifestPayload);
+      } catch (_error) {
+        setExportStatus('Export metadata is invalid for this dashboard build.', 'error');
+        return;
+      }
+      exportButton.classList.add('visible');
+      exportButton.addEventListener('click', async function() {
+        if (!unlockedDashboardKey) {
+          setExportStatus('Unlock the dashboard before exporting.', 'error');
+          return;
+        }
+        exportButton.disabled = true;
+        setExportStatus('Preparing encrypted export bundle...', 'pending');
+        let ciphertext = null;
+        let plaintextView = null;
+        try {
+          const response = await fetch(validatedManifest.asset, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error('fetch-failed');
+          }
+          ciphertext = new Uint8Array(await response.arrayBuffer());
+          if (ciphertext.length !== validatedManifest.ciphertext_size) {
+            throw new Error('size-mismatch');
+          }
+          const ciphertextSha256 = await sha256Hex(ciphertext);
+          if (ciphertextSha256 !== validatedManifest.ciphertext_sha256) {
+            throw new Error('digest-mismatch');
+          }
+          const plaintext = await decryptBytes(
+            unlockedDashboardKey,
+            validatedManifest.salt,
+            validatedManifest.iv,
+            ciphertext
+          );
+          plaintextView = new Uint8Array(plaintext);
+          const filename = buildExportFilename(validatedManifest.filename);
+          triggerDownload(filename, plaintextView);
+          setExportStatus('CSV export ready: ' + filename, 'success');
+        } catch (error) {
+          if (String(error) === 'Error: fetch-failed') {
+            setExportStatus(
+              'Unable to fetch export asset from this context. Try the hosted dashboard or serve extracted files over HTTP.',
+              'error'
+            );
+          } else if (String(error) === 'Error: size-mismatch' || String(error) === 'Error: digest-mismatch') {
+            setExportStatus('Export integrity check failed. Republish and try again.', 'error');
+          } else {
+            setExportStatus('Export failed. Verify key and dashboard assets.', 'error');
+          }
+        } finally {
+          if (ciphertext) {
+            ciphertext.fill(0);
+          }
+          if (plaintextView) {
+            plaintextView.fill(0);
+          }
+          exportButton.disabled = false;
+        }
+      });
+    }
+
     if (!window.crypto || !window.crypto.subtle) {
       unlockButton.disabled = true;
+      if (exportButton) {
+        exportButton.disabled = true;
+      }
       setUnlockStatus(
         'This browser cannot decrypt the dashboard here. Open it over HTTPS or use the standalone artifact.',
         'error'
@@ -3161,12 +3353,15 @@ SECURE_RUNTIME_JS = """
           dashboardKeyInput.value,
           encryptedPayload
         );
+        unlockedDashboardKey = dashboardKeyInput.value;
         authShell.style.display = 'none';
         renderDashboard(payload);
+        enableExport();
         setUnlockStatus('', '');
       } catch (error) {
         unlockButton.disabled = false;
         dashboardKeyInput.select();
+        unlockedDashboardKey = '';
         setUnlockStatus('Wrong dashboard key or corrupted payload.', 'error');
       }
     });
@@ -3393,27 +3588,79 @@ def _build_payload(
     }
 
 
-def _encrypt_payload(payload, dashboard_key):
-    """Encrypt the dashboard payload for encrypted Pages mode."""
-    salt = os.urandom(PBKDF2_SALT_BYTES)
-    iv = os.urandom(AES_GCM_IV_BYTES)
+def _kdf_descriptor() -> dict[str, object]:
+    return {
+        "name": "PBKDF2",
+        "hash": "SHA-256",
+        "iterations": PBKDF2_ITERATIONS,
+    }
+
+
+def _derive_key(dashboard_key: str, salt: bytes) -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
         iterations=PBKDF2_ITERATIONS,
     )
-    key = kdf.derive(dashboard_key.encode("utf-8"))
-    plaintext = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    return kdf.derive(dashboard_key.encode("utf-8"))
+
+
+def _encrypt_bytes(plaintext: bytes, dashboard_key: str) -> tuple[bytes, bytes, bytes]:
+    salt = os.urandom(PBKDF2_SALT_BYTES)
+    iv = os.urandom(AES_GCM_IV_BYTES)
+    key = _derive_key(dashboard_key, salt)
     ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
+    return salt, iv, ciphertext
+
+
+def _build_export_bundle(data_dir: str) -> bytes:
+    files = [*storage.CSV_REGISTRY.keys(), "manifest.json"]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(
+        buffer,
+        mode="w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        for filename in files:
+            data = (Path(data_dir) / filename).read_bytes()
+            info = zipfile.ZipInfo(filename=filename, date_time=EXPORT_ZIP_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, data)
+    return buffer.getvalue()
+
+
+def _build_encrypted_export_manifest(output_path: str, dashboard_key: str) -> dict[str, object]:
+    plaintext_bundle = _build_export_bundle(storage.DATA_DIR)
+    salt, iv, ciphertext = _encrypt_bytes(plaintext_bundle, dashboard_key)
+    ciphertext_sha256 = hashlib.sha256(ciphertext).hexdigest()
+    asset_name = f"{EXPORT_ASSET_PREFIX}{ciphertext_sha256[:16]}{EXPORT_ASSET_SUFFIX}"
+    asset_relative_path = f"assets/{asset_name}"
+    asset_path = Path(output_path).parent / asset_relative_path
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    asset_path.write_bytes(ciphertext)
+    return {
+        "version": EXPORT_MANIFEST_VERSION,
+        "cipher": "AES-GCM",
+        "kdf": _kdf_descriptor(),
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "iv": base64.b64encode(iv).decode("ascii"),
+        "ciphertext_sha256": ciphertext_sha256,
+        "ciphertext_size": len(ciphertext),
+        "asset": asset_relative_path,
+        "filename": "reponomics-export",
+    }
+
+
+def _encrypt_payload(payload, dashboard_key):
+    """Encrypt the dashboard payload for encrypted Pages mode."""
+    plaintext = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    salt, iv, ciphertext = _encrypt_bytes(plaintext, dashboard_key)
     return {
         "version": 1,
         "cipher": "AES-GCM",
-        "kdf": {
-            "name": "PBKDF2",
-            "hash": "SHA-256",
-            "iterations": PBKDF2_ITERATIONS,
-        },
+        "kdf": _kdf_descriptor(),
         "salt": base64.b64encode(salt).decode("ascii"),
         "iv": base64.b64encode(iv).decode("ascii"),
         "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
@@ -3471,11 +3718,13 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
       <div class="hero-toolbar">
         <span class="status-badge active" id="activeBadge"></span>
         <span class="status-badge compare" id="compareBadge"></span>
+        <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
         <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
         <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
           <span class="theme-icon" aria-hidden="true">◐</span>
           <span class="theme-label">Theme</span>
         </button>
+        <p class="auth-status" id="export-status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -3752,7 +4001,7 @@ def _build_public_html(payload, chart_loader):
     return _wrap_html(shell, chart_loader, runtime_js)
 
 
-def _build_encrypted_html(encrypted_payload, chart_loader):
+def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
     """Build the encrypted published dashboard HTML."""
     auth_card = """
   <div id="auth-shell">
@@ -3809,11 +4058,15 @@ def _build_encrypted_html(encrypted_payload, chart_loader):
         str(PBKDF2_ITERATIONS),
     )
     encrypted_payload_json = json.dumps(encrypted_payload, separators=(",", ":"))
+    export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
     body = (
         auth_card
         + shell
         + "\n  <script id=\"encrypted-payload\" type=\"application/json\">"
         + encrypted_payload_json
+        + "</script>\n"
+        + "  <script id=\"export-manifest\" type=\"application/json\">"
+        + export_manifest_json
         + "</script>\n"
     )
     return _wrap_html(
@@ -3873,9 +4126,11 @@ def render():
                 f"{DASHBOARD_KEY_ENV} must be set when " +
                 f"{ACCESS_MODE_ENV}={ACCESS_MODE_ENCRYPTED!r}."
             )
+        export_manifest = _build_encrypted_export_manifest(OUTPUT_PATH, dashboard_key)
         published_html = _build_encrypted_html(
             _encrypt_payload(payload, dashboard_key),
             f'<script src="{_publish_vendored_chart_js(OUTPUT_PATH)}"></script>',
+            export_manifest,
         )
     else:
         published_html = _build_public_html(

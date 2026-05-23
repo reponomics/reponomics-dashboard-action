@@ -69,7 +69,8 @@ Cons:
 
 At publish time, create a canonical CSV ZIP bundle, encrypt it, and publish it
 as a separate asset in the Pages artifact (for example
-`assets/export-data.enc`). Keep only a small export manifest in `index.html`.
+`assets/export-data-<digest>.enc`). Keep only a small export manifest in
+`index.html`.
 
 Pros:
 
@@ -116,6 +117,18 @@ Key points:
 This keeps the retained-data and publication model artifact-backed while
 avoiding plaintext workflow artifacts.
 
+## Implementation Qualifications
+
+- Export scope defaults to canonical retained data fidelity. The bundle includes
+  the full retained canonical file set (including repos currently excluded from
+  dashboard rendering) unless a future decision explicitly introduces scoped
+  export modes.
+- Offline/local-file export is best-effort. If browser origin rules block asset
+  fetch (for example `file://` behavior), the runtime must fail closed with a
+  clear user-facing error and no partial plaintext output.
+- The encrypted export asset path should be cache-safe (content-addressed
+  filename) so dashboard pages and export assets stay aligned across deploys.
+
 ## Security Requirements
 
 - no plaintext export upload to GitHub artifacts, repository commits, or API;
@@ -136,7 +149,8 @@ Runtime publish path:
   `traffic-log.csv`, `traffic-daily.csv`, `traffic-snapshots.csv`,
   `traffic-referrers.csv`, `traffic-paths.csv`, `repo-metrics.csv`,
   and `manifest.json`;
-- encrypt bundle into `assets/export-data.enc`;
+- encrypt bundle into a content-addressed Pages asset path such as
+  `assets/export-data-<digest>.enc`;
 - emit compact `export-manifest` JSON in `index.html` with:
   `version`, `cipher`, `kdf`, `salt`, `iv`, `ciphertext_sha256`,
   `ciphertext_size`, `filename`.

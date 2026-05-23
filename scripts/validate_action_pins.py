@@ -72,7 +72,12 @@ def main() -> int:
 
     failures: list[str] = []
     for path in iter_yaml_files(args.paths):
-        data = yaml.safe_load(path.read_text()) or {}
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except OSError as exc:
+            raise SystemExit(f"{path}: failed to read YAML: {exc}") from exc
+        except yaml.YAMLError as exc:
+            raise SystemExit(f"{path}: invalid YAML: {exc}") from exc
         for uses in iter_uses(data):
             reason = validate_uses(uses)
             if reason:

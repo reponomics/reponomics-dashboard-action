@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import base64
 import csv
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
+import hashlib
+import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+import zipfile
 
 import pytest
 import requests
@@ -43,6 +48,17 @@ def _parse_dashboard_html(html: str) -> DashboardHtmlParser:
     parser = DashboardHtmlParser()
     parser.feed(html)
     return parser
+
+
+def _script_json(html: str, script_id: str) -> dict[str, Any]:
+    match = re.search(
+        rf'<script id="{re.escape(script_id)}" type="application/json">(.*?)</script>',
+        html,
+        flags=re.S,
+    )
+    if not match:
+        raise AssertionError(f"missing script payload for {script_id}")
+    return json.loads(match.group(1))
 
 
 def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
@@ -400,11 +416,14 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert "demo/reponomics" in config.readme_path.read_text(encoding="utf-8")
     dashboard = config.dashboard_path.read_text(encoding="utf-8")
     assert "encrypted-payload" in dashboard
+    assert "export-manifest" in dashboard
+    assert 'id="export-button"' in dashboard
     assert "validateEncryptedPayload" in dashboard
     assert "EXPECTED_KDF_ITERATIONS = 300000" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert (config.dashboard_path.parent / "assets" / "chart.umd.min.js").exists()
+    assert len(list((config.dashboard_path.parent / "assets").glob("export-data-*.enc"))) == 1
 
 
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
@@ -448,6 +467,47 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     assert "Fork Growth" in dashboard
     assert '"total_subscribers":2' not in dashboard
     assert '"total_forks_delta":0' not in dashboard
+
+
+def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    export_manifest = _script_json(dashboard, "export-manifest")
+    assert export_manifest["version"] == 1
+    assert export_manifest["cipher"] == "AES-GCM"
+    assert export_manifest["kdf"] == {
+        "name": "PBKDF2",
+        "hash": "SHA-256",
+        "iterations": run.render_dashboard.PBKDF2_ITERATIONS,
+    }
+    assert "traffic-log.csv" not in dashboard
+    assert "repo-metrics.csv" not in dashboard
+
+    asset_path = config.dashboard_path.parent / export_manifest["asset"]
+    assert asset_path.exists()
+    ciphertext = asset_path.read_bytes()
+    assert len(ciphertext) == export_manifest["ciphertext_size"]
+    assert hashlib.sha256(ciphertext).hexdigest() == export_manifest["ciphertext_sha256"]
+
+    salt = base64.b64decode(export_manifest["salt"])
+    iv = base64.b64decode(export_manifest["iv"])
+    key = run.render_dashboard._derive_key(OLD_KEY, salt)
+    plaintext_bundle = run.render_dashboard.AESGCM(key).decrypt(iv, ciphertext, None)
+
+    expected_files = [*run.storage.CSV_REGISTRY.keys(), "manifest.json"]
+    with zipfile.ZipFile(io.BytesIO(plaintext_bundle), mode="r") as archive:
+        assert archive.namelist() == expected_files
+        for filename in expected_files:
+            assert archive.read(filename) == (config.data_dir / filename).read_bytes()
 
 
 def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

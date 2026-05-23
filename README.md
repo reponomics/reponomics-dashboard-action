@@ -82,6 +82,15 @@ Generated dashboard files are not committed to the repository. This keeps traffi
 
 After a successful encrypted `publish` run, open the workflow run's **Summary** page, download the GitHub Pages artifact before it expires, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
 
+After unlock, use the dashboard `Export CSV` control to download a canonical
+ZIP of retained CSV files. Export delivery is browser-local: ciphertext is
+fetched from a published encrypted asset and decrypted in memory before
+download. Plaintext export data is not uploaded back to GitHub by this path.
+
+Local-file browser restrictions can block `fetch()` for `file://` origins in
+some environments. When that happens, use the hosted Pages dashboard or serve
+the extracted artifact directory over local HTTP.
+
 Artifact availability follows `retention-days`; the default is 90 days.
 
 ## Privacy Modes

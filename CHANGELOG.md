@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.2...v0.7.0) (2026-05-23)
+
+
+### Features
+
+* add browser-local encrypted CSV export asset flow ([07b7835](https://github.com/reponomics/reponomics-dashboard-action/commit/07b7835fcdb1a99e15bff58842dc27f8127f5eac))
+* add export verification tooltip guidance ([e0066c3](https://github.com/reponomics/reponomics-dashboard-action/commit/e0066c31a7ff037d95558bd156c2fa4a41f6fa8e))
+* expose export checksum for manual verification ([802c8f4](https://github.com/reponomics/reponomics-dashboard-action/commit/802c8f4d367ef79ecd8fc19d20e03b6b6ede9b55))
+
+
+### Bug Fixes
+
+* enforce export manifest digest and asset path checks ([67a9750](https://github.com/reponomics/reponomics-dashboard-action/commit/67a9750dedac7d2ebf7b49334c3dbf1e1fe05caf))
+* improve mobile export toolbar and verification popover layout ([69d2ff4](https://github.com/reponomics/reponomics-dashboard-action/commit/69d2ff4823347bc6bc5ee308dc30955d5d0e395b))
+* keep export toolbar single-line and widen mobile verification popover ([392ad0d](https://github.com/reponomics/reponomics-dashboard-action/commit/392ad0d5c6a6e9163b50e1cb6b46722e97539158))
+* keep verification popover anchored on mobile and tighten tablet toolbar ([04e939c](https://github.com/reponomics/reponomics-dashboard-action/commit/04e939cf0a1c5e0f1e52c010bcb6d90672d27d11))
+
 ## [0.6.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.1...v0.6.2) (2026-05-22)
 
 

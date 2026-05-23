@@ -242,13 +242,30 @@ def _response(
     return response
 
 
-def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    (
+        "github_event_repository_private",
+        "expected_repo_is_public",
+        "expected_readme_dashboard",
+    ),
+    [
+        ("false", True, "disabled"),
+        ("true", False, "enabled"),
+    ],
+)
+def test_input_normalization_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    github_event_repository_private: str,
+    expected_repo_is_public: bool,
+    expected_readme_dashboard: str,
+) -> None:
     monkeypatch.setenv("REPONOMICS_MODE", "collect")
     monkeypatch.setenv("REPONOMICS_TRAFFIC_TOKEN", "ghp_traffic")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
     monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", github_event_repository_private)
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
@@ -262,13 +279,12 @@ def test_input_normalization_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert config.data_dir == Path("data")
     assert config.dashboard_path == Path("docs/index.html")
     assert config.privacy_mode == "strong"
-    assert config.repo_is_public is True
+    assert config.repo_is_public is expected_repo_is_public
     assert config.resolved_artifact_mode == "encrypted"
     assert config.normalized_pages_dashboard == "encrypted"
-    assert config.normalized_readme_dashboard == "disabled"
+    assert config.normalized_readme_dashboard == expected_readme_dashboard
     assert config.retention_days == 30
     assert config.commit_outputs is False
-
 
 def test_commit_outputs_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("REPONOMICS_COMMIT_OUTPUTS", raising=False)
@@ -967,7 +983,7 @@ def test_rotate_key_fixture_reencrypts_with_next_secret(
         encoding="utf-8",
     )
 
-    os.environ["TRAFFIC_DASHBOARD_SECRET"] = NEXT_KEY
+    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
     run.crypto_artifact.decrypt(
         rotated.data_dir / "traffic-data.enc",
         rotated.data_dir,
@@ -982,7 +998,7 @@ def test_rotate_key_fixture_reencrypts_with_next_secret(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    os.environ["TRAFFIC_DASHBOARD_SECRET"] = OLD_KEY
+    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", OLD_KEY)
     with pytest.raises(Exception):
         run.crypto_artifact.decrypt(
             rotated.data_dir / "traffic-data.enc",
@@ -1687,7 +1703,7 @@ def test_rotate_key_from_v2_encrypted_fixture_migrates_without_config_rewrite(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    os.environ["TRAFFIC_DASHBOARD_SECRET"] = NEXT_KEY
+    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
     run.crypto_artifact.decrypt(
         rotated.data_dir / "traffic-data.enc",
         rotated.data_dir,

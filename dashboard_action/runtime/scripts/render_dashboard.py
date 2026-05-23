@@ -188,7 +188,12 @@ BASE_STYLES = """
       font-weight: 600;
       letter-spacing: -0.01em;
     }
-    .updated { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; }
+    .updated {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
     .tagline {
       color: var(--text-muted);
       font-size: 0.95rem;
@@ -382,6 +387,8 @@ BASE_STYLES = """
       color: var(--text-muted);
       flex: 1 0 100%;
       order: 98;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       display: none;
     }
     #export-status.visible { display: inline-flex; align-items: center; }
@@ -1169,7 +1176,10 @@ BASE_STYLES = """
     @media (max-width: 720px) {
       body { padding: 1rem; }
       .hero { flex-direction: column; }
-      .hero-toolbar { justify-content: flex-start; }
+      .hero-toolbar {
+        justify-content: flex-start;
+        width: 100%;
+      }
       .controls-card { flex-direction: column; }
       .auth-form { flex-direction: column; align-items: stretch; }
       .auth-button { width: 100%; }
@@ -1193,6 +1203,28 @@ BASE_STYLES = """
       .chart-container { height: 280px; }
       .momentum-cell { padding: 0.5rem 0; border-left: none; border-top: 1px solid var(--border-soft); }
       .momentum-cell:first-child { padding-top: 0; border-top: none; }
+      .export-verify-popover {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        top: auto;
+        bottom: 1rem;
+        width: auto;
+        max-height: min(55vh, 22rem);
+        overflow: auto;
+      }
+      .export-verify-popover code {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+    }
+    @media (max-width: 480px) {
+      .hero-toolbar { gap: 0.45rem; }
+      .toolbar-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.82rem;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
       .stat-spark path.line { animation: none; }
@@ -3379,7 +3411,7 @@ SECURE_RUNTIME_JS = """
             } else {
               throw new Error('clipboard-unavailable');
             }
-            setExportStatus('📄 SHA-256 copied for verification.', 'success');
+            setExportStatus('📄 SHA-256 copied (hash + filename).', 'success');
           } catch (_error) {
             setExportStatus('📄 SHA-256: ' + checksumLine, 'success');
           }
@@ -3426,7 +3458,7 @@ SECURE_RUNTIME_JS = """
           const filename = buildExportFilename(validatedManifest.filename);
           triggerDownload(filename, plaintextView);
           setExportHashState(plaintextSha256, filename);
-          setExportStatus('📄 CSV export ready. SHA-256 verified (' + plaintextSha256.slice(0, 12) + '…).', 'success');
+          setExportStatus('📄 CSV export ready. SHA-256: ' + plaintextSha256, 'success');
         } catch (error) {
           if (String(error) === 'Error: fetch-failed') {
             setExportStatus(
@@ -3857,7 +3889,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
           <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
           <div class="export-verify-popover" role="note">
             <p><strong>Automatic in-browser checks:</strong> on export, the dashboard verifies encrypted asset size + SHA-256, decrypts with your key, then verifies decrypted ZIP SHA-256 against this page's embedded <code>export-manifest</code> before download.</p>
-            <p><strong>Optional manual verification:</strong> click <code>Copy SHA-256</code>, then run <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> and compare hashes.</p>
+            <p><strong>Optional manual verification:</strong> <code>Copy SHA-256</code> copies <code>&lt;sha256&gt;&nbsp;&nbsp;&lt;filename&gt;</code> for checksum-file format. Use <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> to compare manually, or save the copied line and run <code>shasum -a 256 -c &lt;checksums.txt&gt;</code>.</p>
           </div>
         </details>
         <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>

@@ -1459,7 +1459,7 @@ BASE_STYLES = """
     @media (max-width: 720px) {
       body { padding: 1rem; }
       .auth-hero h1 {
-        font-size: clamp(3.4rem, 15vw, 5.6rem);
+        font-size: clamp(3.25rem, 13vw, 4.35rem);
       }
       .auth-theme-toggle {
         top: calc(env(safe-area-inset-top, 0px) + 0.75rem);

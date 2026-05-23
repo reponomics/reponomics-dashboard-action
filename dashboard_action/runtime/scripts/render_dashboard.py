@@ -3110,8 +3110,9 @@ SECURE_RUNTIME_JS = """
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
     const exportButton = document.getElementById('export-button');
+    const exportHashButton = document.getElementById('export-hash-button');
     const exportStatus = document.getElementById('export-status');
-    const EXPORT_BUTTON_LABEL = 'Export CSV';
+    const EXPORT_BUTTON_LABEL = '📄 Export CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
     let unlockedDashboardKey = '';
 
@@ -3126,6 +3127,21 @@ SECURE_RUNTIME_JS = """
       exportStatus.className = 'auth-status'
         + (type ? ' ' + type : '')
         + (message ? ' visible' : '');
+    }
+
+    function setExportHashState(digest, filename) {
+      if (!exportHashButton) return;
+      if (!digest || !filename) {
+        exportHashButton.classList.remove('visible');
+        exportHashButton.removeAttribute('data-digest');
+        exportHashButton.removeAttribute('data-filename');
+        exportHashButton.disabled = true;
+        return;
+      }
+      exportHashButton.classList.add('visible');
+      exportHashButton.setAttribute('data-digest', digest);
+      exportHashButton.setAttribute('data-filename', filename);
+      exportHashButton.disabled = false;
     }
 
     function b64ToBytes(value) {
@@ -3303,17 +3319,40 @@ SECURE_RUNTIME_JS = """
         setExportStatus('Export metadata is invalid for this dashboard build.', 'error');
         return;
       }
+      if (exportHashButton) {
+        exportHashButton.disabled = true;
+        exportHashButton.addEventListener('click', async function() {
+          const digest = exportHashButton.getAttribute('data-digest') || '';
+          const filename = exportHashButton.getAttribute('data-filename') || 'export.zip';
+          if (!digest) {
+            setExportStatus('📄 Export first to capture a checksum.', 'error');
+            return;
+          }
+          const checksumLine = digest + '  ' + filename;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(checksumLine);
+            } else {
+              throw new Error('clipboard-unavailable');
+            }
+            setExportStatus('📄 SHA-256 copied for verification.', 'success');
+          } catch (_error) {
+            setExportStatus('📄 SHA-256: ' + checksumLine, 'success');
+          }
+        });
+      }
       exportButton.classList.add('visible');
       exportButton.textContent = EXPORT_BUTTON_LABEL;
       exportButton.addEventListener('click', async function() {
         if (!unlockedDashboardKey) {
-          setExportStatus('Unlock the dashboard before exporting.', 'error');
+          setExportStatus('📄 Unlock the dashboard before exporting.', 'error');
           return;
         }
         exportButton.disabled = true;
         exportButton.textContent = EXPORT_BUTTON_WORKING_LABEL;
         exportButton.setAttribute('aria-busy', 'true');
-        setExportStatus('Preparing encrypted export bundle...', 'pending');
+        setExportHashState('', '');
+        setExportStatus('📄 Preparing encrypted export bundle...', 'pending');
         let ciphertext = null;
         let plaintextView = null;
         try {
@@ -3342,11 +3381,12 @@ SECURE_RUNTIME_JS = """
           }
           const filename = buildExportFilename(validatedManifest.filename);
           triggerDownload(filename, plaintextView);
-          setExportStatus('CSV export ready: ' + filename, 'success');
+          setExportHashState(plaintextSha256, filename);
+          setExportStatus('📄 CSV export ready. SHA-256 verified (' + plaintextSha256.slice(0, 12) + '…).', 'success');
         } catch (error) {
           if (String(error) === 'Error: fetch-failed') {
             setExportStatus(
-              'Unable to fetch export asset from this context. Try the hosted dashboard or serve extracted files over HTTP.',
+              '📄 Unable to fetch export asset from this context. Try the hosted dashboard or serve extracted files over HTTP.',
               'error'
             );
           } else if (
@@ -3354,9 +3394,9 @@ SECURE_RUNTIME_JS = """
             || String(error) === 'Error: digest-mismatch'
             || String(error) === 'Error: plaintext-digest-mismatch'
           ) {
-            setExportStatus('Export integrity check failed. Republish and try again.', 'error');
+            setExportStatus('📄 Export integrity check failed. Republish and try again.', 'error');
           } else {
-            setExportStatus('Export failed. Verify key and dashboard assets.', 'error');
+            setExportStatus('📄 Export failed. Verify key and dashboard assets.', 'error');
           }
         } finally {
           if (ciphertext) {
@@ -3768,6 +3808,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         <span class="status-badge active" id="activeBadge"></span>
         <span class="status-badge compare" id="compareBadge"></span>
         <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
+        <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
         <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
         <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
           <span class="theme-icon" aria-hidden="true">◐</span>

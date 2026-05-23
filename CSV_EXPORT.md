@@ -4,9 +4,7 @@ Last updated: 2026-05-23
 
 ## Purpose
 
-This document is the long-lived technical reference for CSV export delivery.
-ADR 004 records the decision; this file explains how the export architecture
-works in practice and how to plan capacity as datasets evolve.
+This document is the long-lived technical reference for CSV export delivery. ADR 004 records the decision; this file explains how the export architecture works in practice and how to plan capacity as datasets evolve.
 
 ## Scope
 
@@ -20,13 +18,10 @@ works in practice and how to plan capacity as datasets evolve.
 
 The export bundle is built from canonical retained files:
 
-- `storage.CSV_REGISTRY` files:
-  `traffic-log.csv`, `traffic-daily.csv`, `traffic-snapshots.csv`,
-  `traffic-referrers.csv`, `traffic-paths.csv`, `repo-metrics.csv`
+- `storage.CSV_REGISTRY` files: `traffic-log.csv`, `traffic-daily.csv`, `traffic-snapshots.csv`, `traffic-referrers.csv`, `traffic-paths.csv`, `repo-metrics.csv`
 - `manifest.json`
 
-This includes repos currently excluded from dashboard rendering, because export
-is for retained-data portability and parity.
+This includes repos currently excluded from dashboard rendering, because export is for retained-data portability and parity.
 
 ### 2) Publish-time build pipeline
 
@@ -36,8 +31,7 @@ On encrypted publish:
 2. Compute `plaintext_sha256` of ZIP bytes.
 3. Encrypt ZIP with AES-GCM under a PBKDF2-derived key from dashboard secret.
 4. Compute `ciphertext_sha256`.
-5. Write encrypted asset to a content-addressed path:
-   `assets/export-data-<digest16>.enc`.
+5. Write encrypted asset to a content-addressed path: `assets/export-data-<digest16>.enc`.
 6. Embed only compact export metadata in `index.html` (`export-manifest`).
 
 ### 3) Runtime export pipeline (browser)
@@ -60,22 +54,20 @@ No plaintext export bytes are uploaded back to GitHub by this path.
 - `plaintext_sha256`: confirms decrypted bytes match publish-time canonical ZIP.
 
 Important boundary:
+
 - These controls protect payload integrity at export time.
 - They do not replace trust requirements for build/deploy/runtime supply chain.
 
 ## Caching and Asset Versioning
 
 - Export asset filenames are content-addressed to avoid stale-cache mismatches.
-- Manifest asset path validation is strict:
-  `assets/export-data-[a-f0-9]{16}.enc`.
+- Manifest asset path validation is strict: `assets/export-data-[a-f0-9]{16}.enc`.
 
 ## Offline Behavior
 
 - `file://` export is best-effort, not guaranteed across browsers.
-- If browser fetch/CORS behavior blocks local-file export, runtime fails closed
-  with explicit error messaging.
-- Recommended fallback: hosted Pages URL or serving extracted artifact files
-  over local HTTP.
+- If browser fetch/CORS behavior blocks local-file export, runtime fails closed with explicit error messaging.
+- Recommended fallback: hosted Pages URL or serving extracted artifact files over local HTTP.
 
 ## Performance Posture
 
@@ -86,8 +78,7 @@ Hard architectural budgets:
 
 Operational target:
 
-- Keep click-to-download within an interactive desktop range for the reference
-  profile (`R=50`, `D=90`, `C=1`) as features evolve.
+- Keep click-to-download within an interactive desktop range for the reference profile (`R=50`, `D=90`, `C=1`) as features evolve.
 
 ## Size Estimation Framework
 
@@ -141,17 +132,14 @@ Let `rho` be ZIP compression ratio (`S_zip / S_raw`).
 
 - Typical CSV-heavy range: `rho ~= 0.25..0.45`
 - `S_zip ~= rho * S_raw`
-- `S_enc ~= S_zip + 16 + O(1KB)`
-  (`16` is AES-GCM tag bytes; metadata is small and near-constant)
+- `S_enc ~= S_zip + 16 + O(1KB)` (`16` is AES-GCM tag bytes; metadata is small and near-constant)
 
 ### Worked baseline (current schema profile)
 
 Representative row-byte profiles used internally:
 
-- Typical: `b_log=73`, `b_snap=69`, `b_daily=73`, `b_metric=221`, `b_ref=61`,
-  `b_path=121`
-- Conservative: `b_log=120`, `b_snap=110`, `b_daily=120`, `b_metric=300`,
-  `b_ref=100`, `b_path=260`
+- Typical: `b_log=73`, `b_snap=69`, `b_daily=73`, `b_metric=221`, `b_ref=61`, `b_path=121`
+- Conservative: `b_log=120`, `b_snap=110`, `b_daily=120`, `b_metric=300`, `b_ref=100`, `b_path=260`
 
 For `R=50`, `D=90`, `C=1`, `W=14`, `q_r=q_p=10`:
 
@@ -180,6 +168,49 @@ When a new retained table/metric is added:
 - Export manifest exists in encrypted dashboard HTML.
 - Export asset is generated and content-addressed.
 - Decrypted export ZIP reproduces canonical retained files.
-- Integrity failures (ciphertext size/digest, plaintext digest, wrong key) fail
-  closed with no partial plaintext output.
+- Integrity failures (ciphertext size/digest, plaintext digest, wrong key) fail closed with no partial plaintext output.
 - Pre-unlock export remains unavailable.
+
+## FAQ
+
+### Can someone use devtools to trigger CSV export before unlocking the dashboard?
+
+Not in a way that yields plaintext data.
+
+The export flow is wired after successful unlock, and the runtime keeps an explicit key gate (`unlockedDashboardKey`) before any export work proceeds. Even if a user manually invokes JavaScript in devtools, they still cannot produce plaintext ZIP bytes without the correct dashboard secret.
+
+### If someone forces the click path early, will plaintext ZIP download anyway?
+
+No.
+
+The downloadable asset is encrypted (`.enc`). Plaintext ZIP is only produced after successful decryption with the correct key, followed by digest checks. Without the key, decryption fails and no valid plaintext ZIP download is produced by the supported runtime path.
+
+### What checks does the browser run before download?
+
+For encrypted exports, the browser verifies:
+
+1. Ciphertext size matches manifest.
+2. Ciphertext SHA-256 matches manifest (`ciphertext_sha256`).
+3. AES-GCM decrypt succeeds with the provided secret-derived key.
+4. Decrypted ZIP SHA-256 matches manifest (`plaintext_sha256`).
+
+Only then does the browser trigger the ZIP download.
+
+### If the browser already verifies everything, why offer manual checksum copy?
+
+Operational trust and auditability.
+
+Some users want an extra independent verification step or need to share verification artifacts in support/debug workflows. The UI can copy a checksum line (`<sha256>  <filename>`) so users can run local checks (for example `shasum -a 256 <file>.zip`, or checksum-file workflows with `-c`).
+
+### Does this protect against all attacks?
+
+No. It protects export payload integrity within the client-side model, but it does not replace broader supply-chain or endpoint trust.
+
+Examples outside scope include malicious runtime JS, compromised CI/deploy pipeline, compromised browser/device, or weak secrets in `casual` mode.
+
+### What is the practical privacy difference between `strong` and `casual` here?
+
+Both modes keep export payload encrypted at rest/in transit in published assets. The difference is key strength policy.
+
+- `strong`: requires high-entropy secret and is intended to resist offline guessing.
+- `casual`: allows weak/non-empty secrets and is not intended to resist determined offline brute-force attempts.

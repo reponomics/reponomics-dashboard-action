@@ -3529,11 +3529,95 @@ SECURE_RUNTIME_JS = """
     const exportStatus = document.getElementById('export-status');
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
+    const UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:';
+    const UNLOCK_DELAY_STARTS_AT = 3;
+    const UNLOCK_DELAY_BASE_MS = 2000;
+    const UNLOCK_DELAY_MAX_MS = 30000;
     let unlockedDashboardKey = '';
+    let unlockDelayTimer = null;
 
     function setUnlockStatus(message, type) {
       unlockStatus.textContent = message;
       unlockStatus.className = 'auth-status' + (type ? ' ' + type : '');
+    }
+
+    function unlockAttemptStorageKey() {
+      const fingerprint = [
+        encryptedPayload.version,
+        encryptedPayload.cipher,
+        encryptedPayload.salt,
+        encryptedPayload.iv,
+        String(encryptedPayload.ciphertext || '').slice(0, 32)
+      ].join(':');
+      return UNLOCK_ATTEMPT_STORAGE_PREFIX + fingerprint;
+    }
+
+    function readUnlockAttemptState() {
+      try {
+        const raw = localStorage.getItem(unlockAttemptStorageKey());
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (
+          parsed &&
+          Number.isInteger(parsed.failures) &&
+          Number.isFinite(parsed.nextAllowedAt)
+        ) {
+          return parsed;
+        }
+      } catch (_error) { /* ignore */ }
+      return { failures: 0, nextAllowedAt: 0 };
+    }
+
+    function writeUnlockAttemptState(state) {
+      try {
+        localStorage.setItem(unlockAttemptStorageKey(), JSON.stringify(state));
+      } catch (_error) { /* ignore */ }
+    }
+
+    function resetUnlockAttemptState() {
+      try {
+        localStorage.removeItem(unlockAttemptStorageKey());
+      } catch (_error) { /* ignore */ }
+    }
+
+    function nextUnlockDelayMs(failures) {
+      if (failures < UNLOCK_DELAY_STARTS_AT) {
+        return 0;
+      }
+      const exponent = failures - UNLOCK_DELAY_STARTS_AT;
+      return Math.min(
+        UNLOCK_DELAY_MAX_MS,
+        UNLOCK_DELAY_BASE_MS * Math.pow(2, exponent)
+      );
+    }
+
+    function formatDelay(seconds) {
+      return seconds === 1 ? '1 second' : seconds + ' seconds';
+    }
+
+    function startUnlockDelay(delayMs, prefix) {
+      if (unlockDelayTimer) {
+        clearTimeout(unlockDelayTimer);
+        unlockDelayTimer = null;
+      }
+      const target = Date.now() + Math.max(0, delayMs);
+      unlockButton.disabled = true;
+
+      const updateDelay = function() {
+        const remainingMs = target - Date.now();
+        if (remainingMs <= 0) {
+          unlockButton.disabled = false;
+          unlockDelayTimer = null;
+          setUnlockStatus('', '');
+          dashboardKeyInput.focus();
+          return;
+        }
+        setUnlockStatus(
+          prefix + formatDelay(Math.ceil(remainingMs / 1000)) + '.',
+          'error'
+        );
+        unlockDelayTimer = setTimeout(updateDelay, Math.min(1000, remainingMs));
+      };
+      updateDelay();
     }
 
     function setExportStatus(message, type) {
@@ -3840,7 +3924,13 @@ SECURE_RUNTIME_JS = """
         'error'
       );
     } else {
-      dashboardKeyInput.focus();
+      const storedAttemptState = readUnlockAttemptState();
+      const storedDelayMs = storedAttemptState.nextAllowedAt - Date.now();
+      if (storedDelayMs > 0) {
+        startUnlockDelay(storedDelayMs, 'Too many failed attempts. Try again in ');
+      } else {
+        dashboardKeyInput.focus();
+      }
     }
 
     if (authThemeToggle) {
@@ -3852,6 +3942,17 @@ SECURE_RUNTIME_JS = """
       event.preventDefault();
       if (!dashboardKeyInput.value) {
         setUnlockStatus('Enter the dashboard key.', 'error');
+        return;
+      }
+
+      const attemptState = readUnlockAttemptState();
+      const now = Date.now();
+      if (attemptState.nextAllowedAt > now) {
+        startUnlockDelay(
+          attemptState.nextAllowedAt - now,
+          'Too many failed attempts. Try again in '
+        );
+        dashboardKeyInput.select();
         return;
       }
 
@@ -3869,12 +3970,30 @@ SECURE_RUNTIME_JS = """
         document.body.removeAttribute('data-screen-label');
         renderDashboard(payload);
         enableExport();
+        if (unlockDelayTimer) {
+          clearTimeout(unlockDelayTimer);
+          unlockDelayTimer = null;
+        }
+        resetUnlockAttemptState();
         setUnlockStatus('', '');
       } catch (error) {
-        unlockButton.disabled = false;
+        const failures = attemptState.failures + 1;
+        const delayMs = nextUnlockDelayMs(failures);
+        writeUnlockAttemptState({
+          failures,
+          nextAllowedAt: delayMs ? Date.now() + delayMs : 0
+        });
         dashboardKeyInput.select();
         unlockedDashboardKey = '';
-        setUnlockStatus('Wrong dashboard key or corrupted payload.', 'error');
+        if (delayMs) {
+          startUnlockDelay(
+            delayMs,
+            'Wrong dashboard key or corrupted payload. Try again in '
+          );
+        } else {
+          unlockButton.disabled = false;
+          setUnlockStatus('Wrong dashboard key or corrupted payload.', 'error');
+        }
       }
     });
 """

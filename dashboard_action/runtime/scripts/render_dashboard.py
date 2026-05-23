@@ -324,6 +324,50 @@ BASE_STYLES = """
       border-color: var(--border-soft);
       background: var(--bg-raised);
     }
+    .export-verify-tip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .export-verify-tip > summary {
+      list-style: none;
+    }
+    .export-verify-tip > summary::-webkit-details-marker {
+      display: none;
+    }
+    .export-verify-tip[open] > summary {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(124, 106, 255, 0.12);
+    }
+    .export-verify-popover {
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      right: 0;
+      width: min(35rem, 92vw);
+      padding: 0.75rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+      box-shadow: var(--card-shadow);
+      z-index: 20;
+    }
+    .export-verify-popover p + p {
+      margin-top: 0.5rem;
+    }
+    .export-verify-popover code {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+      background: var(--bg-raised);
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      padding: 0.1rem 0.35rem;
+      white-space: nowrap;
+    }
     .theme-toggle { gap: 0.4rem; }
     .theme-toggle .theme-icon { font-size: 1rem; line-height: 1; }
     #export-status {
@@ -3809,6 +3853,13 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         <span class="status-badge compare" id="compareBadge"></span>
         <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
         <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
+        <details class="export-verify-tip">
+          <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
+          <div class="export-verify-popover" role="note">
+            <p><strong>Automatic in-browser checks:</strong> on export, the dashboard verifies encrypted asset size + SHA-256, decrypts with your key, then verifies decrypted ZIP SHA-256 against this page's embedded <code>export-manifest</code> before download.</p>
+            <p><strong>Optional manual verification:</strong> click <code>Copy SHA-256</code>, then run <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> and compare hashes.</p>
+          </div>
+        </details>
         <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
         <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
           <span class="theme-icon" aria-hidden="true">◐</span>

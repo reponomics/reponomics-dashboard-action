@@ -1087,10 +1087,69 @@ BASE_STYLES = """
       font-style: italic;
       padding: 1rem 0;
     }
-    .auth-copy {
-      color: #8b949e;
+    body.auth-locked {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    body.auth-locked > footer,
+    body.auth-locked .update-notice {
+      display: none;
+    }
+    #auth-shell {
+      width: 100%;
+      min-height: calc(100vh - 3rem);
+      display: flex;
+      flex-direction: column;
+    }
+    .auth-page {
+      flex: 1;
+      display: grid;
+      place-items: start center;
+      padding-top: 8vh;
+      width: 100%;
+    }
+    .auth-wrap {
+      width: 100%;
+      max-width: 720px;
+    }
+    .auth-page .hero {
+      display: block;
+      margin-bottom: 0;
+    }
+    .auth-page .hero-copy {
+      max-width: 100%;
+    }
+    .auth-hero {
+      margin-bottom: 1.5rem;
+    }
+    .auth-hero .brand-lockup {
       margin-bottom: 1rem;
+    }
+    .auth-hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.4rem);
+    }
+    .auth-hero .sub {
+      color: var(--text-muted);
+      font-size: 0.95rem;
       line-height: 1.5;
+      max-width: 52ch;
+    }
+    .auth-card {
+      padding: 1.5rem;
+    }
+    .auth-card-title {
+      color: var(--text);
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.2rem;
+    }
+    .auth-card-sub {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: 1.1rem;
     }
     .auth-hidden-username {
       position: absolute;
@@ -1107,45 +1166,134 @@ BASE_STYLES = """
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .auth-input-wrap {
+      flex: 1 1 260px;
+      min-width: 0;
+      position: relative;
+      display: flex;
       align-items: center;
     }
     .auth-input {
-      flex: 1 1 260px;
+      flex: 1;
       min-width: 0;
       background: var(--bg-raised);
       border: 1px solid var(--border);
       border-radius: 12px;
       color: var(--text);
-      padding: 0.8rem 0.9rem;
+      padding: 0.85rem 3rem 0.85rem 1rem;
+      font-family: 'Inter', sans-serif;
       font-size: 1rem;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .auth-input:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.18);
+    }
+    [data-theme="light"] .auth-input:focus {
+      box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.18);
+    }
+    .auth-input::placeholder {
+      color: var(--text-dim);
+    }
+    .auth-mark {
+      position: absolute;
+      right: 12px;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      color: var(--accent);
     }
     .auth-button {
       border: none;
       border-radius: 12px;
-      background: var(--c-positive);
+      background: var(--accent);
       color: #ffffff;
-      padding: 0.8rem 1rem;
+      padding: 0 1.5rem;
+      min-height: 48px;
+      font-family: 'Inter', sans-serif;
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
+      transition: filter 150ms ease, transform 120ms ease;
+    }
+    .auth-button:hover {
+      filter: brightness(1.08);
+    }
+    .auth-button:active {
+      transform: translateY(1px);
     }
     .auth-button:disabled {
       background: var(--border);
       color: var(--text-muted);
       cursor: not-allowed;
+      filter: none;
+      transform: none;
     }
-    .auth-status {
+    .auth-card .auth-status {
       min-height: 1.2rem;
       margin-top: 0.9rem;
-      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88rem;
     }
     .auth-status.pending { color: #d29922; }
-    .auth-status.error { color: #f85149; }
-    .auth-status.success { color: #3fb950; }
+    .auth-status.error { color: var(--c-negative); }
+    .auth-status.success,
+    .auth-status.ok { color: var(--c-positive); }
+    .auth-card .auth-status.pending { color: #d29922; }
+    .auth-card .auth-status.error { color: var(--c-negative); }
+    .auth-card .auth-status.success,
+    .auth-card .auth-status.ok { color: var(--c-positive); }
+    .auth-meta {
+      display: flex;
+      gap: 18px;
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-soft);
+      flex-wrap: wrap;
+    }
+    .auth-meta .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .auth-meta .glyph {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--c-positive);
+      flex: 0 0 auto;
+    }
+    .auth-footer {
+      width: 100%;
+      margin-top: 2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--border-soft);
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    .auth-footer .footer-line {
+      display: inline-flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    .auth-footer .brand-name {
+      color: var(--text-muted);
+    }
+    .auth-footer .dot {
+      color: var(--border);
+    }
+    .auth-footer .footer-subline {
+      margin-top: 6px;
+    }
     .update-notice {
       max-width: 980px;
       margin: 2rem auto 0;
@@ -1277,6 +1425,7 @@ BASE_STYLES = """
       }
       .controls-card { flex-direction: column; }
       .auth-form { flex-direction: column; align-items: stretch; }
+      .auth-input-wrap { flex-basis: auto; }
       .auth-button { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .stat-card { min-height: 132px; }
@@ -3625,6 +3774,8 @@ SECURE_RUNTIME_JS = """
         );
         unlockedDashboardKey = dashboardKeyInput.value;
         authShell.style.display = 'none';
+        document.body.classList.remove('auth-locked');
+        document.body.removeAttribute('data-screen-label');
         renderDashboard(payload);
         enableExport();
         setUnlockStatus('', '');
@@ -4201,8 +4352,9 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
 """
 
 
-def _wrap_html(body, chart_loader, runtime_js, extra_head=""):
+def _wrap_html(body, chart_loader, runtime_js, extra_head="", body_attributes=""):
     """Wrap page markup in the shared HTML shell."""
+    body_attribute_text = f" {body_attributes}" if body_attributes else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4227,7 +4379,7 @@ def _wrap_html(body, chart_loader, runtime_js, extra_head=""):
     }})();
   </script>
 </head>
-<body>
+<body{body_attribute_text}>
 {body}
 {_render_update_notice()}
 
@@ -4285,42 +4437,82 @@ def _build_public_html(payload, chart_loader):
 
 def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
     """Build the encrypted published dashboard HTML."""
-    auth_card = """
+    auth_card = f"""
   <div id="auth-shell">
-    <div class="brand-lockup">
-      <h1 class="brand">reponomics<span class="accent">.</span></h1>
-      <div class="brand-eyebrow">Dashboard</div>
-    </div>
-    <p class="updated">Encrypted Pages mode for private growth analytics.</p>
+    <div class="auth-page">
+      <div class="auth-wrap">
+        <div class="hero">
+          <div class="hero-copy auth-hero">
+            <div class="brand-lockup">
+              <h1 class="brand">reponomics<span class="accent">.</span></h1>
+              <div class="brand-eyebrow">Dashboard</div>
+            </div>
+            <p class="sub">
+              Encrypted Pages mode for private growth analytics. The dashboard
+              payload is encrypted with your key and decrypted locally &mdash;
+              nothing leaves your browser.
+            </p>
+          </div>
+        </div>
 
-    <div class="card" id="unlock-card">
-      <h2>Unlock Dashboard</h2>
-      <p class="auth-copy">
-        Enter your dashboard key to decrypt the latest dashboard snapshot in
-        this browser.
-      </p>
-      <form class="auth-form" id="unlock-form">
-        <input
-          class="auth-hidden-username"
-          id="dashboard-username"
-          type="text"
-          name="username"
-          autocomplete="username"
-          value="encrypted-dashboard"
-          tabindex="-1"
-          aria-hidden="true"
-        >
-        <input
-          class="auth-input"
-          id="dashboard-key"
-          type="password"
-          name="dashboard-key"
-          autocomplete="current-password"
-          placeholder="Enter dashboard key"
-        >
-        <button class="auth-button" id="unlock-button" type="submit">Unlock</button>
-      </form>
-      <p class="auth-status" id="unlock-status"></p>
+        <div class="card auth-card" id="unlock-card">
+          <h2 class="auth-card-title">Unlock Dashboard</h2>
+          <p class="auth-card-sub">
+            Enter your dashboard key to decrypt the latest dashboard snapshot
+            in this browser.
+          </p>
+
+          <form class="auth-form" id="unlock-form" autocomplete="off">
+            <label class="auth-hidden-username" aria-hidden="true">
+              <input
+                id="dashboard-username"
+                type="text"
+                name="username"
+                autocomplete="username"
+                value="encrypted-dashboard"
+                tabindex="-1"
+              >
+            </label>
+            <div class="auth-input-wrap">
+              <input
+                class="auth-input"
+                id="dashboard-key"
+                type="password"
+                name="dashboard-key"
+                autocomplete="current-password"
+                placeholder="Enter dashboard key"
+                aria-label="Dashboard key"
+              >
+              <span class="auth-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="22" height="22" focusable="false">
+                  <g transform="rotate(45 16 16)">
+                    <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
+                  </g>
+                  <path d="M9 19 L13 15 L17 18 L23 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </span>
+            </div>
+            <button class="auth-button" id="unlock-button" type="submit">Unlock</button>
+          </form>
+
+          <div class="auth-status" id="unlock-status" aria-live="polite"></div>
+
+          <div class="auth-meta">
+            <span class="meta-item"><span class="glyph"></span>AES-GCM &middot; PBKDF2-SHA256 &middot; {PBKDF2_ITERATIONS:,} iterations</span>
+            <span class="meta-item"><span class="glyph"></span>Decryption is strictly client-side</span>
+          </div>
+        </div>
+
+        <footer class="auth-footer">
+          <div class="footer-line">
+            <span>Built with</span>
+            <span class="brand-name">Reponomics</span>
+            <span class="dot">&middot;</span>
+            <span>self-hosted, no trackers, no cost</span>
+          </div>
+          <div class="footer-subline">Made for indie hackers shipping across many repos</div>
+        </footer>
+      </div>
     </div>
   </div>
 """
@@ -4356,6 +4548,7 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         chart_loader,
         runtime_js,
         extra_head='<meta name="robots" content="noindex, nofollow">',
+        body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
     )
 
 

@@ -111,10 +111,14 @@ def test_summarize_rotation_writes_github_step_summary(
     assert "TRAFFIC_DASHBOARD_NEXT_SECRET" in summary
 
 
-def test_mask_secret_emits_escaped_add_mask_commands(capfd: pytest.CaptureFixture[str]) -> None:
+def test_mask_secret_filters_short_values_and_escapes_commands(
+    capfd: pytest.CaptureFixture[str],
+) -> None:
     run._mask_secret("xy\nabc%123\nzztop")
 
     captured = capfd.readouterr()
+    # "xy" is intentionally absent: values shorter than MIN_MASK_LENGTH (3)
+    # are filtered and do not produce ::add-mask:: commands.
     assert captured.out == "::add-mask::abc%25123\n::add-mask::zztop\n"
     assert captured.err == ""
 
@@ -152,6 +156,7 @@ def test_main_dispatches_modes_and_reports_action_errors(
     config = _config_for_run_tests(tmp_path, mode="publish")
 
     monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
     monkeypatch.setattr(run, "run_publish", lambda received: called.append(f"publish:{received.mode}"))
 
     run.main(lambda: config)

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.8.0...v0.8.1) (2026-05-23)
+
+
+### Bug Fixes
+
+* clarify YAML validation errors ([d86cda0](https://github.com/reponomics/reponomics-dashboard-action/commit/d86cda056e9f0b0ddddce47980bcbea00befb1ac))
+* type analytics helper boundaries ([9f2650d](https://github.com/reponomics/reponomics-dashboard-action/commit/9f2650d8ba27593390beb0505f3ecf2aeb388446))
+
 ## [0.8.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.7.0...v0.8.0) (2026-05-23)
 
 

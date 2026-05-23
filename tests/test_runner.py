@@ -537,6 +537,66 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= standalone.canvases
 
 
+def test_publish_encrypted_unlock_shell_affordances(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+
+    assert '<body class="auth-locked" data-screen-label="Unlock - Encrypted Pages">' in dashboard
+    assert 'class="auth-theme-toggle theme-toggle"' in dashboard
+    assert 'id="auth-theme-toggle"' in dashboard
+    assert "right: calc(env(safe-area-inset-right, 0px) + 1rem);" in dashboard
+    assert "document.querySelectorAll('.theme-toggle')" in dashboard
+
+    assert 'class="auth-card-icon"' in dashboard
+    assert 'class="auth-mark"' not in dashboard
+    assert "max-width: 52ch;" not in dashboard
+
+    assert '<a href="https://github.com/reponomics">Forgot your password?</a>' in dashboard
+    assert (
+        '<a class="brand-name" href="https://github.com/reponomics">Reponomics</a>'
+        in dashboard
+    )
+
+
+def test_publish_encrypted_unlock_failure_throttling_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+
+    expected_runtime_markers = [
+        "UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:'",
+        "UNLOCK_DELAY_STARTS_AT = 3",
+        "UNLOCK_DELAY_BASE_MS = 2000",
+        "UNLOCK_DELAY_MAX_MS = 30000",
+        "function unlockAttemptStorageKey()",
+        "function startUnlockDelay(delayMs, prefix)",
+        "localStorage.setItem(unlockAttemptStorageKey(), JSON.stringify(state))",
+        "localStorage.removeItem(unlockAttemptStorageKey())",
+        "resetUnlockAttemptState();",
+        "Too many failed attempts. Try again in ",
+        "Wrong dashboard key or corrupted payload. Try again in ",
+    ]
+    for marker in expected_runtime_markers:
+        assert marker in dashboard
+
+
 def test_publish_dashboard_toolbar_controls_snapshot(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

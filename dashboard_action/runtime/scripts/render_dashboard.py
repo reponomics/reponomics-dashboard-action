@@ -327,12 +327,35 @@ BASE_STYLES = """
     .theme-toggle { gap: 0.4rem; }
     .theme-toggle .theme-icon { font-size: 1rem; line-height: 1; }
     #export-status {
-      margin: 0;
+      margin: 0.15rem 0 0;
       min-height: 0;
       font-size: 0.82rem;
+      line-height: 1.35;
+      padding: 0.32rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      flex: 1 0 100%;
+      order: 98;
       display: none;
     }
-    #export-status.visible { display: inline-flex; }
+    #export-status.visible { display: inline-flex; align-items: center; }
+    #export-status.pending {
+      color: #d29922;
+      border-color: rgba(210, 153, 34, 0.34);
+      background: rgba(210, 153, 34, 0.12);
+    }
+    #export-status.success {
+      color: #3fb950;
+      border-color: rgba(63, 185, 80, 0.34);
+      background: rgba(63, 185, 80, 0.12);
+    }
+    #export-status.error {
+      color: #f85149;
+      border-color: rgba(248, 81, 73, 0.34);
+      background: rgba(248, 81, 73, 0.12);
+    }
     @media (max-width: 480px) {
       .theme-toggle .theme-label { display: none; }
     }
@@ -3088,6 +3111,8 @@ SECURE_RUNTIME_JS = """
     const unlockStatus = document.getElementById('unlock-status');
     const exportButton = document.getElementById('export-button');
     const exportStatus = document.getElementById('export-status');
+    const EXPORT_BUTTON_LABEL = 'Export CSV';
+    const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
     let unlockedDashboardKey = '';
 
     function setUnlockStatus(message, type) {
@@ -3279,12 +3304,15 @@ SECURE_RUNTIME_JS = """
         return;
       }
       exportButton.classList.add('visible');
+      exportButton.textContent = EXPORT_BUTTON_LABEL;
       exportButton.addEventListener('click', async function() {
         if (!unlockedDashboardKey) {
           setExportStatus('Unlock the dashboard before exporting.', 'error');
           return;
         }
         exportButton.disabled = true;
+        exportButton.textContent = EXPORT_BUTTON_WORKING_LABEL;
+        exportButton.setAttribute('aria-busy', 'true');
         setExportStatus('Preparing encrypted export bundle...', 'pending');
         let ciphertext = null;
         let plaintextView = null;
@@ -3338,6 +3366,8 @@ SECURE_RUNTIME_JS = """
             plaintextView.fill(0);
           }
           exportButton.disabled = false;
+          exportButton.textContent = EXPORT_BUTTON_LABEL;
+          exportButton.setAttribute('aria-busy', 'false');
         }
       });
     }
@@ -3743,7 +3773,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
           <span class="theme-icon" aria-hidden="true">◐</span>
           <span class="theme-label">Theme</span>
         </button>
-        <p class="auth-status" id="export-status" aria-live="polite"></p>
+        <p class="auth-status" id="export-status" aria-live="polite" aria-atomic="true"></p>
       </div>
     </div>
 

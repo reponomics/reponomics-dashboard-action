@@ -1123,17 +1123,52 @@ BASE_STYLES = """
     .auth-hero {
       margin-bottom: 1.5rem;
     }
+    .auth-hero-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
     .auth-hero .brand-lockup {
       margin-bottom: 1rem;
     }
     .auth-hero h1 {
-      font-size: clamp(2.4rem, 5vw, 3.4rem);
+      font-size: clamp(3rem, 6.5vw, 4.6rem);
+    }
+    .auth-hero .brand-eyebrow {
+      font-size: 0.88rem;
     }
     .auth-hero .sub {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 1.02rem;
       line-height: 1.5;
       max-width: 52ch;
+    }
+    .auth-theme-toggle {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg-raised);
+      color: var(--text-muted);
+      padding: 0.55rem 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.38rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+      white-space: nowrap;
+    }
+    .auth-theme-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .auth-theme-toggle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
     .auth-card {
       padding: 1.5rem;
@@ -1147,7 +1182,7 @@ BASE_STYLES = """
     }
     .auth-card-sub {
       color: var(--text-muted);
-      font-size: 0.92rem;
+      font-size: 0.98rem;
       line-height: 1.5;
       margin-bottom: 1.1rem;
     }
@@ -1237,7 +1272,7 @@ BASE_STYLES = """
       margin-top: 0.9rem;
       color: var(--text-muted);
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.88rem;
+      font-size: 0.92rem;
     }
     .auth-status.pending { color: #d29922; }
     .auth-status.error { color: var(--c-negative); }
@@ -1260,7 +1295,7 @@ BASE_STYLES = """
       align-items: center;
       gap: 8px;
       color: var(--text-muted);
-      font-size: 0.82rem;
+      font-size: 0.9rem;
     }
     .auth-meta .glyph {
       width: 6px;
@@ -1275,7 +1310,7 @@ BASE_STYLES = """
       padding-top: 1.2rem;
       border-top: 1px solid var(--border-soft);
       color: var(--text-dim);
-      font-size: 0.82rem;
+      font-size: 0.88rem;
       text-align: center;
     }
     .auth-footer .footer-line {
@@ -1408,6 +1443,18 @@ BASE_STYLES = """
     }
     @media (max-width: 720px) {
       body { padding: 1rem; }
+      .auth-hero-head {
+        align-items: flex-start;
+      }
+      .auth-hero h1 {
+        font-size: clamp(3.4rem, 15vw, 5.6rem);
+      }
+      .auth-theme-toggle {
+        padding: 0.5rem 0.68rem;
+      }
+      .auth-theme-toggle .theme-label {
+        display: none;
+      }
       .hero-toolbar-controls {
         gap: 0.42rem;
       }
@@ -1582,14 +1629,13 @@ APP_RUNTIME_JS = """
       if (persist) {
         try { localStorage.setItem(THEME_KEY, theme); } catch (_e) { /* ignore */ }
       }
-      const toggle = document.getElementById('themeToggle');
-      if (toggle) {
+      document.querySelectorAll('.theme-toggle').forEach((toggle) => {
         const icon = toggle.querySelector('.theme-icon');
         const label = toggle.querySelector('.theme-label');
         if (icon) icon.textContent = theme === 'light' ? '☀' : '☾';
         if (label) label.textContent = theme === 'light' ? 'Light' : 'Dark';
         toggle.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
-      }
+      });
       refreshCharts();
     }
     function toggleTheme() {
@@ -3438,6 +3484,7 @@ SECURE_RUNTIME_JS = """
     const dashboardKeyInput = document.getElementById('dashboard-key');
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
+    const authThemeToggle = document.getElementById('auth-theme-toggle');
     const exportButton = document.getElementById('export-button');
     const exportHashButton = document.getElementById('export-hash-button');
     const exportStatus = document.getElementById('export-status');
@@ -3755,6 +3802,11 @@ SECURE_RUNTIME_JS = """
       );
     } else {
       dashboardKeyInput.focus();
+    }
+
+    if (authThemeToggle) {
+      authThemeToggle.addEventListener('click', toggleTheme);
+      applyTheme(preferredTheme(), false);
     }
 
     unlockForm.addEventListener('submit', async function(event) {
@@ -4443,9 +4495,22 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
       <div class="auth-wrap">
         <div class="hero">
           <div class="hero-copy auth-hero">
-            <div class="brand-lockup">
-              <h1 class="brand">reponomics<span class="accent">.</span></h1>
-              <div class="brand-eyebrow">Dashboard</div>
+            <div class="auth-hero-head">
+              <div class="brand-lockup">
+                <h1 class="brand">reponomics<span class="accent">.</span></h1>
+                <div class="brand-eyebrow">Dashboard</div>
+              </div>
+              <button
+                class="auth-theme-toggle theme-toggle"
+                id="auth-theme-toggle"
+                type="button"
+                aria-label="Toggle light/dark theme"
+                aria-pressed="false"
+                title="Toggle theme"
+              >
+                <span class="theme-icon" aria-hidden="true">◐</span>
+                <span class="theme-label">Theme</span>
+              </button>
             </div>
             <p class="sub">
               Encrypted Pages mode for private growth analytics. The dashboard

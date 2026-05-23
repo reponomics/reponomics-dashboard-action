@@ -85,7 +85,9 @@ After a successful encrypted `publish` run, open the workflow run's **Summary** 
 After unlock, use the dashboard `Export CSV` control to download a canonical
 ZIP of retained CSV files. Export delivery is browser-local: ciphertext is
 fetched from a published encrypted asset and decrypted in memory before
-download. Plaintext export data is not uploaded back to GitHub by this path.
+download. The runtime verifies both encrypted-asset and decrypted-bundle
+digests before download. Plaintext export data is not uploaded back to GitHub
+by this path.
 
 Local-file browser restrictions can block `fetch()` for `file://` origins in
 some environments. When that happens, use the hosted Pages dashboard or serve

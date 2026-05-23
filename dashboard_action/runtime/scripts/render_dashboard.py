@@ -1139,7 +1139,7 @@ BASE_STYLES = """
       color: var(--text-muted);
       font-size: 1.02rem;
       line-height: 1.5;
-      max-width: 52ch;
+      max-width: 100%;
     }
     .auth-theme-toggle {
       position: fixed;

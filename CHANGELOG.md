@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.7.0...v0.8.0) (2026-05-23)
+
+
+### Features
+
+* add unlock recovery links ([5c26e16](https://github.com/reponomics/reponomics-dashboard-action/commit/5c26e1645950f1d8c07f4f4d91fc518e10093439))
+* add unlock screen theme toggle ([5607e31](https://github.com/reponomics/reponomics-dashboard-action/commit/5607e3150f17371b85940370816345b22cc3b988))
+* refresh encrypted dashboard unlock screen ([70fd9cd](https://github.com/reponomics/reponomics-dashboard-action/commit/70fd9cd9a4a59724eaabdd259375a4eb9e7b30b1))
+* throttle repeated unlock failures ([3ab79d9](https://github.com/reponomics/reponomics-dashboard-action/commit/3ab79d91f3165ea1cdec8f93e26218f08017d205))
+
+
+### Bug Fixes
+
+* align unlock intro copy width ([d7bbfde](https://github.com/reponomics/reponomics-dashboard-action/commit/d7bbfde4de9e0fc2738dbb2bd55c498394f71676))
+* avoid password manager icon collision ([0901204](https://github.com/reponomics/reponomics-dashboard-action/commit/09012042bb902fd1ac668080d96ca341bf8ceacc))
+* cap mobile unlock wordmark size ([a6f7d44](https://github.com/reponomics/reponomics-dashboard-action/commit/a6f7d44ed74f2d39ad794fc78051b36be47347a4))
+
 ## [0.7.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.6.2...v0.7.0) (2026-05-23)
 
 

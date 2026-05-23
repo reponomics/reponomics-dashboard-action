@@ -159,7 +159,7 @@ BASE_STYLES = """
     /* Brand wordmark: Inter Black, lowercase, tight tracking, blue period. */
     h1.brand {
       font-family: 'Inter', sans-serif;
-      font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+      font-size: clamp(2.75rem, 5.2vw, 3.2rem);
       font-weight: 900;
       letter-spacing: -0.055em;
       line-height: 0.95;
@@ -192,7 +192,10 @@ BASE_STYLES = """
       color: var(--text-muted);
       font-size: 0.88rem;
       line-height: 1.5;
-      overflow-wrap: anywhere;
+      max-width: 58ch;
+      overflow-wrap: break-word;
+      word-break: normal;
+      text-wrap: pretty;
     }
     .tagline {
       color: var(--text-muted);
@@ -222,21 +225,33 @@ BASE_STYLES = """
       align-items: flex-start;
       margin-bottom: 1.5rem;
     }
-    .hero-copy { min-width: 0; }
+    .hero-copy {
+      min-width: 0;
+      flex: 1 1 32rem;
+      min-width: min(100%, 20rem);
+      max-width: min(62ch, 100%);
+    }
     .hero-toolbar {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       gap: 0.15rem;
+      flex: 0 0 auto;
     }
     .hero-toolbar-controls {
       display: flex;
       gap: 0.6rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       justify-content: flex-end;
       align-items: center;
-      width: 100%;
+      max-width: 100%;
     }
+    #activeBadge, #compareBadge { order: 1; }
+    #clearSelectionBtn { order: 2; }
+    #export-button { order: 3; }
+    #export-hash-button { order: 4; }
+    .export-verify-tip { order: 5; }
+    #themeToggle { order: 6; }
     .controls-card {
       display: flex;
       gap: 1rem;
@@ -325,6 +340,9 @@ BASE_STYLES = """
       font-size: 0.86rem;
       font-weight: 500;
       display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
       white-space: nowrap;
       transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
     }
@@ -344,6 +362,7 @@ BASE_STYLES = """
     }
     .export-verify-tip > summary {
       list-style: none;
+      margin: 0;
     }
     .export-verify-tip > summary::-webkit-details-marker {
       display: none;
@@ -393,12 +412,23 @@ BASE_STYLES = """
       border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
-      width: 100%;
-      overflow-wrap: anywhere;
-      word-break: break-word;
+      align-self: flex-end;
+      max-width: min(40rem, 100%);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       display: none;
     }
-    #export-status.visible { display: block; }
+    #export-status.visible { display: inline-flex; align-items: center; }
+    #export-status.visible.multiline {
+      display: inline-flex;
+      align-items: flex-start;
+      white-space: pre-line;
+      overflow: visible;
+      text-overflow: clip;
+      border-radius: 12px;
+      line-height: 1.3;
+    }
     #export-status.pending {
       color: #d29922;
       border-color: rgba(210, 153, 34, 0.34);
@@ -414,23 +444,22 @@ BASE_STYLES = """
       border-color: rgba(248, 81, 73, 0.34);
       background: rgba(248, 81, 73, 0.12);
     }
-    @media (max-width: 480px) {
-      .theme-toggle .theme-label { display: none; }
-    }
     .status-badge {
       display: none;
       border-radius: 999px;
-      padding: 0.4rem 0.75rem;
-      font-size: 0.8rem;
-      font-weight: 600;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.86rem;
+      font-weight: 500;
       letter-spacing: 0.01em;
       border: 1px solid var(--border);
       background: var(--bg-raised);
       color: var(--text-muted);
+      line-height: 1.2;
+      white-space: nowrap;
     }
-    .status-badge.visible { display: inline-flex; align-items: center; gap: 0.4rem; }
-    .status-badge.active { color: var(--accent); border-color: rgba(124, 106, 255, 0.45); background: rgba(124, 106, 255, 0.08); }
-    .status-badge.compare { color: var(--c-uniques); border-color: rgba(63, 185, 80, 0.4); background: rgba(63, 185, 80, 0.06); }
+    .status-badge.visible { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+    .status-badge.active { color: var(--text); border-color: rgba(124, 106, 255, 0.34); background: rgba(124, 106, 255, 0.08); }
+    .status-badge.compare { color: var(--text); border-color: rgba(63, 185, 80, 0.30); background: rgba(63, 185, 80, 0.08); }
     .card {
       background: linear-gradient(180deg, var(--bg-card), var(--bg-card-2));
       border: 1px solid var(--border);
@@ -1175,35 +1204,75 @@ BASE_STYLES = """
       transition: color 150ms ease, border-color 150ms ease;
     }
     footer a:hover { color: var(--accent); border-bottom-color: var(--accent); }
-    @media (max-width: 980px) {
+    @media (max-width: 1240px) {
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.7rem;
+      }
+      .hero-toolbar {
+        align-items: stretch;
+        width: 100%;
+        gap: 0.2rem;
+      }
+      .hero-copy {
+        flex: 0 1 auto;
+        max-width: 100%;
+      }
+      .hero-toolbar-controls {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        justify-content: flex-start;
+        gap: 0.48rem;
+      }
+      .hero-toolbar-controls > .status-badge,
+      .hero-toolbar-controls > .toolbar-button,
+      .hero-toolbar-controls > .export-verify-tip {
+        width: 100%;
+      }
+      .hero-toolbar-controls > .status-badge,
+      .hero-toolbar-controls > .toolbar-button {
+        justify-content: center;
+      }
+      .hero-toolbar-controls > .export-verify-tip > summary {
+        width: 100%;
+        justify-content: center;
+      }
+      #export-status {
+        align-self: flex-start;
+        max-width: 100%;
+        width: 100%;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
+      }
+      #export-status.visible.multiline {
+        width: 100%;
+        max-width: 100%;
+      }
+      #export-status.visible {
+        display: block;
+      }
       .chart-grid, .section-grid { grid-template-columns: 1fr; }
       .section-grid.full { grid-template-columns: 1fr; }
       .chart-container.tall { height: 320px; }
     }
     @media (max-width: 720px) {
       body { padding: 1rem; }
-      .hero { flex-direction: column; }
-      .hero-toolbar {
-        align-items: stretch;
-        width: 100%;
-        gap: 0.12rem;
-      }
       .hero-toolbar-controls {
-        justify-content: flex-start;
-        flex-wrap: nowrap;
         gap: 0.42rem;
       }
       .toolbar-button {
         padding: 0.5rem 0.75rem;
         font-size: 0.82rem;
       }
-      .theme-toggle .theme-label { display: none; }
       .status-badge {
-        max-width: 6.5rem;
-        font-size: 0.74rem;
-        padding: 0.34rem 0.52rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        font-size: 0.82rem;
+        padding: 0.5rem 0.75rem;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
       }
       .controls-card { flex-direction: column; }
@@ -1247,11 +1316,19 @@ BASE_STYLES = """
       }
     }
     @media (max-width: 480px) {
-      .hero-toolbar-controls { gap: 0.36rem; }
+      .hero-toolbar-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.36rem;
+      }
       .toolbar-button {
         padding: 0.48rem 0.68rem;
         font-size: 0.8rem;
       }
+      .status-badge {
+        font-size: 0.8rem;
+        padding: 0.48rem 0.68rem;
+      }
+      .theme-toggle .theme-label { display: none; }
     }
     @media (prefers-reduced-motion: reduce) {
       .stat-spark path.line { animation: none; }
@@ -3215,7 +3292,7 @@ SECURE_RUNTIME_JS = """
     const exportButton = document.getElementById('export-button');
     const exportHashButton = document.getElementById('export-hash-button');
     const exportStatus = document.getElementById('export-status');
-    const EXPORT_BUTTON_LABEL = '📄 Export CSV';
+    const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
     let unlockedDashboardKey = '';
 
@@ -3226,10 +3303,13 @@ SECURE_RUNTIME_JS = """
 
     function setExportStatus(message, type) {
       if (!exportStatus) return;
-      exportStatus.textContent = message;
+      const rawMessage = String(message || '');
+      const useMultiline = rawMessage.includes('\\n');
+      exportStatus.textContent = rawMessage;
       exportStatus.className = 'auth-status'
         + (type ? ' ' + type : '')
-        + (message ? ' visible' : '');
+        + (rawMessage ? ' visible' : '')
+        + (useMultiline ? ' multiline' : '');
     }
 
     function setExportHashState(digest, filename) {
@@ -3485,7 +3565,7 @@ SECURE_RUNTIME_JS = """
           const filename = buildExportFilename(validatedManifest.filename);
           triggerDownload(filename, plaintextView);
           setExportHashState(plaintextSha256, filename);
-          setExportStatus('📄 CSV export ready. SHA-256: ' + plaintextSha256, 'success');
+          setExportStatus('📄 CSV export ready.\\nSHA-256: ' + plaintextSha256, 'success');
         } catch (error) {
           if (String(error) === 'Error: fetch-failed') {
             setExportStatus(
@@ -3911,7 +3991,8 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         <div class="hero-toolbar-controls">
           <span class="status-badge active" id="activeBadge"></span>
           <span class="status-badge compare" id="compareBadge"></span>
-          <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export CSV</button>
+          <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
+          <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export to CSV</button>
           <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
           <details class="export-verify-tip">
             <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
@@ -3920,7 +4001,6 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
               <p><strong>Optional manual verification:</strong> <code>Copy SHA-256</code> copies <code>&lt;sha256&gt;&nbsp;&nbsp;&lt;filename&gt;</code> for checksum-file format. Use <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> to compare manually, or save the copied line and run <code>shasum -a 256 -c &lt;checksums.txt&gt;</code>.</p>
             </div>
           </details>
-          <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
           <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
             <span class="theme-icon" aria-hidden="true">◐</span>
             <span class="theme-label">Theme</span>

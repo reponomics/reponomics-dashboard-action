@@ -1,0 +1,18 @@
+        <div class="hero-toolbar-controls">
+          <span class="status-badge active" id="activeBadge"></span>
+          <span class="status-badge compare" id="compareBadge"></span>
+          <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
+          <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export to CSV</button>
+          <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
+          <details class="export-verify-tip">
+            <summary class="toolbar-button visible" title="How download verification works">Verification</summary>
+            <div class="export-verify-popover" role="note">
+              <p><strong>Automatic in-browser checks:</strong> on export, the dashboard verifies encrypted asset size + SHA-256, decrypts with your key, then verifies decrypted ZIP SHA-256 against this page's embedded <code>export-manifest</code> before download.</p>
+              <p><strong>Optional manual verification:</strong> <code>Copy SHA-256</code> copies <code>&lt;sha256&gt;&nbsp;&nbsp;&lt;filename&gt;</code> for checksum-file format. Use <code>shasum -a 256 &lt;downloaded-file.zip&gt;</code> to compare manually, or save the copied line and run <code>shasum -a 256 -c &lt;checksums.txt&gt;</code>.</p>
+            </div>
+          </details>
+          <button class="toolbar-button theme-toggle visible" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+            <span class="theme-icon" aria-hidden="true">◐</span>
+            <span class="theme-label">Theme</span>
+          </button>
+        </div>

@@ -537,6 +537,50 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= standalone.canvases
 
 
+def test_publish_dashboard_toolbar_controls_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    snapshot = (FIXTURES_DIR / "dashboard_toolbar_controls.snapshot.html").read_text(
+        encoding="utf-8"
+    )
+    assert snapshot in dashboard
+
+
+def test_publish_dashboard_toolbar_layout_and_status_regression(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish")
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    assert "font-size: clamp(2.75rem, 5.2vw, 3.2rem);" in dashboard
+    assert dashboard.count(".theme-toggle .theme-label { display: none; }") == 1
+    assert "@media (max-width: 1240px) {" in dashboard
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in dashboard
+    assert ".hero-toolbar-controls > .export-verify-tip > summary {" in dashboard
+    assert "@media (max-width: 480px) {" in dashboard
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in dashboard
+    assert "grid-template-columns: repeat(3, minmax(0, max-content));" not in dashboard
+    assert "grid-template-columns: repeat(2, minmax(0, max-content));" not in dashboard
+    assert "const useMultiline = rawMessage.includes('\\n');" in dashboard
+    assert "setExportStatus('📄 CSV export ready.\\nSHA-256: ' + plaintextSha256, 'success');" in dashboard
+    assert "const shaMatch = /SHA-256:\\\\s*([0-9a-f]{16,})/i.exec(rawMessage);" not in dashboard
+
+
 def test_release_notice_semver_comparison() -> None:
     compare = run.release_notice.compare_semver
 

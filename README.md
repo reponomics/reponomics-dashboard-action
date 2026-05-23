@@ -90,6 +90,9 @@ digests before download. Plaintext export data is not uploaded back to GitHub
 by this path. Export scope is canonical retained history, including repos that
 are currently excluded from dashboard rendering.
 
+See [CSV Export Architecture Guide](./CSV_EXPORT.md) for implementation
+details, integrity model boundaries, and payload size-estimation formulas.
+
 Local-file browser restrictions can block `fetch()` for `file://` origins in
 some environments. When that happens, use the hosted Pages dashboard or serve
 the extracted artifact directory over local HTTP.

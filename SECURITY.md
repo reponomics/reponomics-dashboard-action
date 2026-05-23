@@ -14,7 +14,7 @@ After stable release, this policy will be updated with the supported major versi
 
 Please do not open a public issue for a suspected vulnerability.
 
-Use GitHub private vulnerability reporting for this repository. If private reporting is unavailable, open a minimal public issue asking maintainers to enable a private reporting channel, but do not include exploit details, secrets, private traffic data, or sensitive reproduction artifacts in that issue.
+Use GitHub [private vulnerability reporting](https://github.com/reponomics/reponomics-dashboard-action/security/advisories/new) for this repository. You will receive a response with 48 hours and we will determine the appropriate method and timeline for a resolution if a problem is identified.
 
 Useful reports include:
 
@@ -41,7 +41,7 @@ Out of scope:
 - denial-of-service reports without a plausible security impact;
 - reports that require access to a user's own GitHub token, repository settings, or dashboard secret without another vulnerability;
 - social engineering, phishing, or physical attacks;
-- vulnerability reports based only on unsupported or intentionally weakened configuration, such as opting into weak dashboard secrets.
+- vulnerability reports based only on unsupported or intentionally weakened configuration, such as opting into weak dashboard secrets ("casual" privacy mode).
 
 ## Public Pre-Release Expectations
 

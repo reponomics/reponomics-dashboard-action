@@ -9,6 +9,7 @@ import os
 from collections import defaultdict
 import math
 import statistics
+from typing import Any
 
 from repo_config import load_repo_config
 import storage
@@ -529,7 +530,7 @@ def top_paths(path_rows, limit=10):
     return result[:limit]
 
 
-def compute_momentum(daily_rows):
+def compute_momentum(daily_rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute aggregate momentum stats from daily traffic rows.
 
     Returns a dict with:
@@ -560,7 +561,8 @@ def compute_momentum(daily_rows):
     values = [by_date[d] for d in sorted_dates]
 
     best_idx = max(range(len(values)), key=lambda i: values[i])
-    best_day = {"date": sorted_dates[best_idx], "views": values[best_idx]}
+    best_date = sorted_dates[best_idx]
+    best_day = {"date": best_date, "views": values[best_idx]}
 
     tail_window = 14
     end_excl = max(0, len(values) - 1)
@@ -579,7 +581,7 @@ def compute_momentum(daily_rows):
     try:
         from datetime import date as _date
         latest = _date.fromisoformat(sorted_dates[-1])
-        peak = _date.fromisoformat(best_day["date"])
+        peak = _date.fromisoformat(best_date)
         days_since_peak = (latest - peak).days
     except (ValueError, TypeError):
         days_since_peak = None
@@ -593,7 +595,12 @@ def compute_momentum(daily_rows):
     }
 
 
-def actionable_insights(daily_rows, metric_rows=None, limit=3, growth=None):
+def actionable_insights(
+    daily_rows: list[dict[str, Any]],
+    metric_rows: list[dict[str, Any]] | int | None = None,
+    limit: int = 3,
+    growth: dict[str, Any] | None = None,
+) -> list[str]:
     """Return ranked, lightweight insight bullets from per-repo daily metrics.
 
     Insights are generated from the same metric families for each repo:
@@ -678,7 +685,12 @@ def actionable_insights(daily_rows, metric_rows=None, limit=3, growth=None):
     return insights[:limit]
 
 
-def actionable_insights_structured(daily_rows, metric_rows=None, limit=3, growth=None):
+def actionable_insights_structured(
+    daily_rows: list[dict[str, Any]],
+    metric_rows: list[dict[str, Any]] | int | None = None,
+    limit: int = 3,
+    growth: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     """Return ranked, structured insight objects for rich UIs.
 
     Mirrors actionable_insights() ranking and diversification but yields

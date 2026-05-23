@@ -153,7 +153,7 @@ Runtime publish path:
   `assets/export-data-<digest>.enc`;
 - emit compact `export-manifest` JSON in `index.html` with:
   `version`, `cipher`, `kdf`, `salt`, `iv`, `ciphertext_sha256`,
-  `ciphertext_size`, `filename`.
+  `plaintext_sha256`, `ciphertext_size`, `filename`.
 
 Dashboard runtime:
 

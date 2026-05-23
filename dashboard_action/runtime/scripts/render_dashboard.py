@@ -3189,6 +3189,15 @@ SECURE_RUNTIME_JS = """
       ) {
         throw new Error('Invalid encrypted export metadata.');
       }
+      if (
+        typeof manifest.plaintext_sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(manifest.plaintext_sha256)
+      ) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
+      if (!/^assets\\/export-data-[a-f0-9]{16}\\.enc$/.test(manifest.asset)) {
+        throw new Error('Invalid encrypted export metadata.');
+      }
       const salt = b64ToBytes(manifest.salt);
       const iv = b64ToBytes(manifest.iv);
       if (salt.length !== EXPECTED_SALT_BYTES || iv.length !== EXPECTED_IV_BYTES) {
@@ -3299,6 +3308,10 @@ SECURE_RUNTIME_JS = """
             ciphertext
           );
           plaintextView = new Uint8Array(plaintext);
+          const plaintextSha256 = await sha256Hex(plaintextView);
+          if (plaintextSha256 !== validatedManifest.plaintext_sha256) {
+            throw new Error('plaintext-digest-mismatch');
+          }
           const filename = buildExportFilename(validatedManifest.filename);
           triggerDownload(filename, plaintextView);
           setExportStatus('CSV export ready: ' + filename, 'success');
@@ -3308,7 +3321,11 @@ SECURE_RUNTIME_JS = """
               'Unable to fetch export asset from this context. Try the hosted dashboard or serve extracted files over HTTP.',
               'error'
             );
-          } else if (String(error) === 'Error: size-mismatch' || String(error) === 'Error: digest-mismatch') {
+          } else if (
+            String(error) === 'Error: size-mismatch'
+            || String(error) === 'Error: digest-mismatch'
+            || String(error) === 'Error: plaintext-digest-mismatch'
+          ) {
             setExportStatus('Export integrity check failed. Republish and try again.', 'error');
           } else {
             setExportStatus('Export failed. Verify key and dashboard assets.', 'error');
@@ -3633,6 +3650,7 @@ def _build_export_bundle(data_dir: str) -> bytes:
 
 def _build_encrypted_export_manifest(output_path: str, dashboard_key: str) -> dict[str, object]:
     plaintext_bundle = _build_export_bundle(storage.DATA_DIR)
+    plaintext_sha256 = hashlib.sha256(plaintext_bundle).hexdigest()
     salt, iv, ciphertext = _encrypt_bytes(plaintext_bundle, dashboard_key)
     ciphertext_sha256 = hashlib.sha256(ciphertext).hexdigest()
     asset_name = f"{EXPORT_ASSET_PREFIX}{ciphertext_sha256[:16]}{EXPORT_ASSET_SUFFIX}"
@@ -3647,6 +3665,7 @@ def _build_encrypted_export_manifest(output_path: str, dashboard_key: str) -> di
         "salt": base64.b64encode(salt).decode("ascii"),
         "iv": base64.b64encode(iv).decode("ascii"),
         "ciphertext_sha256": ciphertext_sha256,
+        "plaintext_sha256": plaintext_sha256,
         "ciphertext_size": len(ciphertext),
         "asset": asset_relative_path,
         "filename": "reponomics-export",

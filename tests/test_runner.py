@@ -1569,6 +1569,7 @@ def test_collect_requests_one_detail_per_selected_repo(
     detail_calls: list[str] = []
 
     def fake_fetch_json(url: str, headers, allow_not_found: bool = False):
+        assert allow_not_found is False
         detail_calls.append(url)
         repo = url.removeprefix("https://api.github.com/repos/")
         return {

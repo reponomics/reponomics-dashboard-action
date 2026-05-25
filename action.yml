@@ -7,7 +7,7 @@ branding:
 
 inputs:
   mode:
-    description: "Runtime mode: collect, publish, or rotate-key."
+    description: "Runtime mode: collect, publish, rotate-key, or incident-reset."
     required: true
     default: collect
   traffic-token:
@@ -23,7 +23,19 @@ inputs:
     required: false
     default: ""
   dashboard-next-secret:
-    description: Next dashboard/artifact encryption secret for strong or casual rotate-key mode.
+    description: Next dashboard/artifact encryption secret for strong or casual rotate-key or incident-reset mode.
+    required: false
+    default: ""
+  incident-confirm-mode:
+    description: Destructive incident-reset confirmation. Must be INCIDENT_RESET_CONFIRMED for incident-reset mode.
+    required: false
+    default: ""
+  incident-confirm-purge:
+    description: Destructive incident-reset confirmation. Must be PURGE_OLD_HISTORY_CONFIRMED for incident-reset mode.
+    required: false
+    default: ""
+  incident-confirm-irreversible:
+    description: Destructive incident-reset confirmation. Must be IRREVERSIBLE_ACTION_CONFIRMED for incident-reset mode.
     required: false
     default: ""
   privacy-mode:
@@ -110,23 +122,26 @@ runs:
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
+        REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
+        REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
       run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
 
     - name: Configure GitHub Pages
-      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
       uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
     - name: Upload GitHub Pages artifact
-      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
       uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
       with:
         path: ${{ steps.runtime.outputs.pages-path }}
 
     - name: Deploy GitHub Pages
       id: deploy-pages
-      if: ${{ inputs.mode != 'collect' && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
       uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
     - name: Upload encrypted traffic data artifact

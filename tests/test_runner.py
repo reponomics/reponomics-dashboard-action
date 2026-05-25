@@ -77,6 +77,9 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "dashboard_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,
+        "incident_confirm_mode": "",
+        "incident_confirm_purge": "",
+        "incident_confirm_irreversible": "",
         "action_ref": "v0.1.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
     }
@@ -400,6 +403,30 @@ def test_secret_validation_for_rotate_key(tmp_path: Path) -> None:
 
     with pytest.raises(run.ActionError):
         run.validate_config(config)
+
+
+def test_incident_reset_requires_confirmations(tmp_path: Path) -> None:
+    config = _config(
+        tmp_path,
+        mode="incident-reset",
+        dashboard_next_secret=NEXT_KEY,
+    )
+
+    with pytest.raises(run.ActionError, match="incident-confirm-mode"):
+        run.validate_config(config)
+
+
+def test_incident_reset_validation_accepts_confirmed_inputs(tmp_path: Path) -> None:
+    config = _config(
+        tmp_path,
+        mode="incident-reset",
+        dashboard_next_secret=NEXT_KEY,
+        incident_confirm_mode=run.INCIDENT_CONFIRM_MODE,
+        incident_confirm_purge=run.INCIDENT_CONFIRM_PURGE,
+        incident_confirm_irreversible=run.INCIDENT_CONFIRM_IRREVERSIBLE,
+    )
+
+    run.validate_config(config)
 
 
 def test_collect_fixture_updates_artifact_without_rendering_outputs(
@@ -1023,6 +1050,110 @@ def test_rotate_key_fixture_reencrypts_with_next_secret(
             rotated.data_dir,
             "TRAFFIC_DASHBOARD_SECRET",
         )
+
+
+def test_purge_workflow_history_deletes_old_runs_and_related_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path, mode="incident-reset", dashboard_next_secret=NEXT_KEY)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "400")
+    captured_headers: list[dict[str, str]] = []
+
+    def fake_fetch_json(url: str, headers: dict[str, str], allow_not_found: bool = False) -> Any:
+        del allow_not_found
+        captured_headers.append(headers)
+        if url.endswith("/actions/runs/400"):
+            return {"workflow_id": 7}
+        if "/actions/workflows/7/runs" in url and "page=1" in url:
+            return {"workflow_runs": [{"id": 400}, {"id": 399}, {"id": 398}]}
+        if "/actions/workflows/7/runs" in url and "page=2" in url:
+            return {"workflow_runs": []}
+        if "/actions/artifacts" in url and "page=1" in url:
+            return {
+                "artifacts": [
+                    {"id": 11, "workflow_run": {"id": 399}},
+                    {"id": 12, "workflow_run": {"id": 400}},
+                    {"id": 13, "workflow_run": {"id": 999}},
+                ]
+            }
+        if "/actions/artifacts" in url and "page=2" in url:
+            return {"artifacts": []}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    deleted_urls: list[str] = []
+
+    def fake_delete(url: str, *, headers: dict[str, str], timeout: int) -> requests.Response:
+        assert timeout == run.INCIDENT_API_TIMEOUT_SECONDS
+        assert headers["Authorization"] == f"Bearer {config.github_token}"
+        deleted_urls.append(url)
+        return _response(204)
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(run.requests, "delete", fake_delete)
+
+    deleted_runs, deleted_artifacts = run._purge_workflow_history(config)
+
+    assert deleted_runs == 2
+    assert deleted_artifacts == 1
+    assert set(deleted_urls) == {
+        "https://api.github.com/repos/demo/repo/actions/runs/399",
+        "https://api.github.com/repos/demo/repo/actions/runs/398",
+        "https://api.github.com/repos/demo/repo/actions/artifacts/11",
+    }
+    assert captured_headers
+    assert all(headers["Authorization"] == f"Bearer {config.github_token}" for headers in captured_headers)
+
+
+def test_incident_reset_reencrypts_without_rendering_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    run.run_collect(config, restore_artifact=False, execute_collect=False)
+
+    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
+    config.data_dir.mkdir(exist_ok=True)
+    for path in config.data_dir.iterdir():
+        path.unlink()
+    (config.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    incident = _config(
+        tmp_path,
+        mode="incident-reset",
+        dashboard_next_secret=NEXT_KEY,
+        incident_confirm_mode=run.INCIDENT_CONFIRM_MODE,
+        incident_confirm_purge=run.INCIDENT_CONFIRM_PURGE,
+        incident_confirm_irreversible=run.INCIDENT_CONFIRM_IRREVERSIBLE,
+    )
+    monkeypatch.setattr(run, "_purge_workflow_history", lambda _config: (0, 0))
+
+    run.validate_config(incident)
+    run.run_incident_reset(incident, restore_artifact=False)
+
+    assert not incident.readme_path.exists()
+    assert not incident.dashboard_path.exists()
+
+    for path in incident.data_dir.iterdir():
+        path.unlink()
+    (incident.data_dir / "traffic-data.enc").write_text(
+        encrypted_path.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
+    run.crypto_artifact.decrypt(
+        incident.data_dir / "traffic-data.enc",
+        incident.data_dir,
+        "TRAFFIC_DASHBOARD_SECRET",
+    )
+    assert (incident.data_dir / "traffic-daily.csv").exists()
 
 
 def test_repo_metrics_registry_creates_growth_snapshot_header(tmp_path: Path) -> None:

@@ -8,9 +8,12 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+
+import requests
 
 
 VERSION = "0.8.1"  # x-release-please-version
@@ -18,8 +21,13 @@ ROOT = Path(__file__).resolve().parent
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_SECRET_LENGTH = 40
 MIN_MASK_LENGTH = 3
+INCIDENT_CONFIRM_MODE = "INCIDENT_RESET_CONFIRMED"
+INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
+INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
+INCIDENT_API_TIMEOUT_SECONDS = 20
+INCIDENT_API_MAX_RETRIES = 6
 
-VALID_MODES = {"collect", "publish", "rotate-key"}
+VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset"}
 VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
 
 if str(SCRIPTS_DIR) not in sys.path:
@@ -59,6 +67,9 @@ class RuntimeConfig:
     dashboard_path: Path
     readme_path: Path
     update_notices: bool
+    incident_confirm_mode: str
+    incident_confirm_purge: str
+    incident_confirm_irreversible: str
     action_ref: str
     action_repository: str
 
@@ -179,6 +190,9 @@ def load_config_from_env() -> RuntimeConfig:
             _env("REPONOMICS_UPDATE_NOTICES", "true"),
             name="update-notices",
         ),
+        incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
+        incident_confirm_purge=_env("REPONOMICS_INCIDENT_CONFIRM_PURGE"),
+        incident_confirm_irreversible=_env("REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE"),
         action_ref=_env("REPONOMICS_ACTION_REF"),
         action_repository=_env("REPONOMICS_ACTION_REPOSITORY"),
     )
@@ -208,6 +222,22 @@ def validate_config(config: RuntimeConfig) -> None:
             "dashboard-next-secret or TRAFFIC_DASHBOARD_NEXT_SECRET",
             allow_weak=config.privacy_mode == "casual",
         )
+    if config.mode == "incident-reset":
+        if config.privacy_mode == "plain":
+            raise ActionError("incident-reset requires strong or casual privacy mode.")
+        _validate_secret(
+            config.dashboard_secret,
+            "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
+            allow_weak=True,
+        )
+        _validate_secret(
+            config.dashboard_next_secret,
+            "dashboard-next-secret or TRAFFIC_DASHBOARD_NEXT_SECRET",
+            allow_weak=config.privacy_mode == "casual",
+        )
+        if not config.github_token:
+            raise ActionError("github-token, GITHUB_TOKEN, or GH_TOKEN is required for incident-reset mode.")
+        _validate_incident_confirmations(config)
 
 
 def _validate_secret(value: str, label: str, *, allow_weak: bool) -> None:
@@ -218,6 +248,24 @@ def _validate_secret(value: str, label: str, *, allow_weak: bool) -> None:
             f"{label} is below the Reponomics dashboard secret entropy policy. "
             + "Use a generated random secret, or set allow-weak-dashboard-secret "
             + "to true if you explicitly accept the disclosure and brute-force risk."
+        )
+
+
+def _validate_incident_confirmations(config: RuntimeConfig) -> None:
+    if config.incident_confirm_mode != INCIDENT_CONFIRM_MODE:
+        raise ActionError(
+            "incident-confirm-mode must be set to "
+            + f"{INCIDENT_CONFIRM_MODE!r} for incident-reset mode."
+        )
+    if config.incident_confirm_purge != INCIDENT_CONFIRM_PURGE:
+        raise ActionError(
+            "incident-confirm-purge must be set to "
+            + f"{INCIDENT_CONFIRM_PURGE!r} for incident-reset mode."
+        )
+    if config.incident_confirm_irreversible != INCIDENT_CONFIRM_IRREVERSIBLE:
+        raise ActionError(
+            "incident-confirm-irreversible must be set to "
+            + f"{INCIDENT_CONFIRM_IRREVERSIBLE!r} for incident-reset mode."
         )
 
 
@@ -477,6 +525,247 @@ def _summarize_rotation() -> None:
         print("\n".join(lines))
 
 
+def _github_api_headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "reponomics-dashboard-action-runtime",
+    }
+
+
+def _github_delete(url: str, headers: dict[str, str]) -> int:
+    last_status = 0
+    for attempt in range(1, INCIDENT_API_MAX_RETRIES + 1):
+        try:
+            response = requests.delete(url, headers=headers, timeout=INCIDENT_API_TIMEOUT_SECONDS)
+        except requests.RequestException as exc:
+            if attempt < INCIDENT_API_MAX_RETRIES:
+                wait = collect_mod._retry_delay_with_jitter(attempt)
+                print(
+                    "GitHub API delete network error for "
+                    + f"{url}: {exc}. retrying in {wait:.2f}s..."
+                )
+                time.sleep(wait)
+                continue
+            raise ActionError(f"GitHub API delete failed for {url}: {exc}") from exc
+
+        last_status = response.status_code
+        if response.status_code in {204, 404}:
+            return response.status_code
+
+        if collect_mod._is_secondary_rate_limit(response) and attempt < INCIDENT_API_MAX_RETRIES:
+            retry_after_seconds, retry_at_utc, source = collect_mod._secondary_retry_window(response)
+            wait = max(1, retry_after_seconds)
+            print(
+                "GitHub secondary rate limit while deleting "
+                + f"{url}; retry at {retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')} "
+                + f"(source: {source}, sleeping {wait}s)."
+            )
+            time.sleep(wait)
+            continue
+
+        if (
+            collect_mod._is_retryable_throttle(response) or response.status_code >= 500
+        ) and attempt < INCIDENT_API_MAX_RETRIES:
+            wait = collect_mod._retry_delay_with_jitter(attempt)
+            print(
+                f"GitHub API delete throttle/server error {response.status_code} "
+                + f"for {url}; retrying in {wait:.2f}s..."
+            )
+            time.sleep(wait)
+            continue
+
+        response_text = (getattr(response, "text", "") or "").strip().replace("\n", " ")
+        if len(response_text) > 240:
+            response_text = response_text[:240] + "..."
+        raise ActionError(
+            f"GitHub API delete failed ({response.status_code}) for {url}: "
+            + (response_text or "no response body")
+        )
+
+    raise ActionError(f"GitHub API delete failed after retries for {url} (last status {last_status}).")
+
+
+def _github_fetch_json(url: str, headers: dict[str, str]) -> Any:
+    try:
+        return collect_mod.fetch_json(url, headers)
+    except collect_mod.SecondaryRateLimitError as exc:
+        raise ActionError(str(exc)) from exc
+    except requests.HTTPError as exc:
+        response = getattr(exc, "response", None)
+        status = response.status_code if response is not None else "unknown"
+        raise ActionError(f"GitHub API request failed for {url} with status {status}.") from exc
+    except requests.RequestException as exc:
+        raise ActionError(f"GitHub API request failed for {url}: {exc}") from exc
+
+
+def _github_repository() -> tuple[str, str]:
+    repository = _env("GITHUB_REPOSITORY")
+    if "/" not in repository:
+        raise ActionError("incident-reset requires GITHUB_REPOSITORY in owner/repo format.")
+    owner, repo = repository.split("/", 1)
+    if not owner or not repo:
+        raise ActionError("incident-reset requires GITHUB_REPOSITORY in owner/repo format.")
+    return owner, repo
+
+
+def _github_run_id() -> int:
+    raw = _env("GITHUB_RUN_ID")
+    if not raw:
+        raise ActionError("incident-reset requires GITHUB_RUN_ID.")
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise ActionError(f"incident-reset received invalid GITHUB_RUN_ID: {raw!r}.") from exc
+
+
+def _current_workflow_id(owner: str, repo: str, run_id: int, headers: dict[str, str]) -> int:
+    run_payload = _github_fetch_json(
+        f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}",
+        headers,
+    )
+    workflow_id = run_payload.get("workflow_id") if isinstance(run_payload, dict) else None
+    if not isinstance(workflow_id, int):
+        raise ActionError("incident-reset could not determine workflow_id for the current run.")
+    return workflow_id
+
+
+def _list_workflow_run_ids(
+    owner: str,
+    repo: str,
+    workflow_id: int,
+    *,
+    current_run_id: int,
+    headers: dict[str, str],
+) -> list[int]:
+    run_ids: list[int] = []
+    page = 1
+    while True:
+        payload = _github_fetch_json(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
+            + f"?per_page=100&page={page}",
+            headers,
+        )
+        if not isinstance(payload, dict):
+            raise ActionError("incident-reset received an unexpected workflow-runs payload.")
+        workflow_runs = payload.get("workflow_runs")
+        if not isinstance(workflow_runs, list):
+            raise ActionError("incident-reset received an invalid workflow-runs list payload.")
+        if not workflow_runs:
+            break
+        for row in workflow_runs:
+            if not isinstance(row, dict):
+                continue
+            run_id = row.get("id")
+            if isinstance(run_id, int) and run_id != current_run_id:
+                run_ids.append(run_id)
+        if len(workflow_runs) < 100:
+            break
+        page += 1
+    return run_ids
+
+
+def _list_old_traffic_artifact_ids(
+    owner: str,
+    repo: str,
+    *,
+    current_run_id: int,
+    old_run_ids: set[int],
+    headers: dict[str, str],
+) -> list[int]:
+    artifact_ids: list[int] = []
+    page = 1
+    while True:
+        payload = _github_fetch_json(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts"
+            + f"?name=traffic-data&per_page=100&page={page}",
+            headers,
+        )
+        if not isinstance(payload, dict):
+            raise ActionError("incident-reset received an unexpected artifact payload.")
+        artifacts = payload.get("artifacts")
+        if not isinstance(artifacts, list):
+            raise ActionError("incident-reset received an invalid artifacts list payload.")
+        if not artifacts:
+            break
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            artifact_id = artifact.get("id")
+            workflow_run = artifact.get("workflow_run")
+            artifact_run_id = workflow_run.get("id") if isinstance(workflow_run, dict) else None
+            if not isinstance(artifact_id, int):
+                continue
+            if artifact_run_id == current_run_id:
+                continue
+            if isinstance(artifact_run_id, int) and artifact_run_id in old_run_ids:
+                artifact_ids.append(artifact_id)
+        if len(artifacts) < 100:
+            break
+        page += 1
+    return artifact_ids
+
+
+def _summarize_incident_reset(*, deleted_runs: int, deleted_artifacts: int) -> None:
+    lines = [
+        "## Incident reset complete",
+        "",
+        f"- Deleted workflow runs: {deleted_runs}",
+        f"- Deleted fallback artifacts: {deleted_artifacts}",
+        "- Rotated runtime encryption to `TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+        "",
+        "Promote `TRAFFIC_DASHBOARD_NEXT_SECRET` into `TRAFFIC_DASHBOARD_SECRET` before normal runs.",
+        "Then delete `TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+    ]
+    summary_path = _env("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with Path(summary_path).open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    else:
+        print("\n".join(lines))
+
+
+def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
+    owner, repo = _github_repository()
+    current_run_id = _github_run_id()
+    headers = _github_api_headers(config.github_token)
+    workflow_id = _current_workflow_id(owner, repo, current_run_id, headers)
+    old_run_ids = _list_workflow_run_ids(
+        owner,
+        repo,
+        workflow_id,
+        current_run_id=current_run_id,
+        headers=headers,
+    )
+    deleted_runs = 0
+    for run_id in old_run_ids:
+        status = _github_delete(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}",
+            headers,
+        )
+        if status == 204:
+            deleted_runs += 1
+
+    old_run_id_set = set(old_run_ids)
+    artifact_ids = _list_old_traffic_artifact_ids(
+        owner,
+        repo,
+        current_run_id=current_run_id,
+        old_run_ids=old_run_id_set,
+        headers=headers,
+    )
+    deleted_artifacts = 0
+    for artifact_id in artifact_ids:
+        status = _github_delete(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts/{artifact_id}",
+            headers,
+        )
+        if status == 204:
+            deleted_artifacts += 1
+    return deleted_runs, deleted_artifacts
+
+
 def run_collect(
     config: RuntimeConfig,
     *,
@@ -527,6 +816,24 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     _write_outputs(config, before)
 
 
+def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) -> None:
+    _patch_runtime_paths(config)
+    _set_runtime_env(config)
+    before = _snapshot_outputs(config)
+    if restore_artifact:
+        _restore_artifact(config)
+    _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _prepare_data_schema(config)
+    _set_runtime_env(config, next_key=True)
+    _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_NEXT_SECRET")
+    deleted_runs, deleted_artifacts = _purge_workflow_history(config)
+    _summarize_incident_reset(
+        deleted_runs=deleted_runs,
+        deleted_artifacts=deleted_artifacts,
+    )
+    _write_outputs(config, before)
+
+
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
     try:
         config = loader()
@@ -536,8 +843,10 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
             run_collect(config)
         elif config.mode == "publish":
             run_publish(config)
-        else:
+        elif config.mode == "rotate-key":
             run_rotate_key(config)
+        else:
+            run_incident_reset(config)
     except ActionError as exc:
         print(f"Reponomics action error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

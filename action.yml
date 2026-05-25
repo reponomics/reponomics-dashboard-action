@@ -144,6 +144,15 @@ runs:
       if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
       uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
+    - name: Upload plain dashboard artifact
+      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.dashboard-mode == 'disabled' && steps.runtime.outputs.artifact-mode == 'plain' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: traffic-dashboard-plain
+        path: ${{ steps.runtime.outputs.pages-path }}
+        retention-days: ${{ inputs.retention-days }}
+        overwrite: true
+
     - name: Upload encrypted traffic data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

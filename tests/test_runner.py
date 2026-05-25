@@ -1416,7 +1416,7 @@ def test_resolve_repositories_applies_stable_auto_selection(
     )
 
     assert resolved == ["demo/manual", "demo/old-a", "demo/old-b"]
-    assert sorted(metadata) == resolved
+    assert sorted(metadata) == sorted(resolved)
     assert updated_manifest["selection_state"] == {
         "auto_seeded_at": "2026-01-01T00:00:00Z",
         "auto_cutoff_created_at": "2025-03-01T00:00:00Z",

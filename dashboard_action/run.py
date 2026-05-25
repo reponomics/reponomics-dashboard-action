@@ -139,9 +139,19 @@ def _parse_retention_days(raw: str) -> int:
 
 
 def _repo_is_public() -> bool:
+    in_actions = _env("GITHUB_ACTIONS").lower() == "true"
     value = _env("GITHUB_EVENT_REPOSITORY_PRIVATE")
     if value:
-        return value.lower() == "false"
+        normalized = value.lower()
+        if normalized == "true":
+            return False
+        if normalized == "false":
+            return True
+        if in_actions:
+            raise ActionError(
+                "Could not determine repository visibility: "
+                + f"GITHUB_EVENT_REPOSITORY_PRIVATE={value!r} is not a boolean."
+            )
     event_path = _env("GITHUB_EVENT_PATH")
     if event_path:
         try:
@@ -152,8 +162,22 @@ def _repo_is_public() -> bool:
             if isinstance(private, bool):
                 return not private
         except (OSError, ValueError):
-            # Treat unreadable or malformed event payloads as non-public by default.
+            if in_actions:
+                raise ActionError(
+                    "Could not determine repository visibility from GITHUB_EVENT_PATH."
+                ) from None
+            # Local/non-Action runs may not have full event context; default
+            # to non-public in that case.
             return False
+        if in_actions:
+            raise ActionError(
+                "Could not determine repository visibility: "
+                + "repository.private is missing from the event payload."
+            )
+    if in_actions:
+        raise ActionError(
+            "Could not determine repository visibility: missing GitHub event context."
+        )
     return False
 
 

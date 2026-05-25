@@ -8,8 +8,8 @@ via the shared load_data module and produces:
 
 The published dashboard supports two modes:
 
-- plain: unencrypted metrics in docs/index.html
-- encrypted: encrypted metrics in docs/index.html, decrypted client-side
+- plain: unencrypted metrics in the generated Pages index artifact
+- encrypted: encrypted metrics in the generated Pages index artifact, decrypted client-side
 """
 
 import base64
@@ -38,7 +38,7 @@ from load_data import (
     growth_analytics,
 )
 
-OUTPUT_PATH = "docs/index.html"
+PAGE_INDEX_OUTPUT_PATH = "docs/index.html"
 STANDALONE_OUTPUT_PATH = "dist/dashboard-standalone.html"
 ACTION_ROOT = Path(__file__).resolve().parents[3]
 VENDORED_CHART_JS_PATH = ACTION_ROOT / "vendor" / "chart.js" / "chart.umd.min.js"
@@ -4832,20 +4832,20 @@ def render():
                 f"{DASHBOARD_KEY_ENV} must be set when " +
                 f"{ACCESS_MODE_ENV}={ACCESS_MODE_ENCRYPTED!r}."
             )
-        export_manifest = _build_encrypted_export_manifest(OUTPUT_PATH, dashboard_key)
+        export_manifest = _build_encrypted_export_manifest(PAGE_INDEX_OUTPUT_PATH, dashboard_key)
         published_html = _build_encrypted_html(
             _encrypt_payload(payload, dashboard_key),
-            f'<script src="{_publish_vendored_chart_js(OUTPUT_PATH)}"></script>',
+            f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             export_manifest,
         )
     else:
         published_html = _build_public_html(
             payload,
-            f'<script src="{_publish_vendored_chart_js(OUTPUT_PATH)}"></script>',
+            f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
         )
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w") as f:
+    os.makedirs(os.path.dirname(PAGE_INDEX_OUTPUT_PATH), exist_ok=True)
+    with open(PAGE_INDEX_OUTPUT_PATH, "w") as f:
         f.write(published_html)
 
     standalone_html = _build_public_html(
@@ -4858,7 +4858,7 @@ def render():
         f.write(standalone_html)
 
     print(
-        f"Dashboards written to {OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} " +
+        f"Dashboards written to {PAGE_INDEX_OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} " +
         f"(mode={access_mode}, {len(daily_rows)} daily rows, {len(dates)} dates, " +
         f"{len(ref_list)} referrers, {len(path_list)} paths)"
     )

@@ -96,7 +96,7 @@ README metrics are derived from repository visibility: private dashboard reposit
 
 ## Offline Viewing
 
-Generated dashboard files are not committed to the repository. This keeps traffic history out of git, but it means offline viewing starts from a workflow artifact rather than from `docs/index.html` in the repo.
+Generated dashboard files are not committed to the repository. This keeps traffic history out of git, but it means offline viewing starts from a workflow artifact rather than from a tracked dashboard file in the repo.
 
 After a successful encrypted `publish` run, open the workflow run's **Summary** page, download the GitHub Pages artifact before it expires, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
 

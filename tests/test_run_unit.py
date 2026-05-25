@@ -206,7 +206,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "generate_readme": False,
-        "dashboard_path": tmp_path / "docs" / "index.html",
+        "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,
         "incident_confirm_mode": "",

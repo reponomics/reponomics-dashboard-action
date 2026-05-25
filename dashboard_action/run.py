@@ -39,7 +39,7 @@ import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
-import render_dashboard_placeholder  # noqa: E402
+import render_pages_disabled_notice  # noqa: E402
 import render_private_readme  # noqa: E402
 import render_readme  # noqa: E402
 import release_notice  # noqa: E402
@@ -64,7 +64,7 @@ class RuntimeConfig:
     data_dir: Path
     retention_days: int
     generate_readme: bool
-    dashboard_path: Path
+    pages_index_path: Path
     readme_path: Path
     update_notices: bool
     incident_confirm_mode: str
@@ -184,7 +184,7 @@ def load_config_from_env() -> RuntimeConfig:
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
-        dashboard_path=Path("docs/index.html"),
+        pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         update_notices=_parse_bool(
             _env("REPONOMICS_UPDATE_NOTICES", "true"),
@@ -302,12 +302,12 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
 
     load_data.load_repo_config = load_config
 
-    assets_dir = config.dashboard_path.parent / "assets"
+    assets_dir = config.pages_index_path.parent / "assets"
     readme_parent = config.readme_path.parent
     display_assets = Path(os.path.relpath(assets_dir, readme_parent))
 
-    render_dashboard.OUTPUT_PATH = config.dashboard_path.as_posix()
-    render_dashboard_placeholder.OUTPUT_PATH = config.dashboard_path
+    render_dashboard.PAGE_INDEX_OUTPUT_PATH = config.pages_index_path.as_posix()
+    render_pages_disabled_notice.PAGES_INDEX_PATH = config.pages_index_path
     render_readme.OUTPUT_PATH = config.readme_path.as_posix()
     render_readme.ASSET_OUTPUT_DIR = assets_dir
     render_readme.ASSET_DISPLAY_DIR = display_assets
@@ -373,7 +373,7 @@ def _sha(path: Path) -> str:
 def _snapshot_outputs(config: RuntimeConfig) -> dict[str, str]:
     return {
         "readme": _sha(config.readme_path),
-        "dashboard": _sha(config.dashboard_path),
+        "dashboard": _sha(config.pages_index_path),
     }
 
 
@@ -419,7 +419,7 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
     if config.pages_dashboard == "disabled":
-        render_dashboard_placeholder.render()
+        render_pages_disabled_notice.render()
     else:
         render_dashboard.render()
 
@@ -489,7 +489,7 @@ def _write_outputs(config: RuntimeConfig, before: dict[str, str]) -> None:
         "collected-at": _manifest_value(config.data_dir, "last_updated"),
         "artifact-mode": config.resolved_artifact_mode,
         "dashboard-mode": config.normalized_pages_dashboard,
-        "pages-path": config.dashboard_path.parent.as_posix(),
+        "pages-path": config.pages_index_path.parent.as_posix(),
         "readme-updated": str(before.get("readme") != after.get("readme")).lower(),
         "dashboard-updated": str(before.get("dashboard") != after.get("dashboard")).lower(),
         "schema-version": storage.SCHEMA_VERSION,

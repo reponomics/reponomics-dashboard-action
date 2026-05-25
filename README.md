@@ -32,13 +32,13 @@ Use normal GitHub Action refs to choose the upgrade cadence:
 - `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.
 - `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; they receive update notices during `publish` runs when a compatible newer release advertises one.
 
-Retained traffic artifacts are migrated by the runtime during `collect`, `publish`, and `rotate-key`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
+Retained traffic artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
 
 New metrics can appear after a compatible upgrade once collection has run with the newer runtime. Historical rows keep blank values unless a safe migration default exists.
 
 ## Usage
 
-Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output.
+Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
 
 ```yaml
 steps:
@@ -60,11 +60,14 @@ steps:
 
 | Input | Description | Default |
 |---|---|---|
-| `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`. | `collect` |
+| `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`. | `collect` |
 | `traffic-token` | Token for GitHub traffic/repository APIs. | Value of `${{ secrets.TRAFFIC_TOKEN }}` in the consuming repository workflow. |
 | `github-token` | Token for artifact/repository workflow operations. | Value of `${{ github.token }}` in the consuming repository workflow/job. |
 | `dashboard-secret` | Current dashboard/artifact encryption key (required for `strong` and `casual`). | Value of `${{ secrets.TRAFFIC_DASHBOARD_SECRET }}` in the consuming repository workflow. |
-| `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` (required for `strong` and `casual` rotate-key runs). | Value of `${{ secrets.TRAFFIC_DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |
+| `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset` (required for `strong` and `casual` rotate-key/incident-reset runs). | Value of `${{ secrets.TRAFFIC_DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |
+| `incident-confirm-mode` | Destructive `incident-reset` confirmation; must be `INCIDENT_RESET_CONFIRMED` when `mode: incident-reset`. | `""` |
+| `incident-confirm-purge` | Destructive `incident-reset` confirmation; must be `PURGE_OLD_HISTORY_CONFIRMED` when `mode: incident-reset`. | `""` |
+| `incident-confirm-irreversible` | Destructive `incident-reset` confirmation; must be `IRREVERSIBLE_ACTION_CONFIRMED` when `mode: incident-reset`. | `""` |
 | `privacy-mode` | Privacy model. Allowed values: `strong`, `casual`, `plain`. Public repositories may use `strong` or `casual`; `plain` is private-repository only. | `strong` |
 | `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
 | `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
@@ -87,7 +90,7 @@ The action emits metadata for workflow summaries and later automation:
 - `schema-version`
 - `runtime-version`
 
-`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, always renders the dashboard shell from retained data, and deploys an encrypted dashboard for `strong` and `casual` privacy modes. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output.
+`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact, always renders the dashboard shell from retained data, and deploys an encrypted dashboard for `strong` and `casual` privacy modes. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `traffic-data` artifacts tied to those old runs.
 
 README metrics are derived from repository visibility: private dashboard repositories may render README metrics, while public dashboard repositories render a non-metric README status block. Plain mode stores plaintext CSV artifacts and is rejected in public repositories.
 

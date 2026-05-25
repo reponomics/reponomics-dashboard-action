@@ -173,6 +173,26 @@ def test_main_dispatches_modes_and_reports_action_errors(
     assert "Reponomics action error: bad input" in capsys.readouterr().err
 
 
+def test_main_dispatches_incident_reset_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    called: list[str] = []
+    config = _config_for_run_tests(tmp_path, mode="incident-reset")
+
+    monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
+    monkeypatch.setattr(
+        run,
+        "run_incident_reset",
+        lambda received: called.append(f"incident:{received.mode}"),
+    )
+
+    run.main(lambda: config)
+
+    assert called == ["incident-reset", "incident:incident-reset"]
+
+
 def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig:
     values: dict[str, Any] = {
         "mode": "collect",
@@ -189,6 +209,9 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "dashboard_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,
+        "incident_confirm_mode": "",
+        "incident_confirm_purge": "",
+        "incident_confirm_irreversible": "",
         "action_ref": "v0.2.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
     }

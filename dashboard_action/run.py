@@ -419,7 +419,10 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
     if config.pages_dashboard == "disabled":
-        render_pages_disabled_notice.render()
+        if config.privacy_mode == "plain":
+            render_dashboard.render()
+        else:
+            render_pages_disabled_notice.render()
     else:
         render_dashboard.render()
 

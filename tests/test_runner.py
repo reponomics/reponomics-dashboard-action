@@ -488,6 +488,32 @@ def test_publish_skips_readme_when_generate_readme_is_false(
     assert config.pages_index_path.exists()
 
 
+def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+    )
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    assert config.pages_index_path.exists()
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    assert "Reponomics Dashboard" in dashboard
+    assert "encrypted-payload" not in dashboard
+    assert "Dashboard disabled" not in dashboard
+    assert 'src="assets/chart.umd.min.js"' in dashboard
+    assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
+
+
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

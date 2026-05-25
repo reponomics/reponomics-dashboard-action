@@ -14,6 +14,7 @@ def test_repo_is_public_reads_event_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     event_path = tmp_path / "event.json"
     event_path.write_text(json.dumps({"repository": {"private": False}}), encoding="utf-8")
     monkeypatch.delenv("GITHUB_EVENT_REPOSITORY_PRIVATE", raising=False)
@@ -29,6 +30,7 @@ def test_repo_is_public_ignores_malformed_event_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     event_path = tmp_path / "event.json"
     event_path.write_text("{not-json", encoding="utf-8")
     monkeypatch.delenv("GITHUB_EVENT_REPOSITORY_PRIVATE", raising=False)

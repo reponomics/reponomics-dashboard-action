@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.10.0...v0.10.1) (2026-05-25)
+
+
+### Bug Fixes
+
+* fail closed when repo visibility cannot be determined ([0bf1132](https://github.com/reponomics/reponomics-dashboard-action/commit/0bf1132a01695e0ee812005907ebefc8ea985751))
+* require explicit repo visibility context ([2eabb72](https://github.com/reponomics/reponomics-dashboard-action/commit/2eabb72522c823b3f669c1e9b72195eb7fae387a))
+* scope repo visibility tests to local context ([15b45b9](https://github.com/reponomics/reponomics-dashboard-action/commit/15b45b9c3576fa6ff8489a427083a386021657e7))
+
 ## [0.10.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.9.0...v0.10.0) (2026-05-25)
 
 

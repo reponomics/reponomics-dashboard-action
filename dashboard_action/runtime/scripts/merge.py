@@ -25,6 +25,7 @@ from storage import (
     dedup_referrers,
     dedup_paths,
     dedup_repo_metrics,
+    dedup_collection_status,
 )
 
 # Map filenames to their dedup functions
@@ -34,6 +35,7 @@ _DEDUP_FNS = {
     "traffic-referrers.csv": dedup_referrers,
     "traffic-paths.csv":     dedup_paths,
     "repo-metrics.csv":      dedup_repo_metrics,
+    "collection-status.csv": dedup_collection_status,
 }
 
 

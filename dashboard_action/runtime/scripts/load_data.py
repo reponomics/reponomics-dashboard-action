@@ -60,6 +60,12 @@ def load_repo_metrics(data_dir=None):
     return _filter_excluded_rows(storage.read_csv(os.path.join(d, "repo-metrics.csv")))
 
 
+def load_collection_status(data_dir=None):
+    """Load collection-status.csv and return the raw row list."""
+    d = data_dir or storage.DATA_DIR
+    return _filter_excluded_rows(storage.read_csv(os.path.join(d, "collection-status.csv")))
+
+
 def _excluded_repos():
     """Return excluded repos from config, ignoring missing config files."""
     return set(load_repo_config().get("exclude_repos", []))
@@ -199,6 +205,97 @@ def _window_cutoff(latest_ts, recent_days):
     from datetime import datetime, timedelta
     latest_date = datetime.strptime(latest_ts, "%Y-%m-%d").date()
     return (latest_date - timedelta(days=recent_days - 1)).isoformat()
+
+
+def collection_quality(status_rows):
+    """Summarize the latest collection run quality from collection-status.csv."""
+    if not status_rows:
+        return {
+            "available": False,
+            "status": "unknown",
+            "message": "",
+            "latest_captured_at": "",
+            "tracked_repos": 0,
+            "with_data_repos": 0,
+            "zero_traffic_repos": 0,
+            "skipped_repos": 0,
+            "error_repos": 0,
+            "coverage_ratio": 1.0,
+            "has_collection_gaps": False,
+            "repos": [],
+        }
+
+    latest_captured_at = max(row.get("captured_at", "") for row in status_rows if row.get("captured_at"))
+    latest_rows = [row for row in status_rows if row.get("captured_at", "") == latest_captured_at]
+    by_repo = {}
+    for row in latest_rows:
+        repo = row.get("repo", "")
+        if repo:
+            by_repo[repo] = row
+
+    counts = {
+        "ok_with_data": 0,
+        "ok_zero_data": 0,
+        "skipped_unavailable": 0,
+        "error": 0,
+        "error_secondary_rate_limit": 0,
+    }
+    for row in by_repo.values():
+        status = row.get("status", "")
+        if status in counts:
+            counts[status] += 1
+
+    tracked_repos = len(by_repo)
+    with_data_repos = counts["ok_with_data"]
+    zero_traffic_repos = counts["ok_zero_data"]
+    skipped_repos = counts["skipped_unavailable"]
+    error_repos = counts["error"] + counts["error_secondary_rate_limit"]
+    observed_repos = with_data_repos + zero_traffic_repos
+    coverage_ratio = (observed_repos / tracked_repos) if tracked_repos else 1.0
+    has_collection_gaps = skipped_repos > 0 or error_repos > 0
+
+    status = "healthy"
+    message = ""
+    if has_collection_gaps:
+        status = "gaps_detected"
+        message = (
+            "Collection gaps detected in the latest run: "
+            + f"{skipped_repos} skipped, {error_repos} error(s), "
+            + f"{observed_repos}/{tracked_repos} repos collected."
+        )
+    elif tracked_repos > 0 and zero_traffic_repos == tracked_repos:
+        status = "all_zero"
+        message = (
+            "Latest collection succeeded but reported zero traffic "
+            + f"for all {tracked_repos} tracked repos."
+        )
+
+    return {
+        "available": True,
+        "status": status,
+        "message": message,
+        "latest_captured_at": latest_captured_at,
+        "tracked_repos": tracked_repos,
+        "with_data_repos": with_data_repos,
+        "zero_traffic_repos": zero_traffic_repos,
+        "skipped_repos": skipped_repos,
+        "error_repos": error_repos,
+        "coverage_ratio": round(coverage_ratio, 4),
+        "has_collection_gaps": has_collection_gaps,
+        "repos": sorted(
+            [
+                {
+                    "repo": repo,
+                    "status": row.get("status", ""),
+                    "metric_source": row.get("metric_source", ""),
+                    "error_type": row.get("error_type", ""),
+                }
+                for repo, row in by_repo.items()
+                if row.get("status", "").startswith("skipped") or row.get("status", "").startswith("error")
+            ],
+            key=lambda item: item["repo"],
+        ),
+    }
 
 
 def repo_metric_deltas(metric_rows, recent_days=14):

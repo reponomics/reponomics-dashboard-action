@@ -34,10 +34,12 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import storage
 from load_data import (
     load_daily, load_referrers, load_paths, load_repo_metrics,
+    load_collection_status,
     aggregate_totals, aggregate_by_date, aggregate_per_repo,
     top_referrers, top_paths,
     actionable_insights,
     actionable_insights_structured,
+    collection_quality,
     growth_analytics,
 )
 
@@ -623,6 +625,23 @@ BASE_STYLES = """
       margin-bottom: 1.2rem;
     }
     .compare-summary.visible { display: grid; }
+    .data-quality-alert {
+      display: none;
+      margin-bottom: 1rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(210, 153, 34, 0.38);
+      background: rgba(210, 153, 34, 0.12);
+      color: var(--text);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+    .data-quality-alert.visible { display: block; }
+    .data-quality-alert.neutral {
+      border-color: rgba(148, 163, 184, 0.30);
+      background: rgba(148, 163, 184, 0.10);
+      color: var(--text-muted);
+    }
     .compare-card {
       position: relative;
       overflow: hidden;
@@ -3435,6 +3454,29 @@ APP_RUNTIME_JS = """
       } catch (_e) { /* ignore */ }
     }
 
+    function updateDataQualityAlert() {
+      const alertEl = document.getElementById('data-quality-alert');
+      if (!alertEl) return;
+      const quality = state.payload?.data_quality;
+      if (!quality || !quality.available) {
+        alertEl.className = 'data-quality-alert';
+        alertEl.textContent = '';
+        return;
+      }
+      if (quality.has_collection_gaps) {
+        alertEl.className = 'data-quality-alert visible';
+        alertEl.textContent = quality.message || 'Collection gaps detected in the latest run. Metrics may understate activity.';
+        return;
+      }
+      if (quality.status === 'all_zero') {
+        alertEl.className = 'data-quality-alert neutral visible';
+        alertEl.textContent = quality.message || 'Latest collection succeeded but reported zero traffic across tracked repositories.';
+        return;
+      }
+      alertEl.className = 'data-quality-alert';
+      alertEl.textContent = '';
+    }
+
     function updateDashboard() {
       if (!state.payload) {
         return;
@@ -3448,6 +3490,7 @@ APP_RUNTIME_JS = """
       updateMetricTabs();
       setText('updated-text', buildUpdatedText(state.payload));
       updateToolbar();
+      updateDataQualityAlert();
       updateStats();
       updateDailyChart();
       updateWeekdayChart();
@@ -4163,6 +4206,7 @@ def _build_payload(
     growth,
     insights,
     insights_structured,
+    data_quality,
 ):
     """Build a JSON-safe dashboard payload shared by all output modes."""
     repos = []
@@ -4219,6 +4263,7 @@ def _build_payload(
         },
         "insights": insights,
         "insights_v2": insights_structured,
+        "data_quality": data_quality,
     }
 
 
@@ -4436,6 +4481,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
     </div>
 
     <div class="compare-summary" id="compare-summary"></div>
+    <div class="data-quality-alert" id="data-quality-alert" role="status" aria-live="polite"></div>
 
     <div class="card controls-card">
       <div class="controls-group">
@@ -4791,6 +4837,7 @@ def render():
     referrer_rows = load_referrers()
     path_rows = load_paths()
     metric_rows = load_repo_metrics()
+    status_rows = load_collection_status()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -4805,6 +4852,7 @@ def render():
     repo_referrers = _latest_snapshot_by_repo(referrer_rows)
     repo_paths = _latest_snapshot_by_repo(path_rows)
     growth = growth_analytics(daily_rows, metric_rows)
+    data_quality = collection_quality(status_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
     insights_structured = actionable_insights_structured(daily_rows, metric_rows, limit=3, growth=growth)
     payload = _build_payload(
@@ -4823,6 +4871,7 @@ def render():
         growth,
         insights,
         insights_structured,
+        data_quality,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.9.0...v0.10.0) (2026-05-25)
+
+
+### Features
+
+* upload plain dashboard artifact for private plain publish ([b3ede21](https://github.com/reponomics/reponomics-dashboard-action/commit/b3ede2184d38d4f95fc7c421c70ba6321a3f0285))
+
 ## [0.9.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.8.1...v0.9.0) (2026-05-25)
 
 

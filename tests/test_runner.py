@@ -73,7 +73,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
-        "commit_outputs": False,
+        "generate_readme": False,
         "dashboard_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,
@@ -268,7 +268,7 @@ def test_input_normalization_from_env(
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", github_event_repository_private)
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
-    monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
+    monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
     monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
 
     config = run.load_config_from_env()
@@ -284,14 +284,14 @@ def test_input_normalization_from_env(
     assert config.normalized_pages_dashboard == "encrypted"
     assert config.normalized_readme_dashboard == expected_readme_dashboard
     assert config.retention_days == 30
-    assert config.commit_outputs is False
+    assert config.generate_readme is False
 
-def test_commit_outputs_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("REPONOMICS_COMMIT_OUTPUTS", raising=False)
+def test_generate_readme_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("REPONOMICS_GENERATE_README", raising=False)
 
     config = run.load_config_from_env()
 
-    assert config.commit_outputs is False
+    assert config.generate_readme is False
 
 
 def test_runtime_outputs_include_pages_path(
@@ -309,15 +309,17 @@ def test_runtime_outputs_include_pages_path(
     assert f"pages-path={config.dashboard_path.parent.as_posix()}" in output
 
 
-def test_commit_outputs_stages_only_readme(
+def test_generate_readme_stages_only_readme(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     calls: list[list[str]] = []
-    config = _config(tmp_path, commit_outputs=True)
+    config = _config(tmp_path, generate_readme=True)
 
     def fake_run(args, **kwargs):
         calls.append(list(args))
+        if list(args) == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return subprocess.CompletedProcess(args, 0, stdout="true", stderr="")
         return subprocess.CompletedProcess(args, 0)
 
     monkeypatch.setattr(run.subprocess, "run", fake_run)
@@ -421,7 +423,7 @@ def test_publish_fixture_renders_outputs_without_live_api(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish")
+    config = _config(tmp_path, mode="publish", generate_readme=True)
     _seed_log(config.data_dir)
 
     run.validate_config(config)
@@ -444,12 +446,27 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert len(list((config.dashboard_path.parent / "assets").glob("export-data-*.enc"))) == 1
 
 
+def test_publish_skips_readme_when_generate_readme_is_false(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    assert not config.readme_path.exists()
+    assert config.dashboard_path.exists()
+
+
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish")
+    config = _config(tmp_path, mode="publish", generate_readme=True)
     _seed_log(config.data_dir)
 
     run.validate_config(config)
@@ -882,6 +899,7 @@ def test_publish_renders_sanitized_release_notice(
     config = _config(
         tmp_path,
         mode="publish",
+        generate_readme=True,
         update_notices=True,
     )
     _seed_log(config.data_dir)
@@ -1638,6 +1656,7 @@ def test_publish_from_v2_fixture_migrates_without_config_rewrite(
     config = _config(
         tmp_path,
         mode="publish",
+        generate_readme=True,
         config_path=fixture / "config.yaml",
         data_dir=fixture / "data",
     )
@@ -1722,7 +1741,7 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    config = _config(tmp_path, mode="publish")
+    config = _config(tmp_path, mode="publish", generate_readme=True)
     _seed_log(config.data_dir)
     (config.data_dir / "repo-metrics.csv").unlink()
 

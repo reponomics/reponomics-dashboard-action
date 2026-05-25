@@ -38,8 +38,8 @@ inputs:
     description: GitHub Actions artifact retention period.
     required: false
     default: "90"
-  commit-outputs:
-    description: Commit generated README output back to the caller repository.
+  generate-readme:
+    description: Generate README dashboard output and commit it back to the caller repository.
     required: false
     default: "false"
   readme-path:
@@ -107,7 +107,7 @@ runs:
         REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
-        REPONOMICS_COMMIT_OUTPUTS: ${{ inputs.commit-outputs }}
+        REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}

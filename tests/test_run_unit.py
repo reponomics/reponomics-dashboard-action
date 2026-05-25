@@ -40,11 +40,11 @@ def test_repo_is_public_ignores_malformed_event_payload(
 def test_load_config_rejects_invalid_boolean_and_retention(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "maybe")
-    with pytest.raises(run.ActionError, match="commit-outputs must be true or false"):
+    monkeypatch.setenv("REPONOMICS_GENERATE_README", "maybe")
+    with pytest.raises(run.ActionError, match="generate-readme must be true or false"):
         run.load_config_from_env()
 
-    monkeypatch.setenv("REPONOMICS_COMMIT_OUTPUTS", "false")
+    monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "0")
     with pytest.raises(run.ActionError, match="retention-days must be between 1 and 90"):
         run.load_config_from_env()
@@ -185,7 +185,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
-        "commit_outputs": False,
+        "generate_readme": False,
         "dashboard_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,

@@ -55,7 +55,7 @@ class RuntimeConfig:
     config_path: Path
     data_dir: Path
     retention_days: int
-    commit_outputs: bool
+    generate_readme: bool
     dashboard_path: Path
     readme_path: Path
     update_notices: bool
@@ -172,7 +172,7 @@ def load_config_from_env() -> RuntimeConfig:
         config_path=Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml")),
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
-        commit_outputs=_parse_bool(_env("REPONOMICS_COMMIT_OUTPUTS", "false"), name="commit-outputs"),
+        generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
         dashboard_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         update_notices=_parse_bool(
@@ -369,11 +369,15 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
     storage.migrate_schema(config.data_dir.as_posix())
 
 
-def _render_outputs(config: RuntimeConfig) -> None:
+def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
     if config.pages_dashboard == "disabled":
         render_dashboard_placeholder.render()
     else:
         render_dashboard.render()
+
+    if not generate_readme:
+        print("Skipping README render because generate-readme is false.")
+        return
 
     if config.normalized_readme_dashboard == "enabled":
         render_readme.render()
@@ -382,7 +386,17 @@ def _render_outputs(config: RuntimeConfig) -> None:
 
 
 def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
-    if not config.commit_outputs:
+    if not config.generate_readme:
+        return
+    in_repo = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    in_repo_stdout = in_repo.stdout.strip() if isinstance(in_repo.stdout, str) else ""
+    if in_repo.returncode != 0 or in_repo_stdout != "true":
+        print("Skipping README commit outside a git worktree.")
         return
     paths = [config.readme_path.as_posix()]
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
@@ -492,7 +506,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
     _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
     _prepare_data_schema(config)
     _set_update_notice_env(config)
-    _render_outputs(config)
+    _render_outputs(config, generate_readme=config.generate_readme)
     _git_commit_readme(config, "chore: publish Reponomics README dashboard [skip ci]")
     _write_outputs(config, before)
 
@@ -506,7 +520,7 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
     _prepare_data_schema(config)
     _set_runtime_env(config, next_key=True)
-    _render_outputs(config)
+    _render_outputs(config, generate_readme=config.generate_readme)
     _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_NEXT_SECRET")
     _git_commit_readme(config, "chore: rotate Reponomics README dashboard key [skip ci]")
     _summarize_rotation()

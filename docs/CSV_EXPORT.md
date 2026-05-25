@@ -1,6 +1,11 @@
-# CSV Export Architecture Guide
+---
+name: CSV_EXPORT.md
+description: Canonical documentation for in-app CSV export system design and privacy/encryption model that it assumes.
+created: 2026-05-23
+last_modified: 2026-05-23
+---
 
-Last updated: 2026-05-23
+# CSV Export Architecture Guide
 
 ## Purpose
 

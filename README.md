@@ -1,8 +1,19 @@
 # Reponomics Dashboard Action
 
+
+![GitHub License](https://img.shields.io/github/license/reponomics/reponomics-dashboard-action)
+![GitHub Release](https://img.shields.io/github/v/release/reponomics/reponomics-dashboard-action)
+![GitHub Release Date](https://img.shields.io/github/release-date/reponomics/reponomics-dashboard-action)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/reponomics/reponomics-dashboard-action/latest)
+
 [![CI](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml)
 [![Action pins](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml)
 [![Vendored assets](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml)
+[![Scorecard supply-chain security](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml)
+
+[![CodeQL](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql)
+[![Dependabot Updates](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates)
+[![Dependency Graph](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph)
 
 GitHub Action for Reponomics dashboards.
 
@@ -13,7 +24,8 @@ This action collects GitHub traffic data, keeps retained CSV data in a GitHub Ac
 
 ## Upgrade Model
 
-Before `v1`, users should not expect seamless updates between versions. Pre-release versions may change action inputs, generated dashboard structure, retained artifact schema, or migration behavior while the project is being hardened. Pin exact refs and review release notes before moving between pre-`v1` versions.
+> [!NOTE]
+> Before `v1`, users should not expect seamless updates between versions. Pre-release versions may change action inputs, generated dashboard structure, retained artifact schema, or migration behavior while the project is being hardened. Pin exact refs and review release notes before moving between pre-`v1` versions.
 
 Use normal GitHub Action refs to choose the upgrade cadence:
 

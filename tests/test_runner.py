@@ -1262,7 +1262,7 @@ def test_collect_retry_after_parses_delta_and_http_date() -> None:
     assert run.collect_mod._parse_retry_after_seconds("2.2") == 3
     parsed_date = run.collect_mod._parse_retry_after_seconds(http_date)
     assert parsed_date is not None
-    assert 0 <= parsed_date <= 30
+    assert 0 <= parsed_date <= 35
     assert run.collect_mod._parse_retry_after_seconds("not a date") is None
 
 

@@ -30,13 +30,13 @@ def test_repo_is_public_ignores_malformed_event_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     event_path = tmp_path / "event.json"
     event_path.write_text("{not-json", encoding="utf-8")
     monkeypatch.delenv("GITHUB_EVENT_REPOSITORY_PRIVATE", raising=False)
     monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
 
-    assert run._repo_is_public() is False
+    with pytest.raises(run.ActionError, match="GITHUB_EVENT_PATH"):
+        run._repo_is_public()
 
 
 @pytest.mark.parametrize(
@@ -47,14 +47,13 @@ def test_repo_is_public_ignores_malformed_event_payload(
         ("", "{}", "repository.private is missing"),
     ],
 )
-def test_repo_is_public_fails_closed_in_github_actions_when_context_is_ambiguous(
+def test_repo_is_public_fails_closed_when_context_is_ambiguous(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     event_repository_private: str,
     event_body: str | None,
     expected_fragment: str,
 ) -> None:
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
     if event_repository_private:
         monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", event_repository_private)
     else:
@@ -74,6 +73,7 @@ def test_repo_is_public_fails_closed_in_github_actions_when_context_is_ambiguous
 def test_load_config_rejects_invalid_boolean_and_retention(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "maybe")
     with pytest.raises(run.ActionError, match="generate-readme must be true or false"):
         run.load_config_from_env()

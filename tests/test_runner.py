@@ -290,6 +290,7 @@ def test_input_normalization_from_env(
     assert config.generate_readme is False
 
 def test_generate_readme_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
     monkeypatch.delenv("REPONOMICS_GENERATE_README", raising=False)
 
     config = run.load_config_from_env()

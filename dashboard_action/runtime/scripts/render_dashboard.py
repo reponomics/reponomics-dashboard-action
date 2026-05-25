@@ -6,10 +6,13 @@ via the shared load_data module and produces:
 - a published dashboard for docs/ hosting
 - a standalone single-file dashboard with Chart.js inlined for offline use
 
-The published dashboard supports two modes:
+The published dashboard renderer supports two access modes:
 
-- plain: unencrypted metrics in the generated Pages index artifact
+- public: unencrypted metrics in the generated Pages index artifact
 - encrypted: encrypted metrics in the generated Pages index artifact, decrypted client-side
+
+Plain privacy mode does not call this renderer in template workflows; it
+renders the Pages-disabled placeholder instead.
 """
 
 import base64

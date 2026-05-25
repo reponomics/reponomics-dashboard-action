@@ -74,7 +74,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "generate_readme": False,
-        "dashboard_path": tmp_path / "docs" / "index.html",
+        "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "update_notices": False,
         "incident_confirm_mode": "",
@@ -280,7 +280,7 @@ def test_input_normalization_from_env(
     assert config.traffic_token == "ghp_traffic"
     assert config.github_token == "ghp_test"
     assert config.data_dir == Path("data")
-    assert config.dashboard_path == Path("docs/index.html")
+    assert config.pages_index_path == Path("docs/index.html")
     assert config.privacy_mode == "strong"
     assert config.repo_is_public is expected_repo_is_public
     assert config.resolved_artifact_mode == "encrypted"
@@ -309,7 +309,7 @@ def test_runtime_outputs_include_pages_path(
     run._write_outputs(config, {"readme": "", "dashboard": ""})
 
     output = output_path.read_text(encoding="utf-8")
-    assert f"pages-path={config.dashboard_path.parent.as_posix()}" in output
+    assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
 
 
 def test_generate_readme_stages_only_readme(
@@ -330,8 +330,8 @@ def test_generate_readme_stages_only_readme(
     run._git_commit_readme(config, "chore: test")
 
     assert ["git", "add", config.readme_path.as_posix()] in calls
-    assert all(config.dashboard_path.as_posix() not in call for call in calls)
-    assert all((config.dashboard_path.parent / "assets").as_posix() not in call for call in calls)
+    assert all(config.pages_index_path.as_posix() not in call for call in calls)
+    assert all((config.pages_index_path.parent / "assets").as_posix() not in call for call in calls)
 
 
 def test_bootstrap_creates_empty_data_files_and_manifest(
@@ -442,7 +442,7 @@ def test_collect_fixture_updates_artifact_without_rendering_outputs(
 
     assert (tmp_path / ".traffic-artifact" / "traffic-data.enc").exists()
     assert not config.readme_path.exists()
-    assert not config.dashboard_path.exists()
+    assert not config.pages_index_path.exists()
 
 
 def test_publish_fixture_renders_outputs_without_live_api(
@@ -457,9 +457,9 @@ def test_publish_fixture_renders_outputs_without_live_api(
     run.run_publish(config, restore_artifact=False)
 
     assert config.readme_path.exists()
-    assert config.dashboard_path.exists()
+    assert config.pages_index_path.exists()
     assert "demo/reponomics" in config.readme_path.read_text(encoding="utf-8")
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "encrypted-payload" in dashboard
     assert "export-manifest" in dashboard
     assert 'id="export-button"' in dashboard
@@ -469,8 +469,8 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert "EXPECTED_KDF_ITERATIONS = 300000" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
-    assert (config.dashboard_path.parent / "assets" / "chart.umd.min.js").exists()
-    assert len(list((config.dashboard_path.parent / "assets").glob("export-data-*.enc"))) == 1
+    assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
+    assert len(list((config.pages_index_path.parent / "assets").glob("export-data-*.enc"))) == 1
 
 
 def test_publish_skips_readme_when_generate_readme_is_false(
@@ -485,7 +485,7 @@ def test_publish_skips_readme_when_generate_readme_is_false(
     run.run_publish(config, restore_artifact=False)
 
     assert not config.readme_path.exists()
-    assert config.dashboard_path.exists()
+    assert config.pages_index_path.exists()
 
 
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
@@ -500,7 +500,7 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     run.run_publish(config, restore_artifact=False)
 
     readme = config.readme_path.read_text(encoding="utf-8")
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
 
     assert "Growth (14d)" in readme
     assert "interest **+0 stars** / **+0 watchers** (now 11 / 2)" in readme
@@ -542,7 +542,7 @@ def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     export_manifest = _script_json(dashboard, "export-manifest")
     assert export_manifest["version"] == 1
     assert export_manifest["cipher"] == "AES-GCM"
@@ -556,7 +556,7 @@ def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
     assert "traffic-log.csv" not in dashboard
     assert "repo-metrics.csv" not in dashboard
 
-    asset_path = config.dashboard_path.parent / export_manifest["asset"]
+    asset_path = config.pages_index_path.parent / export_manifest["asset"]
     assert asset_path.exists()
     ciphertext = asset_path.read_bytes()
     assert len(ciphertext) == export_manifest["ciphertext_size"]
@@ -583,7 +583,7 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    published = _parse_dashboard_html(config.dashboard_path.read_text(encoding="utf-8"))
+    published = _parse_dashboard_html(config.pages_index_path.read_text(encoding="utf-8"))
     script_sources = [script.get("src") for script in published.scripts if script.get("src")]
     assert script_sources == ["assets/chart.umd.min.js"]
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
@@ -608,7 +608,7 @@ def test_publish_encrypted_unlock_shell_affordances(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
 
     assert '<body class="auth-locked" data-screen-label="Unlock - Encrypted Pages">' in dashboard
     assert 'class="auth-theme-toggle theme-toggle"' in dashboard
@@ -638,7 +638,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
 
     expected_runtime_markers = [
         "UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:'",
@@ -668,7 +668,7 @@ def test_publish_dashboard_toolbar_controls_snapshot(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     snapshot = (FIXTURES_DIR / "dashboard_toolbar_controls.snapshot.html").read_text(
         encoding="utf-8"
     )
@@ -686,7 +686,7 @@ def test_publish_dashboard_toolbar_layout_and_status_regression(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "font-size: clamp(2.75rem, 5.2vw, 3.2rem);" in dashboard
     assert dashboard.count(".theme-toggle .theme-label { display: none; }") == 1
     assert "@media (max-width: 1240px) {" in dashboard
@@ -934,7 +934,7 @@ def test_publish_renders_sanitized_release_notice(
     run.run_publish(config, restore_artifact=False)
 
     readme = config.readme_path.read_text(encoding="utf-8")
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "View v0.2.0" in readme
     assert "View v0.2.0" in dashboard
     assert "Safe metadata only; no markdown" in readme
@@ -985,9 +985,9 @@ def test_dashboard_placeholder_renders_disabled_pages_output(
     tmp_path: Path,
 ) -> None:
     output_path = tmp_path / "docs" / "index.html"
-    monkeypatch.setattr(run.render_dashboard_placeholder, "OUTPUT_PATH", output_path)
+    monkeypatch.setattr(run.render_pages_disabled_notice, "PAGES_INDEX_PATH", output_path)
 
-    run.render_dashboard_placeholder.render()
+    run.render_pages_disabled_notice.render()
 
     html = output_path.read_text(encoding="utf-8")
     assert "<title>GitHub Traffic Dashboard Disabled</title>" in html
@@ -1138,7 +1138,7 @@ def test_incident_reset_reencrypts_without_rendering_outputs(
     run.run_incident_reset(incident, restore_artifact=False)
 
     assert not incident.readme_path.exists()
-    assert not incident.dashboard_path.exists()
+    assert not incident.pages_index_path.exists()
 
     for path in incident.data_dir.iterdir():
         path.unlink()
@@ -1797,13 +1797,13 @@ def test_publish_from_v2_fixture_migrates_without_config_rewrite(
 
     assert config.config_path.read_text(encoding="utf-8") == before_config
     assert config.readme_path.exists()
-    assert config.dashboard_path.exists()
+    assert config.pages_index_path.exists()
     manifest = json.loads((config.data_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
     header = (config.data_dir / "repo-metrics.csv").read_text(encoding="utf-8").splitlines()[0]
     assert header.split(",") == run.storage.REPO_METRIC_FIELDS
     readme = config.readme_path.read_text(encoding="utf-8")
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Growth (14d)" in readme
     assert "now 11 / 2" in readme
     assert "Reponomics Dashboard" in dashboard
@@ -1880,9 +1880,9 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     run.run_publish(config, restore_artifact=False)
 
     readme = config.readme_path.read_text(encoding="utf-8")
-    dashboard = config.dashboard_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert config.readme_path.exists()
-    assert config.dashboard_path.exists()
+    assert config.pages_index_path.exists()
     assert "Growth (14d)" not in readme
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-payload" in dashboard

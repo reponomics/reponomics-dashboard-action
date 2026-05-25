@@ -1,16 +1,16 @@
-"""Render a no-data dashboard placeholder for disabled Pages mode."""
+"""Render a placeholder index page when Pages publication is disabled."""
 
 from datetime import datetime, timezone
 from pathlib import Path
 
 
-OUTPUT_PATH = Path("docs") / "index.html"
+PAGES_INDEX_PATH = Path("docs") / "index.html"
 
 
 def render() -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(
+    PAGES_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PAGES_INDEX_PATH.write_text(
         f"""<!doctype html>
 <html lang="en">
 <head>
@@ -49,7 +49,7 @@ def render() -> None:
 """,
         encoding="utf-8",
     )
-    print(f"Dashboard placeholder written to {OUTPUT_PATH}")
+    print(f"Pages-disabled placeholder written to {PAGES_INDEX_PATH}")
 
 
 if __name__ == "__main__":

@@ -16,17 +16,20 @@
 [![Dependabot Updates](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates)
 [![Dependency Graph](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph)
 
-GitHub Action for Reponomics Dashboard repositories (repositories created from the Reponomics Dashboard template repo). Although this will be published as a GitHub Actions Marketplace action, conceptually it's best to think of this action and the associated template repo as forming a single product. The reason for moving runtime logic into an action was to create an independent delivery channel for enhancements and bug-fixes to consumers of the template repo.
+GitHub Action for the [Reponomics Dashboard template repository](https://github.com/reponomics/reponomics-dashboard). A composite action that handles data collection through the GitHub API, artifact storage in CSV format, data encryption, and rendering of the README and HTML dashboard for the Reponomics Dashboard. You're welcome to use it in any way you like (and if you do, we'd love to hear about what you built!). But for the purposes of explanation, we will mostly assume that it is being used in the workflows provided by our template repo. 
+
+The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub pages site. To use this action, all you need to do is copy our template repository, which has everything you need to start collecting your own data and hosting your own repo analytics dashboard straight from GitHub - no strings attached. Easy to setup in five minutes, no subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
 
 > [!WARNING]
 > Public pre-release: this repository is visible for review and hardening, but it is not yet promoted for general use. Do not expect stable behavior or seamless upgrades before `v1`.
 
-This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, renders the dashboard shell during `publish`, and supports dashboard/artifact key rotation.
+## Action Modes
+
+This is a composite action that does a lot of different things for the Reponomics Dashboard. These are the primary "modes" in which it is used:
+
+- `collect`: queries the GitHub API on a daily schedule and collects growth metrics (stars/subscribers, forks, etc.) and, most importantly, traffic data (viewers, views, clones, top referrers, and most popular content), which GitHub provides but only for a bounded, 14-day rolling window. Collecting and persisting this ephemeral data is one of the most important tasks for the Reponomics Dashboard action, since if you aren't storing the data while GitHub makes it available, there's no way to retroactively query it. Even if you have no desire for a hosted dashboard, a turnkey way to aggregate and persist this data in a portable CSV format is in itself highly valuable. In order to keep your data separate from your git history, `collect` mode stores data in _workflow artifacts_ - data that is stored and managed by GitHub but is not part of your repository's git history.
 
 ## Upgrade Model
-
-> [!NOTE]
-> Before `v1`, users should not expect seamless updates between versions. Pre-release versions may change action inputs, generated dashboard structure, retained artifact schema, or migration behavior while the project is being hardened. Pin exact refs and review release notes before moving between pre-`v1` versions.
 
 Use normal GitHub Action refs to choose the upgrade cadence:
 

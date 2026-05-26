@@ -515,6 +515,34 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
 
+def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    fixture = _copy_fixture("collection_quality_preview", tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+        pages_index_path=fixture / "docs" / "index.html",
+    )
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    assert 'id="calendarMonthLabel"' in dashboard
+    assert "function shiftCalendarMonth(delta)" in dashboard
+    assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in dashboard
+    assert '"date":"2026-04-30","status":"gaps_detected"' in dashboard
+    assert '"date":"2026-05-14","status":"all_zero"' in dashboard
+
+
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

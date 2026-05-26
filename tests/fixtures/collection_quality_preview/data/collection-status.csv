@@ -1,0 +1,33 @@
+repo,ts,captured_at,run_id,status,metric_source,traffic_days,referrer_rows,path_rows,error_type,error_message,schema_version
+demo/alpha,2026-04-29,2026-04-29T12:00:00Z,9101,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-04-29,2026-04-29T12:00:00Z,9101,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-04-30,2026-04-30T12:00:00Z,9102,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-04-30,2026-04-30T12:00:00Z,9102,skipped_unavailable,repo-detail,0,0,0,RepoUnavailableError,404 Not Found,3
+demo/alpha,2026-05-12,2026-05-12T12:00:00Z,9201,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-12,2026-05-12T12:00:00Z,9201,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-13,2026-05-13T12:00:00Z,9202,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-13,2026-05-13T12:00:00Z,9202,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-14,2026-05-14T12:00:00Z,9203,ok_zero_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-14,2026-05-14T12:00:00Z,9203,ok_zero_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-15,2026-05-15T12:00:00Z,9204,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-15,2026-05-15T12:00:00Z,9204,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-16,2026-05-16T12:00:00Z,9205,error_secondary_rate_limit,repo-detail,0,0,0,SecondaryRateLimitError,secondary rate limit,3
+demo/beta,2026-05-16,2026-05-16T12:00:00Z,9205,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-17,2026-05-17T12:00:00Z,9206,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-17,2026-05-17T12:00:00Z,9206,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-18,2026-05-18T12:00:00Z,9207,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-18,2026-05-18T12:00:00Z,9207,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-19,2026-05-19T12:00:00Z,9208,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-19,2026-05-19T12:00:00Z,9208,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-20,2026-05-20T12:00:00Z,9209,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-20,2026-05-20T12:00:00Z,9209,skipped_unavailable,repo-detail,0,0,0,RepoUnavailableError,404 Not Found,3
+demo/alpha,2026-05-21,2026-05-21T12:00:00Z,9210,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-21,2026-05-21T12:00:00Z,9210,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-22,2026-05-22T12:00:00Z,9211,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-22,2026-05-22T12:00:00Z,9211,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-23,2026-05-23T12:00:00Z,9212,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-23,2026-05-23T12:00:00Z,9212,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-24,2026-05-24T12:00:00Z,9213,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-24,2026-05-24T12:00:00Z,9213,ok_with_data,repo-detail,14,2,2,,,3
+demo/alpha,2026-05-25,2026-05-25T12:00:00Z,9214,ok_with_data,repo-detail,14,2,2,,,3
+demo/beta,2026-05-25,2026-05-25T12:00:00Z,9214,skipped_unavailable,repo-detail,0,0,0,RepoUnavailableError,404 Not Found,3

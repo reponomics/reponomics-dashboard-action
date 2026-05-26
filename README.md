@@ -175,7 +175,10 @@ Fixture checks stop before any live GitHub staging validation:
 make fixture-collect
 make fixture-publish
 make fixture-rotate-key
+make preview-collection-quality-dashboard
 ```
+
+`preview-collection-quality-dashboard` uses fixture data from `tests/fixtures/collection_quality_preview` and renders a local publish output at `.tmp/collection_quality_preview/docs/index.html`.
 
 ## Maintainer Release Policy
 

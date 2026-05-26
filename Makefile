@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
-.PHONY: fixture-collect fixture-publish fixture-rotate-key clean
+.PHONY: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -13,6 +13,8 @@ ANTIPASTA := $(VENV)/bin/antipasta
 PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
+COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
+COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -73,5 +75,17 @@ fixture-publish: install ## Run publish fixture without live GitHub API calls
 fixture-rotate-key: install ## Run rotate-key fixture
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_rotate_key_fixture_reencrypts_with_next_secret -v
 
+preview-collection-quality-dashboard: install ## Render dashboard from collection-quality fixture data
+	rm -rf $(COLLECTION_QUALITY_PREVIEW_OUTPUT)
+	mkdir -p $(COLLECTION_QUALITY_PREVIEW_OUTPUT)
+	cp -R $(COLLECTION_QUALITY_PREVIEW_FIXTURE)/. $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/
+	cd $(COLLECTION_QUALITY_PREVIEW_OUTPUT) && \
+		REPONOMICS_MODE=publish \
+		REPONOMICS_PRIVACY_MODE=plain \
+		GITHUB_EVENT_REPOSITORY_PRIVATE=true \
+		REPONOMICS_GENERATE_README=false \
+		$(abspath $(PYTHON)) -m dashboard_action.run
+	@echo "Preview ready: $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html"
+
 clean: ## Remove local generated state
-	rm -rf $(VENV) .pytest_cache .ruff_cache .coverage coverage.xml data dist docs/assets docs/index.html .traffic-artifact
+	rm -rf $(VENV) .pytest_cache .ruff_cache .coverage coverage.xml data dist docs/assets docs/index.html .traffic-artifact .tmp

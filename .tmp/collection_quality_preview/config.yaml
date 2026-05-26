@@ -1,8 +1,0 @@
-include_only:
-  - demo/alpha
-  - demo/beta
-exclude: []
-max_repos: 50
-include_others: true
-include_new: false
-include_private: true

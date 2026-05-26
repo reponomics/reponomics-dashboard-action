@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.1...v0.11.2) (2026-05-26)
+
+
+### Bug Fixes
+
+* **ci:** disable SBOM release asset uploads ([8c5ae42](https://github.com/reponomics/reponomics-dashboard-action/commit/8c5ae425155e9f06789d60eb0c3cc2b6adccb3b5))
+
 ## [0.11.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.0...v0.11.1) (2026-05-26)
 
 

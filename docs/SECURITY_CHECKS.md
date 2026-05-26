@@ -10,7 +10,7 @@ For OpenSSF-style evidence of independent open-source security tooling, this rep
 
 ## GitHub Action SHA Pins
 
-`scripts/validate_action_pins.py` scans `action.yml` and `.github` workflow YAML for imported GitHub Actions. Third-party `uses:` references must be pinned to a full 40-character lowercase commit SHA. Local actions and Docker image references are not checked by this script.
+`scripts/validate_action_pins.py` scans `action.yml` and `.github` workflow YAML for imported GitHub Actions. Third-party `uses:` references must be pinned to a full 40-character lowercase commit SHA. Local actions and Docker image references are not checked by this script. Third-party remote reusable workflows are rejected even when the reusable workflow reference itself is SHA-pinned, because their internal `uses:` entries are outside this repository's local workflow YAML and can violate the repository's action policy at workflow startup. Reusable workflows owned by the `reponomics` organization are allowed when SHA-pinned.
 
 CI runs this check through `.github/workflows/validate-action-pins.yml`, which is also called by the aggregate `.github/workflows/ci.yml` workflow.
 
@@ -20,7 +20,7 @@ Run it locally with:
 make validate-action-pins
 ```
 
-GitHub repository settings also enforce SHA-pinned actions, and the settings are configured according to an explicit allowlist. The script keeps the same policy auditable from code review and from the `CI` workflow result.
+GitHub repository settings also enforce SHA-pinned actions, and the settings are configured according to an explicit allowlist. The script keeps local workflow changes auditable from code review and from the `CI` workflow result. A separate live repository-settings check may be added later for the public badge claim that the GitHub action policy itself has `selected` actions and SHA pinning enabled.
 
 ## Vendored Assets
 
@@ -76,7 +76,7 @@ CI runs this check through `.github/workflows/validate-runtime-lock.yml`, which 
 
 ## OSV SARIF Scan
 
-`.github/workflows/osv-scanner.yml` runs the OSV-Scanner reusable workflow on pushes to `main`, a weekly schedule, and manual dispatch. It uploads SARIF to GitHub code scanning using the workflow permissions recommended by OSV-Scanner.
+`.github/workflows/osv-scanner.yml` runs OSV-Scanner on pushes to `main`, a weekly schedule, and manual dispatch. It inlines the scanner, reporter, artifact upload, and SARIF upload steps with full-SHA-pinned actions instead of importing OSV-Scanner's reusable workflow, so the repository's SHA-pinning policy applies to every executable third-party action in the workflow.
 
 This complements the vendored-asset validator. The validator checks the recorded npm tarball assets and their pinned package versions directly; OSV-Scanner provides a repository-level SARIF signal for supported manifests and lockfiles.
 

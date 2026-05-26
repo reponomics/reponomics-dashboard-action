@@ -21,13 +21,14 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Generate SPDX SBOM
-        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
           path: .
           format: spdx-json
           output-file: reponomics-dashboard-action.spdx.json
           artifact-name: reponomics-dashboard-action-spdx-sbom
           dependency-snapshot: true
+          config: .github/syft-sbom.yaml
           upload-artifact-retention: 14
 
   release-provenance:
@@ -62,21 +63,22 @@ jobs:
           echo "sbom=dist/reponomics-dashboard-action-${safe_ref}.spdx.json" >> "$GITHUB_OUTPUT"
 
       - name: Generate release SBOM
-        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
           path: .
           format: spdx-json
           output-file: ${{ steps.archive.outputs.sbom }}
+          config: .github/syft-sbom.yaml
           upload-artifact: false
           dependency-snapshot: false
 
       - name: Attest release source archive
-        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: ${{ steps.archive.outputs.archive }}
 
       - name: Attest release SBOM
-        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: ${{ steps.archive.outputs.archive }}
           sbom-path: ${{ steps.archive.outputs.sbom }}

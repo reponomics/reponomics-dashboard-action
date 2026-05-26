@@ -86,6 +86,8 @@ This complements the vendored-asset validator. The validator checks the recorded
 
 For published releases and manual runs, the workflow also creates a source archive, generates a matching SPDX SBOM, and uses GitHub artifact attestations for both provenance and SBOM attestation. The archive and SBOM are uploaded as workflow artifacts; the attestation records are available through GitHub's attestation surfaces.
 
+The Anchore SBOM action's release-asset upload is disabled because this repository uses immutable GitHub Releases; release evidence is published through workflow artifacts and artifact attestations instead of mutating the release after publication.
+
 This repository is a composite action consumed by Git ref, not a package pushed to a package registry. The release attestation therefore covers the source archive produced from the release checkout rather than a registry package.
 
 ## Release Notice Blocks

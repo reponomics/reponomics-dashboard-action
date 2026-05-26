@@ -1,3 +1,9 @@
+---
+name: MARKETPLACE_PUBLISHING.md
+description: Document the repository's protocol and pre-publish checklist for publishing this action to GitHub Actions Marketplace.
+created: 2026-05-20
+modified: 2026-05-26
+---
 # GitHub Marketplace Packaging
 
 GitHub Actions does not provide a native Python action runtime. Marketplace actions are packaged as Docker container, JavaScript, or composite actions.
@@ -15,4 +21,4 @@ Marketplace publication checklist:
 - Keep `action.yml` metadata complete: `name`, `description`, `author`, `inputs`, `outputs`, `runs`, and `branding`.
 - Release immutable exact SemVer tags such as `v1.2.3`; maintain plain floating compatibility tags such as `v1` and `v1.2`.
 - Publish from a GitHub release with the Marketplace option enabled.
-- Review the current GitHub Marketplace repository constraints before publication; GitHub's [current docs](https://docs.github.com/en/actions/how-tos/create-and-publish-actions/publish-in-github-marketplace#prerequisites) say Marketplace action repositories should not contain workflow files, which conflicts with in-repository CI/CD. This appears stale or overbroad: many prominent Marketplace actions, including GitHub-maintained `actions/*` repositories such as [`actions/setup-node`](https://github.com/actions/setup-node), keep maintenance workflows in the action repository. GitHub's own action maintenance documentation is also [inconsistent](https://docs.github.com/en/actions/how-tos/create-and-publish-actions/release-and-maintain-actions) with a literal reading of that Marketplace prerequisite. Until GitHub clarifies the requirement, keep workflows that are necessary to test, audit, release, and maintain this action, and avoid unrelated workflow templates or generated artifacts in this repository.
+- Review the current GitHub Marketplace repository constraints before publication; ~~GitHub's [current docs](https://docs.github.com/en/actions/how-tos/create-and-publish-actions/publish-in-github-marketplace#prerequisites) say Marketplace action repositories should not contain workflow files, which conflicts with in-repository CI/CD. This appears stale or overbroad: many prominent Marketplace actions, including GitHub-maintained `actions/*` repositories such as [`actions/setup-node`](https://github.com/actions/setup-node), keep maintenance workflows in the action repository. GitHub's own action maintenance documentation is also [inconsistent](https://docs.github.com/en/actions/how-tos/create-and-publish-actions/release-and-maintain-actions) with a literal reading of that Marketplace prerequisite. Until GitHub clarifies the requirement, keep workflows that are necessary to test, audit, release, and maintain this action, and avoid unrelated workflow templates or generated artifacts in this repository.~~ [UPDATE: GitHub docs maintainer has closed this issue as not in effect: https://github.com/github/docs/pull/43229]

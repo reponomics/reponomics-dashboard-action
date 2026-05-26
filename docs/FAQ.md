@@ -2,7 +2,7 @@
 name: FAQ (Frequently Asked Questions)
 description: Intended to explain aspects of the system to non-technical users, or to technical users who may lack expertise in certain areas, such as encryption.
 Created: 2026-05-23
-Revised: 2026-05-23
+Revised: 2026-05-26
 Status: In progress
 ---
 
@@ -35,11 +35,23 @@ Summary:
 
 ### What are the different privacy modes and how do I decide which one I should use?
 
+(WIP)
+
+- `strong`: data and artifacts are encrypted. User is expected to use a high-entropy security key following one of our recommended methods. A local "smell test" (length-based) check is used to enforce this. Because GitHub Pages are public, whether the repo is private or not, any HTML dashboard containing encrypted data is vulnerable to offline brute-force attack. So, to claim any semblance of privacy, only a high-entropy security will work. This does _not_ protect your data against all forms of attack or compromise. However, it will guarantee that an attacker cannot use brute-force methods to decrypt your dashboard. Given the encryption protocols used, doing so would take something on the order of 10<sup>50</sup>+ years. Use this if you have a higher risk profile. However, do not mistake this for enterprise-level security or authentication. Our stance is that this is strong security for the use case that it is intended for.
+
+- `casual`: data and artifacts are encrypted. However, the system does enforce or expect anything about the strength of your passowrd/key. This is still good enough for many users, as it protects against most "passers-by" (non-technical users without direct access who visit your dashboard). They will be confronted with the decryption form/login screen, and probably will not be able to guess your key right away. This does not provide any protection against a targeted attacker or anyone trying to brute-force entry into your dashboard. Use this if you want a small roadblock that would stop someone who is not very interested in your data. Do not use this if you are worried about a targeted attacker.
+
+- `plain`: data and artifacts are not encrypted. The action will not publish a plaintext dashboard to GitHub Pages (without modification). This is intended for users with private repos, and is not compatible with public repos. For a private repo, you may wish to avoid the encryption overhead, and mainly want the data collection and the plaintext README dashboard. Use this if you have a private repo, you don't care about a hosted HTML dashboard, and your privacy boundary is effectively equivalent to the repo's access policy. As a convenience, a dashboard will still be generated for you and uploaded as a workflow artifact, which you can then download and access offline or host elsewhere.
+
 ### What sort of password do I need and why does it have to be so long?
 
 ## What sort of threats does this system protect me from? And what does it leave me vulnerable to?
 
 ## Is any of my data committed to the repository's git history?
+
+We offer to generate a more lightweight (but still very pretty) markdown dashboard with your data and publish it to your repo's README. If you opt in to this, it will become part of your git history. Otherwise, no. When the Reponomics Dashboard action handles your data, we can confidently say that not only is your data always encrypted at rest, it is always encrypted, and never stored at rest (caveat: artifacts). All traffic and growth data is stored in regular CSV files in _GitHub workflow artifacts_. These are assets that can be stored and downloaded mainly in the course of a workflow run. So, when the action collects your repos' data, according to your preferences, it will download a copy of the existing data (encrypted) from GitHub's artifact storage, then momentarily decrypt it, append the new data found during the collection run, and then immediately re-encrypt it and upload it back to artifact storage. The interval between decrypting the previous artifact, adding the new data, and encrypting the updated artifact before uploading it again, is the only time your data is handled in unencrypted form within GitHub. If you publish the data dashboard to GitHub Pages, the payload is again always encrypted, and only decrypted in your browser after you've entered your encryption key and other integrity checks have been performed.
+
+So, regarding git history, only the README dashboard, if enabled, can touch your git history. This option is not permitted for public repos. Otherwise, all data is stored in artifact storage, which may be considered "a part of" your repo, but is certainly not part of your git history. That means, for example, that these artifacts can be deleted in an emergency, and they do not persist in other parts of the history, or in forks of your repository (although public repo artifacts are generally available to public access, just not directly via forking).
 
 ## Which entities have access to my repositories' data?
 

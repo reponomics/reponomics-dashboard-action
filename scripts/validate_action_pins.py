@@ -6,6 +6,8 @@ keeps the policy visible in pull requests and in the public CI result. It scans
 workflow and action YAML for third-party ``uses: owner/repo@ref`` imports and
 rejects anything other than a full 40-character lowercase commit SHA. Local
 actions and Docker image references are intentionally out of scope.
+Third-party remote reusable workflows are intentionally rejected because their
+internal ``uses:`` entries are outside this repository's local YAML.
 
 Policy details: docs/SECURITY_CHECKS.md.
 """
@@ -21,6 +23,10 @@ from typing import Any
 import yaml
 
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+TRUSTED_REMOTE_REUSABLE_WORKFLOW_OWNERS = {"reponomics"}
+REMOTE_REUSABLE_WORKFLOW = re.compile(
+    r"^(?P<owner>[^/\s]+)/[^/\s]+/\.github/workflows/[^@\s]+\.(?:yml|yaml)@[^@\s]+$"
+)
 
 
 def iter_yaml_files(paths: list[Path]) -> list[Path]:
@@ -57,6 +63,9 @@ def iter_uses(value: Any) -> list[str]:
 def validate_uses(uses: str) -> str | None:
     if uses.startswith(("./", "../", "docker://")):
         return None
+    reusable_workflow = REMOTE_REUSABLE_WORKFLOW.fullmatch(uses)
+    if reusable_workflow and reusable_workflow.group("owner") not in TRUSTED_REMOTE_REUSABLE_WORKFLOW_OWNERS:
+        return "third-party remote reusable workflows are not allowed; inline pinned steps locally"
     if "@" not in uses:
         return "missing @ref"
     ref = uses.rsplit("@", 1)[1]
@@ -65,13 +74,9 @@ def validate_uses(uses: str) -> str | None:
     return None
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("paths", nargs="+", type=Path)
-    args = parser.parse_args()
-
+def collect_failures(paths: list[Path]) -> list[str]:
     failures: list[str] = []
-    for path in iter_yaml_files(args.paths):
+    for path in iter_yaml_files(paths):
         try:
             data = yaml.safe_load(path.read_text()) or {}
         except OSError as exc:
@@ -82,6 +87,15 @@ def main() -> int:
             reason = validate_uses(uses)
             if reason:
                 failures.append(f"{path}: {uses}: {reason}")
+    return failures
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("paths", nargs="+", type=Path)
+    args = parser.parse_args()
+
+    failures = collect_failures(args.paths)
 
     if failures:
         print("GitHub Action imports must be pinned to full commit SHAs:", file=sys.stderr)

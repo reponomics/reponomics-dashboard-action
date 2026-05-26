@@ -1,0 +1,3 @@
+# Avoid an empty-purl dependency-submission entry for workflow manifests while keeping GitHub Actions dependency detection.
+select-catalogers:
+  - -github-action-workflow-usage-cataloger

@@ -1,0 +1,19 @@
+{
+  "schema_version": "3",
+  "created_at": "2026-04-29T12:00:00Z",
+  "last_updated": "2026-05-25T12:00:00Z",
+  "retention_days": 90,
+  "files": [
+    "traffic-log.csv",
+    "traffic-daily.csv",
+    "traffic-snapshots.csv",
+    "traffic-referrers.csv",
+    "traffic-paths.csv",
+    "repo-metrics.csv",
+    "collection-status.csv"
+  ],
+  "selection_state": {
+    "auto_seeded_at": "",
+    "auto_cutoff_created_at": ""
+  }
+}

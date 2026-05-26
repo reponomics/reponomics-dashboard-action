@@ -47,6 +47,22 @@ def _metric_row(
     }
 
 
+def _status_row(
+    repo: str,
+    captured_at: str,
+    status: str,
+    *,
+    metric_source: str = "repo-detail",
+) -> dict[str, str]:
+    return {
+        "repo": repo,
+        "ts": captured_at[:10],
+        "captured_at": captured_at,
+        "status": status,
+        "metric_source": metric_source,
+    }
+
+
 def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -73,6 +89,80 @@ def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
         _daily_row("demo/public", "2026-05-01", 8, 3)
     ]
     assert calls == ["traffic-daily.csv", "traffic-log.csv"]
+
+
+def test_collection_quality_reports_gaps_for_skipped_and_error_repos() -> None:
+    quality = load_data.collection_quality(
+        [
+            _status_row("demo/one", "2026-05-10T12:00:00Z", "ok_with_data"),
+            _status_row("demo/two", "2026-05-10T12:00:00Z", "skipped_unavailable"),
+            _status_row("demo/three", "2026-05-10T12:00:00Z", "error"),
+            _status_row("demo/old", "2026-05-09T12:00:00Z", "ok_with_data"),
+        ]
+    )
+
+    assert quality["available"] is True
+    assert quality["status"] == "gaps_detected"
+    assert quality["has_collection_gaps"] is True
+    assert quality["tracked_repos"] == 3
+    assert quality["with_data_repos"] == 1
+    assert quality["zero_traffic_repos"] == 0
+    assert quality["skipped_repos"] == 1
+    assert quality["error_repos"] == 1
+    assert quality["coverage_ratio"] == pytest.approx(1 / 3, rel=0, abs=1e-4)
+    assert "Collection gaps detected" in quality["message"]
+    assert [row["repo"] for row in quality["repos"]] == ["demo/three", "demo/two"]
+
+
+def test_collection_quality_reports_all_zero_without_collection_gaps() -> None:
+    quality = load_data.collection_quality(
+        [
+            _status_row("demo/one", "2026-05-10T12:00:00Z", "ok_zero_data"),
+            _status_row("demo/two", "2026-05-10T12:00:00Z", "ok_zero_data"),
+        ]
+    )
+
+    assert quality["status"] == "all_zero"
+    assert quality["has_collection_gaps"] is False
+    assert quality["tracked_repos"] == 2
+    assert quality["with_data_repos"] == 0
+    assert quality["zero_traffic_repos"] == 2
+    assert "reported zero traffic" in quality["message"]
+
+
+def test_collection_quality_days_uses_latest_run_per_day() -> None:
+    days = load_data.collection_quality_days(
+        [
+            _status_row("demo/one", "2026-05-10T08:00:00Z", "ok_with_data"),
+            _status_row("demo/two", "2026-05-10T08:00:00Z", "ok_with_data"),
+            _status_row("demo/one", "2026-05-10T12:00:00Z", "ok_zero_data"),
+            _status_row("demo/two", "2026-05-10T12:00:00Z", "skipped_unavailable"),
+            _status_row("demo/one", "2026-05-11T12:00:00Z", "ok_with_data"),
+        ]
+    )
+
+    assert [day["date"] for day in days] == ["2026-05-10", "2026-05-11"]
+    assert days[0]["run_count"] == 2
+    assert days[0]["status"] == "gaps_detected"
+    assert days[0]["with_data_repos"] == 0
+    assert days[0]["zero_traffic_repos"] == 1
+    assert days[0]["skipped_repos"] == 1
+    assert days[0]["repos"] == [
+        {
+            "repo": "demo/one",
+            "status": "ok_zero_data",
+            "metric_source": "repo-detail",
+            "error_type": "",
+        },
+        {
+            "repo": "demo/two",
+            "status": "skipped_unavailable",
+            "metric_source": "repo-detail",
+            "error_type": "",
+        },
+    ]
+    assert days[1]["run_count"] == 1
+    assert days[1]["status"] == "healthy"
 
 
 def test_latest_repo_metrics_per_day_normalizes_blank_counters_and_skips_incomplete_rows() -> None:

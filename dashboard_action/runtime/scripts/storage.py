@@ -67,6 +67,12 @@ REPO_METRIC_FIELDS = [
     "source", "schema_version",
 ]
 
+COLLECTION_STATUS_FIELDS = [
+    "repo", "ts", "captured_at", "run_id", "status",
+    "metric_source", "traffic_days", "referrer_rows", "path_rows",
+    "error_type", "error_message", "schema_version",
+]
+
 # Map filename -> (field list, date field used for retention trim)
 CSV_REGISTRY = {
     "traffic-log.csv":       (LOG_FIELDS,      "ts"),
@@ -75,6 +81,7 @@ CSV_REGISTRY = {
     "traffic-referrers.csv": (REFERRER_FIELDS,  "captured_at"),
     "traffic-paths.csv":     (PATH_FIELDS,      "captured_at"),
     "repo-metrics.csv":      (REPO_METRIC_FIELDS, "ts"),
+    "collection-status.csv": (COLLECTION_STATUS_FIELDS, "ts"),
 }
 
 ARTIFACT_FILES = list(CSV_REGISTRY.keys()) + ["manifest.json"]
@@ -242,6 +249,18 @@ def dedup_repo_metrics(rows):
     seen = {}
     for row in rows:
         key = (row["repo"], row["captured_at"])
+        seen[key] = row
+    return list(seen.values())
+
+
+def dedup_collection_status(rows):
+    """Remove duplicate per-run collection-status rows.
+
+    Key: (repo, captured_at, status).
+    """
+    seen = {}
+    for row in rows:
+        key = (row["repo"], row["captured_at"], row.get("status", ""))
         seen[key] = row
     return list(seen.values())
 

@@ -29,6 +29,7 @@ from storage import (
     REFERRER_FIELDS,
     PATH_FIELDS,
     REPO_METRIC_FIELDS,
+    COLLECTION_STATUS_FIELDS,
     append_csv,
     read_manifest,
     write_manifest,
@@ -130,11 +131,79 @@ def _record_network_warning(
     })
 
 
+def _collection_status_row(
+    *,
+    repo: str,
+    captured_at: str,
+    run_id: str,
+    status: str,
+    metric_source: str,
+    traffic_days: int,
+    referrer_rows: int,
+    path_rows: int,
+    error_type: str = "",
+    error_message: str = "",
+) -> dict[str, Any]:
+    message = error_message.replace("\n", " ").strip()
+    if len(message) > 240:
+        message = message[:240] + "..."
+    return {
+        "repo": repo,
+        "ts": captured_at[:10],
+        "captured_at": captured_at,
+        "run_id": run_id,
+        "status": status,
+        "metric_source": metric_source,
+        "traffic_days": traffic_days,
+        "referrer_rows": referrer_rows,
+        "path_rows": path_rows,
+        "error_type": error_type,
+        "error_message": message,
+        "schema_version": SCHEMA_VERSION,
+    }
+
+
+def _append_collection_status(row: dict[str, Any]) -> None:
+    append_csv(
+        os.path.join(DATA_DIR, "collection-status.csv"),
+        [row],
+        COLLECTION_STATUS_FIELDS,
+    )
+
+
+def _has_nonzero_traffic(rows: list[dict[str, Any]]) -> bool:
+    for row in rows:
+        if (
+            int(row.get("views_count", 0) or 0) > 0
+            or int(row.get("views_uniques", 0) or 0) > 0
+            or int(row.get("clones_count", 0) or 0) > 0
+            or int(row.get("clones_uniques", 0) or 0) > 0
+        ):
+            return True
+    return False
+
+
+def _collection_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {
+        "ok_with_data": 0,
+        "ok_zero_data": 0,
+        "skipped_unavailable": 0,
+        "error": 0,
+        "error_secondary_rate_limit": 0,
+    }
+    for row in rows:
+        status = str(row.get("status", "")).strip()
+        if status in counts:
+            counts[status] += 1
+    return counts
+
+
 def _write_step_summary(
     outcome: str,
     errors: list[str] | None = None,
     secondary_limit: SecondaryRateLimitError | None = None,
     skipped_repos: list[str] | None = None,
+    status_rows: list[dict[str, Any]] | None = None,
 ) -> None:
     """Write a GitHub Actions step summary when available."""
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -154,6 +223,12 @@ def _write_step_summary(
             "- Repositories skipped as unavailable: "
             + ", ".join(skipped_repos)
         )
+    if status_rows:
+        counts = _collection_status_counts(status_rows)
+        lines.extend([
+            f"- Repositories collected with data: {counts['ok_with_data']}",
+            f"- Repositories collected with zero traffic: {counts['ok_zero_data']}",
+        ])
 
     if secondary_limit is not None:
         lines.extend([
@@ -799,9 +874,11 @@ def main() -> None:
     repos, manifest, repo_metadata = resolve_repositories(headers, config, manifest)
     write_manifest(manifest, DATA_DIR)
     captured_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
 
     errors = []
     skipped_repos: list[str] = []
+    status_rows: list[dict[str, Any]] = []
     for repo in repos:
         print(f"Collecting traffic for {repo}...")
         detail = None
@@ -845,6 +922,18 @@ def main() -> None:
                 metric_rows,
                 REPO_METRIC_FIELDS,
             )
+            status_rows.append(
+                _collection_status_row(
+                    repo=repo,
+                    captured_at=captured_at,
+                    run_id=run_id,
+                    status="ok_with_data" if _has_nonzero_traffic(vc_rows) else "ok_zero_data",
+                    metric_source=metric_source,
+                    traffic_days=len(vc_rows),
+                    referrer_rows=len(ref_rows),
+                    path_rows=len(path_rows),
+                )
+            )
 
             print(
                 f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), " +
@@ -852,39 +941,111 @@ def main() -> None:
             )
         except SecondaryRateLimitError as exc:
             errors.append(repo)
+            status_rows.append(
+                _collection_status_row(
+                    repo=repo,
+                    captured_at=captured_at,
+                    run_id=run_id,
+                    status="error_secondary_rate_limit",
+                    metric_source=metric_source,
+                    traffic_days=0,
+                    referrer_rows=0,
+                    path_rows=0,
+                    error_type=exc.__class__.__name__,
+                    error_message=str(exc),
+                )
+            )
             print(f"  Error collecting {repo}: {exc}")
             print("  Stop rerunning this workflow until the reported retry window has passed.")
+            _append_collection_status(status_rows[-1])
             _write_step_summary(
                 "failed",
                 errors=errors,
                 secondary_limit=exc,
                 skipped_repos=skipped_repos,
+                status_rows=status_rows,
             )
             sys.exit(1)
         except RepoUnavailableError as exc:
             skipped_repos.append(repo)
+            status_rows.append(
+                _collection_status_row(
+                    repo=repo,
+                    captured_at=captured_at,
+                    run_id=run_id,
+                    status="skipped_unavailable",
+                    metric_source=metric_source,
+                    traffic_days=0,
+                    referrer_rows=0,
+                    path_rows=0,
+                    error_type=exc.__class__.__name__,
+                    error_message=str(exc),
+                )
+            )
+            _append_collection_status(status_rows[-1])
             print(f"  Skipping {repo}: {exc}")
         except requests.HTTPError as exc:
             print(f"  Error collecting {repo}: {exc}")
             errors.append(repo)
+            status_rows.append(
+                _collection_status_row(
+                    repo=repo,
+                    captured_at=captured_at,
+                    run_id=run_id,
+                    status="error",
+                    metric_source=metric_source,
+                    traffic_days=0,
+                    referrer_rows=0,
+                    path_rows=0,
+                    error_type=exc.__class__.__name__,
+                    error_message=str(exc),
+                )
+            )
+            _append_collection_status(status_rows[-1])
         except requests.RequestException as exc:
             print(f"  Error collecting {repo}: {exc}")
             errors.append(repo)
+            status_rows.append(
+                _collection_status_row(
+                    repo=repo,
+                    captured_at=captured_at,
+                    run_id=run_id,
+                    status="error",
+                    metric_source=metric_source,
+                    traffic_days=0,
+                    referrer_rows=0,
+                    path_rows=0,
+                    error_type=exc.__class__.__name__,
+                    error_message=str(exc),
+                )
+            )
+            _append_collection_status(status_rows[-1])
+        else:
+            _append_collection_status(status_rows[-1])
 
     if errors:
-        _write_step_summary("failed", errors=errors, skipped_repos=skipped_repos)
+        _write_step_summary(
+            "failed",
+            errors=errors,
+            skipped_repos=skipped_repos,
+            status_rows=status_rows,
+        )
         print(f"\nCollection finished with errors for: {', '.join(errors)}")
         sys.exit(1)
 
     if skipped_repos:
-        _write_step_summary("success-with-skips", skipped_repos=skipped_repos)
+        _write_step_summary(
+            "success-with-skips",
+            skipped_repos=skipped_repos,
+            status_rows=status_rows,
+        )
         print(
             "Collection complete with unavailable repositories skipped: "
             + ", ".join(skipped_repos)
         )
         return
 
-    _write_step_summary("success")
+    _write_step_summary("success", status_rows=status_rows)
     print("Collection complete.")
 
 

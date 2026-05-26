@@ -1,0 +1,5 @@
+repo,captured_at,path,title,count,uniques,schema_version
+demo/alpha,2026-05-25T12:00:00Z,/demo/alpha,Repository overview,44,31,3
+demo/alpha,2026-05-25T12:00:00Z,/demo/alpha/blob/main/README.md,README,12,9,3
+demo/beta,2026-05-25T12:00:00Z,/demo/beta,Repository overview,19,13,3
+demo/beta,2026-05-25T12:00:00Z,/demo/beta/issues,Issues,7,5,3

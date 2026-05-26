@@ -515,6 +515,34 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
 
+def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    fixture = _copy_fixture("collection_quality_preview", tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+        pages_index_path=fixture / "docs" / "index.html",
+    )
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    assert 'id="calendarMonthLabel"' in dashboard
+    assert "function shiftCalendarMonth(delta)" in dashboard
+    assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in dashboard
+    assert '"date":"2026-04-30","status":"gaps_detected"' in dashboard
+    assert '"date":"2026-05-14","status":"all_zero"' in dashboard
+
+
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -610,12 +638,25 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    published = _parse_dashboard_html(config.pages_index_path.read_text(encoding="utf-8"))
+    dashboard_html = config.pages_index_path.read_text(encoding="utf-8")
+    published = _parse_dashboard_html(dashboard_html)
     script_sources = [script.get("src") for script in published.scripts if script.get("src")]
     assert script_sources == ["assets/chart.umd.min.js"]
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
     assert "unlock-form" in published.forms
+    assert 'id="calendarHint"' in dashboard_html
+    assert 'id="calendarDayDetail"' in dashboard_html
+    assert 'id="calendarGrid"' in dashboard_html
+    assert 'id="calendarMonthLabel"' in dashboard_html
+    assert 'data-detail="' in dashboard_html
+    assert "function renderCollectionCalendar()" in dashboard_html
+    assert "function computeNoRunStats(days)" in dashboard_html
+    assert "function calendarStatusLabel(day)" in dashboard_html
+    assert "function applyVisibilityThresholdToQualityDays(days)" in dashboard_html
+    assert "status: no-run" in dashboard_html
+    assert "no-run day(s)" in dashboard_html
+    assert "function shiftCalendarMonth(delta)" in dashboard_html
 
     standalone = _parse_dashboard_html(
         (tmp_path / "dist" / "dashboard-standalone.html").read_text(encoding="utf-8")
@@ -1597,9 +1638,13 @@ def test_collect_requests_one_detail_per_selected_repo(
     ]
     with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
     assert [row["repo"] for row in rows] == ["demo/one", "demo/two"]
     assert [row["subscribers_count"] for row in rows] == ["21", "22"]
     assert [row["source"] for row in rows] == ["repo-detail", "repo-detail"]
+    assert [row["repo"] for row in status_rows] == ["demo/one", "demo/two"]
+    assert [row["status"] for row in status_rows] == ["ok_zero_data", "ok_zero_data"]
 
 
 def test_detail_failure_falls_back_without_losing_traffic(
@@ -1661,11 +1706,70 @@ def test_detail_failure_falls_back_without_losing_traffic(
         traffic_rows = list(csv.DictReader(handle))
     with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
         metric_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
     assert traffic_rows[-1]["repo"] == "demo/reponomics"
     assert traffic_rows[-1]["views_count"] == "5"
     assert metric_rows[-1]["source"] == "discovery-fallback"
     assert metric_rows[-1]["subscribers_count"] == "3"
     assert metric_rows[-1]["stargazers_count"] == "15"
+    assert status_rows[-1]["status"] == "ok_with_data"
+    assert status_rows[-1]["metric_source"] == "discovery-fallback"
+
+
+def test_collect_records_skipped_unavailable_repo_status(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "id": 123,
+            "node_id": "R_123",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+            "stargazers_count": 15,
+            "watchers_count": 999,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        }
+    ]
+
+    unavailable = run.collect_mod.RepoUnavailableError(
+        "https://api.github.com/repos/demo/reponomics/traffic/views",
+        _response(404, text="Not Found"),
+        attempts=3,
+    )
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(run.collect_mod, "collect_repo_detail", lambda repo, headers: discovered[0])
+
+    def raise_unavailable(repo: str, headers, captured_at: str):
+        raise unavailable
+
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", raise_unavailable)
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "traffic-log.csv").open(newline="", encoding="utf-8") as handle:
+        traffic_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+
+    assert traffic_rows == []
+    assert len(status_rows) == 1
+    assert status_rows[0]["repo"] == "demo/reponomics"
+    assert status_rows[0]["status"] == "skipped_unavailable"
 
 
 def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(

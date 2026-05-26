@@ -1,0 +1,5 @@
+repo,captured_at,referrer,count,uniques,schema_version
+demo/alpha,2026-05-25T12:00:00Z,github.com,42,30,3
+demo/alpha,2026-05-25T12:00:00Z,google.com,18,14,3
+demo/beta,2026-05-25T12:00:00Z,github.com,16,12,3
+demo/beta,2026-05-25T12:00:00Z,reponomics.dev,9,7,3

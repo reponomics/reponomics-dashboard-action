@@ -30,6 +30,7 @@ jobs:
           dependency-snapshot: true
           config: .github/syft-sbom.yaml
           upload-artifact-retention: 14
+          upload-release-assets: false
 
   release-provenance:
     name: Attest release source archive
@@ -70,6 +71,7 @@ jobs:
           output-file: ${{ steps.archive.outputs.sbom }}
           config: .github/syft-sbom.yaml
           upload-artifact: false
+          upload-release-assets: false
           dependency-snapshot: false
 
       - name: Attest release source archive

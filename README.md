@@ -102,7 +102,30 @@ After a successful encrypted `publish` run, open the workflow run's **Summary** 
 
 For private repositories in `privacy-mode: plain`, `publish` uploads a plain dashboard artifact named `traffic-dashboard-plain`. Download that artifact from the workflow run and open `index.html` directly.
 
-After unlock, use the dashboard `Export CSV` control to download a canonical ZIP of retained CSV files. Export delivery is browser-local: ciphertext is fetched from a published encrypted asset and decrypted in memory before download. The runtime verifies both encrypted-asset and decrypted-bundle digests before download. Plaintext export data is not uploaded back to GitHub by this path. Export scope is canonical retained history, including repos that are currently excluded from dashboard rendering.
+You can also download the dashboard with GitHub CLI if you have repository read access. Replace `OWNER/REPO` with the dashboard repository, use `gh run list --repo OWNER/REPO --status success --limit 10` to find the latest successful `publish` workflow run, and replace `RUN_ID` with that run ID.
+
+For encrypted `strong` or `casual` output, download the GitHub Pages artifact:
+
+```bash
+rm -rf .reponomics-dashboard
+mkdir -p .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name github-pages --dir .reponomics-dashboard
+tar -xf .reponomics-dashboard/artifact.tar -C .reponomics-dashboard
+python3 -m http.server 8000 --directory .reponomics-dashboard
+```
+
+Then open `http://localhost:8000/` and unlock the dashboard with `TRAFFIC_DASHBOARD_SECRET`.
+
+For private `plain` output, download the plain dashboard artifact:
+
+```bash
+rm -rf .reponomics-dashboard
+mkdir -p .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name traffic-dashboard-plain --dir .reponomics-dashboard
+python3 -m http.server 8000 --directory .reponomics-dashboard
+```
+
+For encrypted dashboards, after unlock, use the dashboard `Export CSV` control to download a canonical ZIP of retained CSV files. Export delivery is browser-local: ciphertext is fetched from a published encrypted asset and decrypted in memory before download. The runtime verifies both encrypted-asset and decrypted-bundle digests before download. Plaintext export data is not uploaded back to GitHub by this path. Export scope is canonical retained history, including repos that are currently excluded from dashboard rendering.
 
 See [CSV Export Architecture Guide](./docs/CSV_EXPORT.md) for implementation details, integrity model boundaries, and payload size-estimation formulas.
 

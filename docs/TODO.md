@@ -6,19 +6,22 @@ Recently addressed:
 
 - [x] Validate encrypted dashboard payload metadata before WebCrypto work. The browser runtime should reject unexpected payload versions, cipher names, KDF names, KDF hashes, KDF iterations, salt sizes, IV sizes, and empty ciphertexts instead of trusting attacker-controlled payload fields.
 - [x] Prefer generated high-entropy dashboard secrets in user guidance. Recommend `openssl rand -hex 32` as the simple shell-safe default, while noting that equivalent generated base64 secrets are cryptographically fine but easier to mishandle. [NOTE: Privacy model has been clarified by three-way distinction: `strong`, `casual`, or `plain` (unencrypted).]
-- [ ] Vendor Chart.js from a pinned npm tarball, render Pages output against `docs/assets/chart.umd.min.js`, inline the same vendored asset in standalone HTML, and assert generated dashboard HTML does not reference remote JavaScript.
+- [x] Vendor Chart.js from a pinned npm tarball and validate the vendored bytes, license, upstream tarball integrity, and OSV vulnerability status through `make validate-vendored-assets`.
+- [x] Render Pages output against the same-origin `assets/chart.umd.min.js` file and assert generated dashboard HTML does not reference remote JavaScript. Do not inline Chart.js into the Pages HTML; keeping it as a same-origin script is the cleaner CSP direction.
+- [x] Keep retained data and generated dashboard output out of git. Dashboard delivery is via GitHub Pages artifacts for encrypted modes and workflow artifacts for private `plain` mode.
 
 Deferred:
 
-- Add a strict CSP for the Pages dashboard. Target posture:
+- [ ] Add a strict CSP for the Pages dashboard. This has not been implemented in the renderer yet: the generated HTML still uses inline style/runtime blocks, JSON script blocks, and `data:` font URLs. Keep Chart.js as a same-origin external script; either move first-party CSS/JS/font assets to same-origin files or generate CSP hashes for the remaining inline blocks.
+
+  Target direction:
 
   ```http
-  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-...'; style-src 'self' 'sha256-...'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'
   ```
 
-- Generate and commit a standalone encrypted dashboard HTML file for mobile and offline accessibility. This should inline Chart.js and the encrypted payload so a user can download one file, store it on a phone, turn off networking, and still open the dashboard.
-- Treat the standalone HTML file as a convenience/offline artifact with a less clean CSP story than the Pages output. Avoid CDN JavaScript there too; if CSP is embedded, prefer generated script hashes over `unsafe-inline`.
-- Optionally upload an offline zip artifact containing the same dashboard files for desktop and power users, but do not rely on GitHub Actions artifacts as the primary mobile/vibe-coder access path.
+- [ ] Decide whether to keep, remove, or re-scope `dist/dashboard-standalone.html`. It is generated locally today with inlined Chart.js, is not uploaded by the composite action, and currently uses the public/plain dashboard builder even during encrypted publish runs. Do not promote it as the primary offline/mobile path unless the weaker CSP story and encrypted-mode behavior are explicit and tested.
+- [x] Use existing workflow artifacts as the offline/convenience access path instead of committing generated dashboard HTML or adding a separate offline zip. Encrypted modes reuse the `github-pages` artifact that already feeds Pages deployment; private `plain` mode has a separate `traffic-dashboard-plain` artifact because Pages is intentionally disabled there. The README documents GitHub CLI download commands for both paths, and artifact retention remains the availability boundary.
 
 ## CI, Release, And Badge Hardening
 
@@ -35,9 +38,9 @@ Recently addressed:
 Deferred:
 
 - [ ] Before first release, add a proper complexity gate with `antipasta` and `complexipy` after reducing large runtime modules and high-complexity functions. Initial targets include `load_data.py`, `collect.py`, `release_notice.py`, and the dashboard/rendering modules.
-- [x] Add CodeQL scanning for the action/runtime code.
+- [x] Add CodeQL scanning for the action/runtime code. Current repository state appears to rely on GitHub code scanning/default setup rather than a checked-in workflow.
 - [x] Add OSSF Scorecard on push/merge to `main`. It can report posture without blocking normal CI while the project is still hardening.
-- [ ] Decide whether to add Snyk, Codacy, or another public quality/security badge after the core GitHub-native checks are stable.
+- [x] Decide whether to add Snyk, Codacy, or another public quality/security badge after the core GitHub-native checks are stable. Current decision: do not add a third-party SaaS scanner or badge yet. Revisit only if GitHub-native checks leave a concrete gap; start advisory-only, high-severity/SARIF-oriented, and pinned by full action SHA if added later.
 - [x] Add public README badges once the workflows exist:
   - [x] project CI
   - [x] Dependabot Updates

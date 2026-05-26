@@ -4393,7 +4393,7 @@ SECURE_RUNTIME_JS = """
         exportButton.disabled = true;
       }
       setUnlockStatus(
-        'This browser cannot decrypt the dashboard here. Open it over HTTPS or use the standalone artifact.',
+        'This browser cannot decrypt the dashboard here. Open it over HTTPS or serve the extracted dashboard artifact over local HTTP.',
         'error'
       );
     } else {

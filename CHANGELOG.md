@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.10.1...v0.11.0) (2026-05-26)
+
+
+### Features
+
+* dashboard shows collection errors by day ([#47](https://github.com/reponomics/reponomics-dashboard-action/issues/47)) ([019975d](https://github.com/reponomics/reponomics-dashboard-action/commit/019975d1b77a4f721cb374edc87a6e1d4f53bd03))
+
 ## [0.10.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.10.0...v0.10.1) (2026-05-25)
 
 

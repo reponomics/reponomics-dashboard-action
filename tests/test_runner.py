@@ -478,7 +478,7 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert 'id="export-hash-button"' in dashboard
     assert "How download verification works" in dashboard
     assert "validateEncryptedPayload" in dashboard
-    assert "EXPECTED_KDF_ITERATIONS = 300000" in dashboard
+    assert "EXPECTED_KDF_ITERATIONS = 600000" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()

@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci
-.PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock
+.PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
 .PHONY: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
@@ -15,7 +15,7 @@ PIP_COMPILE := $(VENV)/bin/pip-compile
 PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
-RUNTIME_LOCK := requirements-runtime.lock
+RUNTIME_LOCK := requirements-runtime.txt
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
@@ -87,6 +87,9 @@ validate-action-pins: install ## Validate imported GitHub Action SHA pins
 
 validate-vendored-assets: install ## Validate vendored third-party assets
 	$(PYTHON) scripts/validate_vendored_assets.py
+
+update-vendored-assets: install ## Update vendored third-party assets from upstream package registries
+	$(PYTHON) scripts/update_vendored_assets.py
 
 validate-release-notice: install ## Validate release notice tooling
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v

@@ -38,9 +38,17 @@ Run it locally with:
 make validate-vendored-assets
 ```
 
+Refresh vendored assets from their recorded upstream npm packages with:
+
+```bash
+make update-vendored-assets
+```
+
+The updater reads each manifest, resolves the package's current npm `latest` dist-tag unless an explicit `--version PACKAGE=VERSION` override is passed to `scripts/update_vendored_assets.py`, downloads the selected tarball, verifies its SRI value, replaces the vendored asset and license bytes, and rewrites the manifest hashes.
+
 This check requires network access to the npm registry and OSV API.
 
-CI runs this check through `.github/workflows/validate-vendored-assets.yml`, which is also called by the aggregate `.github/workflows/ci.yml` workflow. The workflow has a weekly scheduled run so newly disclosed OSV vulnerabilities can fail the badge even when the vendored file has not changed.
+CI runs this check through `.github/workflows/validate-vendored-assets.yml`, which is also called by the aggregate `.github/workflows/ci.yml` workflow. The workflow has a weekly scheduled run so newly disclosed OSV vulnerabilities can fail the badge even when the vendored file has not changed. `.github/workflows/update-vendored-assets.yml` runs the updater weekly and opens or refreshes a pull request when upstream vendored asset updates are available.
 
 ## Python Dependency Audit
 
@@ -56,7 +64,7 @@ CI runs this check through `.github/workflows/open-source-security.yml` on pull 
 
 ## Runtime Dependency Lock
 
-`requirements-runtime.lock` is the hash-pinned runtime dependency lock generated from `pyproject.toml` with `make lock-runtime`. The composite action installs this lock with `python -m pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-runtime.lock"` before running the bundled runtime script, so the action no longer resolves third-party Python dependency ranges at runtime.
+`requirements-runtime.txt` is the hash-pinned runtime dependency lock generated from `pyproject.toml` with `make lock-runtime`. The composite action installs this lock with `python -m pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-runtime.txt"` before running the bundled runtime script, so the action no longer resolves third-party Python dependency ranges at runtime.
 
 Run the lock validation locally with:
 

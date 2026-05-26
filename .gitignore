@@ -13,3 +13,4 @@ dist/
 docs/assets/
 docs/index.html
 README.generated.md
+.DS_Store

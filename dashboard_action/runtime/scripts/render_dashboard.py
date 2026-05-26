@@ -414,36 +414,85 @@ BASE_STYLES = """
       font-size: 0.76rem;
       font-variant-numeric: tabular-nums;
       position: relative;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
     }
     .calendar-day.blank {
       border: none;
       background: transparent;
     }
+    .calendar-day:not(.blank) {
+      cursor: help;
+    }
+    .calendar-day:not(.blank):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(1, 4, 9, 0.22);
+    }
+    .calendar-day:not(.blank):focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
     .calendar-day.no-run {
       color: var(--text-dim);
-      background: rgba(148, 163, 184, 0.05);
-      border-color: rgba(148, 163, 184, 0.22);
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(148, 163, 184, 0.11) 0 3px,
+          rgba(148, 163, 184, 0.02) 3px 6px
+        ),
+        var(--bg-card);
+      border-color: rgba(148, 163, 184, 0.34);
     }
     .calendar-day.ok {
       color: var(--text);
-      background: rgba(63, 185, 80, 0.12);
-      border-color: rgba(63, 185, 80, 0.30);
+      background: rgba(0, 158, 115, 0.12);
+      border-color: rgba(0, 158, 115, 0.52);
     }
     .calendar-day.zero {
       color: var(--text);
-      background: rgba(210, 153, 34, 0.13);
-      border-color: rgba(210, 153, 34, 0.36);
+      background: rgba(230, 159, 0, 0.12);
+      border-color: rgba(230, 159, 0, 0.62);
     }
     .calendar-day.gap {
       color: var(--text);
-      background: rgba(248, 81, 73, 0.14);
-      border-color: rgba(248, 81, 73, 0.36);
+      background:
+        repeating-linear-gradient(
+          45deg,
+          rgba(213, 94, 0, 0.22) 0 3px,
+          rgba(213, 94, 0, 0.06) 3px 6px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(213, 94, 0, 0.16) 0 2px,
+          transparent 2px 5px
+        ),
+        rgba(213, 94, 0, 0.06);
+      border-color: rgba(213, 94, 0, 0.78);
+    }
+    .calendar-day.gap::after {
+      position: absolute;
+      top: 1px;
+      right: 2px;
+      font-size: 0.5rem;
+      font-weight: 700;
+      line-height: 1;
+      opacity: 0.95;
+    }
+    .calendar-day.gap::after {
+      content: '▲';
+      color: #d55e00;
     }
     .calendar-hint {
       margin: 0;
       color: var(--text-muted);
       font-size: 0.79rem;
       line-height: 1.35;
+    }
+    .calendar-day-detail {
+      margin: 0.33rem 0 0;
+      color: var(--text-dim);
+      font-size: 0.73rem;
+      line-height: 1.35;
+      min-height: 2.05em;
     }
     .toolbar-button {
       border: 1px solid var(--border);
@@ -735,23 +784,6 @@ BASE_STYLES = """
       margin-bottom: 1.2rem;
     }
     .compare-summary.visible { display: grid; }
-    .data-quality-alert {
-      display: none;
-      margin-bottom: 1rem;
-      padding: 0.7rem 0.9rem;
-      border-radius: 10px;
-      border: 1px solid rgba(210, 153, 34, 0.38);
-      background: rgba(210, 153, 34, 0.12);
-      color: var(--text);
-      font-size: 0.86rem;
-      line-height: 1.4;
-    }
-    .data-quality-alert.visible { display: block; }
-    .data-quality-alert.neutral {
-      border-color: rgba(148, 163, 184, 0.30);
-      background: rgba(148, 163, 184, 0.10);
-      color: var(--text-muted);
-    }
     .compare-card {
       position: relative;
       overflow: hidden;
@@ -1641,8 +1673,16 @@ BASE_STYLES = """
         text-overflow: clip;
         white-space: nowrap;
       }
-      .controls-card { flex-direction: column; }
-      .controls-main { width: 100%; }
+      .controls-card {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .controls-main {
+        width: 100%;
+        flex: 0 0 auto;
+        gap: 0.8rem;
+      }
+      .controls-group { gap: 0.48rem; }
       .calendar-panel { width: min(100%, 360px); flex-basis: auto; }
       .auth-form { flex-direction: column; align-items: stretch; }
       .auth-input-wrap { flex-basis: auto; }
@@ -2136,9 +2176,17 @@ APP_RUNTIME_JS = """
       return new Date(Date.UTC(year, month, 0)).getUTCDate();
     }
 
+    function calendarStatusLabel(day) {
+      if (!day) return 'no-run';
+      if (day.has_collection_gaps) return 'gap';
+      if (String(day.status || '') === 'all_zero') return 'all-zero';
+      return 'healthy';
+    }
+
     function formatCalendarDayTooltip(day) {
+      const statusLabel = calendarStatusLabel(day);
       const parts = [
-        day.date,
+        `${day.date} · status: ${statusLabel}`,
         `tracked ${formatNumber(day.tracked_repos || 0)}`,
         `with data ${formatNumber(day.with_data_repos || 0)}`,
         `zero ${formatNumber(day.zero_traffic_repos || 0)}`,
@@ -2156,9 +2204,10 @@ APP_RUNTIME_JS = """
       const monthLabel = document.getElementById('calendarMonthLabel');
       const grid = document.getElementById('calendarGrid');
       const hint = document.getElementById('calendarHint');
+      const dayDetail = document.getElementById('calendarDayDetail');
       const prevBtn = document.getElementById('calendarPrevBtn');
       const nextBtn = document.getElementById('calendarNextBtn');
-      if (!panel || !monthLabel || !grid || !hint || !prevBtn || !nextBtn) return;
+      if (!panel || !monthLabel || !grid || !hint || !dayDetail || !prevBtn || !nextBtn) return;
 
       const days = qualityDaysForSelectedWindow();
       const monthKeys = calendarMonthKeys(days);
@@ -2169,6 +2218,7 @@ APP_RUNTIME_JS = """
 
       if (!activeMonth) {
         panel.style.display = 'none';
+        dayDetail.textContent = '';
         return;
       }
 
@@ -2179,6 +2229,7 @@ APP_RUNTIME_JS = """
       if (!parsed) {
         grid.innerHTML = '';
         hint.textContent = 'Collection status per day in the selected window.';
+        dayDetail.textContent = 'Hover or focus a day to inspect collection details.';
         return;
       }
 
@@ -2195,25 +2246,53 @@ APP_RUNTIME_JS = """
         const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
         const day = byDate.get(iso);
         let cls = 'calendar-day no-run';
-        let title = `${iso} · no collection run`;
+        let detail = `${iso} · status: no-run · no collection run`;
+        let title = detail;
         if (day) {
           if (day.has_collection_gaps) cls = 'calendar-day gap';
           else if (day.status === 'all_zero') cls = 'calendar-day zero';
           else cls = 'calendar-day ok';
-          title = formatCalendarDayTooltip(day);
+          detail = formatCalendarDayTooltip(day);
+          title = detail;
         }
-        cells.push(`<span class="${cls}" title="${escapeHtml(title)}">${dayNum}</span>`);
+        cells.push(
+          `<span class="${cls}" title="${escapeHtml(title)}" data-detail="${escapeHtml(detail)}" tabindex="0">${dayNum}</span>`
+        );
       }
       const trailing = (7 - (cells.length % 7)) % 7;
       for (let i = 0; i < trailing; i += 1) {
         cells.push('<span class="calendar-day blank" aria-hidden="true"></span>');
       }
       grid.innerHTML = cells.join('');
+      const defaultDayDetail = 'Hover or focus a day to inspect collection details.';
+      dayDetail.textContent = defaultDayDetail;
+      grid.querySelectorAll('.calendar-day:not(.blank)').forEach((cell) => {
+        const showDetail = function() {
+          const detail = cell.getAttribute('data-detail') || '';
+          dayDetail.textContent = detail || defaultDayDetail;
+        };
+        const resetDetail = function() {
+          dayDetail.textContent = defaultDayDetail;
+        };
+        cell.addEventListener('mouseenter', showDetail);
+        cell.addEventListener('focus', showDetail);
+        cell.addEventListener('click', showDetail);
+        cell.addEventListener('mouseleave', resetDetail);
+        cell.addEventListener('blur', resetDetail);
+      });
 
       const gapDays = days.filter((day) => day.has_collection_gaps).length;
       const zeroDays = days.filter((day) => day.status === 'all_zero').length;
-      const scopeLabel = getSelectedWindow() === 'all' ? 'all retained data' : `selected ${getSelectedWindow()}d window`;
-      hint.textContent = `${scopeLabel}: ${formatNumber(gapDays)} gap day(s), ${formatNumber(zeroDays)} all-zero day(s).`;
+      const noRunStats = computeNoRunStats(days);
+      const streakText = noRunStats.longestNoRunStreak > 0
+        ? ` (longest streak ${formatNumber(noRunStats.longestNoRunStreak)})`
+        : '';
+      hint.textContent = (
+        `${formatNumber(noRunStats.collectedDays)} collected day(s), `
+        + `${formatNumber(noRunStats.noRunDays)} no-run day(s)${streakText}, `
+        + `${formatNumber(gapDays)} gap day(s), `
+        + `${formatNumber(zeroDays)} all-zero day(s).`
+      );
     }
 
     function shiftCalendarMonth(delta) {
@@ -2227,41 +2306,51 @@ APP_RUNTIME_JS = """
       renderCollectionCalendar();
     }
 
-    function buildWindowQualitySummary() {
-      const days = qualityDaysForSelectedWindow();
-      if (!days.length) {
-        return { available: false, hasGaps: false, allZero: false, message: '' };
-      }
-      const gapDays = days.filter((day) => day.has_collection_gaps);
-      const skipped = gapDays.reduce((total, day) => total + Number(day.skipped_repos || 0), 0);
-      const errors = gapDays.reduce((total, day) => total + Number(day.error_repos || 0), 0);
-      const trackedSamples = days.reduce((total, day) => total + Number(day.tracked_repos || 0), 0);
-      const observedSamples = days.reduce(
-        (total, day) => total + Number(day.with_data_repos || 0) + Number(day.zero_traffic_repos || 0),
-        0,
-      );
-      const allZero = days.every((day) => String(day.status || '') === 'all_zero');
-      if (gapDays.length) {
+    function computeNoRunStats(days) {
+      const collectedDates = Array.from(
+        new Set((days || []).map((day) => String(day.date || '')).filter(Boolean))
+      ).sort();
+      if (!collectedDates.length) {
         return {
-          available: true,
-          hasGaps: true,
-          allZero: false,
-          message:
-            `Collection gaps in ${getRangeLabel().toLowerCase()}: ${formatNumber(gapDays.length)} day(s) affected, `
-            + `${formatNumber(skipped)} skipped, ${formatNumber(errors)} error(s), `
-            + `${formatNumber(observedSamples)}/${formatNumber(trackedSamples)} repo samples collected.`,
+          collectedDays: 0,
+          noRunDays: 0,
+          longestNoRunStreak: 0
         };
       }
-      if (allZero) {
+
+      const start = parseIsoDate(collectedDates[0]);
+      const end = parseIsoDate(collectedDates[collectedDates.length - 1]);
+      if (!start || !end) {
         return {
-          available: true,
-          hasGaps: false,
-          allZero: true,
-          message:
-            `Collections succeeded in ${getRangeLabel().toLowerCase()}, but every recorded day reported zero traffic.`,
+          collectedDays: collectedDates.length,
+          noRunDays: 0,
+          longestNoRunStreak: 0
         };
       }
-      return { available: true, hasGaps: false, allZero: false, message: '' };
+
+      const collectedSet = new Set(collectedDates);
+      const cursor = new Date(start.getTime());
+      let noRunDays = 0;
+      let streak = 0;
+      let longestNoRunStreak = 0;
+
+      while (cursor.getTime() <= end.getTime()) {
+        const iso = formatIsoDate(cursor);
+        if (collectedSet.has(iso)) {
+          streak = 0;
+        } else {
+          noRunDays += 1;
+          streak += 1;
+          if (streak > longestNoRunStreak) longestNoRunStreak = streak;
+        }
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+
+      return {
+        collectedDays: collectedDates.length,
+        noRunDays,
+        longestNoRunStreak
+      };
     }
 
     function seriesForRange(series) {
@@ -3758,29 +3847,6 @@ APP_RUNTIME_JS = """
       } catch (_e) { /* ignore */ }
     }
 
-    function updateDataQualityAlert() {
-      const alertEl = document.getElementById('data-quality-alert');
-      if (!alertEl) return;
-      const summary = buildWindowQualitySummary();
-      if (!summary.available) {
-        alertEl.className = 'data-quality-alert';
-        alertEl.textContent = '';
-        return;
-      }
-      if (summary.hasGaps) {
-        alertEl.className = 'data-quality-alert visible';
-        alertEl.textContent = summary.message || 'Collection gaps detected in the selected window. Metrics may understate activity.';
-        return;
-      }
-      if (summary.allZero) {
-        alertEl.className = 'data-quality-alert neutral visible';
-        alertEl.textContent = summary.message || 'Collection succeeded, but selected window reports zero traffic.';
-        return;
-      }
-      alertEl.className = 'data-quality-alert';
-      alertEl.textContent = '';
-    }
-
     function updateDashboard() {
       if (!state.payload) {
         return;
@@ -3794,7 +3860,6 @@ APP_RUNTIME_JS = """
       updateMetricTabs();
       setText('updated-text', buildUpdatedText(state.payload));
       updateToolbar();
-      updateDataQualityAlert();
       renderCollectionCalendar();
       updateStats();
       updateDailyChart();
@@ -4791,7 +4856,6 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
     </div>
 
     <div class="compare-summary" id="compare-summary"></div>
-    <div class="data-quality-alert" id="data-quality-alert" role="status" aria-live="polite"></div>
 
     <div class="card controls-card">
       <div class="controls-main">
@@ -4832,6 +4896,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
         <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
+        <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
     </div>
 

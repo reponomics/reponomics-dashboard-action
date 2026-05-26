@@ -367,36 +367,85 @@
       font-size: 0.76rem;
       font-variant-numeric: tabular-nums;
       position: relative;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
     }
     .calendar-day.blank {
       border: none;
       background: transparent;
     }
+    .calendar-day:not(.blank) {
+      cursor: help;
+    }
+    .calendar-day:not(.blank):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(1, 4, 9, 0.22);
+    }
+    .calendar-day:not(.blank):focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
     .calendar-day.no-run {
       color: var(--text-dim);
-      background: rgba(148, 163, 184, 0.05);
-      border-color: rgba(148, 163, 184, 0.22);
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(148, 163, 184, 0.11) 0 3px,
+          rgba(148, 163, 184, 0.02) 3px 6px
+        ),
+        var(--bg-card);
+      border-color: rgba(148, 163, 184, 0.34);
     }
     .calendar-day.ok {
       color: var(--text);
-      background: rgba(63, 185, 80, 0.12);
-      border-color: rgba(63, 185, 80, 0.30);
+      background: rgba(0, 158, 115, 0.12);
+      border-color: rgba(0, 158, 115, 0.52);
     }
     .calendar-day.zero {
       color: var(--text);
-      background: rgba(210, 153, 34, 0.13);
-      border-color: rgba(210, 153, 34, 0.36);
+      background: rgba(230, 159, 0, 0.12);
+      border-color: rgba(230, 159, 0, 0.62);
     }
     .calendar-day.gap {
       color: var(--text);
-      background: rgba(248, 81, 73, 0.14);
-      border-color: rgba(248, 81, 73, 0.36);
+      background:
+        repeating-linear-gradient(
+          45deg,
+          rgba(213, 94, 0, 0.22) 0 3px,
+          rgba(213, 94, 0, 0.06) 3px 6px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(213, 94, 0, 0.16) 0 2px,
+          transparent 2px 5px
+        ),
+        rgba(213, 94, 0, 0.06);
+      border-color: rgba(213, 94, 0, 0.78);
+    }
+    .calendar-day.gap::after {
+      position: absolute;
+      top: 1px;
+      right: 2px;
+      font-size: 0.5rem;
+      font-weight: 700;
+      line-height: 1;
+      opacity: 0.95;
+    }
+    .calendar-day.gap::after {
+      content: '▲';
+      color: #d55e00;
     }
     .calendar-hint {
       margin: 0;
       color: var(--text-muted);
       font-size: 0.79rem;
       line-height: 1.35;
+    }
+    .calendar-day-detail {
+      margin: 0.33rem 0 0;
+      color: var(--text-dim);
+      font-size: 0.73rem;
+      line-height: 1.35;
+      min-height: 2.05em;
     }
     .toolbar-button {
       border: 1px solid var(--border);
@@ -688,23 +737,6 @@
       margin-bottom: 1.2rem;
     }
     .compare-summary.visible { display: grid; }
-    .data-quality-alert {
-      display: none;
-      margin-bottom: 1rem;
-      padding: 0.7rem 0.9rem;
-      border-radius: 10px;
-      border: 1px solid rgba(210, 153, 34, 0.38);
-      background: rgba(210, 153, 34, 0.12);
-      color: var(--text);
-      font-size: 0.86rem;
-      line-height: 1.4;
-    }
-    .data-quality-alert.visible { display: block; }
-    .data-quality-alert.neutral {
-      border-color: rgba(148, 163, 184, 0.30);
-      background: rgba(148, 163, 184, 0.10);
-      color: var(--text-muted);
-    }
     .compare-card {
       position: relative;
       overflow: hidden;
@@ -1594,8 +1626,16 @@
         text-overflow: clip;
         white-space: nowrap;
       }
-      .controls-card { flex-direction: column; }
-      .controls-main { width: 100%; }
+      .controls-card {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .controls-main {
+        width: 100%;
+        flex: 0 0 auto;
+        gap: 0.8rem;
+      }
+      .controls-group { gap: 0.48rem; }
       .calendar-panel { width: min(100%, 360px); flex-basis: auto; }
       .auth-form { flex-direction: column; align-items: stretch; }
       .auth-input-wrap { flex-basis: auto; }
@@ -1681,7 +1721,7 @@
           <h1 class="brand">reponomics<span class="accent">.</span></h1>
           <div class="brand-eyebrow">Dashboard</div>
         </div>
-        <p class="updated" id="updated-text">Last updated: 2026-05-26 00:41 UTC | Tracking 2 repositories | 16 days of data</p>
+        <p class="updated" id="updated-text">Last updated: 2026-05-26 03:28 UTC | Tracking 2 repositories | 16 days of data</p>
       </div>
       <div class="hero-toolbar">
         <div class="hero-toolbar-controls">
@@ -1768,7 +1808,6 @@
     </div>
 
     <div class="compare-summary" id="compare-summary"></div>
-    <div class="data-quality-alert" id="data-quality-alert" role="status" aria-live="polite"></div>
 
     <div class="card controls-card">
       <div class="controls-main">
@@ -1809,6 +1848,7 @@
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
         <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
+        <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
     </div>
 
@@ -2368,9 +2408,17 @@
       return new Date(Date.UTC(year, month, 0)).getUTCDate();
     }
 
+    function calendarStatusLabel(day) {
+      if (!day) return 'no-run';
+      if (day.has_collection_gaps) return 'gap';
+      if (String(day.status || '') === 'all_zero') return 'all-zero';
+      return 'healthy';
+    }
+
     function formatCalendarDayTooltip(day) {
+      const statusLabel = calendarStatusLabel(day);
       const parts = [
-        day.date,
+        `${day.date} · status: ${statusLabel}`,
         `tracked ${formatNumber(day.tracked_repos || 0)}`,
         `with data ${formatNumber(day.with_data_repos || 0)}`,
         `zero ${formatNumber(day.zero_traffic_repos || 0)}`,
@@ -2388,9 +2436,10 @@
       const monthLabel = document.getElementById('calendarMonthLabel');
       const grid = document.getElementById('calendarGrid');
       const hint = document.getElementById('calendarHint');
+      const dayDetail = document.getElementById('calendarDayDetail');
       const prevBtn = document.getElementById('calendarPrevBtn');
       const nextBtn = document.getElementById('calendarNextBtn');
-      if (!panel || !monthLabel || !grid || !hint || !prevBtn || !nextBtn) return;
+      if (!panel || !monthLabel || !grid || !hint || !dayDetail || !prevBtn || !nextBtn) return;
 
       const days = qualityDaysForSelectedWindow();
       const monthKeys = calendarMonthKeys(days);
@@ -2401,6 +2450,7 @@
 
       if (!activeMonth) {
         panel.style.display = 'none';
+        dayDetail.textContent = '';
         return;
       }
 
@@ -2411,6 +2461,7 @@
       if (!parsed) {
         grid.innerHTML = '';
         hint.textContent = 'Collection status per day in the selected window.';
+        dayDetail.textContent = 'Hover or focus a day to inspect collection details.';
         return;
       }
 
@@ -2427,25 +2478,53 @@
         const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
         const day = byDate.get(iso);
         let cls = 'calendar-day no-run';
-        let title = `${iso} · no collection run`;
+        let detail = `${iso} · status: no-run · no collection run`;
+        let title = detail;
         if (day) {
           if (day.has_collection_gaps) cls = 'calendar-day gap';
           else if (day.status === 'all_zero') cls = 'calendar-day zero';
           else cls = 'calendar-day ok';
-          title = formatCalendarDayTooltip(day);
+          detail = formatCalendarDayTooltip(day);
+          title = detail;
         }
-        cells.push(`<span class="${cls}" title="${escapeHtml(title)}">${dayNum}</span>`);
+        cells.push(
+          `<span class="${cls}" title="${escapeHtml(title)}" data-detail="${escapeHtml(detail)}" tabindex="0">${dayNum}</span>`
+        );
       }
       const trailing = (7 - (cells.length % 7)) % 7;
       for (let i = 0; i < trailing; i += 1) {
         cells.push('<span class="calendar-day blank" aria-hidden="true"></span>');
       }
       grid.innerHTML = cells.join('');
+      const defaultDayDetail = 'Hover or focus a day to inspect collection details.';
+      dayDetail.textContent = defaultDayDetail;
+      grid.querySelectorAll('.calendar-day:not(.blank)').forEach((cell) => {
+        const showDetail = function() {
+          const detail = cell.getAttribute('data-detail') || '';
+          dayDetail.textContent = detail || defaultDayDetail;
+        };
+        const resetDetail = function() {
+          dayDetail.textContent = defaultDayDetail;
+        };
+        cell.addEventListener('mouseenter', showDetail);
+        cell.addEventListener('focus', showDetail);
+        cell.addEventListener('click', showDetail);
+        cell.addEventListener('mouseleave', resetDetail);
+        cell.addEventListener('blur', resetDetail);
+      });
 
       const gapDays = days.filter((day) => day.has_collection_gaps).length;
       const zeroDays = days.filter((day) => day.status === 'all_zero').length;
-      const scopeLabel = getSelectedWindow() === 'all' ? 'all retained data' : `selected ${getSelectedWindow()}d window`;
-      hint.textContent = `${scopeLabel}: ${formatNumber(gapDays)} gap day(s), ${formatNumber(zeroDays)} all-zero day(s).`;
+      const noRunStats = computeNoRunStats(days);
+      const streakText = noRunStats.longestNoRunStreak > 0
+        ? ` (longest streak ${formatNumber(noRunStats.longestNoRunStreak)})`
+        : '';
+      hint.textContent = (
+        `${formatNumber(noRunStats.collectedDays)} collected day(s), `
+        + `${formatNumber(noRunStats.noRunDays)} no-run day(s)${streakText}, `
+        + `${formatNumber(gapDays)} gap day(s), `
+        + `${formatNumber(zeroDays)} all-zero day(s).`
+      );
     }
 
     function shiftCalendarMonth(delta) {
@@ -2459,41 +2538,51 @@
       renderCollectionCalendar();
     }
 
-    function buildWindowQualitySummary() {
-      const days = qualityDaysForSelectedWindow();
-      if (!days.length) {
-        return { available: false, hasGaps: false, allZero: false, message: '' };
-      }
-      const gapDays = days.filter((day) => day.has_collection_gaps);
-      const skipped = gapDays.reduce((total, day) => total + Number(day.skipped_repos || 0), 0);
-      const errors = gapDays.reduce((total, day) => total + Number(day.error_repos || 0), 0);
-      const trackedSamples = days.reduce((total, day) => total + Number(day.tracked_repos || 0), 0);
-      const observedSamples = days.reduce(
-        (total, day) => total + Number(day.with_data_repos || 0) + Number(day.zero_traffic_repos || 0),
-        0,
-      );
-      const allZero = days.every((day) => String(day.status || '') === 'all_zero');
-      if (gapDays.length) {
+    function computeNoRunStats(days) {
+      const collectedDates = Array.from(
+        new Set((days || []).map((day) => String(day.date || '')).filter(Boolean))
+      ).sort();
+      if (!collectedDates.length) {
         return {
-          available: true,
-          hasGaps: true,
-          allZero: false,
-          message:
-            `Collection gaps in ${getRangeLabel().toLowerCase()}: ${formatNumber(gapDays.length)} day(s) affected, `
-            + `${formatNumber(skipped)} skipped, ${formatNumber(errors)} error(s), `
-            + `${formatNumber(observedSamples)}/${formatNumber(trackedSamples)} repo samples collected.`,
+          collectedDays: 0,
+          noRunDays: 0,
+          longestNoRunStreak: 0
         };
       }
-      if (allZero) {
+
+      const start = parseIsoDate(collectedDates[0]);
+      const end = parseIsoDate(collectedDates[collectedDates.length - 1]);
+      if (!start || !end) {
         return {
-          available: true,
-          hasGaps: false,
-          allZero: true,
-          message:
-            `Collections succeeded in ${getRangeLabel().toLowerCase()}, but every recorded day reported zero traffic.`,
+          collectedDays: collectedDates.length,
+          noRunDays: 0,
+          longestNoRunStreak: 0
         };
       }
-      return { available: true, hasGaps: false, allZero: false, message: '' };
+
+      const collectedSet = new Set(collectedDates);
+      const cursor = new Date(start.getTime());
+      let noRunDays = 0;
+      let streak = 0;
+      let longestNoRunStreak = 0;
+
+      while (cursor.getTime() <= end.getTime()) {
+        const iso = formatIsoDate(cursor);
+        if (collectedSet.has(iso)) {
+          streak = 0;
+        } else {
+          noRunDays += 1;
+          streak += 1;
+          if (streak > longestNoRunStreak) longestNoRunStreak = streak;
+        }
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+
+      return {
+        collectedDays: collectedDates.length,
+        noRunDays,
+        longestNoRunStreak
+      };
     }
 
     function seriesForRange(series) {
@@ -3990,29 +4079,6 @@
       } catch (_e) { /* ignore */ }
     }
 
-    function updateDataQualityAlert() {
-      const alertEl = document.getElementById('data-quality-alert');
-      if (!alertEl) return;
-      const summary = buildWindowQualitySummary();
-      if (!summary.available) {
-        alertEl.className = 'data-quality-alert';
-        alertEl.textContent = '';
-        return;
-      }
-      if (summary.hasGaps) {
-        alertEl.className = 'data-quality-alert visible';
-        alertEl.textContent = summary.message || 'Collection gaps detected in the selected window. Metrics may understate activity.';
-        return;
-      }
-      if (summary.allZero) {
-        alertEl.className = 'data-quality-alert neutral visible';
-        alertEl.textContent = summary.message || 'Collection succeeded, but selected window reports zero traffic.';
-        return;
-      }
-      alertEl.className = 'data-quality-alert';
-      alertEl.textContent = '';
-    }
-
     function updateDashboard() {
       if (!state.payload) {
         return;
@@ -4026,7 +4092,6 @@
       updateMetricTabs();
       setText('updated-text', buildUpdatedText(state.payload));
       updateToolbar();
-      updateDataQualityAlert();
       renderCollectionCalendar();
       updateStats();
       updateDailyChart();
@@ -4089,7 +4154,7 @@
       updateDashboard();
     }
 
-const dashboardPayload = {"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-26 00:41 UTC","totals":{"repo_count":2,"days_tracked":16,"total_views":284,"total_uniques":174,"total_clones":36,"total_clone_uniques":27},"daily":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"views":[17,9,21,19,0,23,14,18,26,18,9,13,23,26,29,19],"uniques":[11,6,13,10,0,14,8,11,16,11,6,7,14,17,18,12],"clones":[3,1,3,1,0,3,1,2,4,2,1,1,3,4,5,2],"clone_uniques":[2,1,2,1,0,2,1,2,3,2,1,1,2,3,3,1]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[22.5,19.5,15.0,7.3,23.0,20.0,23.5],"clones":[3.0,2.5,1.7,0.7,3.0,2.5,3.5]},"repos":[{"name":"demo/alpha","views":203,"uniques":130,"clones":27,"clone_uniques":18,"days":16},{"name":"demo/beta","views":81,"uniques":44,"clones":9,"clone_uniques":9,"days":13}],"repo_series":{"demo/alpha":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"views":[12,9,14,13,0,15,10,11,17,12,9,8,16,18,20,19],"uniques":[8,6,9,7,0,10,6,7,11,8,6,5,10,12,13,12],"clones":[2,1,2,1,0,2,1,1,3,1,1,1,2,3,4,2],"clone_uniques":[1,1,1,1,0,1,1,1,2,1,1,1,1,2,2,1]},"demo/beta":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"views":[5,7,6,0,8,4,7,9,6,5,7,8,9],"uniques":[3,4,3,0,4,2,4,5,3,2,4,5,5],"clones":[1,1,0,0,1,0,1,1,1,0,1,1,1],"clone_uniques":[1,1,0,0,1,0,1,1,1,0,1,1,1]}},"repo_weekday":{"demo/alpha":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[18.0,13.0,11.3,5.7,15.5,14.0,15.5],"clones":[2.5,1.5,1.3,0.7,2.0,2.0,2.5]},"demo/beta":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[9.0,6.5,5.5,2.5,7.5,6.0,8.0],"clones":[1.0,1.0,0.5,0.0,1.0,0.5,1.0]}},"referrers":[{"referrer":"github.com","count":58,"uniques":42},{"referrer":"google.com","count":18,"uniques":14},{"referrer":"reponomics.dev","count":9,"uniques":7}],"paths":[{"repo":"demo/alpha","path":"/demo/alpha","title":"Repository overview","content":"Repository overview","count":44,"uniques":31},{"repo":"demo/beta","path":"/demo/beta","title":"Repository overview","content":"Repository overview","count":19,"uniques":13},{"repo":"demo/alpha","path":"/demo/alpha/blob/main/README.md","title":"README","content":"README","count":12,"uniques":9},{"repo":"demo/beta","path":"/demo/beta/issues","title":"Issues","content":"Issues","count":7,"uniques":5}],"repo_referrers":{"demo/alpha":[{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","referrer":"github.com","count":"42","uniques":"30","schema_version":"3"},{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","referrer":"google.com","count":"18","uniques":"14","schema_version":"3"}],"demo/beta":[{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","referrer":"github.com","count":"16","uniques":"12","schema_version":"3"},{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","referrer":"reponomics.dev","count":"9","uniques":"7","schema_version":"3"}]},"repo_paths":{"demo/alpha":[{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","path":"/demo/alpha","title":"Repository overview","count":"44","uniques":"31","schema_version":"3"},{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","path":"/demo/alpha/blob/main/README.md","title":"README","count":"12","uniques":"9","schema_version":"3"}],"demo/beta":[{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","path":"/demo/beta","title":"Repository overview","count":"19","uniques":"13","schema_version":"3"},{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","path":"/demo/beta/issues","title":"Issues","count":"7","uniques":"5","schema_version":"3"}]},"growth":{"window_days":14,"cutoff":"2026-05-12","latest_date":"2026-05-25","totals":{"total_stargazers":170,"total_stars":170,"total_subscribers":40,"total_forks":23,"total_stargazers_delta":24,"total_stars_delta":24,"total_subscribers_delta":10,"total_forks_delta":7},"series":{"demo/alpha":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"stargazers":[100,101,104,105,105,107,107,108,110,111,111,112,114,116,118,120],"subscribers":[20,20,21,21,21,22,22,22,23,23,23,24,25,26,27,28],"forks":[10,10,11,11,11,11,11,12,12,12,12,13,14,15,16,16],"samples":16},"demo/beta":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"stargazers":[40,42,42,42,43,44,45,46,47,48,48,49,50],"subscribers":[8,9,9,9,9,10,10,10,11,11,11,12,12],"forks":[5,5,5,5,5,6,6,6,6,6,6,7,7],"samples":13}},"per_repo":{"demo/alpha":{"repo":"demo/alpha","traffic":{"views":182,"uniques":116,"clones":24,"clone_uniques":16,"sample_count":14},"deltas":{"stargazers_delta":16,"stars_delta":16,"subscribers_delta":7,"forks_delta":5,"sample_count":14,"start_date":"2026-05-12","end_date":"2026-05-25","current_stargazers":120,"current_stars":120,"current_subscribers":28,"current_forks":16},"conversion":{"stargazers":{"value":0.13793103448275862,"denominator":116,"denominator_metric":"visitors"},"subscribers":{"value":0.0603448275862069,"denominator":116,"denominator_metric":"visitors"},"forks":{"value":0.04310344827586207,"denominator":116,"denominator_metric":"visitors"},"stars":{"value":0.13793103448275862,"denominator":116,"denominator_metric":"visitors"}},"series":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"stargazers":[100,101,104,105,105,107,107,108,110,111,111,112,114,116,118,120],"subscribers":[20,20,21,21,21,22,22,22,23,23,23,24,25,26,27,28],"forks":[10,10,11,11,11,11,11,12,12,12,12,13,14,15,16,16],"samples":16}},"demo/beta":{"repo":"demo/beta","traffic":{"views":76,"uniques":41,"clones":8,"clone_uniques":8,"sample_count":12},"deltas":{"stargazers_delta":8,"stars_delta":8,"subscribers_delta":3,"forks_delta":2,"sample_count":12,"start_date":"2026-05-12","end_date":"2026-05-24","current_stargazers":50,"current_stars":50,"current_subscribers":12,"current_forks":7},"conversion":{"stargazers":{"value":0.1951219512195122,"denominator":41,"denominator_metric":"visitors"},"subscribers":{"value":0.07317073170731707,"denominator":41,"denominator_metric":"visitors"},"forks":{"value":0.04878048780487805,"denominator":41,"denominator_metric":"visitors"},"stars":{"value":0.1951219512195122,"denominator":41,"denominator_metric":"visitors"}},"series":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"stargazers":[40,42,42,42,43,44,45,46,47,48,48,49,50],"subscribers":[8,9,9,9,9,10,10,10,11,11,11,12,12],"forks":[5,5,5,5,5,6,6,6,6,6,6,7,7],"samples":13}}}},"insights":["`demo/alpha` forks jumped +5 in the selected window.","`demo/beta` views +38% over the last 6d (32 -> 44, +12).","`demo/alpha` watchers rose +7 in the selected window."],"insights_v2":[{"repo":"demo/alpha","kind":"growth","subtype":"fork_spike","metric":"forks","text":"`demo/alpha` forks jumped +5 in the selected window.","delta":5,"denominator":116},{"repo":"demo/beta","kind":"trend","metric":"views","window_days":6,"prior":32,"current":44,"delta":12,"pct":37.5,"text":"`demo/beta` views +38% over the last 6d (32 -> 44, +12)."},{"repo":"demo/alpha","kind":"growth","subtype":"watcher_subscriber_spike","metric":"subscribers","text":"`demo/alpha` watchers rose +7 in the selected window.","delta":7,"denominator":116}],"data_quality":{"available":true,"status":"gaps_detected","message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected.","latest_captured_at":"2026-05-25T12:00:00Z","tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5,"has_collection_gaps":true,"repos":[{"repo":"demo/beta","status":"skipped_unavailable","metric_source":"repo-detail","error_type":"RepoUnavailableError"}],"days":[{"date":"2026-04-29","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-04-29T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-04-30","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-04-30T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5},{"date":"2026-05-12","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-12T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-13","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-13T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-14","status":"all_zero","has_collection_gaps":false,"latest_captured_at":"2026-05-14T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":0,"zero_traffic_repos":2,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-15","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-15T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-16","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-16T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":1,"coverage_ratio":0.5},{"date":"2026-05-17","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-17T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-18","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-18T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-19","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-19T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-20","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-20T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5},{"date":"2026-05-21","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-21T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-22","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-22T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-23","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-23T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-24","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-24T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-25","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-25T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5}]}};
+const dashboardPayload = {"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-26 03:28 UTC","totals":{"repo_count":2,"days_tracked":16,"total_views":284,"total_uniques":174,"total_clones":36,"total_clone_uniques":27},"daily":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"views":[17,9,21,19,0,23,14,18,26,18,9,13,23,26,29,19],"uniques":[11,6,13,10,0,14,8,11,16,11,6,7,14,17,18,12],"clones":[3,1,3,1,0,3,1,2,4,2,1,1,3,4,5,2],"clone_uniques":[2,1,2,1,0,2,1,2,3,2,1,1,2,3,3,1]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[22.5,19.5,15.0,7.3,23.0,20.0,23.5],"clones":[3.0,2.5,1.7,0.7,3.0,2.5,3.5]},"repos":[{"name":"demo/alpha","views":203,"uniques":130,"clones":27,"clone_uniques":18,"days":16},{"name":"demo/beta","views":81,"uniques":44,"clones":9,"clone_uniques":9,"days":13}],"repo_series":{"demo/alpha":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"views":[12,9,14,13,0,15,10,11,17,12,9,8,16,18,20,19],"uniques":[8,6,9,7,0,10,6,7,11,8,6,5,10,12,13,12],"clones":[2,1,2,1,0,2,1,1,3,1,1,1,2,3,4,2],"clone_uniques":[1,1,1,1,0,1,1,1,2,1,1,1,1,2,2,1]},"demo/beta":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"views":[5,7,6,0,8,4,7,9,6,5,7,8,9],"uniques":[3,4,3,0,4,2,4,5,3,2,4,5,5],"clones":[1,1,0,0,1,0,1,1,1,0,1,1,1],"clone_uniques":[1,1,0,0,1,0,1,1,1,0,1,1,1]}},"repo_weekday":{"demo/alpha":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[18.0,13.0,11.3,5.7,15.5,14.0,15.5],"clones":[2.5,1.5,1.3,0.7,2.0,2.0,2.5]},"demo/beta":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[9.0,6.5,5.5,2.5,7.5,6.0,8.0],"clones":[1.0,1.0,0.5,0.0,1.0,0.5,1.0]}},"referrers":[{"referrer":"github.com","count":58,"uniques":42},{"referrer":"google.com","count":18,"uniques":14},{"referrer":"reponomics.dev","count":9,"uniques":7}],"paths":[{"repo":"demo/alpha","path":"/demo/alpha","title":"Repository overview","content":"Repository overview","count":44,"uniques":31},{"repo":"demo/beta","path":"/demo/beta","title":"Repository overview","content":"Repository overview","count":19,"uniques":13},{"repo":"demo/alpha","path":"/demo/alpha/blob/main/README.md","title":"README","content":"README","count":12,"uniques":9},{"repo":"demo/beta","path":"/demo/beta/issues","title":"Issues","content":"Issues","count":7,"uniques":5}],"repo_referrers":{"demo/alpha":[{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","referrer":"github.com","count":"42","uniques":"30","schema_version":"3"},{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","referrer":"google.com","count":"18","uniques":"14","schema_version":"3"}],"demo/beta":[{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","referrer":"github.com","count":"16","uniques":"12","schema_version":"3"},{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","referrer":"reponomics.dev","count":"9","uniques":"7","schema_version":"3"}]},"repo_paths":{"demo/alpha":[{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","path":"/demo/alpha","title":"Repository overview","count":"44","uniques":"31","schema_version":"3"},{"repo":"demo/alpha","captured_at":"2026-05-25T12:00:00Z","path":"/demo/alpha/blob/main/README.md","title":"README","count":"12","uniques":"9","schema_version":"3"}],"demo/beta":[{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","path":"/demo/beta","title":"Repository overview","count":"19","uniques":"13","schema_version":"3"},{"repo":"demo/beta","captured_at":"2026-05-25T12:00:00Z","path":"/demo/beta/issues","title":"Issues","count":"7","uniques":"5","schema_version":"3"}]},"growth":{"window_days":14,"cutoff":"2026-05-12","latest_date":"2026-05-25","totals":{"total_stargazers":170,"total_stars":170,"total_subscribers":40,"total_forks":23,"total_stargazers_delta":24,"total_stars_delta":24,"total_subscribers_delta":10,"total_forks_delta":7},"series":{"demo/alpha":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"stargazers":[100,101,104,105,105,107,107,108,110,111,111,112,114,116,118,120],"subscribers":[20,20,21,21,21,22,22,22,23,23,23,24,25,26,27,28],"forks":[10,10,11,11,11,11,11,12,12,12,12,13,14,15,16,16],"samples":16},"demo/beta":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"stargazers":[40,42,42,42,43,44,45,46,47,48,48,49,50],"subscribers":[8,9,9,9,9,10,10,10,11,11,11,12,12],"forks":[5,5,5,5,5,6,6,6,6,6,6,7,7],"samples":13}},"per_repo":{"demo/alpha":{"repo":"demo/alpha","traffic":{"views":182,"uniques":116,"clones":24,"clone_uniques":16,"sample_count":14},"deltas":{"stargazers_delta":16,"stars_delta":16,"subscribers_delta":7,"forks_delta":5,"sample_count":14,"start_date":"2026-05-12","end_date":"2026-05-25","current_stargazers":120,"current_stars":120,"current_subscribers":28,"current_forks":16},"conversion":{"stargazers":{"value":0.13793103448275862,"denominator":116,"denominator_metric":"visitors"},"subscribers":{"value":0.0603448275862069,"denominator":116,"denominator_metric":"visitors"},"forks":{"value":0.04310344827586207,"denominator":116,"denominator_metric":"visitors"},"stars":{"value":0.13793103448275862,"denominator":116,"denominator_metric":"visitors"}},"series":{"dates":["2026-04-29","2026-04-30","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25"],"stargazers":[100,101,104,105,105,107,107,108,110,111,111,112,114,116,118,120],"subscribers":[20,20,21,21,21,22,22,22,23,23,23,24,25,26,27,28],"forks":[10,10,11,11,11,11,11,12,12,12,12,13,14,15,16,16],"samples":16}},"demo/beta":{"repo":"demo/beta","traffic":{"views":76,"uniques":41,"clones":8,"clone_uniques":8,"sample_count":12},"deltas":{"stargazers_delta":8,"stars_delta":8,"subscribers_delta":3,"forks_delta":2,"sample_count":12,"start_date":"2026-05-12","end_date":"2026-05-24","current_stargazers":50,"current_stars":50,"current_subscribers":12,"current_forks":7},"conversion":{"stargazers":{"value":0.1951219512195122,"denominator":41,"denominator_metric":"visitors"},"subscribers":{"value":0.07317073170731707,"denominator":41,"denominator_metric":"visitors"},"forks":{"value":0.04878048780487805,"denominator":41,"denominator_metric":"visitors"},"stars":{"value":0.1951219512195122,"denominator":41,"denominator_metric":"visitors"}},"series":{"dates":["2026-04-29","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-21","2026-05-22","2026-05-23","2026-05-24"],"stargazers":[40,42,42,42,43,44,45,46,47,48,48,49,50],"subscribers":[8,9,9,9,9,10,10,10,11,11,11,12,12],"forks":[5,5,5,5,5,6,6,6,6,6,6,7,7],"samples":13}}}},"insights":["`demo/alpha` forks jumped +5 in the selected window.","`demo/beta` views +38% over the last 6d (32 -> 44, +12).","`demo/alpha` watchers rose +7 in the selected window."],"insights_v2":[{"repo":"demo/alpha","kind":"growth","subtype":"fork_spike","metric":"forks","text":"`demo/alpha` forks jumped +5 in the selected window.","delta":5,"denominator":116},{"repo":"demo/beta","kind":"trend","metric":"views","window_days":6,"prior":32,"current":44,"delta":12,"pct":37.5,"text":"`demo/beta` views +38% over the last 6d (32 -> 44, +12)."},{"repo":"demo/alpha","kind":"growth","subtype":"watcher_subscriber_spike","metric":"subscribers","text":"`demo/alpha` watchers rose +7 in the selected window.","delta":7,"denominator":116}],"data_quality":{"available":true,"status":"gaps_detected","message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected.","latest_captured_at":"2026-05-25T12:00:00Z","tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5,"has_collection_gaps":true,"repos":[{"repo":"demo/beta","status":"skipped_unavailable","metric_source":"repo-detail","error_type":"RepoUnavailableError"}],"days":[{"date":"2026-04-29","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-04-29T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-04-30","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-04-30T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5},{"date":"2026-05-12","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-12T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-13","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-13T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-14","status":"all_zero","has_collection_gaps":false,"latest_captured_at":"2026-05-14T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":0,"zero_traffic_repos":2,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-15","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-15T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-16","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-16T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":1,"coverage_ratio":0.5},{"date":"2026-05-17","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-17T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-18","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-18T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-19","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-19T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-20","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-20T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5},{"date":"2026-05-21","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-21T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-22","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-22T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-23","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-23T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-24","status":"healthy","has_collection_gaps":false,"latest_captured_at":"2026-05-24T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":2,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0},{"date":"2026-05-25","status":"gaps_detected","has_collection_gaps":true,"latest_captured_at":"2026-05-25T12:00:00Z","run_count":1,"tracked_repos":2,"with_data_repos":1,"zero_traffic_repos":0,"skipped_repos":1,"error_repos":0,"coverage_ratio":0.5}]}};
 renderDashboard(dashboardPayload);
 
   </script>

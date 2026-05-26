@@ -645,10 +645,16 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
     assert "unlock-form" in published.forms
-    assert 'id="data-quality-alert"' in dashboard_html
+    assert 'id="calendarHint"' in dashboard_html
+    assert 'id="calendarDayDetail"' in dashboard_html
     assert 'id="calendarGrid"' in dashboard_html
     assert 'id="calendarMonthLabel"' in dashboard_html
+    assert 'data-detail="' in dashboard_html
     assert "function renderCollectionCalendar()" in dashboard_html
+    assert "function computeNoRunStats(days)" in dashboard_html
+    assert "function calendarStatusLabel(day)" in dashboard_html
+    assert "status: no-run" in dashboard_html
+    assert "no-run day(s)" in dashboard_html
     assert "function shiftCalendarMonth(delta)" in dashboard_html
 
     standalone = _parse_dashboard_html(

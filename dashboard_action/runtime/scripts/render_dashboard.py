@@ -265,6 +265,13 @@ BASE_STYLES = """
       flex-wrap: wrap;
       margin-bottom: 1.1rem;
     }
+    .controls-main {
+      min-width: 0;
+      flex: 1 1 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
     .controls-group {
       min-width: 0;
       display: flex;
@@ -334,6 +341,109 @@ BASE_STYLES = """
       color: #58a6ff;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+    }
+    .calendar-panel {
+      flex: 0 0 290px;
+      width: 290px;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      padding: 0.72rem 0.78rem 0.75rem;
+      background: var(--bg-card-2);
+    }
+    .calendar-head {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.45rem;
+    }
+    .calendar-month-label {
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+    .calendar-nav {
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-raised);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .calendar-nav:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.24rem;
+      margin-bottom: 0.28rem;
+      color: var(--text-dim);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .calendar-weekday {
+      text-align: center;
+      font-weight: 700;
+      padding: 0.15rem 0;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.24rem;
+      margin-bottom: 0.4rem;
+    }
+    .calendar-day {
+      min-height: 1.78rem;
+      border-radius: 7px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.76rem;
+      font-variant-numeric: tabular-nums;
+      position: relative;
+    }
+    .calendar-day.blank {
+      border: none;
+      background: transparent;
+    }
+    .calendar-day.no-run {
+      color: var(--text-dim);
+      background: rgba(148, 163, 184, 0.05);
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+    .calendar-day.ok {
+      color: var(--text);
+      background: rgba(63, 185, 80, 0.12);
+      border-color: rgba(63, 185, 80, 0.30);
+    }
+    .calendar-day.zero {
+      color: var(--text);
+      background: rgba(210, 153, 34, 0.13);
+      border-color: rgba(210, 153, 34, 0.36);
+    }
+    .calendar-day.gap {
+      color: var(--text);
+      background: rgba(248, 81, 73, 0.14);
+      border-color: rgba(248, 81, 73, 0.36);
+    }
+    .calendar-hint {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.79rem;
+      line-height: 1.35;
     }
     .toolbar-button {
       border: 1px solid var(--border);
@@ -1532,6 +1642,8 @@ BASE_STYLES = """
         white-space: nowrap;
       }
       .controls-card { flex-direction: column; }
+      .controls-main { width: 100%; }
+      .calendar-panel { width: min(100%, 360px); flex-basis: auto; }
       .auth-form { flex-direction: column; align-items: stretch; }
       .auth-input-wrap { flex-basis: auto; }
       .auth-button { width: 100%; }
@@ -1652,7 +1764,8 @@ APP_RUNTIME_JS = """
       compareRepos: [],
       metric: 'views',
       repoSortKey: null,
-      repoSortDir: null
+      repoSortDir: null,
+      calendarMonth: null
     };
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
@@ -1958,6 +2071,197 @@ APP_RUNTIME_JS = """
       const cutoff = new Date(latest.getTime());
       cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
       return formatIsoDate(cutoff);
+    }
+
+    function qualityDaysForSelectedWindow() {
+      const allDays = (state.payload?.data_quality?.days || []).slice();
+      if (!allDays.length) return [];
+      if (getSelectedWindow() === 'all') return allDays;
+      const cutoff = getWindowCutoffDate();
+      if (!cutoff) return allDays;
+      return allDays.filter((day) => String(day.date || '') >= cutoff);
+    }
+
+    function monthKeyFromIsoDate(value) {
+      const raw = String(value || '');
+      return raw.length >= 7 ? raw.slice(0, 7) : '';
+    }
+
+    function parseMonthKey(key) {
+      if (!/^\\d{4}-\\d{2}$/.test(String(key || ''))) return null;
+      const year = Number(key.slice(0, 4));
+      const month = Number(key.slice(5, 7));
+      if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return null;
+      return { year, month };
+    }
+
+    function monthLabelFromKey(key) {
+      const parsed = parseMonthKey(key);
+      if (!parsed) return 'No data';
+      const date = new Date(Date.UTC(parsed.year, parsed.month - 1, 1));
+      return date.toLocaleString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    function latestMonthKeyFallback() {
+      const qualityDays = state.payload?.data_quality?.days || [];
+      if (qualityDays.length) {
+        return monthKeyFromIsoDate(qualityDays[qualityDays.length - 1].date);
+      }
+      const dates = state.payload?.daily?.dates || [];
+      if (dates.length) {
+        return monthKeyFromIsoDate(dates[dates.length - 1]);
+      }
+      return '';
+    }
+
+    function calendarMonthKeys(days) {
+      const keys = Array.from(new Set((days || []).map((day) => monthKeyFromIsoDate(day.date)).filter(Boolean))).sort();
+      if (keys.length) return keys;
+      const fallback = latestMonthKeyFallback();
+      return fallback ? [fallback] : [];
+    }
+
+    function resolveCalendarMonth(days, monthKeys) {
+      if (!monthKeys.length) {
+        state.calendarMonth = null;
+        return null;
+      }
+      if (!state.calendarMonth || !monthKeys.includes(state.calendarMonth)) {
+        state.calendarMonth = monthKeys[monthKeys.length - 1];
+      }
+      return state.calendarMonth;
+    }
+
+    function daysInMonth(year, month) {
+      return new Date(Date.UTC(year, month, 0)).getUTCDate();
+    }
+
+    function formatCalendarDayTooltip(day) {
+      const parts = [
+        day.date,
+        `tracked ${formatNumber(day.tracked_repos || 0)}`,
+        `with data ${formatNumber(day.with_data_repos || 0)}`,
+        `zero ${formatNumber(day.zero_traffic_repos || 0)}`,
+        `skipped ${formatNumber(day.skipped_repos || 0)}`,
+        `errors ${formatNumber(day.error_repos || 0)}`
+      ];
+      if (Number(day.run_count || 0) > 1) {
+        parts.push(`${formatNumber(day.run_count)} runs`);
+      }
+      return parts.join(' · ');
+    }
+
+    function renderCollectionCalendar() {
+      const panel = document.getElementById('calendar-panel');
+      const monthLabel = document.getElementById('calendarMonthLabel');
+      const grid = document.getElementById('calendarGrid');
+      const hint = document.getElementById('calendarHint');
+      const prevBtn = document.getElementById('calendarPrevBtn');
+      const nextBtn = document.getElementById('calendarNextBtn');
+      if (!panel || !monthLabel || !grid || !hint || !prevBtn || !nextBtn) return;
+
+      const days = qualityDaysForSelectedWindow();
+      const monthKeys = calendarMonthKeys(days);
+      const activeMonth = resolveCalendarMonth(days, monthKeys);
+      const monthIndex = activeMonth ? monthKeys.indexOf(activeMonth) : -1;
+      prevBtn.disabled = monthIndex <= 0;
+      nextBtn.disabled = monthIndex < 0 || monthIndex >= monthKeys.length - 1;
+
+      if (!activeMonth) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = '';
+      monthLabel.textContent = monthLabelFromKey(activeMonth);
+
+      const parsed = parseMonthKey(activeMonth);
+      if (!parsed) {
+        grid.innerHTML = '';
+        hint.textContent = 'Collection status per day in the selected window.';
+        return;
+      }
+
+      const byDate = new Map((days || []).map((day) => [String(day.date || ''), day]));
+      const firstDay = new Date(Date.UTC(parsed.year, parsed.month - 1, 1));
+      const leading = (firstDay.getUTCDay() + 6) % 7;
+      const count = daysInMonth(parsed.year, parsed.month);
+
+      const cells = [];
+      for (let i = 0; i < leading; i += 1) {
+        cells.push('<span class="calendar-day blank" aria-hidden="true"></span>');
+      }
+      for (let dayNum = 1; dayNum <= count; dayNum += 1) {
+        const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+        const day = byDate.get(iso);
+        let cls = 'calendar-day no-run';
+        let title = `${iso} · no collection run`;
+        if (day) {
+          if (day.has_collection_gaps) cls = 'calendar-day gap';
+          else if (day.status === 'all_zero') cls = 'calendar-day zero';
+          else cls = 'calendar-day ok';
+          title = formatCalendarDayTooltip(day);
+        }
+        cells.push(`<span class="${cls}" title="${escapeHtml(title)}">${dayNum}</span>`);
+      }
+      const trailing = (7 - (cells.length % 7)) % 7;
+      for (let i = 0; i < trailing; i += 1) {
+        cells.push('<span class="calendar-day blank" aria-hidden="true"></span>');
+      }
+      grid.innerHTML = cells.join('');
+
+      const gapDays = days.filter((day) => day.has_collection_gaps).length;
+      const zeroDays = days.filter((day) => day.status === 'all_zero').length;
+      const scopeLabel = getSelectedWindow() === 'all' ? 'all retained data' : `selected ${getSelectedWindow()}d window`;
+      hint.textContent = `${scopeLabel}: ${formatNumber(gapDays)} gap day(s), ${formatNumber(zeroDays)} all-zero day(s).`;
+    }
+
+    function shiftCalendarMonth(delta) {
+      const days = qualityDaysForSelectedWindow();
+      const monthKeys = calendarMonthKeys(days);
+      if (!monthKeys.length) return;
+      const activeMonth = resolveCalendarMonth(days, monthKeys);
+      const index = Math.max(0, monthKeys.indexOf(activeMonth));
+      const nextIndex = Math.min(monthKeys.length - 1, Math.max(0, index + delta));
+      state.calendarMonth = monthKeys[nextIndex];
+      renderCollectionCalendar();
+    }
+
+    function buildWindowQualitySummary() {
+      const days = qualityDaysForSelectedWindow();
+      if (!days.length) {
+        return { available: false, hasGaps: false, allZero: false, message: '' };
+      }
+      const gapDays = days.filter((day) => day.has_collection_gaps);
+      const skipped = gapDays.reduce((total, day) => total + Number(day.skipped_repos || 0), 0);
+      const errors = gapDays.reduce((total, day) => total + Number(day.error_repos || 0), 0);
+      const trackedSamples = days.reduce((total, day) => total + Number(day.tracked_repos || 0), 0);
+      const observedSamples = days.reduce(
+        (total, day) => total + Number(day.with_data_repos || 0) + Number(day.zero_traffic_repos || 0),
+        0,
+      );
+      const allZero = days.every((day) => String(day.status || '') === 'all_zero');
+      if (gapDays.length) {
+        return {
+          available: true,
+          hasGaps: true,
+          allZero: false,
+          message:
+            `Collection gaps in ${getRangeLabel().toLowerCase()}: ${formatNumber(gapDays.length)} day(s) affected, `
+            + `${formatNumber(skipped)} skipped, ${formatNumber(errors)} error(s), `
+            + `${formatNumber(observedSamples)}/${formatNumber(trackedSamples)} repo samples collected.`,
+        };
+      }
+      if (allZero) {
+        return {
+          available: true,
+          hasGaps: false,
+          allZero: true,
+          message:
+            `Collections succeeded in ${getRangeLabel().toLowerCase()}, but every recorded day reported zero traffic.`,
+        };
+      }
+      return { available: true, hasGaps: false, allZero: false, message: '' };
     }
 
     function seriesForRange(series) {
@@ -3457,20 +3761,20 @@ APP_RUNTIME_JS = """
     function updateDataQualityAlert() {
       const alertEl = document.getElementById('data-quality-alert');
       if (!alertEl) return;
-      const quality = state.payload?.data_quality;
-      if (!quality || !quality.available) {
+      const summary = buildWindowQualitySummary();
+      if (!summary.available) {
         alertEl.className = 'data-quality-alert';
         alertEl.textContent = '';
         return;
       }
-      if (quality.has_collection_gaps) {
+      if (summary.hasGaps) {
         alertEl.className = 'data-quality-alert visible';
-        alertEl.textContent = quality.message || 'Collection gaps detected in the latest run. Metrics may understate activity.';
+        alertEl.textContent = summary.message || 'Collection gaps detected in the selected window. Metrics may understate activity.';
         return;
       }
-      if (quality.status === 'all_zero') {
+      if (summary.allZero) {
         alertEl.className = 'data-quality-alert neutral visible';
-        alertEl.textContent = quality.message || 'Latest collection succeeded but reported zero traffic across tracked repositories.';
+        alertEl.textContent = summary.message || 'Collection succeeded, but selected window reports zero traffic.';
         return;
       }
       alertEl.className = 'data-quality-alert';
@@ -3491,6 +3795,7 @@ APP_RUNTIME_JS = """
       setText('updated-text', buildUpdatedText(state.payload));
       updateToolbar();
       updateDataQualityAlert();
+      renderCollectionCalendar();
       updateStats();
       updateDailyChart();
       updateWeekdayChart();
@@ -3509,6 +3814,7 @@ APP_RUNTIME_JS = """
       state.minActivity = payload.meta?.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
+      state.calendarMonth = null;
       const thresholdInput = document.getElementById('thresholdInput');
       if (thresholdInput) {
         thresholdInput.addEventListener('change', function() {
@@ -3524,6 +3830,10 @@ APP_RUNTIME_JS = """
       document.querySelectorAll('.metric-tab').forEach((btn) => {
         btn.addEventListener('click', function() { setMetric(btn.dataset.metric); });
       });
+      const calendarPrevBtn = document.getElementById('calendarPrevBtn');
+      const calendarNextBtn = document.getElementById('calendarNextBtn');
+      if (calendarPrevBtn) calendarPrevBtn.addEventListener('click', function() { shiftCalendarMonth(-1); });
+      if (calendarNextBtn) calendarNextBtn.addEventListener('click', function() { shiftCalendarMonth(1); });
       const themeToggle = document.getElementById('themeToggle');
       if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
       // Sync the toggle button's icon/label with the bootstrap-applied theme.
@@ -4484,23 +4794,44 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
     <div class="data-quality-alert" id="data-quality-alert" role="status" aria-live="polite"></div>
 
     <div class="card controls-card">
-      <div class="controls-group">
-        <div class="controls-label">Window</div>
-        <div class="segmented-control">
-          <button class="segmented-button" data-window="7" type="button">7d</button>
-          <button class="segmented-button" data-window="14" type="button">14d</button>
-          <button class="segmented-button" data-window="30" type="button">30d</button>
-          <button class="segmented-button" data-window="90" type="button">90d</button>
-          <button class="segmented-button" data-window="all" type="button">All</button>
+      <div class="controls-main">
+        <div class="controls-group">
+          <div class="controls-label">Window</div>
+          <div class="segmented-control">
+            <button class="segmented-button" data-window="7" type="button">7d</button>
+            <button class="segmented-button" data-window="14" type="button">14d</button>
+            <button class="segmented-button" data-window="30" type="button">30d</button>
+            <button class="segmented-button" data-window="90" type="button">90d</button>
+            <button class="segmented-button" data-window="all" type="button">All</button>
+          </div>
+          <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
         </div>
-        <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
+        <div class="controls-group">
+          <div class="controls-label">Visibility threshold</div>
+          <div class="threshold-control">
+            <input class="threshold-input" id="thresholdInput" type="number" min="0" step="1" inputmode="numeric" value="1" aria-label="Minimum combined views and clones for a repo to appear">
+            <span class="controls-hint">Hide repos with fewer than <span class="threshold-value" id="thresholdValue">1</span> combined views + clones in the selected window.</span>
+          </div>
+        </div>
       </div>
-      <div class="controls-group">
-        <div class="controls-label">Visibility threshold</div>
-        <div class="threshold-control">
-          <input class="threshold-input" id="thresholdInput" type="number" min="0" step="1" inputmode="numeric" value="1" aria-label="Minimum combined views and clones for a repo to appear">
-          <span class="controls-hint">Hide repos with fewer than <span class="threshold-value" id="thresholdValue">1</span> combined views + clones in the selected window.</span>
+      <div class="calendar-panel" id="calendar-panel">
+        <div class="controls-label">Collection health</div>
+        <div class="calendar-head">
+          <button class="calendar-nav" id="calendarPrevBtn" type="button" aria-label="Show previous month">◀</button>
+          <div class="calendar-month-label" id="calendarMonthLabel">Month</div>
+          <button class="calendar-nav" id="calendarNextBtn" type="button" aria-label="Show next month">▶</button>
         </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span class="calendar-weekday">Mon</span>
+          <span class="calendar-weekday">Tue</span>
+          <span class="calendar-weekday">Wed</span>
+          <span class="calendar-weekday">Thu</span>
+          <span class="calendar-weekday">Fri</span>
+          <span class="calendar-weekday">Sat</span>
+          <span class="calendar-weekday">Sun</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
       </div>
     </div>
 

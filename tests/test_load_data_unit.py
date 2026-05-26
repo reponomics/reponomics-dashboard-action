@@ -130,6 +130,27 @@ def test_collection_quality_reports_all_zero_without_collection_gaps() -> None:
     assert "reported zero traffic" in quality["message"]
 
 
+def test_collection_quality_days_uses_latest_run_per_day() -> None:
+    days = load_data.collection_quality_days(
+        [
+            _status_row("demo/one", "2026-05-10T08:00:00Z", "ok_with_data"),
+            _status_row("demo/two", "2026-05-10T08:00:00Z", "ok_with_data"),
+            _status_row("demo/one", "2026-05-10T12:00:00Z", "ok_zero_data"),
+            _status_row("demo/two", "2026-05-10T12:00:00Z", "skipped_unavailable"),
+            _status_row("demo/one", "2026-05-11T12:00:00Z", "ok_with_data"),
+        ]
+    )
+
+    assert [day["date"] for day in days] == ["2026-05-10", "2026-05-11"]
+    assert days[0]["run_count"] == 2
+    assert days[0]["status"] == "gaps_detected"
+    assert days[0]["with_data_repos"] == 0
+    assert days[0]["zero_traffic_repos"] == 1
+    assert days[0]["skipped_repos"] == 1
+    assert days[1]["run_count"] == 1
+    assert days[1]["status"] == "healthy"
+
+
 def test_latest_repo_metrics_per_day_normalizes_blank_counters_and_skips_incomplete_rows() -> None:
     rows = [
         _metric_row("", "2026-05-01", 1, 1, 1),

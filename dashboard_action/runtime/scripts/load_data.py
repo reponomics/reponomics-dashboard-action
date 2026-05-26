@@ -223,12 +223,61 @@ def collection_quality(status_rows):
             "coverage_ratio": 1.0,
             "has_collection_gaps": False,
             "repos": [],
+            "days": [],
         }
 
     latest_captured_at = max(row.get("captured_at", "") for row in status_rows if row.get("captured_at"))
     latest_rows = [row for row in status_rows if row.get("captured_at", "") == latest_captured_at]
+    summary = _quality_summary_for_rows(latest_rows)
+
+    status = "healthy"
+    message = ""
+    if summary["has_collection_gaps"]:
+        status = "gaps_detected"
+        message = (
+            "Collection gaps detected in the latest run: "
+            + f"{summary['skipped_repos']} skipped, {summary['error_repos']} error(s), "
+            + f"{summary['observed_repos']}/{summary['tracked_repos']} repos collected."
+        )
+    elif summary["tracked_repos"] > 0 and summary["zero_traffic_repos"] == summary["tracked_repos"]:
+        status = "all_zero"
+        message = (
+            "Latest collection succeeded but reported zero traffic "
+            + f"for all {summary['tracked_repos']} tracked repos."
+        )
+
+    return {
+        "available": True,
+        "status": status,
+        "message": message,
+        "latest_captured_at": latest_captured_at,
+        "tracked_repos": summary["tracked_repos"],
+        "with_data_repos": summary["with_data_repos"],
+        "zero_traffic_repos": summary["zero_traffic_repos"],
+        "skipped_repos": summary["skipped_repos"],
+        "error_repos": summary["error_repos"],
+        "coverage_ratio": round(summary["coverage_ratio"], 4),
+        "has_collection_gaps": summary["has_collection_gaps"],
+        "repos": sorted(
+            [
+                {
+                    "repo": repo,
+                    "status": row.get("status", ""),
+                    "metric_source": row.get("metric_source", ""),
+                    "error_type": row.get("error_type", ""),
+                }
+                for repo, row in summary["by_repo"].items()
+                if row.get("status", "").startswith("skipped") or row.get("status", "").startswith("error")
+            ],
+            key=lambda item: item["repo"],
+        ),
+        "days": collection_quality_days(status_rows),
+    }
+
+
+def _quality_summary_for_rows(rows):
     by_repo = {}
-    for row in latest_rows:
+    for row in rows:
         repo = row.get("repo", "")
         if repo:
             by_repo[repo] = row
@@ -254,48 +303,62 @@ def collection_quality(status_rows):
     coverage_ratio = (observed_repos / tracked_repos) if tracked_repos else 1.0
     has_collection_gaps = skipped_repos > 0 or error_repos > 0
 
-    status = "healthy"
-    message = ""
-    if has_collection_gaps:
-        status = "gaps_detected"
-        message = (
-            "Collection gaps detected in the latest run: "
-            + f"{skipped_repos} skipped, {error_repos} error(s), "
-            + f"{observed_repos}/{tracked_repos} repos collected."
-        )
-    elif tracked_repos > 0 and zero_traffic_repos == tracked_repos:
-        status = "all_zero"
-        message = (
-            "Latest collection succeeded but reported zero traffic "
-            + f"for all {tracked_repos} tracked repos."
-        )
-
     return {
-        "available": True,
-        "status": status,
-        "message": message,
-        "latest_captured_at": latest_captured_at,
+        "by_repo": by_repo,
         "tracked_repos": tracked_repos,
         "with_data_repos": with_data_repos,
         "zero_traffic_repos": zero_traffic_repos,
         "skipped_repos": skipped_repos,
         "error_repos": error_repos,
-        "coverage_ratio": round(coverage_ratio, 4),
+        "observed_repos": observed_repos,
+        "coverage_ratio": coverage_ratio,
         "has_collection_gaps": has_collection_gaps,
-        "repos": sorted(
-            [
-                {
-                    "repo": repo,
-                    "status": row.get("status", ""),
-                    "metric_source": row.get("metric_source", ""),
-                    "error_type": row.get("error_type", ""),
-                }
-                for repo, row in by_repo.items()
-                if row.get("status", "").startswith("skipped") or row.get("status", "").startswith("error")
-            ],
-            key=lambda item: item["repo"],
-        ),
     }
+
+
+def collection_quality_days(status_rows):
+    """Return daily quality summaries keyed from latest run per day."""
+    if not status_rows:
+        return []
+
+    by_day = defaultdict(list)
+    for row in status_rows:
+        ts = row.get("ts", "")
+        captured_at = row.get("captured_at", "")
+        if not ts or not captured_at:
+            continue
+        by_day[ts].append(row)
+
+    summaries = []
+    for day, rows in by_day.items():
+        run_timestamps = sorted({row.get("captured_at", "") for row in rows if row.get("captured_at")})
+        if not run_timestamps:
+            continue
+        latest_captured_at = run_timestamps[-1]
+        latest_rows = [row for row in rows if row.get("captured_at", "") == latest_captured_at]
+        summary = _quality_summary_for_rows(latest_rows)
+        status = "healthy"
+        if summary["has_collection_gaps"]:
+            status = "gaps_detected"
+        elif summary["tracked_repos"] > 0 and summary["zero_traffic_repos"] == summary["tracked_repos"]:
+            status = "all_zero"
+        summaries.append(
+            {
+                "date": day,
+                "status": status,
+                "has_collection_gaps": summary["has_collection_gaps"],
+                "latest_captured_at": latest_captured_at,
+                "run_count": len(run_timestamps),
+                "tracked_repos": summary["tracked_repos"],
+                "with_data_repos": summary["with_data_repos"],
+                "zero_traffic_repos": summary["zero_traffic_repos"],
+                "skipped_repos": summary["skipped_repos"],
+                "error_repos": summary["error_repos"],
+                "coverage_ratio": round(summary["coverage_ratio"], 4),
+            }
+        )
+
+    return sorted(summaries, key=lambda item: item["date"])
 
 
 def repo_metric_deltas(metric_rows, recent_days=14):

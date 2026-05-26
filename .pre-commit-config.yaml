@@ -35,3 +35,9 @@ repos:
         language: system
         pass_filenames: false
         files: ^(action\.yml|\.github/.*\.ya?ml|scripts/validate_action_pins\.py)$
+
+      - id: fixture-checks
+        name: Fixture checks
+        entry: make fixtures
+        language: system
+        pass_filenames: false

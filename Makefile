@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
-.PHONY: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
+.PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -95,6 +95,8 @@ validate-release-notice: install ## Validate release notice tooling
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v
 
 ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-release-notice validate-runtime-lock validate-vendored-assets ## Run CI checks
+
+fixtures: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard ## Run fixture checks
 
 fixture-collect: install ## Run collect fixture without live GitHub API calls
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_collect_fixture_updates_artifact_without_rendering_outputs -v

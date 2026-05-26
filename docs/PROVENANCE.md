@@ -51,7 +51,7 @@ This is not meant to be the normal setup guide. Most users should follow the REA
 
 - GitHub immutable releases are configured. A current release can be checked with `gh release view TAG --repo reponomics/reponomics-dashboard-action --json isImmutable,targetCommitish,url`.
 - GitHub release attestations can be checked with `gh release verify TAG --repo reponomics/reponomics-dashboard-action --format json`. The verification output includes the package URL, attested subject, and digest information for the release being checked.
-- `.github/workflows/sbom-provenance.yml` generates an SPDX JSON SBOM with Anchore's SBOM action and submits dependency information to GitHub's dependency graph.
+- `.github/workflows/sbom-provenance.yml` generates an SPDX JSON SBOM with Anchore's SBOM action and uploads it as a workflow artifact.
 - For published releases and manual runs, the same workflow creates a `git archive` source tarball from the release checkout, generates a matching SPDX SBOM, and uses GitHub artifact attestations for both the source archive and the SBOM.
 - These attestations establish GitHub-hosted provenance for the generated release source archive and SBOM. They do not change how GitHub Actions consumes this repository as a composite action; consumers still get the source tree for the ref they use.
 

@@ -12,7 +12,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It uses the release app token so release-created events can trigger downstream automation, and it moves the floating major/minor action tags after a release is created.
 
-- [`sbom-provenance.yml`](sbom-provenance.yml) generates a repository SPDX SBOM, submits dependency data to GitHub's dependency graph, and creates release source/SBOM attestations for release and manual runs. Release asset upload is explicitly disabled because immutable releases cannot be mutated after publication.
+- [`sbom-provenance.yml`](sbom-provenance.yml) generates a repository SPDX SBOM and creates release source/SBOM attestations for release and manual runs. Release asset upload is explicitly disabled because immutable releases cannot be mutated after publication, and dependency snapshot upload is disabled so the third-party SBOM action runs with a read-only job token.
 
 - [`scorecard.yml`](scorecard.yml) runs OpenSSF Scorecard and publishes SARIF/results for supply-chain posture visibility. It also supports the public Scorecard badge and keeps checks such as Maintained refreshed on a schedule.
 

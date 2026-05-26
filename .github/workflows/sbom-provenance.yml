@@ -15,7 +15,7 @@ jobs:
     name: Generate repository SBOM
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -27,7 +27,7 @@ jobs:
           format: spdx-json
           output-file: reponomics-dashboard-action.spdx.json
           artifact-name: reponomics-dashboard-action-spdx-sbom
-          dependency-snapshot: true
+          dependency-snapshot: false
           config: .github/syft-sbom.yaml
           upload-artifact-retention: 14
           upload-release-assets: false

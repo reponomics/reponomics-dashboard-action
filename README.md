@@ -9,23 +9,27 @@
 [![CI](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml)
 [![Action pins](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-action-pins.yml)
 [![Vendored assets](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml)
+[![Runtime lock](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml)
 [![Scorecard supply-chain security](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml)
 
 [![CodeQL](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql)
 [![Dependabot Updates](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates)
 [![Dependency Graph](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph)
 
-GitHub Action for Reponomics Dashboard repositories (repositories created from the Reponomics Dashboard template repo). Although this will be published as a GitHub Actions Marketplace action, conceptually it's best to think of this action and the associated template repo as forming a single product. The reason for moving runtime logic into an action was to create an independent delivery channel for enhancements and bug-fixes to consumers of the template repo.
+GitHub Action for the [Reponomics Dashboard template repository](https://github.com/reponomics/reponomics-dashboard). A composite action that handles data collection through the GitHub API, artifact storage in CSV format, data encryption, and rendering of the README and HTML dashboard for the Reponomics Dashboard. You're welcome to use it in any way you like (and if you do, we'd love to hear about what you built!). But for the purposes of explanation, we will mostly assume that it is being used in the workflows provided by our template repo. 
+
+The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub pages site. To use this action, all you need to do is copy our template repository, which has everything you need to start collecting your own data and hosting your own repo analytics dashboard straight from GitHub - no strings attached. Easy to setup in five minutes, no subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
 
 > [!WARNING]
 > Public pre-release: this repository is visible for review and hardening, but it is not yet promoted for general use. Do not expect stable behavior or seamless upgrades before `v1`.
 
-This action collects GitHub traffic data, keeps retained CSV data in a GitHub Actions artifact, renders the dashboard shell during `publish`, and supports dashboard/artifact key rotation.
+## Action Modes
+
+This is a composite action that does a lot of different things for the Reponomics Dashboard. These are the primary "modes" in which it is used:
+
+- `collect`: queries the GitHub API on a daily schedule and collects growth metrics (stars/subscribers, forks, etc.) and, most importantly, traffic data (viewers, views, clones, top referrers, and most popular content), which GitHub provides but only for a bounded, 14-day rolling window. Collecting and persisting this ephemeral data is one of the most important tasks for the Reponomics Dashboard action, since if you aren't storing the data while GitHub makes it available, there's no way to retroactively query it. Even if you have no desire for a hosted dashboard, a turnkey way to aggregate and persist this data in a portable CSV format is in itself highly valuable. In order to keep your data separate from your git history, `collect` mode stores data in _workflow artifacts_ - data that is stored and managed by GitHub but is not part of your repository's git history.
 
 ## Upgrade Model
-
-> [!NOTE]
-> Before `v1`, users should not expect seamless updates between versions. Pre-release versions may change action inputs, generated dashboard structure, retained artifact schema, or migration behavior while the project is being hardened. Pin exact refs and review release notes before moving between pre-`v1` versions.
 
 Use normal GitHub Action refs to choose the upgrade cadence:
 
@@ -102,7 +106,30 @@ After a successful encrypted `publish` run, open the workflow run's **Summary** 
 
 For private repositories in `privacy-mode: plain`, `publish` uploads a plain dashboard artifact named `traffic-dashboard-plain`. Download that artifact from the workflow run and open `index.html` directly.
 
-After unlock, use the dashboard `Export CSV` control to download a canonical ZIP of retained CSV files. Export delivery is browser-local: ciphertext is fetched from a published encrypted asset and decrypted in memory before download. The runtime verifies both encrypted-asset and decrypted-bundle digests before download. Plaintext export data is not uploaded back to GitHub by this path. Export scope is canonical retained history, including repos that are currently excluded from dashboard rendering.
+You can also download the dashboard with GitHub CLI if you have repository read access. Replace `OWNER/REPO` with the dashboard repository, use `gh run list --repo OWNER/REPO --status success --limit 10` to find the latest successful `publish` workflow run, and replace `RUN_ID` with that run ID.
+
+For encrypted `strong` or `casual` output, download the GitHub Pages artifact:
+
+```bash
+rm -rf .reponomics-dashboard
+mkdir -p .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name github-pages --dir .reponomics-dashboard
+tar -xf .reponomics-dashboard/artifact.tar -C .reponomics-dashboard
+python3 -m http.server 8000 --directory .reponomics-dashboard
+```
+
+Then open `http://localhost:8000/` and unlock the dashboard with `TRAFFIC_DASHBOARD_SECRET`.
+
+For private `plain` output, download the plain dashboard artifact:
+
+```bash
+rm -rf .reponomics-dashboard
+mkdir -p .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name traffic-dashboard-plain --dir .reponomics-dashboard
+python3 -m http.server 8000 --directory .reponomics-dashboard
+```
+
+For encrypted dashboards, after unlock, use the dashboard `Export CSV` control to download a canonical ZIP of retained CSV files. Export delivery is browser-local: ciphertext is fetched from a published encrypted asset and decrypted in memory before download. The runtime verifies both encrypted-asset and decrypted-bundle digests before download. Plaintext export data is not uploaded back to GitHub by this path. Export scope is canonical retained history, including repos that are currently excluded from dashboard rendering.
 
 See [CSV Export Architecture Guide](./docs/CSV_EXPORT.md) for implementation details, integrity model boundaries, and payload size-estimation formulas.
 

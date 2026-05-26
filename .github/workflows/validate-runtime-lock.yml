@@ -1,11 +1,11 @@
-name: Validate vendored assets
+name: Validate runtime lock
 
 on:
   workflow_call:
   push:
     branches: [main]
   schedule:
-    - cron: "37 9 * * 1"
+    - cron: "27 9 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate vendored third-party assets
+    name: Validate hash-pinned runtime dependencies
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -24,7 +24,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-runtime.txt
 
-      - name: Validate vendored third-party assets
-        run: make validate-vendored-assets
+      - name: Validate runtime dependency lock
+        run: make validate-runtime-lock

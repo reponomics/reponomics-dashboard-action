@@ -1,0 +1,58 @@
+name: Update vendored assets
+
+on:
+  schedule:
+    - cron: "7 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update vendored third-party assets
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Update vendored third-party assets
+        run: make update-vendored-assets
+
+      - name: Validate vendored third-party assets
+        run: make validate-vendored-assets
+
+      - name: Create pull request
+        env:
+          BRANCH: automation/update-vendored-assets
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- vendor; then
+            echo "No vendored asset updates."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BRANCH:$BRANCH" || true
+          git switch -C "$BRANCH"
+          git add vendor
+          git commit -m "build: update vendored assets"
+          git push --force-with-lease origin "HEAD:$BRANCH"
+          if gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$BRANCH" --repo "$GITHUB_REPOSITORY" --title "build: update vendored assets" --body "Updates vendored browser assets from their recorded upstream npm packages and refreshes the manifest hashes."
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "build: update vendored assets" --body "Updates vendored browser assets from their recorded upstream npm packages and refreshes the manifest hashes."
+          fi

@@ -60,7 +60,7 @@ ACCESS_MODE_PUBLIC = "public"
 ACCESS_MODE_ENCRYPTED = "encrypted"
 ACCESS_MODE_LEGACY_SHARED_SECRET = "shared-secret"
 
-PBKDF2_ITERATIONS = 300_000
+PBKDF2_ITERATIONS = 600_000
 PBKDF2_SALT_BYTES = 16
 AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -777,6 +777,7 @@ BASE_STYLES = """
     }
     .stat-spark path.line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
     .stat-spark path.area { stroke: none; opacity: 0.22; }
+    .dashboard-hidden { display: none; }
     .compare-summary {
       display: none;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -814,6 +815,7 @@ BASE_STYLES = """
       height: 10px;
       border-radius: 999px;
       flex: 0 0 auto;
+      background: var(--repo-color, var(--accent));
     }
     .compare-metric-row {
       display: flex;
@@ -1053,6 +1055,7 @@ BASE_STYLES = """
       letter-spacing: -0.01em;
       line-height: 1.1;
     }
+    .momentum-value.muted { color: var(--text-muted); }
     .momentum-meta {
       color: var(--text-muted);
       font-size: 0.78rem;
@@ -1233,6 +1236,7 @@ BASE_STYLES = """
       height: 8px;
       border-radius: 999px;
       flex: 0 0 auto;
+      background: var(--repo-color, var(--accent));
       box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04);
     }
     .repo-row:focus-visible {
@@ -2747,7 +2751,7 @@ APP_RUNTIME_JS = """
         cells.push(`
           <div class="momentum-cell">
             <span class="momentum-label"><span class="moji">🔥</span>Hot streak</span>
-            <span class="momentum-value" style="color: var(--text-muted)">—</span>
+            <span class="momentum-value muted">—</span>
             <span class="momentum-meta">no current streak above baseline (~${formatNumber(Math.round(m.streak.median))}/d)</span>
           </div>`);
       }
@@ -3024,7 +3028,7 @@ APP_RUNTIME_JS = """
           });
           card.innerHTML = `
             <div class="compare-header">
-              <span class="color-dot" style="background:${repoColor}"></span>
+              <span class="color-dot"></span>
               <span>${escapeHtml(getShortName(repo.name))}</span>
             </div>
             ${rows}
@@ -3788,7 +3792,6 @@ APP_RUNTIME_JS = """
         const value = Number(repo[metric.key] || 0);
         const sharePct = totalForMetric > 0 ? (value / totalForMetric) * 100 : 0;
         const barPct = Math.max(2, (value / maxForMetric) * 100);
-        const repoColor = getRepoColor(repo.name);
         const sparkValues = (repo.series && repo.series[metric.key]) || [];
         const sparkSVG = buildRepoSparkSVG(sparkValues, metric.color);
 
@@ -3799,7 +3802,7 @@ APP_RUNTIME_JS = """
             <td class="checkbox-col"><input type="checkbox" data-repo="${repo.name}"${checked} aria-label="Compare ${escapeHtml(getShortName(repo.name))}"></td>
             <td class="repo-name">
               <span class="repo-name-wrap">
-                <span class="repo-color-dot" style="background:${repoColor}"></span>
+                <span class="repo-color-dot"></span>
                 <span>${escapeHtml(repo.name)}${daysMeta}</span>
               </span>
             </td>
@@ -3817,7 +3820,7 @@ APP_RUNTIME_JS = """
             <td>
               <div class="repo-share">
                 <div class="repo-bar-track" aria-hidden="true">
-                  <div class="repo-bar" style="width:${barPct.toFixed(1)}%; background: linear-gradient(90deg, ${metric.color}, ${hexAlpha(metric.color, 0.6)});"></div>
+                  <div class="repo-bar" data-bar-pct="${barPct.toFixed(1)}"></div>
                 </div>
                 <span class="repo-share-pct">${sharePct.toFixed(1)}%</span>
               </div>
@@ -3828,6 +3831,7 @@ APP_RUNTIME_JS = """
       container.innerHTML = html;
 
       container.querySelectorAll('tr[data-repo]').forEach((row) => {
+        row.style.setProperty('--repo-color', getRepoColor(row.dataset.repo));
         const select = function(event) {
           if (event && event.target && event.target.closest('input[type="checkbox"]')) return;
           const modifier = !!(event && (event.metaKey || event.ctrlKey || event.shiftKey));
@@ -3844,6 +3848,14 @@ APP_RUNTIME_JS = """
       });
       container.querySelectorAll('th.sortable').forEach((th) => {
         th.addEventListener('click', function() { setRepoSort(th.dataset.sort); });
+      });
+      container.querySelectorAll('.repo-bar').forEach((bar) => {
+        const pct = Math.max(0, Math.min(100, Number(bar.dataset.barPct || 0)));
+        bar.style.width = pct.toFixed(1) + '%';
+        bar.style.setProperty(
+          '--bar-color',
+          `linear-gradient(90deg, ${metric.color}, ${hexAlpha(metric.color, 0.6)})`
+        );
       });
     }
 
@@ -3906,7 +3918,7 @@ APP_RUNTIME_JS = """
       sanitizeSelection();
       syncUrlHash();
       const dashboardApp = document.getElementById('dashboard-app');
-      dashboardApp.style.display = 'block';
+      dashboardApp.classList.remove('dashboard-hidden');
       ensureCharts();
       updateControls();
       updateMetricTabs();
@@ -3951,6 +3963,8 @@ APP_RUNTIME_JS = """
       const calendarNextBtn = document.getElementById('calendarNextBtn');
       if (calendarPrevBtn) calendarPrevBtn.addEventListener('click', function() { shiftCalendarMonth(-1); });
       if (calendarNextBtn) calendarNextBtn.addEventListener('click', function() { shiftCalendarMonth(1); });
+      const clearButton = document.getElementById('clearSelectionBtn');
+      if (clearButton) clearButton.addEventListener('click', clearSelection);
       const themeToggle = document.getElementById('themeToggle');
       if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
       // Sync the toggle button's icon/label with the bootstrap-applied theme.
@@ -4393,7 +4407,7 @@ SECURE_RUNTIME_JS = """
         exportButton.disabled = true;
       }
       setUnlockStatus(
-        'This browser cannot decrypt the dashboard here. Open it over HTTPS or use the standalone artifact.',
+        'This browser cannot decrypt the dashboard here. Open it over HTTPS or serve the extracted dashboard artifact over local HTTP.',
         'error'
       );
     } else {
@@ -4811,7 +4825,7 @@ def _render_update_notice():
 
 def _build_dashboard_shell(updated_text, stat_values, hidden=False):
     """Build the shared dashboard markup used by public and secure pages."""
-    hidden_attr = ' style="display:none;"' if hidden else ""
+    hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
   <div id="dashboard-app"{hidden_attr}>
     <div class="hero">
@@ -4827,7 +4841,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
         <div class="hero-toolbar-controls">
           <span class="status-badge active" id="activeBadge"></span>
           <span class="status-badge compare" id="compareBadge"></span>
-          <button class="toolbar-button" id="clearSelectionBtn" type="button" onclick="clearSelection()">Clear selection</button>
+          <button class="toolbar-button" id="clearSelectionBtn" type="button">Clear selection</button>
           <button class="toolbar-button" id="export-button" type="button" title="Download canonical retained CSV data as a ZIP file">Export to CSV</button>
           <button class="toolbar-button" id="export-hash-button" type="button" title="Copy SHA-256 digest for manual download verification">Copy SHA-256</button>
           <details class="export-verify-tip">
@@ -5059,32 +5073,71 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
 """
 
 
-def _wrap_html(body, chart_loader, runtime_js, extra_head="", body_attributes=""):
+def _csp_hash(content: str) -> str:
+    digest = hashlib.sha256(content.encode("utf-8")).digest()
+    return "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
+
+
+def _build_csp(style_blocks: list[str], script_blocks: list[str]) -> str:
+    style_sources = ["'self'", *[_csp_hash(block) for block in style_blocks if block]]
+    script_sources = ["'self'", *[_csp_hash(block) for block in script_blocks if block]]
+    directives = [
+        "default-src 'self'",
+        "script-src " + " ".join(script_sources),
+        "style-src " + " ".join(style_sources),
+        "font-src 'self' data:",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+    ]
+    return "; ".join(directives)
+
+
+def _theme_bootstrap_js() -> str:
+    return """(function() {
+      try {
+        var saved = localStorage.getItem('gh-traffic-theme');
+        var theme = (saved === 'light' || saved === 'dark')
+          ? saved
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) { /* ignore */ }
+    })();"""
+
+
+def _wrap_html(
+    body,
+    chart_loader,
+    runtime_js,
+    extra_head="",
+    body_attributes="",
+    inline_chart_js="",
+    extra_csp_scripts=None,
+):
     """Wrap page markup in the shared HTML shell."""
     body_attribute_text = f" {body_attributes}" if body_attributes else ""
+    style_content = f"{_build_font_face_styles()}\n{BASE_STYLES}"
+    theme_js = _theme_bootstrap_js()
+    script_blocks = [
+        inline_chart_js,
+        theme_js,
+        *(extra_csp_scripts or []),
+        runtime_js,
+    ]
+    csp = html.escape(_build_csp([style_content], script_blocks), quote=True)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
+  <meta http-equiv="Content-Security-Policy" content="{csp}">
   {extra_head}
   {chart_loader}
-  <style>
-{_build_font_face_styles()}
-{BASE_STYLES}
-  </style>
-  <script>
-    (function() {{
-      try {{
-        var saved = localStorage.getItem('gh-traffic-theme');
-        var theme = (saved === 'light' || saved === 'dark')
-          ? saved
-          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-      }} catch (e) {{ /* ignore */ }}
-    }})();
-  </script>
+  <style>{style_content}</style>
+  <script>{theme_js}</script>
 </head>
 <body{body_attribute_text}>
 {body}
@@ -5108,15 +5161,13 @@ def _wrap_html(body, chart_loader, runtime_js, extra_head="", body_attributes=""
     </div>
   </footer>
 
-  <script>
-{runtime_js}
-  </script>
+  <script>{runtime_js}</script>
 </body>
 </html>
 """
 
 
-def _build_public_html(payload, chart_loader):
+def _build_public_html(payload, chart_loader, inline_chart_js=""):
     """Build the standard published dashboard HTML."""
     totals = payload["totals"]
     shell = _build_dashboard_shell(
@@ -5139,7 +5190,7 @@ def _build_public_html(payload, chart_loader):
         + json.dumps(payload, separators=(",", ":"))
         + ";\nrenderDashboard(dashboardPayload);\n"
     )
-    return _wrap_html(shell, chart_loader, runtime_js)
+    return _wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
 
 
 def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
@@ -5277,6 +5328,7 @@ def _build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         runtime_js,
         extra_head='<meta name="robots" content="noindex, nofollow">',
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
+        extra_csp_scripts=[encrypted_payload_json, export_manifest_json],
     )
 
 
@@ -5348,9 +5400,11 @@ def render():
     with open(PAGE_INDEX_OUTPUT_PATH, "w") as f:
         f.write(published_html)
 
+    standalone_chart_js = _load_vendored_chart_js()
     standalone_html = _build_public_html(
         payload,
-        f"<script>{_load_vendored_chart_js()}</script>",
+        f"<script>{standalone_chart_js}</script>",
+        inline_chart_js=standalone_chart_js,
     )
 
     os.makedirs(os.path.dirname(STANDALONE_OUTPUT_PATH), exist_ok=True)

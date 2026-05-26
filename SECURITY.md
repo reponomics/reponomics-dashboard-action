@@ -50,7 +50,7 @@ This repository is public for review and hardening, not broad production adoptio
 - CI validates the action code, workflow shape, GitHub Action SHA pins, and vendored assets.
 - Vendored assets are checked against recorded upstream package metadata and OSV vulnerability data.
 - Generated dashboard artifacts in consuming repositories require their own workflow and deployment controls.
-- Provenance and SBOM workflows are still being designed and should not be assumed unless a specific release or consuming repository provides them.
+- Provenance and SBOM claims are documented in `docs/PROVENANCE.md` and should be read according to the specific commit, release, or consuming workflow being evaluated.
 
 ## Disclosure
 

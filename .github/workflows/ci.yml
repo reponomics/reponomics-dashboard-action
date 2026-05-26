@@ -25,6 +25,10 @@ jobs:
     name: Validate vendored assets
     uses: ./.github/workflows/validate-vendored-assets.yml
 
+  validate-runtime-lock:
+    name: Validate runtime lock
+    uses: ./.github/workflows/validate-runtime-lock.yml
+
   validate-release-notice:
     name: Validate release notice
     runs-on: ubuntu-24.04
@@ -35,7 +39,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
 
@@ -85,7 +89,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
 

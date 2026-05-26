@@ -9,14 +9,16 @@ modified: 2026-05-26
 
 This document summarizes what this repository can currently assert about source authenticity, vendored asset provenance, release materials, generated artifacts, and integrity checks. It is intentionally conservative: a claim belongs here only if it is backed by repository files, CI, GitHub metadata, or a command a user can run.
 
+This is not meant to be the normal setup guide. Most users should follow the README and may reasonably use the moving major-version ref recommended there once the project has a stable release line. This document is for users, researchers, maintainers, or reviewers who want to inspect the higher-assurance evidence behind the project's privacy and supply-chain posture. Full commit SHA pinning is the highest-assurance consumer-side control, but it is not presented here as the only acceptable way for ordinary users to run the action.
+
 ## Short Version
 
-- The strongest way to consume the action is by full commit SHA: `uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>`. With a full SHA, the action code GitHub runs is the repository tree at that immutable commit.
+- The highest-assurance way to consume the action is by full commit SHA: `uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>`. With a full SHA, the action code GitHub runs is the repository tree at that immutable commit. Major-version refs are more convenient for normal users, but they trade some strict pinning assurance for easier updates.
 - Chart.js and dashboard fonts are vendored, not loaded from CDNs. The current manifests record exact npm package versions, tarball URLs, tarball integrity values, upstream source paths, local paths, local SHA-256 digests, license paths, and license SHA-256 digests.
 - `make validate-vendored-assets` verifies that the vendored browser asset bytes and license bytes match the recorded npm package tarballs, verifies each tarball SRI value against the downloaded tarball, confirms the registry still reports the recorded tarball and integrity metadata for each pinned package version, and checks OSV for known vulnerabilities in each pinned package version.
 - Published dashboard HTML loads Chart.js from `assets/chart.umd.min.js` in the same generated artifact, and the renderer copies that file from `vendor/chart.js/chart.umd.min.js`. The supported path is not a remote script and not a CDN.
 - Repository CI validates workflow/action SHA pins, vendored assets, tests, type checks, Python dependency audit, OSV SARIF scanning, Scorecard, and CodeQL. The dashboard renderer also emits a strict CSP with hashes for first-party inline code. These are hardening and detection controls; they are not a substitute for pinning the action by commit SHA.
-- GitHub immutable releases are enabled for releases. For example, `gh release view v0.11.0 --json isImmutable,targetCommitish` reports `isImmutable: true` and target commit `0477e986ff0dcd4a08e0a3bc41dc6804591e8c06`.
+- GitHub immutable releases are enabled for releases. Use `gh release view TAG --json isImmutable,targetCommitish,url` to inspect the current immutability and target commit evidence for a specific release.
 - The SBOM/provenance workflow generates SPDX SBOMs and GitHub artifact attestations for release source archives. Because this is a composite action consumed by Git ref rather than a package registry artifact, the release attestation covers the source archive produced from the release checkout, not a registry package.
 
 ## What Can Be Asserted
@@ -25,16 +27,13 @@ This document summarizes what this repository can currently assert about source 
 
 - This repository distributes a composite GitHub Action. A consuming workflow that uses `reponomics/reponomics-dashboard-action@REF` causes GitHub Actions to fetch this repository at `REF` and run `action.yml` from that checkout.
 - If `REF` is a full 40-character commit SHA, the consumed source tree is fixed by Git object identity. A user can inspect the exact source at `https://github.com/reponomics/reponomics-dashboard-action/tree/<commit-sha>`.
-- If `REF` is a tag such as `v0.11.0` or `v0.11`, the user can inspect which commit the tag currently resolves to, but a tag is a weaker reference than a full commit SHA unless repository policy and GitHub protections are relied on. The strongest recommendation remains full-SHA pinning.
+- If `REF` is a tag such as `v0.11.0` or `v0.11`, the user can inspect which commit the tag currently resolves to, but a tag is a weaker reference than a full commit SHA unless repository policy and GitHub protections are relied on. Major-version refs may be the practical recommendation for most users because they receive fixes and features automatically; full commit SHA pinning is the high-assurance option for users who prefer explicit update review.
 - The action itself uses full-SHA pins for imported GitHub Actions in `action.yml`, and `scripts/validate_action_pins.py` enforces that policy for `action.yml` and `.github` workflow files.
 
 ### Vendored Browser Assets
 
 - Each vendored browser asset has a manifest under `vendor/*/manifest.json`. The manifest identifies the npm package, exact version, registry, tarball URL, npm tarball integrity value, upstream path inside the tarball, local vendored path, local SHA-256 hash, license source path, local license path, and license SHA-256 hash.
-- Current vendored browser assets are:
-  - `chart.js@4.5.1`: `vendor/chart.js/chart.umd.min.js` matches upstream `package/dist/chart.umd.min.js`, SHA-256 `48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a`.
-  - `@fontsource-variable/inter@5.2.8`: `vendor/inter/inter-latin-wght-normal.woff2` matches upstream `package/files/inter-latin-wght-normal.woff2`, SHA-256 `3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62`.
-  - `@fontsource-variable/jetbrains-mono@5.2.8`: `vendor/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2` matches upstream `package/files/jetbrains-mono-latin-wght-normal.woff2`, SHA-256 `18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e`.
+- Current vendored browser assets include Chart.js, Inter, and JetBrains Mono. Their exact package versions, upstream paths, local paths, tarball integrity values, file SHA-256 values, and license SHA-256 values are recorded in the corresponding `vendor/*/manifest.json` files.
 - `scripts/validate_vendored_assets.py` proves byte identity against the published npm tarball at validation time. It does not merely trust the local hash; it downloads the recorded package tarball, verifies the tarball integrity, extracts the recorded upstream file, hashes it, and compares that hash to the local manifest and local file.
 - `.github/workflows/validate-vendored-assets.yml` runs the vendored asset validator on pushes to `main`, on a weekly schedule, manually, and through the aggregate CI workflow. A passing run is evidence that the committed vendored asset still matches its recorded upstream package artifact and has no known OSV vulnerability at that package version at the time of the run.
 
@@ -50,7 +49,7 @@ This document summarizes what this repository can currently assert about source 
 ### Release Materials
 
 - GitHub immutable releases are configured. A current release can be checked with `gh release view TAG --repo reponomics/reponomics-dashboard-action --json isImmutable,targetCommitish,url`.
-- GitHub release attestations can be checked with `gh release verify TAG --repo reponomics/reponomics-dashboard-action --format json`. For `v0.11.0`, GitHub verifies a release attestation for `pkg:github/reponomics/reponomics-dashboard-action@v0.11.0` with SHA-1 commit digest `0477e986ff0dcd4a08e0a3bc41dc6804591e8c06`.
+- GitHub release attestations can be checked with `gh release verify TAG --repo reponomics/reponomics-dashboard-action --format json`. The verification output includes the package URL, attested subject, and digest information for the release being checked.
 - `.github/workflows/sbom-provenance.yml` generates an SPDX JSON SBOM with Anchore's SBOM action and submits dependency information to GitHub's dependency graph.
 - For published releases and manual runs, the same workflow creates a `git archive` source tarball from the release checkout, generates a matching SPDX SBOM, and uses GitHub artifact attestations for both the source archive and the SBOM.
 - These attestations establish GitHub-hosted provenance for the generated release source archive and SBOM. They do not change how GitHub Actions consumes this repository as a composite action; consumers still get the source tree for the ref they use.
@@ -91,22 +90,11 @@ curl -fsSL "https://raw.githubusercontent.com/reponomics/reponomics-dashboard-ac
 curl -fsSL "https://raw.githubusercontent.com/reponomics/reponomics-dashboard-action/REF/vendor/chart.js/chart.umd.min.js" | shasum -a 256
 ```
 
-The expected Chart.js digest for the current manifest is:
-
-```text
-48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a  vendor/chart.js/chart.umd.min.js
-```
-
-The expected font digests for the current manifests are:
-
-```text
-3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62  vendor/inter/inter-latin-wght-normal.woff2
-18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e  vendor/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2
-```
+The expected digests are the `sha256` values in the corresponding manifest files at the commit or tag being evaluated. This document intentionally does not duplicate those values so the manifest remains the single source of truth.
 
 ## How To Verify The Action A Consuming Repo Runs
 
-1. Prefer a full commit SHA in the consuming workflow:
+1. For the highest-assurance posture, use a full commit SHA in the consuming workflow:
 
 ```yaml
 uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>

@@ -9,16 +9,9 @@ Recently addressed:
 - [x] Vendor Chart.js from a pinned npm tarball and validate the vendored bytes, license, upstream tarball integrity, and OSV vulnerability status through `make validate-vendored-assets`.
 - [x] Render Pages output against the same-origin `assets/chart.umd.min.js` file and assert generated dashboard HTML does not reference remote JavaScript. Do not inline Chart.js into the Pages HTML; keeping it as a same-origin script is the cleaner CSP direction.
 - [x] Keep retained data and generated dashboard output out of git. Dashboard delivery is via GitHub Pages artifacts for encrypted modes and workflow artifacts for private `plain` mode.
+- [x] Add a generated CSP meta tag for dashboard HTML. The renderer hashes its inline CSS and first-party inline scripts, keeps Chart.js as a same-origin external script, allows only same-origin fetches, and avoids inline event handlers and HTML style attributes.
 
 Deferred:
-
-- [ ] Add a strict CSP for the Pages dashboard. This has not been implemented in the renderer yet: the generated HTML still uses inline style/runtime blocks, JSON script blocks, and `data:` font URLs. Keep Chart.js as a same-origin external script; either move first-party CSS/JS/font assets to same-origin files or generate CSP hashes for the remaining inline blocks.
-
-  Target direction:
-
-  ```http
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-...'; style-src 'self' 'sha256-...'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'
-  ```
 
 - [ ] Decide whether to keep, remove, or re-scope `dist/dashboard-standalone.html`. It is generated locally today with inlined Chart.js, is not uploaded by the composite action, and currently uses the public/plain dashboard builder even during encrypted publish runs. Do not promote it as the primary offline/mobile path unless the weaker CSP story and encrypted-mode behavior are explicit and tested.
 - [x] Use existing workflow artifacts as the offline/convenience access path instead of committing generated dashboard HTML or adding a separate offline zip. Encrypted modes reuse the `github-pages` artifact that already feeds Pages deployment; private `plain` mode has a separate `traffic-dashboard-plain` artifact because Pages is intentionally disabled there. The README documents GitHub CLI download commands for both paths, and artifact retention remains the availability boundary.

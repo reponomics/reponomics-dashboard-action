@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import csv
 from datetime import datetime, timedelta, timezone
+from html import unescape
 from html.parser import HTMLParser
 import hashlib
 import io
@@ -59,6 +60,16 @@ def _script_json(html: str, script_id: str) -> dict[str, Any]:
     if not match:
         raise AssertionError(f"missing script payload for {script_id}")
     return json.loads(match.group(1))
+
+
+def _csp_content(document: str) -> str:
+    match = re.search(
+        r'<meta http-equiv="Content-Security-Policy" content="([^"]+)">',
+        document,
+    )
+    if not match:
+        raise AssertionError("missing Content-Security-Policy meta tag")
+    return unescape(match.group(1))
 
 
 def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
@@ -640,9 +651,18 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
 
     dashboard_html = config.pages_index_path.read_text(encoding="utf-8")
     published = _parse_dashboard_html(dashboard_html)
+    csp = _csp_content(dashboard_html)
     script_sources = [script.get("src") for script in published.scripts if script.get("src")]
     assert script_sources == ["assets/chart.umd.min.js"]
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
+    assert "default-src 'self'" in csp
+    assert "script-src 'self' 'sha256-" in csp
+    assert "style-src 'self' 'sha256-" in csp
+    assert "connect-src 'self'" in csp
+    assert "object-src 'none'" in csp
+    assert "'unsafe-inline'" not in csp
+    assert "onclick=" not in dashboard_html
+    assert 'style="' not in dashboard_html
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
     assert "unlock-form" in published.forms
     assert 'id="calendarHint"' in dashboard_html

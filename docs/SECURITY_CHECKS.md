@@ -54,6 +54,18 @@ make security-audit
 
 CI runs this check through `.github/workflows/open-source-security.yml` on pull requests, pushes to `main`, a weekly schedule, and manual dispatch. This is intentionally separate from the GitHub-native Dependabot signal: Dependabot opens update PRs, while `pip-audit` gives an open-source dependency vulnerability gate on the resolved CI environment.
 
+## Runtime Dependency Lock
+
+`requirements-runtime.lock` is the hash-pinned runtime dependency lock generated from `pyproject.toml` with `make lock-runtime`. The composite action installs this lock with `python -m pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-runtime.lock"` before running the bundled runtime script, so the action no longer resolves third-party Python dependency ranges at runtime.
+
+Run the lock validation locally with:
+
+```bash
+make validate-runtime-lock
+```
+
+CI runs this check in the Python matrix. The check regenerates a temporary lock from `pyproject.toml`, compares it against the committed lock, and verifies that `pip` accepts the committed lock in hash-required mode.
+
 ## OSV SARIF Scan
 
 `.github/workflows/osv-scanner.yml` runs the OSV-Scanner reusable workflow on pushes to `main`, a weekly schedule, and manual dispatch. It uploads SARIF to GitHub code scanning using the workflow permissions recommended by OSV-Scanner.

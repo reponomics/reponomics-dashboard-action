@@ -72,6 +72,9 @@ jobs:
       - name: Validate workflow YAML
         run: make validate-workflows
 
+      - name: Validate runtime dependency lock
+        run: make validate-runtime-lock
+
       - name: Test
         run: make test
 

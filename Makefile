@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci
-.PHONY: test coverage complexity security security-audit
+.PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
 .PHONY: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
@@ -11,9 +11,12 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 ANTIPASTA := $(VENV)/bin/antipasta
 PIP_AUDIT := $(VENV)/bin/pip-audit
+PIP_COMPILE := $(VENV)/bin/pip-compile
 PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
+RUNTIME_LOCK := requirements-runtime.lock
+PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 
@@ -46,7 +49,24 @@ complexity: install ## Run complexity metrics
 security-audit: install ## Audit Python dependencies for known vulnerabilities
 	$(PIP_AUDIT) --local --skip-editable --progress-spinner off
 
-security: security-audit validate-vendored-assets ## Run open-source security checks
+security: security-audit validate-runtime-lock validate-vendored-assets ## Run open-source security checks
+
+lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
+	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
+
+validate-runtime-lock: install ## Verify runtime dependency lock is current and hash-installable
+	tmp_lock=$$(mktemp); \
+	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file "$$tmp_lock" pyproject.toml; \
+	if ! cmp -s "$(RUNTIME_LOCK)" "$$tmp_lock"; then \
+		echo "$(RUNTIME_LOCK) is stale; run make lock-runtime"; \
+		diff -u "$(RUNTIME_LOCK)" "$$tmp_lock" || true; \
+		rm -f "$$tmp_lock"; \
+		exit 1; \
+	fi; \
+	rm -f "$$tmp_lock"
+	tmp_site=$$(mktemp -d); \
+	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(RUNTIME_LOCK); \
+	rm -rf "$$tmp_site"
 
 lint: install ## Run lint checks
 	$(PYTHON) -m ruff check dashboard_action tests scripts
@@ -54,7 +74,7 @@ lint: install ## Run lint checks
 type-check: install ## Run static type checks
 	$(PYTHON) -m mypy
 
-validate: validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice ## Run validation checks
+validate: validate-action validate-workflows validate-action-pins validate-runtime-lock validate-vendored-assets validate-release-notice ## Run validation checks
 
 validate-action: install ## Validate action.yml
 	$(PYTHON) -c "import pathlib, yaml; data = yaml.safe_load(pathlib.Path('action.yml').read_text()); assert data['runs']['using'] == 'composite'"
@@ -71,7 +91,7 @@ validate-vendored-assets: install ## Validate vendored third-party assets
 validate-release-notice: install ## Validate release notice tooling
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v
 
-ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-release-notice validate-vendored-assets ## Run CI checks
+ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-release-notice validate-runtime-lock validate-vendored-assets ## Run CI checks
 
 fixture-collect: install ## Run collect fixture without live GitHub API calls
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_collect_fixture_updates_artifact_without_rendering_outputs -v

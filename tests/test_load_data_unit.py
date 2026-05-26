@@ -147,6 +147,20 @@ def test_collection_quality_days_uses_latest_run_per_day() -> None:
     assert days[0]["with_data_repos"] == 0
     assert days[0]["zero_traffic_repos"] == 1
     assert days[0]["skipped_repos"] == 1
+    assert days[0]["repos"] == [
+        {
+            "repo": "demo/one",
+            "status": "ok_zero_data",
+            "metric_source": "repo-detail",
+            "error_type": "",
+        },
+        {
+            "repo": "demo/two",
+            "status": "skipped_unavailable",
+            "metric_source": "repo-detail",
+            "error_type": "",
+        },
+    ]
     assert days[1]["run_count"] == 1
     assert days[1]["status"] == "healthy"
 

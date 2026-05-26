@@ -2114,12 +2114,64 @@ APP_RUNTIME_JS = """
     }
 
     function qualityDaysForSelectedWindow() {
-      const allDays = (state.payload?.data_quality?.days || []).slice();
+      const allDays = applyVisibilityThresholdToQualityDays(
+        (state.payload?.data_quality?.days || []).slice()
+      );
       if (!allDays.length) return [];
       if (getSelectedWindow() === 'all') return allDays;
       const cutoff = getWindowCutoffDate();
       if (!cutoff) return allDays;
       return allDays.filter((day) => String(day.date || '') >= cutoff);
+    }
+
+    function summarizeQualityDayStatuses(day, repos) {
+      const counts = {
+        ok_with_data: 0,
+        ok_zero_data: 0,
+        skipped_unavailable: 0,
+        error: 0,
+        error_secondary_rate_limit: 0,
+      };
+      (repos || []).forEach((row) => {
+        const status = String(row?.status || '');
+        if (status in counts) counts[status] += 1;
+      });
+      const trackedRepos = (repos || []).length;
+      const withDataRepos = counts.ok_with_data;
+      const zeroTrafficRepos = counts.ok_zero_data;
+      const skippedRepos = counts.skipped_unavailable;
+      const errorRepos = counts.error + counts.error_secondary_rate_limit;
+      const observedRepos = withDataRepos + zeroTrafficRepos;
+      const hasCollectionGaps = skippedRepos > 0 || errorRepos > 0;
+      let status = 'healthy';
+      if (hasCollectionGaps) status = 'gaps_detected';
+      else if (trackedRepos > 0 && zeroTrafficRepos === trackedRepos) status = 'all_zero';
+      return {
+        ...day,
+        status,
+        has_collection_gaps: hasCollectionGaps,
+        tracked_repos: trackedRepos,
+        with_data_repos: withDataRepos,
+        zero_traffic_repos: zeroTrafficRepos,
+        skipped_repos: skippedRepos,
+        error_repos: errorRepos,
+        coverage_ratio: trackedRepos ? Math.round((observedRepos / trackedRepos) * 10000) / 10000 : 1,
+        repos: repos || [],
+      };
+    }
+
+    function applyVisibilityThresholdToQualityDays(days) {
+      const hasRepoBreakdown = (days || []).some((day) => Array.isArray(day?.repos));
+      if (!hasRepoBreakdown) return days;
+      const visibleRepoNames = new Set(getVisibleRepos().map((repo) => repo.name));
+      if (!visibleRepoNames.size) return [];
+      return (days || [])
+        .map((day) => {
+          const dayRepos = Array.isArray(day?.repos) ? day.repos : [];
+          const filtered = dayRepos.filter((row) => visibleRepoNames.has(String(row?.repo || '')));
+          return summarizeQualityDayStatuses(day, filtered);
+        })
+        .filter((day) => Number(day?.tracked_repos || 0) > 0);
     }
 
     function monthKeyFromIsoDate(value) {

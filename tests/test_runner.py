@@ -653,6 +653,7 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert "function renderCollectionCalendar()" in dashboard_html
     assert "function computeNoRunStats(days)" in dashboard_html
     assert "function calendarStatusLabel(day)" in dashboard_html
+    assert "function applyVisibilityThresholdToQualityDays(days)" in dashboard_html
     assert "status: no-run" in dashboard_html
     assert "no-run day(s)" in dashboard_html
     assert "function shiftCalendarMonth(delta)" in dashboard_html

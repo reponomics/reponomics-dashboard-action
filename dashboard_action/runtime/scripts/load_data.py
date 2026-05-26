@@ -342,6 +342,19 @@ def collection_quality_days(status_rows):
             status = "gaps_detected"
         elif summary["tracked_repos"] > 0 and summary["zero_traffic_repos"] == summary["tracked_repos"]:
             status = "all_zero"
+        repos = sorted(
+            [
+                {
+                    "repo": repo,
+                    "status": row.get("status", ""),
+                    "metric_source": row.get("metric_source", ""),
+                    "error_type": row.get("error_type", ""),
+                }
+                for repo, row in summary["by_repo"].items()
+                if repo
+            ],
+            key=lambda item: item["repo"],
+        )
         summaries.append(
             {
                 "date": day,
@@ -355,6 +368,7 @@ def collection_quality_days(status_rows):
                 "skipped_repos": summary["skipped_repos"],
                 "error_repos": summary["error_repos"],
                 "coverage_ratio": round(summary["coverage_ratio"], 4),
+                "repos": repos,
             }
         )
 

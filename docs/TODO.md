@@ -33,6 +33,9 @@ Deferred:
 - [ ] Before first release, add a proper complexity gate with `antipasta` and `complexipy` after reducing large runtime modules and high-complexity functions. Initial targets include `load_data.py`, `collect.py`, `release_notice.py`, and the dashboard/rendering modules.
 - [x] Add CodeQL scanning for the action/runtime code. Current repository state appears to rely on GitHub code scanning/default setup rather than a checked-in workflow.
 - [x] Add OSSF Scorecard on push/merge to `main`. It can report posture without blocking normal CI while the project is still hardening.
+- [x] Add open-source dependency vulnerability checks with `pip-audit` and OSV SARIF upload. These complement Dependabot and CodeQL rather than replacing them.
+- [x] Generate SPDX SBOMs and release provenance attestations for repository source archives. This covers the composite-action release shape even though there is no package registry publish.
+- [ ] If the OpenSSF Scorecard `Fuzzing` check becomes a release goal, add ClusterFuzzLite with Atheris harnesses only after identifying a stable parser boundary that is expected to remain in the product. Do not add placeholder fuzzers only for the badge.
 - [x] Decide whether to add Snyk, Codacy, or another public quality/security badge after the core GitHub-native checks are stable. Current decision: do not add a third-party SaaS scanner or badge yet. Revisit only if GitHub-native checks leave a concrete gap; start advisory-only, high-severity/SARIF-oriented, and pinned by full action SHA if added later.
 - [x] Add public README badges once the workflows exist:
   - [x] project CI

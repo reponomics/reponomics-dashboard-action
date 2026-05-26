@@ -1,0 +1,27 @@
+name: OSV SARIF scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "7 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    name: OSV scanner
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+    with:
+      results-file-name: osv-scanner.sarif
+      scan-args: |-
+        --recursive
+        ./
+    permissions:
+      actions: read
+      contents: read
+      security-events: write

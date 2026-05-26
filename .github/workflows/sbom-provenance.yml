@@ -1,0 +1,92 @@
+name: SBOM and provenance
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate repository SBOM
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        with:
+          path: .
+          format: spdx-json
+          output-file: reponomics-dashboard-action.spdx.json
+          artifact-name: reponomics-dashboard-action-spdx-sbom
+          dependency-snapshot: true
+          upload-artifact-retention: 14
+
+  release-provenance:
+    name: Attest release source archive
+    if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Prepare release source archive
+        id: archive
+        env:
+          RELEASE_REF: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          mkdir -p dist
+          safe_ref="${RELEASE_REF//\//-}"
+          archive="dist/reponomics-dashboard-action-${safe_ref}.tar.gz"
+          git archive \
+            --format=tar.gz \
+            --prefix="reponomics-dashboard-action-${safe_ref}/" \
+            -o "$archive" \
+            HEAD
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "sbom=dist/reponomics-dashboard-action-${safe_ref}.spdx.json" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release SBOM
+        uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
+        with:
+          path: .
+          format: spdx-json
+          output-file: ${{ steps.archive.outputs.sbom }}
+          upload-artifact: false
+          dependency-snapshot: false
+
+      - name: Attest release source archive
+        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
+        with:
+          subject-path: ${{ steps.archive.outputs.archive }}
+
+      - name: Attest release SBOM
+        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
+        with:
+          subject-path: ${{ steps.archive.outputs.archive }}
+          sbom-path: ${{ steps.archive.outputs.sbom }}
+
+      - name: Upload release provenance materials
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reponomics-release-provenance
+          path: |
+            ${{ steps.archive.outputs.archive }}
+            ${{ steps.archive.outputs.sbom }}
+          if-no-files-found: error
+          retention-days: 90

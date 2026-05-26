@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci
-.PHONY: test coverage complexity
+.PHONY: test coverage complexity security security-audit
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
 .PHONY: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
@@ -10,6 +10,7 @@ VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 ANTIPASTA := $(VENV)/bin/antipasta
+PIP_AUDIT := $(VENV)/bin/pip-audit
 PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
@@ -23,6 +24,7 @@ install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
 $(INSTALL_STAMP): pyproject.toml
 	python3 -m venv $(VENV)
+	$(PYTHON) -m pip install --upgrade pip
 	$(PIP) install -e '.[dev]'
 	touch $(INSTALL_STAMP)
 
@@ -40,6 +42,11 @@ coverage: install ## Run tests with coverage report
 
 complexity: install ## Run complexity metrics
 	$(ANTIPASTA) metrics --directory dashboard_action
+
+security-audit: install ## Audit Python dependencies for known vulnerabilities
+	$(PIP_AUDIT) --local --skip-editable --progress-spinner off
+
+security: security-audit validate-vendored-assets ## Run open-source security checks
 
 lint: install ## Run lint checks
 	$(PYTHON) -m ruff check dashboard_action tests scripts

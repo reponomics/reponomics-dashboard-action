@@ -21,6 +21,7 @@ dev = [
     "antipasta>=1.1.2",
     "complexipy>=5.4.1",
     "mypy>=1.18",
+    "pip-audit>=2.10",
     "pre-commit>=4.0",
     "pytest>=7.0",
     "pytest-cov>=5.0",

@@ -117,6 +117,12 @@ preview-collection-quality-dashboard: install ## Render dashboard from collectio
 		GITHUB_EVENT_REPOSITORY_PRIVATE=true \
 		REPONOMICS_GENERATE_README=false \
 		$(abspath $(PYTHON)) -m dashboard_action.run
+	@test -s $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
+	@test -s $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/assets/chart.umd.min.js
+	@grep -q 'src="assets/chart.umd.min.js"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
+	@grep -q 'id="calendarMonthLabel"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
+	@grep -q '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
+	@grep -q '"date":"2026-04-30","status":"gaps_detected"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
 	@echo "Preview ready: $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html"
 
 clean: ## Remove local generated state

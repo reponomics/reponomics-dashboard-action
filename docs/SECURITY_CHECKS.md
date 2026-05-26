@@ -72,7 +72,7 @@ Run the lock validation locally with:
 make validate-runtime-lock
 ```
 
-CI runs this check in the Python matrix. The check regenerates a temporary lock from `pyproject.toml`, compares it against the committed lock, and verifies that `pip` accepts the committed lock in hash-required mode.
+CI runs this check through `.github/workflows/validate-runtime-lock.yml`, which is also called by the aggregate `.github/workflows/ci.yml` workflow. The check regenerates a temporary lock from `pyproject.toml`, compares it against the committed lock, and verifies that `pip` accepts the committed lock in hash-required mode.
 
 ## OSV SARIF Scan
 

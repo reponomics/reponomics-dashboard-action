@@ -25,6 +25,10 @@ jobs:
     name: Validate vendored assets
     uses: ./.github/workflows/validate-vendored-assets.yml
 
+  validate-runtime-lock:
+    name: Validate runtime lock
+    uses: ./.github/workflows/validate-runtime-lock.yml
+
   validate-release-notice:
     name: Validate release notice
     runs-on: ubuntu-24.04
@@ -71,9 +75,6 @@ jobs:
 
       - name: Validate workflow YAML
         run: make validate-workflows
-
-      - name: Validate runtime dependency lock
-        run: make validate-runtime-lock
 
       - name: Test
         run: make test

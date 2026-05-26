@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.0...v0.11.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **ci:** fix non-compliant workflows ([#51](https://github.com/reponomics/reponomics-dashboard-action/issues/51)) ([4f774c6](https://github.com/reponomics/reponomics-dashboard-action/commit/4f774c6e78a8139d42ce6b172118d4f89b2512f8))
+* **ci:** security and provenance hardening ([#49](https://github.com/reponomics/reponomics-dashboard-action/issues/49)) ([bb1eddd](https://github.com/reponomics/reponomics-dashboard-action/commit/bb1eddd30d6a9fb17b509f4f02da98a83acff6af))
+
 ## [0.11.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.10.1...v0.11.0) (2026-05-26)
 
 

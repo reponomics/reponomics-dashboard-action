@@ -71,6 +71,7 @@ class NetworkWarning(TypedDict):
 _LAST_REQUEST_COMPLETED_AT: float | None = None
 _NETWORK_WARNINGS: list[NetworkWarning] = []
 _REPO_DETAIL_WARNINGS: list[str] = []
+_REPO_COMMUNITY_WARNINGS: list[str] = []
 
 
 class SecondaryRateLimitError(requests.HTTPError):
@@ -121,9 +122,11 @@ class RepoUnavailableError(requests.HTTPError):
 def _reset_runtime_state() -> None:
     """Reset per-run pacing and warning state."""
     global _LAST_REQUEST_COMPLETED_AT, _NETWORK_WARNINGS, _REPO_DETAIL_WARNINGS
+    global _REPO_COMMUNITY_WARNINGS
     _LAST_REQUEST_COMPLETED_AT = None
     _NETWORK_WARNINGS = []
     _REPO_DETAIL_WARNINGS = []
+    _REPO_COMMUNITY_WARNINGS = []
 
 
 def _record_network_warning(
@@ -273,6 +276,14 @@ def _write_step_summary(
             "",
         ])
         lines.extend(f"- {warning}" for warning in _REPO_DETAIL_WARNINGS)
+
+    if _REPO_COMMUNITY_WARNINGS:
+        lines.extend([
+            "",
+            "### Community Profile Warnings",
+            "",
+        ])
+        lines.extend(f"- {warning}" for warning in _REPO_COMMUNITY_WARNINGS)
 
     with open(summary_path, "a") as f:
         f.write("\n".join(lines) + "\n")
@@ -833,14 +844,45 @@ def collect_repo_detail(repo: str, headers: Headers) -> RepoMetadata:
     return data
 
 
+def collect_repo_community_profile(repo: str, headers: Headers) -> RepoMetadata:
+    """Fetch repository community profile metrics."""
+    url = f"https://api.github.com/repos/{repo}/community/profile"
+    data = fetch_json(url, headers)
+    if not isinstance(data, dict):
+        raise requests.HTTPError(
+            f"Unexpected community profile response for {repo}: {type(data).__name__}"
+        )
+    return data
+
+
+def _community_has_file(files: RepoMetadata, key: str) -> bool | str:
+    if key not in files:
+        return ""
+    return bool(files.get(key))
+
+
+def _community_health_percentage(profile: RepoMetadata) -> int | str:
+    value = profile.get("health_percentage")
+    if value in (None, ""):
+        return ""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return ""
+
+
 def collect_repo_metrics(
     repo: str,
     repo_detail: RepoMetadata,
+    community_profile: RepoMetadata,
     captured_at: str,
     *,
     source: str = "repo-detail",
 ) -> list[dict[str, Any]]:
     """Return aggregate repository growth counters from repository detail data."""
+    files = community_profile.get("files")
+    if not isinstance(files, dict):
+        files = {}
     return [{
         "repo": repo,
         "repo_id": repo_detail.get("id", ""),
@@ -862,6 +904,22 @@ def collect_repo_metrics(
         "has_discussions": repo_detail.get("has_discussions", ""),
         "archived": repo_detail.get("archived", ""),
         "disabled": repo_detail.get("disabled", ""),
+        "community_health_percentage": _community_health_percentage(community_profile),
+        "community_documentation": community_profile.get("documentation", "") or "",
+        "community_updated_at": community_profile.get("updated_at", "") or "",
+        "community_content_reports_enabled": community_profile.get(
+            "content_reports_enabled",
+            "",
+        ),
+        "community_has_code_of_conduct": _community_has_file(files, "code_of_conduct"),
+        "community_has_contributing": _community_has_file(files, "contributing"),
+        "community_has_issue_template": _community_has_file(files, "issue_template"),
+        "community_has_pull_request_template": _community_has_file(
+            files,
+            "pull_request_template",
+        ),
+        "community_has_readme": _community_has_file(files, "readme"),
+        "community_has_license": _community_has_file(files, "license"),
         "source": source,
         "schema_version": SCHEMA_VERSION,
     }]
@@ -871,6 +929,13 @@ def _fallback_repo_detail_warning(repo: str, exc: Exception) -> str:
     return (
         f"{repo}: repository detail request failed ({exc}); " +
         "traffic collection continued and repo metrics used discovery fallback."
+    )
+
+
+def _fallback_repo_community_warning(repo: str, exc: Exception) -> str:
+    return (
+        f"{repo}: community profile request failed ({exc}); "
+        + "collection continued and community metrics were left blank."
     )
 
 
@@ -891,6 +956,7 @@ def main() -> None:
     for repo in repos:
         print(f"Collecting traffic for {repo}...")
         detail = None
+        community_profile: RepoMetadata = {}
         metric_source = "repo-detail"
         try:
             try:
@@ -903,6 +969,16 @@ def main() -> None:
                 print(f"  Warning: {warning}")
                 detail = repo_metadata.get(repo, {})
                 metric_source = "discovery-fallback"
+
+            try:
+                community_profile = collect_repo_community_profile(repo, headers)
+            except SecondaryRateLimitError:
+                raise
+            except (requests.HTTPError, requests.RequestException) as exc:
+                warning = _fallback_repo_community_warning(repo, exc)
+                _REPO_COMMUNITY_WARNINGS.append(warning)
+                print(f"  Warning: {warning}")
+                community_profile = {}
 
             vc_rows = collect_views_clones(repo, headers, captured_at)
             append_csv(os.path.join(DATA_DIR, "traffic-log.csv"), vc_rows, LOG_FIELDS)
@@ -923,6 +999,7 @@ def main() -> None:
             metric_rows = collect_repo_metrics(
                 repo,
                 detail or {},
+                community_profile,
                 captured_at,
                 source=metric_source,
             )

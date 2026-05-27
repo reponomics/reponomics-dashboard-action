@@ -41,6 +41,7 @@ from load_data import (
     actionable_insights_structured,
     collection_quality,
     growth_analytics,
+    latest_repo_community_profiles,
 )
 
 PAGE_INDEX_OUTPUT_PATH = "docs/index.html"
@@ -729,6 +730,33 @@ BASE_STYLES = """
     }
     .growth-total {
       text-align: right;
+    }
+    .community-cell {
+      display: inline-grid;
+      gap: 0.2rem;
+      min-width: 150px;
+    }
+    .community-health {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.94rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .community-meta {
+      color: var(--text-muted);
+      font-size: 0.77rem;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .community-cell.excellent .community-health {
+      color: var(--c-positive);
+    }
+    .community-cell.moderate .community-health {
+      color: var(--accent);
+    }
+    .community-cell.needs-work .community-health {
+      color: var(--c-negative);
     }
     .stat-head {
       display: flex;
@@ -1703,6 +1731,12 @@ BASE_STYLES = """
         grid-template-columns: minmax(2.75rem, max-content) minmax(3.7rem, max-content) minmax(3.35rem, max-content);
         column-gap: 0.32rem;
       }
+      .community-cell {
+        min-width: 130px;
+      }
+      .community-meta {
+        font-size: 0.72rem;
+      }
       .repo-strip-card { grid-template-columns: 1fr; gap: 0.5rem; }
       .repo-strip-hint { display: none; }
       .section-header { flex-direction: column; align-items: stretch; }
@@ -2464,6 +2498,7 @@ APP_RUNTIME_JS = """
     }
 
     function buildRepoMetrics(repoName) {
+      const baseRepo = (state.payload?.repos || []).find((repo) => repo.name === repoName) || {};
       const series = seriesForRange(state.payload?.repo_series?.[repoName]);
       const growthRow = state.payload?.growth?.per_repo?.[repoName] || {};
       const deltas = growthRow.deltas || {};
@@ -2472,6 +2507,8 @@ APP_RUNTIME_JS = """
       const starsDelta = seriesDelta(growthSeries, 'stargazers', deltas.stars_delta || deltas.stargazers_delta);
       const subscribersDelta = seriesDelta(growthSeries, 'subscribers', deltas.subscribers_delta);
       const forksDelta = seriesDelta(growthSeries, 'forks', deltas.forks_delta);
+      const community = baseRepo.community || {};
+      const communityHealth = Number(community.health_percentage);
       return {
         name: repoName,
         views: sum(series.views),
@@ -2486,6 +2523,19 @@ APP_RUNTIME_JS = """
         forks: latestSeriesValue(growthSeries, 'forks', deltas.current_forks),
         days: (series.dates || []).length,
         activity: sum(series.views) + sum(series.clones),
+        community: {
+          available: !!community.available,
+          health_percentage: Number.isFinite(communityHealth) ? communityHealth : null,
+          documentation: String(community.documentation || ''),
+          updated_at: String(community.updated_at || ''),
+          content_reports_enabled: community.content_reports_enabled,
+          has_code_of_conduct: community.has_code_of_conduct,
+          has_contributing: community.has_contributing,
+          has_issue_template: community.has_issue_template,
+          has_pull_request_template: community.has_pull_request_template,
+          has_readme: community.has_readme,
+          has_license: community.has_license
+        },
         series
       };
     }
@@ -3644,6 +3694,45 @@ APP_RUNTIME_JS = """
       container.appendChild(ul);
     }
 
+    function asBool(value) {
+      if (value === true || value === false) return value;
+      const normalized = String(value || '').trim().toLowerCase();
+      if (!normalized) return null;
+      if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+      if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+      return null;
+    }
+
+    function renderCommunityCell(repo) {
+      const community = repo.community || {};
+      const health = Number(community.health_percentage);
+      const hasHealth = Number.isFinite(health);
+      const signals = [
+        asBool(community.has_code_of_conduct),
+        asBool(community.has_contributing),
+        asBool(community.has_issue_template),
+        asBool(community.has_pull_request_template),
+        asBool(community.has_readme),
+        asBool(community.has_license)
+      ];
+      const knownSignals = signals.filter((value) => value !== null);
+      const presentSignals = knownSignals.filter(Boolean).length;
+      const statusClass = hasHealth
+        ? (health >= 85 ? 'excellent' : health >= 60 ? 'moderate' : 'needs-work')
+        : 'unknown';
+      const signalText = knownSignals.length
+        ? `${presentSignals}/${knownSignals.length} files`
+        : 'No file signal';
+      const docs = String(community.documentation || '').trim();
+      const docLabel = docs ? 'Docs linked' : 'No docs URL';
+      return `
+        <span class="community-cell ${statusClass}">
+          <span class="community-health">${hasHealth ? formatNumber(health) + '%' : '—'}</span>
+          <span class="community-meta">${escapeHtml(signalText)} · ${escapeHtml(docLabel)}</span>
+        </span>
+      `;
+    }
+
     function buildRepoSparkSVG(values, color) {
       if (!values || values.length < 2) return '';
       const { line, area } = buildSparklinePath(values, 92, 26);
@@ -3655,6 +3744,10 @@ APP_RUNTIME_JS = """
     function getRepoSortKey(repo, key) {
       if (key === 'name') return repo.name.toLowerCase();
       if (key === 'growth') return Number(repo.stars_delta || 0) + Number(repo.subscribers_delta || 0) + Number(repo.forks_delta || 0);
+      if (key === 'community') {
+        const health = Number(repo.community?.health_percentage);
+        return Number.isFinite(health) ? health : -1;
+      }
       return Number(repo[key] || 0);
     }
 
@@ -3774,6 +3867,7 @@ APP_RUNTIME_JS = """
         headCell('uniques', 'Visitors', true) +
         headCell('clones', 'Clones', true) +
         headCell('growth', 'Growth', true) +
+        headCell('community', 'Community', true) +
         '<th>Trend</th>' +
         `<th>Share of ${escapeHtml(metric.label.toLowerCase())}</th>` +
         '</tr></thead><tbody>';
@@ -3816,6 +3910,7 @@ APP_RUNTIME_JS = """
                 <span class="growth-row"><strong>${formatSigned(repo.forks_delta)}</strong><span class="growth-label">forks</span><span class="growth-total">(${formatNumber(repo.forks)})</span></span>
               </span>
             </td>
+            <td>${renderCommunityCell(repo)}</td>
             <td>${sparkSVG}</td>
             <td>
               <div class="repo-share">
@@ -4648,11 +4743,13 @@ def _build_payload(
     insights,
     insights_structured,
     data_quality,
+    community_profiles,
 ):
     """Build a JSON-safe dashboard payload shared by all output modes."""
     repos = []
     for row in per_repo:
         series_row = repo_series.get(row["repo"], {})
+        community = community_profiles.get(row["repo"], {})
         repos.append({
             "name": row["repo"],
             "views": row["total_views"],
@@ -4660,6 +4757,19 @@ def _build_payload(
             "clones": row["total_clones"],
             "clone_uniques": row["total_clone_uniques"],
             "days": len(series_row.get("dates", [])),
+            "community": {
+                "available": bool(community.get("available", False)),
+                "health_percentage": community.get("health_percentage"),
+                "documentation": community.get("documentation", ""),
+                "updated_at": community.get("updated_at", ""),
+                "content_reports_enabled": community.get("content_reports_enabled"),
+                "has_code_of_conduct": community.get("has_code_of_conduct"),
+                "has_contributing": community.get("has_contributing"),
+                "has_issue_template": community.get("has_issue_template"),
+                "has_pull_request_template": community.get("has_pull_request_template"),
+                "has_readme": community.get("has_readme"),
+                "has_license": community.get("has_license"),
+            },
         })
 
     return {
@@ -5352,6 +5462,7 @@ def render():
     repo_referrers = _latest_snapshot_by_repo(referrer_rows)
     repo_paths = _latest_snapshot_by_repo(path_rows)
     growth = growth_analytics(daily_rows, metric_rows)
+    community_profiles = latest_repo_community_profiles(metric_rows)
     data_quality = collection_quality(status_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
     insights_structured = actionable_insights_structured(daily_rows, metric_rows, limit=3, growth=growth)
@@ -5372,6 +5483,7 @@ def render():
         insights,
         insights_structured,
         data_quality,
+        community_profiles,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

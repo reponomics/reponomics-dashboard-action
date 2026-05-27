@@ -59,7 +59,7 @@ This is not meant to be the normal setup guide. Most users should follow the REA
 
 - Imported GitHub Actions in `action.yml` and repository workflows are pinned by full commit SHA. This reduces the risk that an upstream tag move changes what CI or the composite wrapper runs.
 - `scripts/validate_action_pins.py` enforces this in CI and can be run locally with `make validate-action-pins`.
-- Current composite-action imports include pinned `actions/setup-python`, `actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`, and `actions/upload-artifact`.
+- Current composite-action imports include pinned `actions/setup-python`, `actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`, and `actions/upload-artifact`. `actions/configure-pages` runs with Pages enablement disabled; repository owners enable the GitHub Actions publishing source through repository settings.
 - The composite action installs runtime Python dependencies from `requirements-runtime.txt` with `pip --require-hashes` before executing `dashboard_action/run.py`. `make validate-runtime-lock` regenerates a temporary lock from `pyproject.toml`, compares it against the committed lock, and verifies that `pip` accepts the committed lock in hash-required mode.
 
 ### Vulnerability And Supply-Chain Signals

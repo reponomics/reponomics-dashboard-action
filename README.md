@@ -44,7 +44,7 @@ New metrics can appear after a compatible upgrade once collection has run with t
 
 ## Usage
 
-Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `traffic-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
+Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. The repository owner must first configure the repository's Pages source to **GitHub Actions** in the GitHub UI; this action verifies that configuration and deploys to it, but does not enable Pages or change the publishing source. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `traffic-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
 
 ```yaml
 steps:
@@ -63,6 +63,9 @@ steps:
 
 > [!NOTE]
 > Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
+
+For `traffic-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=Reponomics%20Traffic%20Token&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories being collected. Choose **All repositories** for broad automatic discovery, or **Only selected repositories** for a narrower dashboard. If you choose selected repositories, keep the dashboard configuration within that token's repository access. It does not need Pages or Administration write permissions.
+Fine-grained personal access tokens are scoped to one GitHub resource owner; for one dashboard spanning multiple users or organizations, use a classic PAT with `repo` scope where the relevant organizations allow it.
 
 | Input | Description | Default |
 |---|---|---|
@@ -88,8 +91,8 @@ The action emits metadata for workflow summaries and later automation:
 - `tracked-repos`
 - `collected-at`
 - `artifact-mode`
-- `dashboard-mode`
-- `pages-path`
+- `publish-pages`: `true` when the rendered dashboard is published to GitHub Pages, `false` when it is only uploaded as a workflow artifact
+- `pages-path`: rendered dashboard directory uploaded to Pages or the plain dashboard artifact
 - `page-url`
 - `readme-updated`
 - `dashboard-updated`
@@ -99,6 +102,18 @@ The action emits metadata for workflow summaries and later automation:
 `collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`traffic-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `traffic-data` artifacts tied to those old runs.
 
 README metrics are derived from repository visibility: private dashboard repositories may render README metrics, while public dashboard repositories render a non-metric README status block. Plain mode stores plaintext CSV artifacts and is rejected in public repositories.
+
+## GitHub Pages Setup
+
+For a hosted encrypted dashboard, configure Pages once in the dashboard repository before relying on `publish` deployment:
+
+1. Open the dashboard repository on GitHub.
+2. Go to **Settings**.
+3. In the sidebar, open **Pages**.
+4. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+5. If GitHub suggests workflow templates, skip them. The Reponomics publish workflow already uploads and deploys the dashboard artifact.
+
+Do not select **Deploy from a branch** for Reponomics dashboard publishing. Do not grant Pages or Administration write permissions to `TRAFFIC_TOKEN` for this setup. `TRAFFIC_TOKEN` is for reading repository traffic data; Pages deployment uses the workflow `GITHUB_TOKEN` with the permissions declared by the consuming workflow.
 
 ## Offline Viewing
 

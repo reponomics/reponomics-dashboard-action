@@ -256,6 +256,51 @@ def _response(
     return response
 
 
+def test_validate_token_401_points_to_fine_grained_token(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return _response(401)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert "fine-grained personal access token" in output
+    assert "personal-access-tokens/new" in output
+    assert "administration=read" in output
+
+
+def test_validate_token_403_names_required_permission(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return _response(403)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert "TRAFFIC_TOKEN lacks required permissions" in output
+    assert "Administration: read" in output
+
+
 @pytest.mark.parametrize(
     (
         "github_event_repository_private",
@@ -295,10 +340,35 @@ def test_input_normalization_from_env(
     assert config.privacy_mode == "strong"
     assert config.repo_is_public is expected_repo_is_public
     assert config.resolved_artifact_mode == "encrypted"
-    assert config.normalized_pages_dashboard == "encrypted"
+    assert config.publish_pages is True
     assert config.normalized_readme_dashboard == expected_readme_dashboard
     assert config.retention_days == 30
     assert config.generate_readme is False
+
+
+@pytest.mark.parametrize(
+    ("privacy_mode", "expected_artifact_mode", "expected_publish_pages"),
+    [
+        ("strong", "encrypted", True),
+        ("casual", "encrypted", True),
+        ("plain", "plain", False),
+    ],
+)
+def test_publish_pages_values_follow_privacy_mode(
+    tmp_path: Path,
+    privacy_mode: str,
+    expected_artifact_mode: str,
+    expected_publish_pages: bool,
+) -> None:
+    config = _config(
+        tmp_path,
+        privacy_mode=privacy_mode,
+        dashboard_secret="" if privacy_mode == "plain" else OLD_KEY,
+    )
+
+    assert config.resolved_artifact_mode == expected_artifact_mode
+    assert config.publish_pages is expected_publish_pages
+
 
 def test_generate_readme_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
@@ -321,6 +391,7 @@ def test_runtime_outputs_include_pages_path(
     run._write_outputs(config, {"readme": "", "dashboard": ""})
 
     output = output_path.read_text(encoding="utf-8")
+    assert "publish-pages=true" in output
     assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
 
 
@@ -1044,7 +1115,7 @@ def test_private_readme_renders_disabled_metrics_with_notice(
     monkeypatch.setattr(run.render_private_readme, "OUTPUT_PATH", output_path)
     monkeypatch.setattr(run.render_private_readme, "ASSET_DIR", asset_dir)
     monkeypatch.setenv("GITHUB_REPOSITORY", "demo/reponomics")
-    monkeypatch.setenv("PAGES_DASHBOARD", "encrypted")
+    monkeypatch.setenv("PUBLISH_PAGES", "true")
     monkeypatch.setenv("ARTIFACT_SECURITY_MODE", "encrypted")
     monkeypatch.setenv(
         "REPONOMICS_UPDATE_NOTICE_JSON",

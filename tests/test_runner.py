@@ -256,6 +256,51 @@ def _response(
     return response
 
 
+def test_validate_token_401_points_to_fine_grained_token(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return _response(401)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert "fine-grained personal access token" in output
+    assert "personal-access-tokens/new" in output
+    assert "administration=read" in output
+
+
+def test_validate_token_403_names_required_permission(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return _response(403)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert "TRAFFIC_TOKEN lacks required permissions" in output
+    assert "Administration: read" in output
+
+
 @pytest.mark.parametrize(
     (
         "github_event_repository_private",

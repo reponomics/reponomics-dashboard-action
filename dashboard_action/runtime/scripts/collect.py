@@ -44,6 +44,15 @@ REQUEST_PACING_MAX_SECONDS = 1.0
 SECONDARY_LIMIT_FALLBACK_SECONDS = 60
 NOT_FOUND_RETRIES = 2
 TOKEN_VALIDATION_URL = "https://api.github.com/user"
+TOKEN_CREATION_URL = "".join(
+    [
+        "https://github.com/settings/personal-access-tokens/new",
+        "?name=Reponomics%20Traffic%20Token",
+        "&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard",
+        "&expires_in=366",
+        "&administration=read",
+    ]
+)
 REPO_DISCOVERY_URL = "https://api.github.com/user/repos"
 REPO_DISCOVERY_PAGE_SIZE = 100
 CURRENT_REPOSITORY_ENV_KEYS = ("GITHUB_REPOSITORY", "GH_REPO")
@@ -414,11 +423,11 @@ def validate_token(headers: Headers) -> None:
         sys.exit(1)
     if resp.status_code == 401:
         print("Error: TRAFFIC_TOKEN is invalid or expired.")
-        print("Create a new token at https://github.com/settings/tokens")
+        print(f"Create a fine-grained personal access token: {TOKEN_CREATION_URL}")
         sys.exit(1)
     if resp.status_code == 403:
         print("Error: TRAFFIC_TOKEN lacks required permissions.")
-        print("The token needs read access to repository traffic data.")
+        print("The token needs repository Administration: read access.")
         sys.exit(1)
     if resp.status_code >= 400:
         print(f"Error: GitHub API returned status {resp.status_code} during token validation.")

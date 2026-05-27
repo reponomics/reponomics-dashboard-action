@@ -216,7 +216,7 @@ Tracked values include:
 
 These fields are surfaced in the dashboard Repositories table under the Community column.
 
-GitHub lists this endpoint under repository `Contents: read` for fine-grained personal access tokens. With the default traffic-token guidance, private-repository community fields may be blank unless the token also grants `Contents: read`. For public repositories, GitHub exposes profile data through the public endpoint; if the authenticated request is rejected, the collector leaves community fields blank and continues.
+For public repositories, GitHub does not require special token permissions for this endpoint. If you want to track community health for private repositories, add repository `Contents: read` to the fine-grained personal access token used for collection.
 
 ## Local Development
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.3...v0.12.0) (2026-05-27)
+
+
+### Features
+
+* track repo community health score ([#58](https://github.com/reponomics/reponomics-dashboard-action/issues/58)) ([d898dff](https://github.com/reponomics/reponomics-dashboard-action/commit/d898dff0717fd2564129177aa886edb007b6e672))
+
 ## [0.11.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.2...v0.11.3) (2026-05-27)
 
 

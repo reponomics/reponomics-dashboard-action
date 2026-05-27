@@ -43,16 +43,9 @@ Summary:
 
 ### How do I turn on the hosted GitHub Pages dashboard?
 
-For `strong` or `casual` mode, first run the setup workflow from the template
-repository. Then open your dashboard repository on GitHub and go to
-**Settings -> Pages**. Under **Build and deployment**, set **Source** to
-**GitHub Actions**. If GitHub suggests workflow templates, skip them; the
-Reponomics publish workflow already handles the Pages artifact upload and
-deployment.
+For `strong` or `casual` mode, first run the setup workflow from the template repository. Then open your dashboard repository on GitHub and go to **Settings -> Pages**. Under **Build and deployment**, set **Source** to **GitHub Actions**. If GitHub suggests workflow templates, skip them; the Reponomics publish workflow already handles the Pages artifact upload and deployment.
 
-The Reponomics action does not enable GitHub Pages for the repository, and it
-does not change the Pages publishing source. It only verifies the existing Pages
-configuration during publish and deploys the rendered dashboard artifact.
+The Reponomics action does not enable GitHub Pages for the repository, and it does not change the Pages publishing source. It only verifies the existing Pages configuration during publish and deploys the rendered dashboard artifact.
 
 ### What sort of password do I need and why does it have to be so long?
 

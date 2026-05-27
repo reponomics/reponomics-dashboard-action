@@ -84,6 +84,9 @@ steps:
 > **Only selected repositories** for a narrower dashboard. If you choose
 > selected repositories, keep the dashboard configuration within that token's
 > repository access. It does not need Pages or Administration write permissions.
+> Fine-grained personal access tokens are scoped to one GitHub resource owner;
+> for one dashboard spanning multiple users or organizations, use a classic PAT
+> with `repo` scope where the relevant organizations allow it.
 
 | Input | Description | Default |
 |---|---|---|

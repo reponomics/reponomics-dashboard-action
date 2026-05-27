@@ -17,7 +17,7 @@ def render() -> None:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>GitHub Traffic Dashboard Disabled</title>
+  <title>Reponomics Dashboard Disabled</title>
   <style>
     body {{
       margin: 0;

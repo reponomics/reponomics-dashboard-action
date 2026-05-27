@@ -1863,7 +1863,7 @@ APP_RUNTIME_JS = """
       const map = { views: '--c-views', uniques: '--c-uniques', clones: '--c-clones', clone_uniques: '--c-cloners', stars_delta: '--accent-2', subscribers_delta: '--accent', forks_delta: '--c-uniques' };
       return getThemeColor(map[seriesKey], '');
     }
-    const THEME_KEY = 'gh-traffic-theme';
+    const THEME_KEY = 'reponomics-theme';
     function preferredTheme() {
       try {
         const saved = localStorage.getItem(THEME_KEY);
@@ -5208,7 +5208,7 @@ def _build_csp(style_blocks: list[str], script_blocks: list[str]) -> str:
 def _theme_bootstrap_js() -> str:
     return """(function() {
       try {
-        var saved = localStorage.getItem('gh-traffic-theme');
+        var saved = localStorage.getItem('reponomics-theme');
         var theme = (saved === 'light' || saved === 'dark')
           ? saved
           : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -5265,7 +5265,7 @@ def _wrap_html(
     </div>
     <div class="footer-line">
       <span>Built with</span>
-      <a href="https://github.com/hesreallyhim/github-traffic-report-template">Reponomics</a>
+      <a href="https://github.com/reponomics/reponomics-dashboard">Reponomics</a>
       <span class="dot">·</span>
       <span>Made for indie hackers shipping across many repos</span>
     </div>

@@ -75,7 +75,7 @@ def _csp_content(document: str) -> str:
 def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
     values: dict[str, Any] = {
         "mode": "collect",
-        "traffic_token": "ghp_traffic",
+        "collection_token": "ghp_collection",
         "github_token": "ghp_test",
         "dashboard_secret": OLD_KEY,
         "dashboard_next_secret": "",
@@ -296,6 +296,8 @@ def test_validate_token_401_points_to_fine_grained_token(
     output = capsys.readouterr().out
     assert "fine-grained personal access token" in output
     assert "personal-access-tokens/new" in output
+    assert "name=COLLECTION_TOKEN" in output
+    assert "name=Reponomics%20Collection%20Token" not in output
     assert "administration=read" in output
 
 
@@ -317,7 +319,7 @@ def test_validate_token_403_names_required_permission(
         run.collect_mod.validate_token({})
 
     output = capsys.readouterr().out
-    assert "TRAFFIC_TOKEN lacks required permissions" in output
+    assert "COLLECTION_TOKEN lacks required permissions" in output
     assert "Administration: read" in output
 
 
@@ -340,7 +342,7 @@ def test_input_normalization_from_env(
     expected_readme_dashboard: str,
 ) -> None:
     monkeypatch.setenv("REPONOMICS_MODE", "collect")
-    monkeypatch.setenv("REPONOMICS_TRAFFIC_TOKEN", "ghp_traffic")
+    monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghp_collection")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
     monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
@@ -353,7 +355,7 @@ def test_input_normalization_from_env(
     config = run.load_config_from_env()
 
     assert config.mode == "collect"
-    assert config.traffic_token == "ghp_traffic"
+    assert config.collection_token == "ghp_collection"
     assert config.github_token == "ghp_test"
     assert config.data_dir == Path("data")
     assert config.pages_index_path == Path("docs/index.html")
@@ -543,7 +545,7 @@ def test_collect_fixture_updates_artifact_without_rendering_outputs(
     run.validate_config(config)
     run.run_collect(config, restore_artifact=False, execute_collect=False)
 
-    assert (tmp_path / ".traffic-artifact" / "traffic-data.enc").exists()
+    assert (tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc").exists()
     assert not config.readme_path.exists()
     assert not config.pages_index_path.exists()
 
@@ -1169,7 +1171,7 @@ def test_dashboard_placeholder_renders_disabled_pages_output(
     run.render_pages_disabled_notice.render()
 
     html = output_path.read_text(encoding="utf-8")
-    assert "<title>GitHub Traffic Dashboard Disabled</title>" in html
+    assert "<title>Reponomics Dashboard Disabled</title>" in html
     assert "Dashboard disabled" in html
     assert "No traffic metrics are published here." in html
 
@@ -1183,11 +1185,11 @@ def test_rotate_key_fixture_reencrypts_with_next_secret(
     _seed_log(config.data_dir)
     run.run_collect(config, restore_artifact=False, execute_collect=False)
 
-    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
+    encrypted_path = tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc"
     config.data_dir.mkdir(exist_ok=True)
     for path in config.data_dir.iterdir():
         path.unlink()
-    (config.data_dir / "traffic-data.enc").write_text(
+    (config.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
@@ -1202,32 +1204,32 @@ def test_rotate_key_fixture_reencrypts_with_next_secret(
 
     for path in rotated.data_dir.iterdir():
         path.unlink()
-    (rotated.data_dir / "traffic-data.enc").write_text(
+    (rotated.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", NEXT_KEY)
     run.crypto_artifact.decrypt(
-        rotated.data_dir / "traffic-data.enc",
+        rotated.data_dir / "dashboard-data.enc",
         rotated.data_dir,
-        "TRAFFIC_DASHBOARD_SECRET",
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
     )
     assert (rotated.data_dir / "traffic-daily.csv").exists()
 
-    run.crypto_artifact.encrypt(rotated.data_dir, encrypted_path, "TRAFFIC_DASHBOARD_SECRET")
+    run.crypto_artifact.encrypt(rotated.data_dir, encrypted_path, "DASHBOARD_SECRET_DO_NOT_REPLACE")
     for path in rotated.data_dir.iterdir():
         path.unlink()
-    (rotated.data_dir / "traffic-data.enc").write_text(
+    (rotated.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", OLD_KEY)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)
     with pytest.raises(Exception):
         run.crypto_artifact.decrypt(
-            rotated.data_dir / "traffic-data.enc",
+            rotated.data_dir / "dashboard-data.enc",
             rotated.data_dir,
-            "TRAFFIC_DASHBOARD_SECRET",
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
         )
 
 
@@ -1294,11 +1296,11 @@ def test_incident_reset_reencrypts_without_rendering_outputs(
     _seed_log(config.data_dir)
     run.run_collect(config, restore_artifact=False, execute_collect=False)
 
-    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
+    encrypted_path = tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc"
     config.data_dir.mkdir(exist_ok=True)
     for path in config.data_dir.iterdir():
         path.unlink()
-    (config.data_dir / "traffic-data.enc").write_text(
+    (config.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
@@ -1321,16 +1323,16 @@ def test_incident_reset_reencrypts_without_rendering_outputs(
 
     for path in incident.data_dir.iterdir():
         path.unlink()
-    (incident.data_dir / "traffic-data.enc").write_text(
+    (incident.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", NEXT_KEY)
     run.crypto_artifact.decrypt(
-        incident.data_dir / "traffic-data.enc",
+        incident.data_dir / "dashboard-data.enc",
         incident.data_dir,
-        "TRAFFIC_DASHBOARD_SECRET",
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
     )
     assert (incident.data_dir / "traffic-daily.csv").exists()
 
@@ -2095,7 +2097,7 @@ def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
     assert rows[-1]["default_branch"] == "main"
     assert rows[-1]["source"] == "repo-detail"
     assert rows[-1]["schema_version"] == run.storage.SCHEMA_VERSION
-    assert (tmp_path / ".traffic-artifact" / "traffic-data.enc").exists()
+    assert (tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc").exists()
 
 
 def test_publish_from_v2_fixture_migrates_without_config_rewrite(
@@ -2145,11 +2147,11 @@ def test_rotate_key_from_v2_encrypted_fixture_migrates_without_config_rewrite(
 
     run._patch_runtime_paths(config)
     run._set_runtime_env(config)
-    encrypted_path = tmp_path / ".traffic-artifact" / "traffic-data.enc"
-    run.crypto_artifact.encrypt(config.data_dir, encrypted_path, "TRAFFIC_DASHBOARD_SECRET")
+    encrypted_path = tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc"
+    run.crypto_artifact.encrypt(config.data_dir, encrypted_path, "DASHBOARD_SECRET_DO_NOT_REPLACE")
     for path in config.data_dir.iterdir():
         path.unlink()
-    (config.data_dir / "traffic-data.enc").write_text(
+    (config.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
@@ -2169,15 +2171,15 @@ def test_rotate_key_from_v2_encrypted_fixture_migrates_without_config_rewrite(
 
     for path in rotated.data_dir.iterdir():
         path.unlink()
-    (rotated.data_dir / "traffic-data.enc").write_text(
+    (rotated.data_dir / "dashboard-data.enc").write_text(
         encrypted_path.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", NEXT_KEY)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", NEXT_KEY)
     run.crypto_artifact.decrypt(
-        rotated.data_dir / "traffic-data.enc",
+        rotated.data_dir / "dashboard-data.enc",
         rotated.data_dir,
-        "TRAFFIC_DASHBOARD_SECRET",
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
     )
 
     manifest = json.loads((rotated.data_dir / "manifest.json").read_text(encoding="utf-8"))

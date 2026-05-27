@@ -126,4 +126,4 @@ preview-collection-quality-dashboard: install ## Render dashboard from collectio
 	@echo "Preview ready: $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html"
 
 clean: ## Remove local generated state
-	rm -rf $(VENV) .pytest_cache .ruff_cache .coverage coverage.xml data dist docs/assets docs/index.html .traffic-artifact .tmp
+	rm -rf $(VENV) .pytest_cache .ruff_cache .coverage coverage.xml data dist docs/assets docs/index.html .dashboard-data-artifact .tmp

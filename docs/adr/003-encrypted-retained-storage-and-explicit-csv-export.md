@@ -64,7 +64,7 @@ general-purpose matrix of storage and publication modes.
 The initial export proposal added two manual workflows for encrypted-track CSV
 portability:
 
-- `export` restores and decrypts the retained `traffic-data` artifact, packages
+- `export` restores and decrypts the retained `dashboard-data` artifact, packages
   the canonical CSV files, and uploads a separate plaintext export artifact.
 - `destroy-exports` deletes plaintext export artifacts created by `export`.
 
@@ -172,13 +172,13 @@ should use the default `GITHUB_TOKEN` whenever possible.
 
 The credential model is:
 
-- `TRAFFIC_TOKEN`: reads GitHub traffic and repository metadata for tracked
+- `COLLECTION_TOKEN`: reads GitHub traffic, growth, community, and repository metadata for tracked
   repositories; used by `collect`.
 - `GITHUB_TOKEN`: manages dashboard-repository operations such as Pages
   deployment and optional README commits, with workflow permissions set in the
   generated workflows.
-- `TRAFFIC_DASHBOARD_SECRET`: used only in `strong` and `casual` modes to
-  encrypt/decrypt retained traffic data and encrypted dashboard payloads.
+- `DASHBOARD_SECRET_DO_NOT_REPLACE`: used only in `strong` and `casual` modes to
+  encrypt/decrypt retained dashboard data and encrypted dashboard payloads.
 
 Dashboard-local export does not require another personal access token. It also
 avoids requiring `actions: write` permission solely to clean up plaintext export
@@ -211,8 +211,8 @@ Generated template changes:
 
 - ask users to choose `strong`, `casual`, or `plain`;
 - for `strong`, require and validate a high-entropy
-  `TRAFFIC_DASHBOARD_SECRET`;
-- for `casual`, require a non-empty `TRAFFIC_DASHBOARD_SECRET` and document the
+  `DASHBOARD_SECRET_DO_NOT_REPLACE`;
+- for `casual`, require a non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` and document the
   weaker threat model;
 - for `plain`, require a private dashboard repository;
 - document that encrypted-mode CSV export happens from the unlocked dashboard,

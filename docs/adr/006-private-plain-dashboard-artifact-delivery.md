@@ -18,7 +18,7 @@ Private plain users already accept plaintext retained artifacts inside repositor
 
 ## Decision
 
-For private repositories using `privacy-mode: plain`, `publish` will render a plain dashboard and upload it as a regular workflow artifact named `traffic-dashboard-plain`.
+For private repositories using `privacy-mode: plain`, `publish` will render a plain dashboard and upload it as a regular workflow artifact named `html-dashboard-plain`.
 
 Guardrails:
 
@@ -30,7 +30,7 @@ Guardrails:
 ## Implementation Notes
 
 - Runtime: when `publish-pages` is false because `privacy-mode` is plain, `publish` now renders the dashboard via the standard renderer (public access mode) instead of the pages-disabled placeholder.
-- Composite action: plain private `publish` runs upload `${{ steps.runtime.outputs.pages-path }}` as `traffic-dashboard-plain` using `actions/upload-artifact`.
+- Composite action: plain private `publish` runs upload `${{ steps.runtime.outputs.pages-path }}` as `html-dashboard-plain` using `actions/upload-artifact`.
 - Pages configure/upload/deploy steps remain gated to `publish-pages: true` and therefore do not run for plain mode.
 
 ## Consequences

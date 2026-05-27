@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-For encrypted privacy modes, retained history is stored in `traffic-data` artifacts encrypted with `TRAFFIC_DASHBOARD_SECRET`. If that secret is exposed, prior encrypted artifacts can be downloaded and attacked offline indefinitely. A normal `rotate-key` run only moves forward and does not remove older workflow runs or artifacts that remain decryptable with the compromised key.
+For encrypted privacy modes, retained history is stored in `dashboard-data` artifacts encrypted with `DASHBOARD_SECRET_DO_NOT_REPLACE`. If that secret is exposed, prior encrypted artifacts can be downloaded and attacked offline indefinitely. A normal `rotate-key` run only moves forward and does not remove older workflow runs or artifacts that remain decryptable with the compromised key.
 
 The product needs an emergency mode that preserves continuity while removing old decryptable history from GitHub Actions surfaces as far as repository-scoped API permissions allow.
 
@@ -19,10 +19,10 @@ Add a dedicated runtime mode: `incident-reset`.
 `incident-reset` is designed for emergency recovery after suspected secret exposure and does all of the following in one run:
 
 1. Restores the current retained artifact.
-2. Decrypts retained state with `TRAFFIC_DASHBOARD_SECRET`.
-3. Re-encrypts retained state with `TRAFFIC_DASHBOARD_NEXT_SECRET`.
+2. Decrypts retained state with `DASHBOARD_SECRET_DO_NOT_REPLACE`.
+3. Re-encrypts retained state with `DASHBOARD_NEXT_SECRET`.
 4. Deletes prior workflow runs from the same workflow as the currently executing incident-reset run.
-5. Deletes `traffic-data` artifacts associated with those deleted runs.
+5. Deletes `dashboard-data` artifacts associated with those deleted runs.
 
 The mode is intentionally destructive and requires explicit triple confirmation inputs:
 
@@ -45,7 +45,7 @@ The mode is intentionally destructive and requires explicit triple confirmation 
 Deletion scope is intentionally bounded:
 
 - Workflow runs: all runs for the same workflow id, excluding the currently running incident-reset run.
-- Artifacts: `traffic-data` artifacts tied to those old run ids, excluding artifacts tied to the current run.
+- Artifacts: `dashboard-data` artifacts tied to those old run ids, excluding artifacts tied to the current run.
 
 This mode does not claim global repository cleanup outside those scopes.
 

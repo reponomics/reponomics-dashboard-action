@@ -47,8 +47,8 @@ TOKEN_VALIDATION_URL = "https://api.github.com/user"
 TOKEN_CREATION_URL = "".join(
     [
         "https://github.com/settings/personal-access-tokens/new",
-        "?name=Reponomics%20Traffic%20Token",
-        "&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard",
+        "?name=COLLECTION_TOKEN",
+        "&description=Read%20repository%20data%20for%20Reponomics%20Dashboard",
         "&expires_in=366",
         "&administration=read",
     ]
@@ -414,7 +414,7 @@ def get_headers() -> dict[str, str]:
     token = os.environ.get("GH_TOKEN")
     if not token:
         print("Error: GH_TOKEN environment variable is not set.")
-        print("Set the TRAFFIC_TOKEN secret in your repository settings.")
+        print("Set the COLLECTION_TOKEN secret in your repository settings.")
         sys.exit(1)
     return {
         "Authorization": f"Bearer {token}",
@@ -433,11 +433,11 @@ def validate_token(headers: Headers) -> None:
         print(f"Error: could not reach GitHub API: {exc}")
         sys.exit(1)
     if resp.status_code == 401:
-        print("Error: TRAFFIC_TOKEN is invalid or expired.")
+        print("Error: COLLECTION_TOKEN is invalid or expired.")
         print(f"Create a fine-grained personal access token: {TOKEN_CREATION_URL}")
         sys.exit(1)
     if resp.status_code == 403:
-        print("Error: TRAFFIC_TOKEN lacks required permissions.")
+        print("Error: COLLECTION_TOKEN lacks required permissions.")
         print("The token needs repository Administration: read access.")
         sys.exit(1)
     if resp.status_code >= 400:

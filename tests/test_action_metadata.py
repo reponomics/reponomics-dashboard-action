@@ -44,8 +44,8 @@ def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> N
     assert "token" not in step.get("with", {})
 
     serialized = yaml.safe_dump(step)
-    assert "traffic-token" not in serialized
-    assert "TRAFFIC_TOKEN" not in serialized
+    assert "collection-token" not in serialized
+    assert "COLLECTION_TOKEN" not in serialized
 
 
 def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
@@ -56,7 +56,7 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     assert upload_pages["if"] == PAGES_DEPLOYMENT_IF
     assert deploy_pages["if"] == PAGES_DEPLOYMENT_IF
     assert plain_dashboard["if"] == PLAIN_DASHBOARD_ARTIFACT_IF
-    assert plain_dashboard["with"]["name"] == "traffic-dashboard-plain"
+    assert plain_dashboard["with"]["name"] == "html-dashboard-plain"
 
 
 def test_publish_pages_replaces_dashboard_mode_output() -> None:

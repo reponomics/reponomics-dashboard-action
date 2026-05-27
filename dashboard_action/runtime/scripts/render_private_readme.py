@@ -13,15 +13,15 @@ ASSET_DIR = Path("docs") / "assets"
 UPDATE_NOTICE_ENV = "REPONOMICS_UPDATE_NOTICE_JSON"
 
 
-def _pages_line(pages_dashboard: str) -> str:
+def _pages_line(publish_pages: bool) -> str:
     repo = os.environ.get("GITHUB_REPOSITORY", "OWNER/REPO")
     owner, _, name = repo.partition("/")
-    if pages_dashboard == "encrypted":
+    if publish_pages:
         return (
             f"Encrypted dashboard: `https://{owner}.github.io/{name}/` " +
             "(requires your dashboard key)"
         )
-    return "Pages dashboard: disabled"
+    return "Pages publishing: disabled"
 
 
 def _load_update_notice():
@@ -60,7 +60,7 @@ def _update_notice_lines():
 
 
 def render() -> None:
-    pages_dashboard = os.environ.get("PAGES_DASHBOARD", "encrypted")
+    publish_pages = os.environ.get("PUBLISH_PAGES", "true").lower() == "true"
     artifact_mode = os.environ.get("ARTIFACT_SECURITY_MODE", "plain")
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -78,7 +78,7 @@ def render() -> None:
         + "publish traffic metrics.",
         "",
         "- README analytics summary: disabled",
-        f"- {_pages_line(pages_dashboard)}",
+        f"- {_pages_line(publish_pages)}",
         f"- Actions data artifact: {artifact_mode}",
         "",
         "Setup and privacy details are in [docs/README.md](docs/README.md).",

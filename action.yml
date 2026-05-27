@@ -73,9 +73,9 @@ outputs:
   artifact-mode:
     description: Resolved artifact security mode.
     value: ${{ steps.runtime.outputs.artifact-mode }}
-  dashboard-mode:
-    description: Resolved Pages dashboard mode.
-    value: ${{ steps.runtime.outputs.dashboard-mode }}
+  publish-pages:
+    description: Whether this run publishes the rendered dashboard to GitHub Pages.
+    value: ${{ steps.runtime.outputs.publish-pages }}
   readme-updated:
     description: Whether the README output changed.
     value: ${{ steps.runtime.outputs.readme-updated }}
@@ -83,7 +83,7 @@ outputs:
     description: Whether the dashboard output changed.
     value: ${{ steps.runtime.outputs.dashboard-updated }}
   pages-path:
-    description: Directory uploaded for GitHub Pages deployment.
+    description: Rendered dashboard directory uploaded to Pages or the plain dashboard artifact.
     value: ${{ steps.runtime.outputs.pages-path }}
   page-url:
     description: Deployed GitHub Pages URL when a Pages dashboard is published.
@@ -129,12 +129,14 @@ runs:
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
       run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
 
-    - name: Configure GitHub Pages
-      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+    - name: Verify GitHub Pages configuration
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}
       uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      with:
+        enablement: "false"
 
     - name: Upload GitHub Pages artifact
-      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}
       uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
       with:
         path: ${{ steps.runtime.outputs.pages-path }}
@@ -142,11 +144,11 @@ runs:
 
     - name: Deploy GitHub Pages
       id: deploy-pages
-      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.dashboard-mode != 'disabled' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}
       uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
     - name: Upload plain dashboard artifact
-      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.dashboard-mode == 'disabled' && steps.runtime.outputs.artifact-mode == 'plain' }}
+      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'plain' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: traffic-dashboard-plain

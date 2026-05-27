@@ -2,7 +2,7 @@
 name: FAQ (Frequently Asked Questions)
 description: Intended to explain aspects of the system to non-technical users, or to technical users who may lack expertise in certain areas, such as encryption.
 Created: 2026-05-23
-Revised: 2026-05-26
+Revised: 2026-05-27
 Status: In progress
 ---
 
@@ -40,6 +40,19 @@ Summary:
 - `casual`: data and artifacts are encrypted. However, the system does not enforce or expect anything about the strength of your passowrd/key. This is still good enough for many users, as it protects against most "passers-by" (non-technical users without direct access who visit your dashboard). They will be confronted with the decryption form/login screen, and probably will not be able to guess your key right away. This does not provide any protection against a targeted attacker or anyone trying to brute-force entry into your dashboard. Use this if you want a small roadblock that would stop someone who is not very interested in your data. Do not use this if you are worried about a targeted attacker.
 
 - `plain`: data and artifacts are not encrypted. The action will not (without modification) publish a plaintext dashboard to GitHub Pages. This is intended for users with _private repos_, and is not compatible with public repos. For a private repo, you may wish to avoid the encryption overhead, and mainly want the data collection and the plaintext README dashboard. Use this if you have a private repo, you don't care about a hosted HTML dashboard, and your privacy boundary is effectively equivalent to the repo's access policy. As a convenience, a dashboard will still be generated for you and uploaded as a workflow artifact, which you can then download and access offline or host elsewhere.
+
+### How do I turn on the hosted GitHub Pages dashboard?
+
+For `strong` or `casual` mode, first run the setup workflow from the template
+repository. Then open your dashboard repository on GitHub and go to
+**Settings -> Pages**. Under **Build and deployment**, set **Source** to
+**GitHub Actions**. If GitHub suggests workflow templates, skip them; the
+Reponomics publish workflow already handles the Pages artifact upload and
+deployment.
+
+The Reponomics action does not enable GitHub Pages for the repository, and it
+does not change the Pages publishing source. It only verifies the existing Pages
+configuration during publish and deploys the rendered dashboard artifact.
 
 ### What sort of password do I need and why does it have to be so long?
 

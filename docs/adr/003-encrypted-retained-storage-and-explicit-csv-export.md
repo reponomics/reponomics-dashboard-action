@@ -159,11 +159,13 @@ This decision preserves the core credential story. `strong` and `casual` should
 require one collection token plus one dashboard secret. `plain` should require
 one collection token and no dashboard secret.
 
-The product still has two separate API permission boundaries:
+The product still has separate permission boundaries:
 
 - collection access to the repositories whose traffic data is being read;
 - dashboard-repository access for setup, workflow management, Pages deployment,
   and any committed README output.
+- manual repository settings access to set the Pages publishing source to
+  GitHub Actions before hosted dashboard deployment.
 
 Those boundaries should not be conflated in documentation. A collection token
 may need read access across source repositories. Dashboard-repository operations

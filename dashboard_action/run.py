@@ -82,12 +82,8 @@ class RuntimeConfig:
         return "disabled" if self.repo_is_public else "enabled"
 
     @property
-    def normalized_pages_dashboard(self) -> str:
-        return "disabled" if self.privacy_mode == "plain" else "encrypted"
-
-    @property
-    def pages_dashboard(self) -> str:
-        return self.normalized_pages_dashboard
+    def publish_pages(self) -> bool:
+        return self.privacy_mode != "plain"
 
 
 def _env(name: str, default: str = "") -> str:
@@ -334,10 +330,10 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
     os.environ["README_DASHBOARD"] = config.normalized_readme_dashboard
-    os.environ["PAGES_DASHBOARD"] = config.normalized_pages_dashboard
+    os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
     os.environ["ARTIFACT_SECURITY_MODE"] = config.resolved_artifact_mode
     os.environ["DASHBOARD_ACCESS_MODE"] = (
-        "encrypted" if config.pages_dashboard == "encrypted" else "public"
+        "encrypted" if config.publish_pages else "public"
     )
     if config.traffic_token:
         os.environ["GH_TOKEN"] = config.traffic_token
@@ -433,7 +429,7 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
 
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
-    if config.pages_dashboard == "disabled":
+    if not config.publish_pages:
         if config.privacy_mode == "plain":
             render_dashboard.render()
         else:
@@ -506,7 +502,7 @@ def _write_outputs(config: RuntimeConfig, before: dict[str, str]) -> None:
         "tracked-repos": ",".join(_tracked_repos(config.data_dir)),
         "collected-at": _manifest_value(config.data_dir, "last_updated"),
         "artifact-mode": config.resolved_artifact_mode,
-        "dashboard-mode": config.normalized_pages_dashboard,
+        "publish-pages": str(config.publish_pages).lower(),
         "pages-path": config.pages_index_path.parent.as_posix(),
         "readme-updated": str(before.get("readme") != after.get("readme")).lower(),
         "dashboard-updated": str(before.get("dashboard") != after.get("dashboard")).lower(),

@@ -178,6 +178,16 @@ def _seed_log(data_dir: Path) -> None:
                 "has_discussions": "True",
                 "archived": "False",
                 "disabled": "False",
+                "community_health_percentage": "71",
+                "community_documentation": "https://github.com/demo/reponomics",
+                "community_updated_at": "2026-05-01T11:30:00Z",
+                "community_content_reports_enabled": "True",
+                "community_has_code_of_conduct": "True",
+                "community_has_contributing": "True",
+                "community_has_issue_template": "False",
+                "community_has_pull_request_template": "False",
+                "community_has_readme": "True",
+                "community_has_license": "True",
                 "source": "fixture",
                 "schema_version": run.storage.SCHEMA_VERSION,
             }
@@ -228,6 +238,16 @@ def _metric_row(
         "has_discussions": "",
         "archived": "",
         "disabled": "",
+        "community_health_percentage": "",
+        "community_documentation": "",
+        "community_updated_at": "",
+        "community_content_reports_enabled": "",
+        "community_has_code_of_conduct": "",
+        "community_has_contributing": "",
+        "community_has_issue_template": "",
+        "community_has_pull_request_template": "",
+        "community_has_readme": "",
+        "community_has_license": "",
         "source": "fixture",
         "schema_version": run.storage.SCHEMA_VERSION,
     }
@@ -1329,6 +1349,11 @@ def test_repo_metrics_registry_creates_growth_snapshot_header(tmp_path: Path) ->
         "open_issues_count", "size_kb", "created_at", "pushed_at",
         "updated_at", "language", "visibility", "default_branch",
         "has_pages", "has_discussions", "archived", "disabled",
+        "community_health_percentage", "community_documentation",
+        "community_updated_at", "community_content_reports_enabled",
+        "community_has_code_of_conduct", "community_has_contributing",
+        "community_has_issue_template", "community_has_pull_request_template",
+        "community_has_readme", "community_has_license",
         "source", "schema_version",
     ]
 
@@ -1356,6 +1381,20 @@ def test_repo_metrics_are_mapped_from_detail_without_watchers_count() -> None:
             "archived": False,
             "disabled": False,
         },
+        {
+            "health_percentage": 85,
+            "documentation": "https://docs.example.com/reponomics",
+            "updated_at": "2026-05-16T12:00:00Z",
+            "content_reports_enabled": True,
+            "files": {
+                "code_of_conduct": {"html_url": "https://example.com/coc"},
+                "contributing": {"html_url": "https://example.com/contrib"},
+                "issue_template": None,
+                "pull_request_template": {"html_url": "https://example.com/pr"},
+                "readme": {"html_url": "https://example.com/readme"},
+                "license": {"html_url": "https://example.com/license"},
+            },
+        },
         "2026-05-16T12:00:00Z",
     )
 
@@ -1381,6 +1420,16 @@ def test_repo_metrics_are_mapped_from_detail_without_watchers_count() -> None:
             "has_discussions": True,
             "archived": False,
             "disabled": False,
+            "community_health_percentage": 85,
+            "community_documentation": "https://docs.example.com/reponomics",
+            "community_updated_at": "2026-05-16T12:00:00Z",
+            "community_content_reports_enabled": True,
+            "community_has_code_of_conduct": True,
+            "community_has_contributing": True,
+            "community_has_issue_template": False,
+            "community_has_pull_request_template": True,
+            "community_has_readme": True,
+            "community_has_license": True,
             "source": "repo-detail",
             "schema_version": run.storage.SCHEMA_VERSION,
         }
@@ -1699,9 +1748,25 @@ def test_collect_requests_one_detail_per_selected_repo(
         },
     ]
     detail_calls: list[str] = []
+    community_calls: list[str] = []
 
     def fake_fetch_json(url: str, headers, allow_not_found: bool = False):
         assert allow_not_found is False
+        if url.endswith("/community/profile"):
+            community_calls.append(url)
+            return {
+                "health_percentage": 71,
+                "documentation": "https://github.com/docs",
+                "updated_at": "2026-05-16T10:00:00Z",
+                "files": {
+                    "code_of_conduct": None,
+                    "contributing": {"html_url": "https://example.com/contributing"},
+                    "issue_template": None,
+                    "pull_request_template": None,
+                    "readme": {"html_url": "https://example.com/readme"},
+                    "license": {"html_url": "https://example.com/license"},
+                },
+            }
         detail_calls.append(url)
         repo = url.removeprefix("https://api.github.com/repos/")
         return {
@@ -1726,6 +1791,10 @@ def test_collect_requests_one_detail_per_selected_repo(
     assert detail_calls == [
         "https://api.github.com/repos/demo/one",
         "https://api.github.com/repos/demo/two",
+    ]
+    assert community_calls == [
+        "https://api.github.com/repos/demo/one/community/profile",
+        "https://api.github.com/repos/demo/two/community/profile",
     ]
     with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -1771,6 +1840,7 @@ def test_detail_failure_falls_back_without_losing_traffic(
     monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
     monkeypatch.setattr(run.collect_mod, "collect_repo_detail", raise_detail_error)
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda repo, headers: {})
     monkeypatch.setattr(
         run.collect_mod,
         "collect_views_clones",
@@ -1844,6 +1914,7 @@ def test_collect_records_skipped_unavailable_repo_status(
     monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
     monkeypatch.setattr(run.collect_mod, "collect_repo_detail", lambda repo, headers: discovered[0])
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda repo, headers: {})
 
     def raise_unavailable(repo: str, headers, captured_at: str):
         raise unavailable
@@ -1902,6 +1973,16 @@ def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
             "has_discussions": "",
             "archived": "",
             "disabled": "",
+            "community_health_percentage": "",
+            "community_documentation": "",
+            "community_updated_at": "",
+            "community_content_reports_enabled": "",
+            "community_has_code_of_conduct": "",
+            "community_has_contributing": "",
+            "community_has_issue_template": "",
+            "community_has_pull_request_template": "",
+            "community_has_readme": "",
+            "community_has_license": "",
             "source": "fixture",
             "schema_version": run.storage.SCHEMA_VERSION,
         }
@@ -1951,10 +2032,26 @@ def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
         ],
     )
     detail_calls: list[str] = []
+    community_calls: list[str] = []
 
     def fake_fetch_json(url: str, headers, allow_not_found: bool = False):
-        assert url == "https://api.github.com/repos/demo/reponomics"
         assert allow_not_found is False
+        if url == "https://api.github.com/repos/demo/reponomics/community/profile":
+            community_calls.append(url)
+            return {
+                "health_percentage": 57,
+                "documentation": "",
+                "updated_at": "2026-05-16T12:00:00Z",
+                "files": {
+                    "code_of_conduct": None,
+                    "contributing": None,
+                    "issue_template": None,
+                    "pull_request_template": None,
+                    "readme": {"html_url": "https://example.com/readme"},
+                    "license": {"html_url": "https://example.com/license"},
+                },
+            }
+        assert url == "https://api.github.com/repos/demo/reponomics"
         detail_calls.append(url)
         return {
             "id": 123,
@@ -1988,6 +2085,7 @@ def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
     with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert detail_calls == ["https://api.github.com/repos/demo/reponomics"]
+    assert community_calls == ["https://api.github.com/repos/demo/reponomics/community/profile"]
     assert rows[-1]["repo_id"] == "123"
     assert rows[-1]["stargazers_count"] == "15"
     assert rows[-1]["subscribers_count"] == "3"

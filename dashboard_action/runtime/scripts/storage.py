@@ -64,6 +64,11 @@ REPO_METRIC_FIELDS = [
     "open_issues_count", "size_kb", "created_at", "pushed_at",
     "updated_at", "language", "visibility", "default_branch",
     "has_pages", "has_discussions", "archived", "disabled",
+    "community_health_percentage", "community_documentation",
+    "community_updated_at", "community_content_reports_enabled",
+    "community_has_code_of_conduct", "community_has_contributing",
+    "community_has_issue_template", "community_has_pull_request_template",
+    "community_has_readme", "community_has_license",
     "source", "schema_version",
 ]
 

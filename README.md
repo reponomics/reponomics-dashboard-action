@@ -197,6 +197,18 @@ Repository growth metrics use the GitHub repository detail API fields with their
 - Forks are `forks_count`.
 - GitHub's `watchers_count` field is not used as true watchers because that field mirrors stargazers on GitHub repository responses.
 
+## Community Health Metrics
+
+Per-repository community health metrics are collected from `GET /repos/{owner}/{repo}/community/profile` and persisted in `repo-metrics.csv` alongside growth counters.
+
+Tracked values include:
+
+- `community_health_percentage`
+- documentation URL and profile timestamp
+- file-presence signals for code of conduct, contributing guide, issue template, pull request template, README, and license
+
+These fields are surfaced in the dashboard Repositories table under the Community column.
+
 ## Local Development
 
 ```bash

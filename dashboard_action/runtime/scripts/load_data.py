@@ -28,6 +28,20 @@ def _int_or_none(value):
     return int(value)
 
 
+def _bool_or_none(value):
+    """Return a boolean when parseable, preserving missing values."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "off"}:
+        return False
+    return None
+
+
 def _counter_snapshot(row, field):
     value = _int_or_none(row.get(field))
     return value if value is not None else 0
@@ -121,6 +135,46 @@ def latest_repo_metrics(metric_rows):
                 "subscribers_count": _counter_snapshot(row, "subscribers_count"),
                 "forks_count": _counter_snapshot(row, "forks_count"),
             }
+    return latest
+
+
+def latest_repo_community_profiles(metric_rows):
+    """Return latest community health metrics keyed by repo."""
+    latest = {}
+    for row in metric_rows:
+        repo = row.get("repo", "")
+        captured_at = row.get("captured_at", "")
+        if not repo:
+            continue
+        existing = latest.get(repo)
+        if existing is not None and captured_at < existing.get("captured_at", ""):
+            continue
+
+        health = _int_or_none(row.get("community_health_percentage"))
+        latest[repo] = {
+            "captured_at": captured_at,
+            "available": health is not None,
+            "health_percentage": health,
+            "documentation": row.get("community_documentation", "") or "",
+            "updated_at": row.get("community_updated_at", "") or "",
+            "content_reports_enabled": _bool_or_none(
+                row.get("community_content_reports_enabled")
+            ),
+            "has_code_of_conduct": _bool_or_none(
+                row.get("community_has_code_of_conduct")
+            ),
+            "has_contributing": _bool_or_none(
+                row.get("community_has_contributing")
+            ),
+            "has_issue_template": _bool_or_none(
+                row.get("community_has_issue_template")
+            ),
+            "has_pull_request_template": _bool_or_none(
+                row.get("community_has_pull_request_template")
+            ),
+            "has_readme": _bool_or_none(row.get("community_has_readme")),
+            "has_license": _bool_or_none(row.get("community_has_license")),
+        }
     return latest
 
 

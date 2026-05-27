@@ -203,6 +203,58 @@ def test_latest_repo_metrics_per_day_normalizes_blank_counters_and_skips_incompl
     ]
 
 
+def test_latest_repo_community_profiles_prefers_latest_capture_and_normalizes_types() -> None:
+    rows = [
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-05-01T10:00:00Z",
+            "community_health_percentage": "",
+            "community_documentation": "",
+            "community_updated_at": "",
+            "community_content_reports_enabled": "",
+            "community_has_code_of_conduct": "",
+            "community_has_contributing": "",
+            "community_has_issue_template": "",
+            "community_has_pull_request_template": "",
+            "community_has_readme": "",
+            "community_has_license": "",
+        },
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-05-02T10:00:00Z",
+            "community_health_percentage": "71",
+            "community_documentation": "https://github.com/docs",
+            "community_updated_at": "2026-05-02T09:00:00Z",
+            "community_content_reports_enabled": "True",
+            "community_has_code_of_conduct": "False",
+            "community_has_contributing": "True",
+            "community_has_issue_template": "",
+            "community_has_pull_request_template": "true",
+            "community_has_readme": "1",
+            "community_has_license": "0",
+        },
+    ]
+
+    profiles = load_data.latest_repo_community_profiles(rows)
+
+    assert profiles == {
+        "demo/app": {
+            "captured_at": "2026-05-02T10:00:00Z",
+            "available": True,
+            "health_percentage": 71,
+            "documentation": "https://github.com/docs",
+            "updated_at": "2026-05-02T09:00:00Z",
+            "content_reports_enabled": True,
+            "has_code_of_conduct": False,
+            "has_contributing": True,
+            "has_issue_template": None,
+            "has_pull_request_template": True,
+            "has_readme": True,
+            "has_license": False,
+        }
+    }
+
+
 def test_repo_metric_deltas_ignore_unobserved_counter_baselines() -> None:
     rows = [
         _metric_row("demo/app", "2026-05-01", 10, "", ""),

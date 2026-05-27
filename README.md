@@ -63,9 +63,9 @@ steps:
 
 > [!NOTE]
 > Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
->
-> For `traffic-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=Reponomics%20Traffic%20Token&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories being collected. Choose **All repositories** for broad automatic discovery, or **Only selected repositories** for a narrower dashboard. If you choose selected repositories, keep the dashboard configuration within that token's repository access. It does not need Pages or Administration write permissions.
-> Fine-grained personal access tokens are scoped to one GitHub resource owner; for one dashboard spanning multiple users or organizations, use a classic PAT with `repo` scope where the relevant organizations allow it.
+
+For `traffic-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=Reponomics%20Traffic%20Token&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories being collected. Choose **All repositories** for broad automatic discovery, or **Only selected repositories** for a narrower dashboard. If you choose selected repositories, keep the dashboard configuration within that token's repository access. It does not need Pages or Administration write permissions.
+Fine-grained personal access tokens are scoped to one GitHub resource owner; for one dashboard spanning multiple users or organizations, use a classic PAT with `repo` scope where the relevant organizations allow it.
 
 | Input | Description | Default |
 |---|---|---|

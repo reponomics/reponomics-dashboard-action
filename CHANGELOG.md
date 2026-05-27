@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.2...v0.11.3) (2026-05-27)
+
+
+### Bug Fixes
+
+* unify Pages publishing model across repos ([#56](https://github.com/reponomics/reponomics-dashboard-action/issues/56)) ([f1aed73](https://github.com/reponomics/reponomics-dashboard-action/commit/f1aed73d2b731091c7bb2baff91dc37b30faaa1a))
+
 ## [0.11.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.1...v0.11.2) (2026-05-26)
 
 

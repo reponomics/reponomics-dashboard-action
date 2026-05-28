@@ -74,6 +74,9 @@ For `collection-token`, use a [fine-grained personal access token](https://githu
 
 This action accepts one `collection-token`. Fine-grained personal access tokens are scoped to one GitHub resource owner, so a fine-grained token is the right fit only when the dashboard collects from one user or organization owner. If one dashboard must span multiple owners today, the current single-token fallback is a classic PAT with `repo` scope where the relevant organizations allow it.
 
+> [!NOTE]
+> We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
+
 | Input | Description | Default |
 |---|---|---|
 | `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`. | `collect` |

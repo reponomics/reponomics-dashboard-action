@@ -75,6 +75,27 @@ def _update_notice_lines():
     ]
 
 
+def _latest_capture_timestamp(*row_groups) -> str:
+    latest = ""
+    for rows in row_groups:
+        for row in rows:
+            captured_at = str(row.get("captured_at", "")).strip()
+            if captured_at > latest:
+                latest = captured_at
+    return latest
+
+
+def _format_capture_timestamp(value: str) -> str:
+    if not value:
+        return "not yet collected"
+    try:
+        normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _repo_table_lines(rows):
     lines = [
         "| Repository | Views | Visitors | Clones | Cloners |",
@@ -175,7 +196,9 @@ def render():
     path_rows = load_paths()
     metric_rows = load_repo_metrics()
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    latest_capture = _format_capture_timestamp(
+        _latest_capture_timestamp(daily_rows, referrer_rows, path_rows, metric_rows)
+    )
     totals = aggregate_totals(daily_rows)
     growth = growth_analytics(daily_rows, metric_rows)
     growth["totals"]["total_views"] = totals["total_views"]
@@ -199,7 +222,7 @@ def render():
         "[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)]"
         + "(../../actions/workflows/collect.yml)",
         "",
-        f"<sub>Last updated: {now}</sub>",
+        f"<sub>Latest data capture: {latest_capture}</sub>",
         "",
     ]
 

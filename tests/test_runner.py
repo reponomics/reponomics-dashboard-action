@@ -557,7 +557,10 @@ def test_publish_fixture_renders_outputs_without_live_api(
 
     assert config.readme_path.exists()
     assert config.pages_index_path.exists()
-    assert "demo/reponomics" in config.readme_path.read_text(encoding="utf-8")
+    readme = config.readme_path.read_text(encoding="utf-8")
+    assert "demo/reponomics" in readme
+    assert "Latest data capture: 2026-05-01 12:00 UTC" in readme
+    assert "Last updated:" not in readme
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "encrypted-payload" in dashboard
     assert "export-manifest" in dashboard

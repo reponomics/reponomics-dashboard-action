@@ -42,13 +42,13 @@ def test_crypto_decrypt_missing_artifact_is_noop(tmp_path: Path) -> None:
 
 
 def test_crypto_rejects_missing_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TRAFFIC_DASHBOARD_SECRET", raising=False)
+    monkeypatch.delenv("DASHBOARD_SECRET_DO_NOT_REPLACE", raising=False)
 
-    with pytest.raises(ValueError, match="TRAFFIC_DASHBOARD_SECRET must be set"):
+    with pytest.raises(ValueError, match="DASHBOARD_SECRET_DO_NOT_REPLACE must be set"):
         run.crypto_artifact.encrypt(
             Path("data"),
-            Path(".traffic-artifact") / "traffic-data.enc",
-            "TRAFFIC_DASHBOARD_SECRET",
+            Path(".dashboard-data-artifact") / "dashboard-data.enc",
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
         )
 
 
@@ -56,12 +56,12 @@ def test_crypto_rejects_unsupported_payload_version(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    encrypted = tmp_path / "traffic-data.enc"
+    encrypted = tmp_path / "dashboard-data.enc"
     encrypted.write_text(json.dumps({"version": 999}), encoding="utf-8")
-    monkeypatch.setenv("TRAFFIC_DASHBOARD_SECRET", "secret-value")
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", "secret-value")
 
     with pytest.raises(ValueError, match="Unsupported encrypted artifact version"):
-        run.crypto_artifact.decrypt(encrypted, tmp_path / "data", "TRAFFIC_DASHBOARD_SECRET")
+        run.crypto_artifact.decrypt(encrypted, tmp_path / "data", "DASHBOARD_SECRET_DO_NOT_REPLACE")
 
 
 def test_crypto_safe_extract_rejects_path_traversal(tmp_path: Path) -> None:

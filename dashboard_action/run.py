@@ -39,8 +39,6 @@ import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
-import render_pages_disabled_notice  # noqa: E402
-import render_private_readme  # noqa: E402
 import render_readme  # noqa: E402
 import release_notice  # noqa: E402
 import repo_config  # noqa: E402
@@ -54,7 +52,7 @@ class ActionError(RuntimeError):
 @dataclass(frozen=True)
 class RuntimeConfig:
     mode: str
-    traffic_token: str
+    collection_token: str
     github_token: str
     dashboard_secret: str
     dashboard_next_secret: str
@@ -76,10 +74,6 @@ class RuntimeConfig:
     @property
     def resolved_artifact_mode(self) -> str:
         return "plain" if self.privacy_mode == "plain" else "encrypted"
-
-    @property
-    def normalized_readme_dashboard(self) -> str:
-        return "disabled" if self.repo_is_public else "enabled"
 
     @property
     def publish_pages(self) -> bool:
@@ -177,17 +171,17 @@ def load_config_from_env() -> RuntimeConfig:
     )
     return RuntimeConfig(
         mode=mode,
-        traffic_token=_first_env(
-            "REPONOMICS_TRAFFIC_TOKEN",
-            "TRAFFIC_TOKEN",
+        collection_token=_first_env(
+            "REPONOMICS_COLLECTION_TOKEN",
+            "COLLECTION_TOKEN",
             "REPONOMICS_GITHUB_TOKEN",
             "GH_TOKEN",
         ),
         github_token=_first_env("REPONOMICS_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"),
-        dashboard_secret=_first_env("REPONOMICS_DASHBOARD_SECRET", "TRAFFIC_DASHBOARD_SECRET"),
+        dashboard_secret=_first_env("REPONOMICS_DASHBOARD_SECRET", "DASHBOARD_SECRET_DO_NOT_REPLACE"),
         dashboard_next_secret=_first_env(
             "REPONOMICS_DASHBOARD_NEXT_SECRET",
-            "TRAFFIC_DASHBOARD_NEXT_SECRET",
+            "DASHBOARD_NEXT_SECRET",
         ),
         privacy_mode=privacy_mode,
         repo_is_public=repo_is_public,
@@ -210,14 +204,16 @@ def load_config_from_env() -> RuntimeConfig:
 
 
 def validate_config(config: RuntimeConfig) -> None:
-    if config.mode == "collect" and not config.traffic_token:
-        raise ActionError("traffic-token, TRAFFIC_TOKEN, or GH_TOKEN is required for collect mode.")
+    if config.mode == "collect" and not config.collection_token:
+        raise ActionError("collection-token, COLLECTION_TOKEN, or GH_TOKEN is required for collect mode.")
     if config.repo_is_public and config.privacy_mode == "plain":
         raise ActionError("privacy-mode plain is only supported for private repositories.")
+    if config.repo_is_public and config.generate_readme:
+        raise ActionError("generate-readme is only supported for private repositories.")
     if config.mode in {"collect", "publish"} and config.privacy_mode in {"strong", "casual"}:
         _validate_secret(
             config.dashboard_secret,
-            "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
+            "dashboard-secret or DASHBOARD_SECRET_DO_NOT_REPLACE",
             allow_weak=config.privacy_mode == "casual",
         )
     if config.mode == "rotate-key":
@@ -225,12 +221,12 @@ def validate_config(config: RuntimeConfig) -> None:
             raise ActionError("rotate-key requires strong or casual privacy mode.")
         _validate_secret(
             config.dashboard_secret,
-            "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
+            "dashboard-secret or DASHBOARD_SECRET_DO_NOT_REPLACE",
             allow_weak=True,
         )
         _validate_secret(
             config.dashboard_next_secret,
-            "dashboard-next-secret or TRAFFIC_DASHBOARD_NEXT_SECRET",
+            "dashboard-next-secret or DASHBOARD_NEXT_SECRET",
             allow_weak=config.privacy_mode == "casual",
         )
     if config.mode == "incident-reset":
@@ -238,12 +234,12 @@ def validate_config(config: RuntimeConfig) -> None:
             raise ActionError("incident-reset requires strong or casual privacy mode.")
         _validate_secret(
             config.dashboard_secret,
-            "dashboard-secret or TRAFFIC_DASHBOARD_SECRET",
+            "dashboard-secret or DASHBOARD_SECRET_DO_NOT_REPLACE",
             allow_weak=True,
         )
         _validate_secret(
             config.dashboard_next_secret,
-            "dashboard-next-secret or TRAFFIC_DASHBOARD_NEXT_SECRET",
+            "dashboard-next-secret or DASHBOARD_NEXT_SECRET",
             allow_weak=config.privacy_mode == "casual",
         )
         if not config.github_token:
@@ -292,7 +288,7 @@ def _mask_secret(value: str) -> None:
 
 
 def _mask_config_secrets(config: RuntimeConfig) -> None:
-    _mask_secret(config.traffic_token)
+    _mask_secret(config.collection_token)
     _mask_secret(config.github_token)
     _mask_secret(config.dashboard_secret)
     _mask_secret(config.dashboard_next_secret)
@@ -318,29 +314,25 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
     display_assets = Path(os.path.relpath(assets_dir, readme_parent))
 
     render_dashboard.PAGE_INDEX_OUTPUT_PATH = config.pages_index_path.as_posix()
-    render_pages_disabled_notice.PAGES_INDEX_PATH = config.pages_index_path
     render_readme.OUTPUT_PATH = config.readme_path.as_posix()
     render_readme.ASSET_OUTPUT_DIR = assets_dir
     render_readme.ASSET_DISPLAY_DIR = display_assets
-    render_private_readme.OUTPUT_PATH = config.readme_path
-    render_private_readme.ASSET_DIR = assets_dir
 
 
 def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
-    os.environ["README_DASHBOARD"] = config.normalized_readme_dashboard
     os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
     os.environ["ARTIFACT_SECURITY_MODE"] = config.resolved_artifact_mode
     os.environ["DASHBOARD_ACCESS_MODE"] = (
         "encrypted" if config.publish_pages else "public"
     )
-    if config.traffic_token:
-        os.environ["GH_TOKEN"] = config.traffic_token
+    if config.collection_token:
+        os.environ["GH_TOKEN"] = config.collection_token
     if config.dashboard_secret:
-        os.environ["TRAFFIC_DASHBOARD_SECRET"] = config.dashboard_secret
+        os.environ["DASHBOARD_SECRET_DO_NOT_REPLACE"] = config.dashboard_secret
     if config.dashboard_next_secret:
-        os.environ["TRAFFIC_DASHBOARD_NEXT_SECRET"] = config.dashboard_next_secret
+        os.environ["DASHBOARD_NEXT_SECRET"] = config.dashboard_next_secret
     dashboard_key = config.dashboard_next_secret if next_key else config.dashboard_secret
     if dashboard_key:
         os.environ["DASHBOARD_KEY"] = dashboard_key
@@ -394,7 +386,7 @@ def _restore_artifact(config: RuntimeConfig) -> None:
         print("Skipping artifact restore outside GitHub Actions or without gh CLI.")
         return
     env = os.environ.copy()
-    env["ARTIFACT_NAME"] = "traffic-data"
+    env["ARTIFACT_NAME"] = "dashboard-data"
     env["DATA_DIR"] = config.data_dir.as_posix()
     if config.github_token:
         env["GH_TOKEN"] = config.github_token
@@ -403,11 +395,11 @@ def _restore_artifact(config: RuntimeConfig) -> None:
 
 def _decrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
     if config.resolved_artifact_mode != "encrypted":
-        encrypted = config.data_dir / "traffic-data.enc"
+        encrypted = config.data_dir / "dashboard-data.enc"
         encrypted.unlink(missing_ok=True)
         return
     crypto_artifact.decrypt(
-        config.data_dir / "traffic-data.enc",
+        config.data_dir / "dashboard-data.enc",
         config.data_dir,
         secret_env,
     )
@@ -418,7 +410,7 @@ def _encrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
         return
     crypto_artifact.encrypt(
         config.data_dir,
-        Path(".traffic-artifact") / "traffic-data.enc",
+        Path(".dashboard-data-artifact") / "dashboard-data.enc",
         secret_env,
     )
 
@@ -429,22 +421,13 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
 
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
-    if not config.publish_pages:
-        if config.privacy_mode == "plain":
-            render_dashboard.render()
-        else:
-            render_pages_disabled_notice.render()
-    else:
-        render_dashboard.render()
+    render_dashboard.render()
 
     if not generate_readme:
         print("Skipping README render because generate-readme is false.")
         return
 
-    if config.normalized_readme_dashboard == "enabled":
-        render_readme.render()
-    else:
-        render_private_readme.render()
+    render_readme.render()
 
 
 def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
@@ -522,11 +505,11 @@ def _summarize_rotation() -> None:
     lines = [
         "## Dashboard key rotation complete",
         "",
-        "The dashboard outputs and retained traffic artifact now use",
-        "`TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+        "The dashboard outputs and retained dashboard data artifact now use",
+        "`DASHBOARD_NEXT_SECRET`.",
         "",
-        "Now replace `TRAFFIC_DASHBOARD_SECRET` with the new key,",
-        "then delete `TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+        "Now replace `DASHBOARD_SECRET_DO_NOT_REPLACE` with the new key,",
+        "then delete `DASHBOARD_NEXT_SECRET`.",
         "",
         "Normal setup and collection runs should wait until that manual",
         "promotion step is complete.",
@@ -680,7 +663,7 @@ def _list_workflow_run_ids(
     return run_ids
 
 
-def _list_old_traffic_artifact_ids(
+def _list_old_dashboard_data_artifact_ids(
     owner: str,
     repo: str,
     *,
@@ -693,7 +676,7 @@ def _list_old_traffic_artifact_ids(
     while True:
         payload = _github_fetch_json(
             f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts"
-            + f"?name=traffic-data&per_page=100&page={page}",
+            + f"?name=dashboard-data&per_page=100&page={page}",
             headers,
         )
         if not isinstance(payload, dict):
@@ -727,10 +710,10 @@ def _summarize_incident_reset(*, deleted_runs: int, deleted_artifacts: int) -> N
         "",
         f"- Deleted workflow runs: {deleted_runs}",
         f"- Deleted fallback artifacts: {deleted_artifacts}",
-        "- Rotated runtime encryption to `TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+        "- Rotated runtime encryption to `DASHBOARD_NEXT_SECRET`.",
         "",
-        "Promote `TRAFFIC_DASHBOARD_NEXT_SECRET` into `TRAFFIC_DASHBOARD_SECRET` before normal runs.",
-        "Then delete `TRAFFIC_DASHBOARD_NEXT_SECRET`.",
+        "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE` before normal runs.",
+        "Then delete `DASHBOARD_NEXT_SECRET`.",
     ]
     summary_path = _env("GITHUB_STEP_SUMMARY")
     if summary_path:
@@ -762,7 +745,7 @@ def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
             deleted_runs += 1
 
     old_run_id_set = set(old_run_ids)
-    artifact_ids = _list_old_traffic_artifact_ids(
+    artifact_ids = _list_old_dashboard_data_artifact_ids(
         owner,
         repo,
         current_run_id=current_run_id,
@@ -791,12 +774,12 @@ def run_collect(
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     if execute_collect:
         collect_mod.main()
     merge.main()
-    _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _encrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _write_outputs(config, before)
 
 
@@ -806,7 +789,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     _set_update_notice_env(config)
     _render_outputs(config, generate_readme=config.generate_readme)
@@ -820,11 +803,11 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     _set_runtime_env(config, next_key=True)
     _render_outputs(config, generate_readme=config.generate_readme)
-    _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_NEXT_SECRET")
+    _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
     _git_commit_readme(config, "chore: rotate Reponomics README dashboard key [skip ci]")
     _summarize_rotation()
     _write_outputs(config, before)
@@ -836,10 +819,10 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_SECRET")
+    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     _set_runtime_env(config, next_key=True)
-    _encrypt_if_needed(config, secret_env="TRAFFIC_DASHBOARD_NEXT_SECRET")
+    _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
     deleted_runs, deleted_artifacts = _purge_workflow_history(config)
     _summarize_incident_reset(
         deleted_runs=deleted_runs,

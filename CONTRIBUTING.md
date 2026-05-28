@@ -45,7 +45,7 @@ make fixture-publish
 make fixture-rotate-key
 ```
 
-Do not commit generated local state such as `venv`, coverage reports, caches, rendered dashboard output, or local traffic artifacts.
+Do not commit generated local state such as `venv`, coverage reports, caches, rendered dashboard output, or local dashboard data artifacts.
 
 ## Markdown Formatting
 
@@ -56,7 +56,7 @@ Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so futu
 Be conservative with changes to:
 
 - dashboard encryption and decryption;
-- retained traffic artifact encryption and restore behavior;
+- retained dashboard data artifact encryption and restore behavior;
 - generated HTML or JavaScript;
 - vendored third-party assets;
 - workflow permissions and token handling;

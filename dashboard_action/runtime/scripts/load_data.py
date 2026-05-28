@@ -2,7 +2,7 @@
 
 Both renderers must derive from the same canonical CSV data to ensure
 core totals agree. This module provides the single entry point for
-loading and aggregating traffic data from the artifact-backed CSVs.
+loading and aggregating dashboard data from the artifact-backed CSVs.
 """
 
 import os

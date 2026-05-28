@@ -30,7 +30,7 @@ In scope:
 
 - generated dashboard HTML and JavaScript;
 - dashboard encryption and decryption behavior;
-- retained traffic artifact encryption, restore, and upload behavior;
+- retained dashboard data artifact encryption, restore, and upload behavior;
 - workflow permissions, token handling, and release automation;
 - vendored browser assets and their recorded upstream metadata;
 - release notice parsing and rendering;

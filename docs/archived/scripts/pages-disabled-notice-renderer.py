@@ -1,4 +1,19 @@
-"""Render a placeholder index page when Pages publication is disabled."""
+"""
+Archived Pages-Disabled Notice Renderer
+
+This archived helper rendered a placeholder `docs/index.html` when Pages publication was disabled.
+It is no longer part of the runtime contract: disabled Pages publication means no Pages
+upload/deploy step runs, while `plain` mode renders a real HTML dashboard and uploads it
+as the private `html-dashboard-plain` workflow artifact.
+
+If a future feature deliberately tombstones an existing Pages deployment after
+hosted publication is disabled, this code can be used as historical reference.
+That should be implemented as an explicit unpublish/tombstone operation rather
+than as the normal disabled-publication path.
+
+ORIGINAL DOCSTRING:
+Render a placeholder index page when Pages publication is disabled.
+"""
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +32,7 @@ def render() -> None:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>GitHub Traffic Dashboard Disabled</title>
+  <title>Reponomics Dashboard Disabled</title>
   <style>
     body {{
       margin: 0;
@@ -40,8 +55,8 @@ def render() -> None:
 <body>
   <main>
     <h1>Dashboard disabled</h1>
-    <p>This repository is collecting GitHub traffic data, but the Pages
-    dashboard is disabled. No traffic metrics are published here.</p>
+    <p>This repository is collecting GitHub traffic and growth data, but the Pages
+    dashboard is disabled. No dashboard metrics are published here.</p>
     <p><small>Last collection: {now}</small></p>
   </main>
 </body>

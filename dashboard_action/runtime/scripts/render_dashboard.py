@@ -6,13 +6,14 @@ via the shared load_data module and produces:
 - a published dashboard for docs/ hosting
 - a standalone single-file dashboard with Chart.js inlined for offline use
 
-The published dashboard renderer supports two access modes:
+The dashboard renderer supports two access modes:
 
 - public: unencrypted metrics in the generated Pages index artifact
 - encrypted: encrypted metrics in the generated Pages index artifact, decrypted client-side
 
-Plain privacy mode does not call this renderer in template workflows; it
-renders the Pages-disabled placeholder instead.
+Plain privacy mode uses the public access mode and uploads the generated HTML as
+the private `html-dashboard-plain` workflow artifact instead of publishing it to
+GitHub Pages.
 """
 
 import base64
@@ -1863,7 +1864,7 @@ APP_RUNTIME_JS = """
       const map = { views: '--c-views', uniques: '--c-uniques', clones: '--c-clones', clone_uniques: '--c-cloners', stars_delta: '--accent-2', subscribers_delta: '--accent', forks_delta: '--c-uniques' };
       return getThemeColor(map[seriesKey], '');
     }
-    const THEME_KEY = 'gh-traffic-theme';
+    const THEME_KEY = 'reponomics-theme';
     function preferredTheme() {
       try {
         const saved = localStorage.getItem(THEME_KEY);
@@ -4940,7 +4941,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
   <div id="dashboard-app"{hidden_attr}>
     <div class="hero">
       <div class="hero-copy">
-        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>A traffic report for your repos</span></p>
+        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>Traffic and growth data for your repos</span></p>
         <div class="brand-lockup">
           <h1 class="brand">reponomics<span class="accent">.</span></h1>
           <div class="brand-eyebrow">Dashboard</div>
@@ -5208,7 +5209,7 @@ def _build_csp(style_blocks: list[str], script_blocks: list[str]) -> str:
 def _theme_bootstrap_js() -> str:
     return """(function() {
       try {
-        var saved = localStorage.getItem('gh-traffic-theme');
+        var saved = localStorage.getItem('reponomics-theme');
         var theme = (saved === 'light' || saved === 'dark')
           ? saved
           : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -5265,7 +5266,7 @@ def _wrap_html(
     </div>
     <div class="footer-line">
       <span>Built with</span>
-      <a href="https://github.com/hesreallyhim/github-traffic-report-template">Reponomics</a>
+      <a href="https://github.com/reponomics/reponomics-dashboard">Reponomics</a>
       <span class="dot">·</span>
       <span>Made for indie hackers shipping across many repos</span>
     </div>

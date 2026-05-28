@@ -1,4 +1,4 @@
-"""Encrypt or decrypt the traffic data artifact payload.
+"""Encrypt or decrypt the dashboard data artifact payload.
 
 Public repositories cannot treat Actions artifacts as private storage. This
 helper keeps the canonical CSV data artifact-backed while allowing the uploaded
@@ -90,12 +90,12 @@ def encrypt(data_dir: Path, output: Path, secret_env: str) -> None:
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    print(f"Encrypted traffic data artifact written to {output}")
+    print(f"Encrypted dashboard data artifact written to {output}")
 
 
 def decrypt(input_path: Path, data_dir: Path, secret_env: str) -> None:
     if not input_path.exists():
-        print(f"No encrypted traffic data artifact found at {input_path}.")
+        print(f"No encrypted dashboard data artifact found at {input_path}.")
         return
     secret = _load_secret(secret_env)
     payload = json.loads(input_path.read_text(encoding="utf-8"))
@@ -109,7 +109,7 @@ def decrypt(input_path: Path, data_dir: Path, secret_env: str) -> None:
     )
     _safe_extract(plaintext, data_dir)
     input_path.unlink()
-    print(f"Decrypted traffic data artifact into {data_dir}")
+    print(f"Decrypted dashboard data artifact into {data_dir}")
 
 
 def main() -> None:
@@ -118,13 +118,13 @@ def main() -> None:
 
     encrypt_parser = subparsers.add_parser("encrypt")
     encrypt_parser.add_argument("--data-dir", default="data")
-    encrypt_parser.add_argument("--output", default=".traffic-artifact/traffic-data.enc")
-    encrypt_parser.add_argument("--secret-env", default="TRAFFIC_DASHBOARD_SECRET")
+    encrypt_parser.add_argument("--output", default=".dashboard-data-artifact/dashboard-data.enc")
+    encrypt_parser.add_argument("--secret-env", default="DASHBOARD_SECRET_DO_NOT_REPLACE")
 
     decrypt_parser = subparsers.add_parser("decrypt")
-    decrypt_parser.add_argument("--input", default="data/traffic-data.enc")
+    decrypt_parser.add_argument("--input", default="data/dashboard-data.enc")
     decrypt_parser.add_argument("--data-dir", default="data")
-    decrypt_parser.add_argument("--secret-env", default="TRAFFIC_DASHBOARD_SECRET")
+    decrypt_parser.add_argument("--secret-env", default="DASHBOARD_SECRET_DO_NOT_REPLACE")
 
     args = parser.parse_args()
     if args.command == "encrypt":

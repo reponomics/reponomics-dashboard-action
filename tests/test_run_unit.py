@@ -88,6 +88,18 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
 
+def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> None:
+    config = _config_for_run_tests(
+        tmp_path,
+        privacy_mode="strong",
+        repo_is_public=True,
+        generate_readme=True,
+    )
+
+    with pytest.raises(run.ActionError, match="generate-readme is only supported"):
+        run.validate_config(config)
+
+
 def test_restore_artifact_skips_without_github_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -126,7 +138,7 @@ def test_restore_artifact_invokes_script_with_token(
 
     assert calls[0]["args"] == ["bash", str(run.SCRIPTS_DIR / "restore_artifact.sh")]
     assert calls[0]["check"] is True
-    assert calls[0]["env"]["ARTIFACT_NAME"] == "traffic-data"
+    assert calls[0]["env"]["ARTIFACT_NAME"] == "dashboard-data"
     assert calls[0]["env"]["DATA_DIR"] == config.data_dir.as_posix()
     assert calls[0]["env"]["GH_TOKEN"] == "ghp_token"
 
@@ -142,7 +154,7 @@ def test_summarize_rotation_writes_github_step_summary(
 
     summary = summary_path.read_text(encoding="utf-8")
     assert "Dashboard key rotation complete" in summary
-    assert "TRAFFIC_DASHBOARD_NEXT_SECRET" in summary
+    assert "DASHBOARD_NEXT_SECRET" in summary
 
 
 def test_mask_secret_filters_short_values_and_escapes_commands(
@@ -163,7 +175,7 @@ def test_mask_config_secrets_masks_each_secret_line(
 ) -> None:
     config = _config_for_run_tests(
         tmp_path,
-        traffic_token="ghp_traffic",
+        collection_token="ghp_collection",
         github_token="ghp_github",
         dashboard_secret="dashboard%secret",
         dashboard_next_secret="next-secret",
@@ -173,7 +185,7 @@ def test_mask_config_secrets_masks_each_secret_line(
 
     captured = capfd.readouterr()
     assert captured.out.splitlines() == [
-        "::add-mask::ghp_traffic",
+        "::add-mask::ghp_collection",
         "::add-mask::ghp_github",
         "::add-mask::dashboard%25secret",
         "::add-mask::next-secret",
@@ -230,7 +242,7 @@ def test_main_dispatches_incident_reset_mode(
 def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig:
     values: dict[str, Any] = {
         "mode": "collect",
-        "traffic_token": "ghp_traffic",
+        "collection_token": "ghp_collection",
         "github_token": "",
         "dashboard_secret": "dashboard-secret-" + ("x" * 40),
         "dashboard_next_secret": "",

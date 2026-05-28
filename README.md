@@ -44,13 +44,13 @@ Use normal GitHub Action refs to choose the upgrade cadence:
 - `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.
 - `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; they receive update notices during `publish` runs when a compatible newer release advertises one.
 
-Retained traffic artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
+Retained dashboard data artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
 
 New metrics can appear after a compatible upgrade once collection has run with the newer runtime. Historical rows keep blank values unless a safe migration default exists.
 
 ## Usage
 
-Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. The repository owner must first configure the repository's Pages source to **GitHub Actions** in the GitHub UI; this action verifies that configuration and deploys to it, but does not enable Pages or change the publishing source. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `traffic-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
+Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. The repository owner must first configure the repository's Pages source to **GitHub Actions** in the GitHub UI; this action verifies that configuration and deploys to it, but does not enable Pages or change the publishing source. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `html-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
 
 ```yaml
 steps:
@@ -59,9 +59,9 @@ steps:
   - uses: reponomics/reponomics-dashboard-action@v1
     with:
       mode: collect
-      traffic-token: ${{ secrets.TRAFFIC_TOKEN }}
+      collection-token: ${{ secrets.COLLECTION_TOKEN }}
       github-token: ${{ github.token }}
-      dashboard-secret: ${{ secrets.TRAFFIC_DASHBOARD_SECRET }}
+      dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
       privacy-mode: strong
 ```
 
@@ -70,17 +70,20 @@ steps:
 > [!NOTE]
 > Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
 
-For `traffic-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=Reponomics%20Traffic%20Token&description=Read%20repository%20traffic%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories being collected. Choose **All repositories** for broad automatic discovery, or **Only selected repositories** for a narrower dashboard. If you choose selected repositories, keep the dashboard configuration within that token's repository access. It does not need Pages or Administration write permissions.
+For `collection-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories being collected. Choose **All repositories** for broad automatic discovery, or **Only selected repositories** for a narrower dashboard. If you choose selected repositories, keep the dashboard configuration within that token's repository access. It does not need Pages or Administration write permissions.
 
-This action accepts one `traffic-token`. Fine-grained personal access tokens are scoped to one GitHub resource owner, so a fine-grained token is the right fit only when the dashboard collects from one user or organization owner. If one dashboard must span multiple owners today, the current single-token fallback is a classic PAT with `repo` scope where the relevant organizations allow it.
+This action accepts one `collection-token`. Fine-grained personal access tokens are scoped to one GitHub resource owner, so a fine-grained token is the right fit only when the dashboard collects from one user or organization owner. If one dashboard must span multiple owners today, the current single-token fallback is a classic PAT with `repo` scope where the relevant organizations allow it.
+
+> [!NOTE]
+> We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
 
 | Input | Description | Default |
 |---|---|---|
 | `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`. | `collect` |
-| `traffic-token` | Token for GitHub traffic/repository APIs. | Value of `${{ secrets.TRAFFIC_TOKEN }}` in the consuming repository workflow. |
+| `collection-token` | Token for GitHub repository data collection APIs. | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow. |
 | `github-token` | Token for artifact/repository workflow operations. | Value of `${{ github.token }}` in the consuming repository workflow/job. |
-| `dashboard-secret` | Current dashboard/artifact encryption key (required for `strong` and `casual`). | Value of `${{ secrets.TRAFFIC_DASHBOARD_SECRET }}` in the consuming repository workflow. |
-| `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset` (required for `strong` and `casual` rotate-key/incident-reset runs). | Value of `${{ secrets.TRAFFIC_DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |
+| `dashboard-secret` | Current dashboard/artifact encryption key (required for `strong` and `casual`). | Value of `${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}` in the consuming repository workflow. |
+| `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset` (required for `strong` and `casual` rotate-key/incident-reset runs). | Value of `${{ secrets.DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |
 | `incident-confirm-mode` | Destructive `incident-reset` confirmation; must be `INCIDENT_RESET_CONFIRMED` when `mode: incident-reset`. | `""` |
 | `incident-confirm-purge` | Destructive `incident-reset` confirmation; must be `PURGE_OLD_HISTORY_CONFIRMED` when `mode: incident-reset`. | `""` |
 | `incident-confirm-irreversible` | Destructive `incident-reset` confirmation; must be `IRREVERSIBLE_ACTION_CONFIRMED` when `mode: incident-reset`. | `""` |
@@ -106,7 +109,7 @@ The action emits metadata for workflow summaries and later automation:
 - `schema-version`
 - `runtime-version`
 
-`collect` updates only the retained `traffic-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`traffic-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `traffic-data` artifacts tied to those old runs.
+`collect` updates only the retained `dashboard-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`html-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `dashboard-data` artifacts tied to those old runs.
 
 README metrics are derived from repository visibility: private dashboard repositories may render README metrics, while public dashboard repositories render a non-metric README status block. Plain mode stores plaintext CSV artifacts and is rejected in public repositories.
 
@@ -120,15 +123,15 @@ For a hosted encrypted dashboard, configure Pages once in the dashboard reposito
 4. Under **Build and deployment**, set **Source** to **GitHub Actions**.
 5. If GitHub suggests workflow templates, skip them. The Reponomics publish workflow already uploads and deploys the dashboard artifact.
 
-Do not select **Deploy from a branch** for Reponomics dashboard publishing. Do not grant Pages or Administration write permissions to `TRAFFIC_TOKEN` for this setup. `TRAFFIC_TOKEN` is for reading repository traffic data; Pages deployment uses the workflow `GITHUB_TOKEN` with the permissions declared by the consuming workflow.
+Do not select **Deploy from a branch** for Reponomics dashboard publishing. Do not grant Pages or Administration write permissions to `COLLECTION_TOKEN` for this setup. `COLLECTION_TOKEN` is for repository data collection, including GitHub traffic data; Pages deployment uses the workflow `GITHUB_TOKEN` with the permissions declared by the consuming workflow.
 
 ## Offline Viewing
 
-Generated dashboard files are not committed to the repository. This keeps traffic history out of git, but it means offline viewing starts from a workflow artifact rather than from a tracked dashboard file in the repo.
+Generated dashboard files are not committed to the repository. This keeps retained history out of git, but it means offline viewing starts from a workflow artifact rather than from a tracked dashboard file in the repo.
 
 After a successful encrypted `publish` run, open the workflow run's **Summary** page, download the GitHub Pages artifact before it expires, extract it, and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
 
-For private repositories in `privacy-mode: plain`, `publish` uploads a plain dashboard artifact named `traffic-dashboard-plain`. Download that artifact from the workflow run and open `index.html` directly.
+For private repositories in `privacy-mode: plain`, `publish` uploads a plain dashboard artifact named `html-dashboard-plain`. Download that artifact from the workflow run and open `index.html` directly.
 
 You can also download the dashboard with GitHub CLI if you have repository read access. Replace `OWNER/REPO` with the dashboard repository, use `gh run list --repo OWNER/REPO --status success --limit 10` to find the latest successful `publish` workflow run, and replace `RUN_ID` with that run ID.
 
@@ -142,14 +145,14 @@ tar -xf .reponomics-dashboard/artifact.tar -C .reponomics-dashboard
 python3 -m http.server 8000 --directory .reponomics-dashboard
 ```
 
-Then open `http://localhost:8000/` and unlock the dashboard with `TRAFFIC_DASHBOARD_SECRET`.
+Then open `http://localhost:8000/` and unlock the dashboard with `DASHBOARD_SECRET_DO_NOT_REPLACE`.
 
 For private `plain` output, download the plain dashboard artifact:
 
 ```bash
 rm -rf .reponomics-dashboard
 mkdir -p .reponomics-dashboard
-gh run download RUN_ID --repo OWNER/REPO --name traffic-dashboard-plain --dir .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name html-dashboard-plain --dir .reponomics-dashboard
 python3 -m http.server 8000 --directory .reponomics-dashboard
 ```
 
@@ -182,12 +185,12 @@ The action permits three distinct "privacy modes". In `strong` and `casual` mode
 
   Both of these methods will produce a secret that is sufficiently high-entropy that no atacker will be able to decrypt your data with brute-force using consumer hardware within the span of their lifetime.
 
-  Once you've done this, and you have stored the secret in your repository under the default name `TRAFFIC_DASHBOARD_SECRET`, be sure to store it in your preferred password manager as this will also be your "login" password for your hosted dashboard. (Don't worry, if you lose access to the secret, you can rotate it so long as you have control of the repository's workflows, and the previous secret has not been changed, erased, or destroyed.)
+  Once you've done this, and you have stored the secret in your repository under the default name `DASHBOARD_SECRET_DO_NOT_REPLACE`, be sure to store it in your preferred password manager as this will also be your "login" password for your hosted dashboard. (Don't worry, if you lose access to the secret, you can rotate it so long as you have control of the repository's workflows, and the previous secret has not been changed, erased, or destroyed.)
 
 
  - `casual` - in this mode, all data and data-sensitive artifacts are also encrypted, but the action does not care if you use a strong or a weak password. The justification for this is that these modes provide privacy against different "threat models". If you decide to host your dashboard on GitHub Pages, then even a weak password will prevent "any passers-by" from simply viewing your dashboard without first going through the login/decryption flow. For the reasons stated above, weak passwords may easily be bypassed by any _targeted_ attack against your data. But for many users, a simple flow that deters casual users who happen upon their page from viewing the data is more than sufficient. That is the purpose of this mode.
 
- - `plain` - in this mode, there is no encryption or decryption of your data. It is stored in workflow artifacts in plain text. Therefore, because workflow artifacts are accessible to anyone who has read access to your repo, and our policy is to make it very difficult for a user to accidentally make a configuration decision that exposes their data, _`plain` mode is only available in private repos, and the action will not publish your dashboard to GitHub Pages in unencrypted form_. Instead, `publish` generates a plain dashboard and uploads it as a private workflow artifact (`traffic-dashboard-plain`) for download. This is not intended to make your life difficult, and after all, this action is open source, and if you wish to use it in some unintended way, that is within your rights. We impose these restrictions to give users peace of mind that accidental exposure of their data is not possible simply due to misconfiguration of the action or the template repo.
+ - `plain` - in this mode, there is no encryption or decryption of your data. It is stored in workflow artifacts in plain text. Therefore, because workflow artifacts are accessible to anyone who has read access to your repo, and our policy is to make it very difficult for a user to accidentally make a configuration decision that exposes their data, _`plain` mode is only available in private repos, and the action will not publish your dashboard to GitHub Pages in unencrypted form_. Instead, `publish` generates a plain dashboard and uploads it as a private workflow artifact (`html-dashboard-plain`) for download. This is not intended to make your life difficult, and after all, this action is open source, and if you wish to use it in some unintended way, that is within your rights. We impose these restrictions to give users peace of mind that accidental exposure of their data is not possible simply due to misconfiguration of the action or the template repo.
 
 These modes are the best compromise that we could find between giving users a degree of flexibility with respect to their own privacy model, while ensuring that they do not have to worry about their data being published in unencrypted form simply because they "did not read the manual" closely enough.
 

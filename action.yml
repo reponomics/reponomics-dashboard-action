@@ -10,8 +10,8 @@ inputs:
     description: "Runtime mode: collect, publish, rotate-key, or incident-reset."
     required: true
     default: collect
-  traffic-token:
-    description: Token used for GitHub traffic/repository APIs.
+  collection-token:
+    description: Token used for GitHub repository data collection APIs.
     required: false
     default: ""
   github-token:
@@ -51,7 +51,7 @@ inputs:
     required: false
     default: "90"
   generate-readme:
-    description: Generate README dashboard output and commit it back to the caller repository.
+    description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
     default: "false"
   readme-path:
@@ -89,7 +89,7 @@ outputs:
     description: Deployed GitHub Pages URL when a Pages dashboard is published.
     value: ${{ steps.deploy-pages.outputs.page_url }}
   schema-version:
-    description: Retained traffic artifact schema version.
+    description: Retained dashboard data artifact schema version.
     value: ${{ steps.runtime.outputs.schema-version }}
   runtime-version:
     description: Reponomics action runtime version.
@@ -112,7 +112,7 @@ runs:
       shell: bash
       env:
         REPONOMICS_MODE: ${{ inputs.mode }}
-        REPONOMICS_TRAFFIC_TOKEN: ${{ inputs.traffic-token }}
+        REPONOMICS_COLLECTION_TOKEN: ${{ inputs.collection-token }}
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
@@ -151,25 +151,25 @@ runs:
       if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'plain' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: traffic-dashboard-plain
+        name: html-dashboard-plain
         path: ${{ steps.runtime.outputs.pages-path }}
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
 
-    - name: Upload encrypted traffic data artifact
+    - name: Upload encrypted dashboard data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: traffic-data
-        path: .traffic-artifact/traffic-data.enc
+        name: dashboard-data
+        path: .dashboard-data-artifact/dashboard-data.enc
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
 
-    - name: Upload traffic data artifact
+    - name: Upload dashboard data artifact
       if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: traffic-data
+        name: dashboard-data
         path: data
         retention-days: ${{ inputs.retention-days }}
         overwrite: true

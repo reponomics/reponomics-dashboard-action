@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore the latest traffic-data artifact from a previous workflow run.
+# Restore the latest dashboard-data artifact from a previous workflow run.
 #
 # Uses the GitHub CLI (pre-installed on Actions runners) to find and download
 # the most recent unexpired artifact named "$ARTIFACT_NAME".
@@ -10,12 +10,12 @@
 #
 # Environment:
 #   GITHUB_REPOSITORY — owner/repo (set automatically by Actions)
-#   ARTIFACT_NAME     — artifact name to restore (default: traffic-data)
+#   ARTIFACT_NAME     — artifact name to restore (default: dashboard-data)
 #   GH_TOKEN          — GitHub token for API access (set automatically by Actions)
 
 set -euo pipefail
 
-ARTIFACT_NAME="${ARTIFACT_NAME:-traffic-data}"
+ARTIFACT_NAME="${ARTIFACT_NAME:-dashboard-data}"
 DATA_DIR="${DATA_DIR:-data}"
 
 echo "Looking for previous artifact: ${ARTIFACT_NAME}..."

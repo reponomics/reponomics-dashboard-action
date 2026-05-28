@@ -39,7 +39,6 @@ import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
-import render_pages_disabled_notice  # noqa: E402
 import render_private_readme  # noqa: E402
 import render_readme  # noqa: E402
 import release_notice  # noqa: E402
@@ -318,7 +317,6 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
     display_assets = Path(os.path.relpath(assets_dir, readme_parent))
 
     render_dashboard.PAGE_INDEX_OUTPUT_PATH = config.pages_index_path.as_posix()
-    render_pages_disabled_notice.PAGES_INDEX_PATH = config.pages_index_path
     render_readme.OUTPUT_PATH = config.readme_path.as_posix()
     render_readme.ASSET_OUTPUT_DIR = assets_dir
     render_readme.ASSET_DISPLAY_DIR = display_assets
@@ -429,13 +427,7 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
 
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
-    if not config.publish_pages:
-        if config.privacy_mode == "plain":
-            render_dashboard.render()
-        else:
-            render_pages_disabled_notice.render()
-    else:
-        render_dashboard.render()
+    render_dashboard.render()
 
     if not generate_readme:
         print("Skipping README render because generate-readme is false.")

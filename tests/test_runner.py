@@ -1161,21 +1161,6 @@ def test_private_readme_renders_disabled_metrics_with_notice(
     assert "View v0.3.0" in readme
 
 
-def test_dashboard_placeholder_renders_disabled_pages_output(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    output_path = tmp_path / "docs" / "index.html"
-    monkeypatch.setattr(run.render_pages_disabled_notice, "PAGES_INDEX_PATH", output_path)
-
-    run.render_pages_disabled_notice.render()
-
-    html = output_path.read_text(encoding="utf-8")
-    assert "<title>Reponomics Dashboard Disabled</title>" in html
-    assert "Dashboard disabled" in html
-    assert "No dashboard metrics are published here." in html
-
-
 def test_rotate_key_fixture_reencrypts_with_next_secret(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

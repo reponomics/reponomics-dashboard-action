@@ -1173,7 +1173,7 @@ def test_dashboard_placeholder_renders_disabled_pages_output(
     html = output_path.read_text(encoding="utf-8")
     assert "<title>Reponomics Dashboard Disabled</title>" in html
     assert "Dashboard disabled" in html
-    assert "No traffic metrics are published here." in html
+    assert "No dashboard metrics are published here." in html
 
 
 def test_rotate_key_fixture_reencrypts_with_next_secret(

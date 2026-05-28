@@ -4940,7 +4940,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
   <div id="dashboard-app"{hidden_attr}>
     <div class="hero">
       <div class="hero-copy">
-        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>A traffic report for your repos</span></p>
+        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>Traffic and growth data for your repos</span></p>
         <div class="brand-lockup">
           <h1 class="brand">reponomics<span class="accent">.</span></h1>
           <div class="brand-eyebrow">Dashboard</div>

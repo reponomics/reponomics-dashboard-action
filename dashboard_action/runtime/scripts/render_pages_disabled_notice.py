@@ -40,8 +40,8 @@ def render() -> None:
 <body>
   <main>
     <h1>Dashboard disabled</h1>
-    <p>This repository is collecting GitHub traffic data, but the Pages
-    dashboard is disabled. No traffic metrics are published here.</p>
+    <p>This repository is collecting GitHub traffic and growth data, but the Pages
+    dashboard is disabled. No dashboard metrics are published here.</p>
     <p><small>Last collection: {now}</small></p>
   </main>
 </body>

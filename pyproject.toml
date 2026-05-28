@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reponomics-dashboard-action"
-version = "0.12.0"  # x-release-please-version
+version = "0.13.0"  # x-release-please-version
 description = "GitHub Action for the Reponomics Dashboard."
 readme = "README.md"
 authors = [{ "name" = "Reponomics Contributors" }]

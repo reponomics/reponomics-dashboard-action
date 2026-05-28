@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.12.0...v0.13.0) (2026-05-28)
+
+
+### Bug Fixes
+
+* **docs:** spelling fixes ([592893c](https://github.com/reponomics/reponomics-dashboard-action/commit/592893c2c6212dfd04b500f6dd0f36ca882154dc))
+
 ## [0.12.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.11.3...v0.12.0) (2026-05-27)
 
 

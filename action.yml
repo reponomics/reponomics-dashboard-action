@@ -51,7 +51,7 @@ inputs:
     required: false
     default: "90"
   generate-readme:
-    description: Generate README dashboard output and commit it back to the caller repository.
+    description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
     default: "false"
   readme-path:

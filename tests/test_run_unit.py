@@ -88,6 +88,18 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
 
+def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> None:
+    config = _config_for_run_tests(
+        tmp_path,
+        privacy_mode="strong",
+        repo_is_public=True,
+        generate_readme=True,
+    )
+
+    with pytest.raises(run.ActionError, match="generate-readme is only supported"):
+        run.validate_config(config)
+
+
 def test_restore_artifact_skips_without_github_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

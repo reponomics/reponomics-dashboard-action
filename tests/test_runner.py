@@ -324,14 +324,10 @@ def test_validate_token_403_names_required_permission(
 
 
 @pytest.mark.parametrize(
-    (
-        "github_event_repository_private",
-        "expected_repo_is_public",
-        "expected_readme_dashboard",
-    ),
+    ("github_event_repository_private", "expected_repo_is_public"),
     [
-        ("false", True, "disabled"),
-        ("true", False, "enabled"),
+        ("false", True),
+        ("true", False),
     ],
 )
 def test_input_normalization_from_env(
@@ -339,7 +335,6 @@ def test_input_normalization_from_env(
     tmp_path: Path,
     github_event_repository_private: str,
     expected_repo_is_public: bool,
-    expected_readme_dashboard: str,
 ) -> None:
     monkeypatch.setenv("REPONOMICS_MODE", "collect")
     monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghp_collection")
@@ -363,7 +358,6 @@ def test_input_normalization_from_env(
     assert config.repo_is_public is expected_repo_is_public
     assert config.resolved_artifact_mode == "encrypted"
     assert config.publish_pages is True
-    assert config.normalized_readme_dashboard == expected_readme_dashboard
     assert config.retention_days == 30
     assert config.generate_readme is False
 
@@ -1124,41 +1118,6 @@ def test_publish_renders_sanitized_release_notice(
     assert "alert(1)" not in dashboard
     assert "<script>alert(1)</script>" not in readme
     assert "<script>alert(1)</script>" not in dashboard
-
-
-def test_private_readme_renders_disabled_metrics_with_notice(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    output_path = tmp_path / "README.md"
-    asset_dir = tmp_path / "docs" / "assets"
-    asset_dir.mkdir(parents=True)
-    (asset_dir / "old.js").write_text("stale", encoding="utf-8")
-    monkeypatch.setattr(run.render_private_readme, "OUTPUT_PATH", output_path)
-    monkeypatch.setattr(run.render_private_readme, "ASSET_DIR", asset_dir)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/reponomics")
-    monkeypatch.setenv("PUBLISH_PAGES", "true")
-    monkeypatch.setenv("ARTIFACT_SECURITY_MODE", "encrypted")
-    monkeypatch.setenv(
-        "REPONOMICS_UPDATE_NOTICE_JSON",
-        json.dumps({
-            "version": "v0.3.0",
-            "title": "Upgrade <now>",
-            "summary": "No **markdown** is rendered.",
-            "url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.3.0",
-        }),
-    )
-
-    run.render_private_readme.render()
-
-    readme = output_path.read_text(encoding="utf-8")
-    assert not asset_dir.exists()
-    assert "README analytics summary: disabled" in readme
-    assert "Encrypted dashboard: `https://demo.github.io/reponomics/`" in readme
-    assert "Actions data artifact: encrypted" in readme
-    assert "Upgrade &lt;now&gt;" in readme
-    assert "No **markdown** is rendered." in readme
-    assert "View v0.3.0" in readme
 
 
 def test_rotate_key_fixture_reencrypts_with_next_secret(

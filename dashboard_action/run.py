@@ -39,7 +39,6 @@ import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
-import render_private_readme  # noqa: E402
 import render_readme  # noqa: E402
 import release_notice  # noqa: E402
 import repo_config  # noqa: E402
@@ -75,10 +74,6 @@ class RuntimeConfig:
     @property
     def resolved_artifact_mode(self) -> str:
         return "plain" if self.privacy_mode == "plain" else "encrypted"
-
-    @property
-    def normalized_readme_dashboard(self) -> str:
-        return "disabled" if self.repo_is_public else "enabled"
 
     @property
     def publish_pages(self) -> bool:
@@ -213,6 +208,8 @@ def validate_config(config: RuntimeConfig) -> None:
         raise ActionError("collection-token, COLLECTION_TOKEN, or GH_TOKEN is required for collect mode.")
     if config.repo_is_public and config.privacy_mode == "plain":
         raise ActionError("privacy-mode plain is only supported for private repositories.")
+    if config.repo_is_public and config.generate_readme:
+        raise ActionError("generate-readme is only supported for private repositories.")
     if config.mode in {"collect", "publish"} and config.privacy_mode in {"strong", "casual"}:
         _validate_secret(
             config.dashboard_secret,
@@ -320,14 +317,11 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
     render_readme.OUTPUT_PATH = config.readme_path.as_posix()
     render_readme.ASSET_OUTPUT_DIR = assets_dir
     render_readme.ASSET_DISPLAY_DIR = display_assets
-    render_private_readme.OUTPUT_PATH = config.readme_path
-    render_private_readme.ASSET_DIR = assets_dir
 
 
 def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
-    os.environ["README_DASHBOARD"] = config.normalized_readme_dashboard
     os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
     os.environ["ARTIFACT_SECURITY_MODE"] = config.resolved_artifact_mode
     os.environ["DASHBOARD_ACCESS_MODE"] = (
@@ -433,10 +427,7 @@ def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
         print("Skipping README render because generate-readme is false.")
         return
 
-    if config.normalized_readme_dashboard == "enabled":
-        render_readme.render()
-    else:
-        render_private_readme.render()
+    render_readme.render()
 
 
 def _git_commit_readme(config: RuntimeConfig, message: str) -> None:

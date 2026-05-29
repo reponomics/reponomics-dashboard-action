@@ -411,12 +411,22 @@ def test_runtime_outputs_include_pages_path(
     assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
 
 
-def test_generate_readme_stages_only_readme(
+def test_generate_readme_stages_readme_and_svg_assets_only(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     calls: list[list[str]] = []
     config = _config(tmp_path, generate_readme=True)
+    assets_dir = config.pages_index_path.parent / "assets"
+    assets_dir.mkdir(parents=True)
+    svg_asset = assets_dir / "hero-stats.svg"
+    light_svg_asset = assets_dir / "hero-stats-light.svg"
+    chart_asset = assets_dir / "chart.umd.min.js"
+    export_asset = assets_dir / "export-data-deadbeefdeadbeef.enc"
+    svg_asset.write_text("<svg />", encoding="utf-8")
+    light_svg_asset.write_text("<svg />", encoding="utf-8")
+    chart_asset.write_text("chart", encoding="utf-8")
+    export_asset.write_bytes(b"ciphertext")
 
     def fake_run(args, **kwargs):
         calls.append(list(args))
@@ -428,9 +438,16 @@ def test_generate_readme_stages_only_readme(
 
     run._git_commit_readme(config, "chore: test")
 
-    assert ["git", "add", config.readme_path.as_posix()] in calls
+    assert [
+        "git",
+        "add",
+        config.readme_path.as_posix(),
+        light_svg_asset.as_posix(),
+        svg_asset.as_posix(),
+    ] in calls
     assert all(config.pages_index_path.as_posix() not in call for call in calls)
-    assert all((config.pages_index_path.parent / "assets").as_posix() not in call for call in calls)
+    assert all(chart_asset.as_posix() not in call for call in calls)
+    assert all(export_asset.as_posix() not in call for call in calls)
 
 
 def test_bootstrap_creates_empty_data_files_and_manifest(

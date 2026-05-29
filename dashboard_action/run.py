@@ -430,6 +430,17 @@ def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
     render_readme.render()
 
 
+def _readme_svg_asset_paths(config: RuntimeConfig) -> list[str]:
+    assets_dir = config.pages_index_path.parent / "assets"
+    if not assets_dir.exists():
+        return []
+    return [
+        path.as_posix()
+        for path in sorted(assets_dir.glob("*.svg"))
+        if path.is_file()
+    ]
+
+
 def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
     if not config.generate_readme:
         return
@@ -443,7 +454,7 @@ def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
     if in_repo.returncode != 0 or in_repo_stdout != "true":
         print("Skipping README commit outside a git worktree.")
         return
-    paths = [config.readme_path.as_posix()]
+    paths = [config.readme_path.as_posix(), *_readme_svg_asset_paths(config)]
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
     subprocess.run(
         ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],

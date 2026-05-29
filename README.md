@@ -50,7 +50,7 @@ New metrics can appear after a compatible upgrade once collection has run with t
 
 ## Usage
 
-Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. The repository owner must first configure the repository's Pages source to **GitHub Actions** in the GitHub UI; this action verifies that configuration and deploys to it, but does not enable Pages or change the publishing source. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `html-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
+Caller workflows are responsible for checkout, scheduling, permissions, secrets, and version pinning. Hosted Pages dashboards are deployed with GitHub Pages Actions artifacts during `publish` and `rotate-key` runs for `strong` and `casual` privacy modes, so those workflows need `pages: write` and `id-token: write`. The repository owner must first configure the repository's Pages source to **GitHub Actions** in the GitHub UI; this action verifies that configuration and deploys to it, but does not enable Pages or change the publishing source. Private repositories using `privacy-mode: plain` do not publish Pages output, but `publish` still renders a dashboard and uploads it as the `html-dashboard-plain` workflow artifact by default. Workflows only need `contents: write` when `generate-readme: true` is used to generate and commit README output or when `docs-sync` commits managed documentation. `incident-reset` requires `actions: write` because it deletes prior workflow runs and fallback artifacts after rotating retained encryption to `dashboard-next-secret`.
 
 ```yaml
 steps:
@@ -79,7 +79,7 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 
 | Input | Description | Default |
 |---|---|---|
-| `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`. | `collect` |
+| `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`, `docs-sync`. | `collect` |
 | `collection-token` | Token for GitHub repository data collection APIs. | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow. |
 | `github-token` | Token for artifact/repository workflow operations. | Value of `${{ github.token }}` in the consuming repository workflow/job. |
 | `dashboard-secret` | Current dashboard/artifact encryption key (required for `strong` and `casual`). | Value of `${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}` in the consuming repository workflow. |
@@ -91,6 +91,7 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 | `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
 | `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
 | `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |
+| `managed-docs-sync` | Override managed documentation sync into `docs/reponomics/`. Leave blank to use `managed_docs_sync` in `config.yaml`, or default `true` when config is unset. | `""` |
 | `readme-path` | README output path. | `README.md` |
 
 ## Outputs
@@ -107,8 +108,12 @@ The action emits metadata for workflow summaries and later automation:
 - `dashboard-updated`
 - `schema-version`
 - `runtime-version`
+- `docs-sync-state`
+- `docs-sync-reason`
+- `docs-bundle-version`
+- `docs-manifest-action-version`
 
-`collect` updates only the retained `dashboard-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`html-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `dashboard-data` artifacts tied to those old runs.
+`collect` updates only the retained `dashboard-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`html-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. `docs-sync` updates the Reponomics-managed local documentation namespace at `docs/reponomics/` when enabled. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `dashboard-data` artifacts tied to those old runs.
 
 README metrics are derived from repository visibility: private dashboard repositories may render README metrics, while public dashboard repositories render a non-metric README status block. Plain mode stores plaintext CSV artifacts and is rejected in public repositories.
 

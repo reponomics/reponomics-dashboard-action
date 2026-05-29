@@ -67,6 +67,7 @@ PBKDF2_SALT_BYTES = 16
 AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
+MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
@@ -4983,6 +4984,7 @@ def _render_version_badges():
     latest_value = latest_display or "unknown"
     current_href = html.escape(status["current_url"], quote=True)
     latest_href = html.escape(status["url"], quote=True)
+    updates_href = html.escape(os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True)
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
     return (
@@ -4994,7 +4996,7 @@ def _render_version_badges():
         + f'          <a class="action-version-badge latest{latest_state}" href="{latest_href}">'
         + '<span class="badge-label">latest version</span>'
         + f'<span class="badge-value">{latest_value}</span></a>\n'
-        + f'          <a class="action-version-link" href="{latest_href}">View latest updates</a>\n'
+        + f'          <a class="action-version-link" href="{updates_href}">View latest updates</a>\n'
         + "        </div>"
     )
 

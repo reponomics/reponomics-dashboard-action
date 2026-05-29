@@ -110,6 +110,7 @@ def _render_production_outputs(
         data_dir=data_dir,
         retention_days=90,
         generate_readme=True,
+        managed_docs_sync=True,
         pages_index_path=workdir / "docs" / "index.html",
         readme_path=workdir / "README.md",
         incident_confirm_mode="",

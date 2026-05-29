@@ -11,6 +11,7 @@ PLAIN_DASHBOARD_ARTIFACT_IF = (
     "${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == " +
     "'false' && steps.runtime.outputs.artifact-mode == 'plain' }}"
 )
+DATA_ARTIFACT_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
 
 
 def _action() -> dict:
@@ -52,11 +53,15 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     upload_pages = _step_by_uses("actions/upload-pages-artifact@")
     deploy_pages = _step_by_uses("actions/deploy-pages@")
     plain_dashboard = _step_by_name("Upload plain dashboard artifact")
+    encrypted_data = _step_by_name("Upload encrypted dashboard data artifact")
+    plain_data = _step_by_name("Upload dashboard data artifact")
 
     assert upload_pages["if"] == PAGES_DEPLOYMENT_IF
     assert deploy_pages["if"] == PAGES_DEPLOYMENT_IF
     assert plain_dashboard["if"] == PLAIN_DASHBOARD_ARTIFACT_IF
     assert plain_dashboard["with"]["name"] == "html-dashboard-plain"
+    assert DATA_ARTIFACT_MODE_EXCLUSION in encrypted_data["if"]
+    assert DATA_ARTIFACT_MODE_EXCLUSION in plain_data["if"]
 
 
 def test_publish_pages_replaces_dashboard_mode_output() -> None:
@@ -66,3 +71,18 @@ def test_publish_pages_replaces_dashboard_mode_output() -> None:
     assert "dashboard-mode" not in outputs
     assert "publishes" in description
     assert "GitHub Pages" in description
+
+
+def test_managed_docs_sync_metadata_contract() -> None:
+    action = _action()
+    inputs = action["inputs"]
+    outputs = action["outputs"]
+    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+
+    assert "docs-sync" in inputs["mode"]["description"]
+    assert inputs["managed-docs-sync"]["default"] == ""
+    assert runtime_env["REPONOMICS_MANAGED_DOCS_SYNC"] == "${{ inputs.managed-docs-sync }}"
+    assert outputs["docs-sync-state"]["value"] == "${{ steps.runtime.outputs.docs-sync-state }}"
+    assert outputs["docs-sync-reason"]["value"] == "${{ steps.runtime.outputs.docs-sync-reason }}"
+    assert outputs["docs-bundle-version"]["value"] == "${{ steps.runtime.outputs.docs-bundle-version }}"
+    assert outputs["docs-manifest-action-version"]["value"] == "${{ steps.runtime.outputs.docs-manifest-action-version }}"

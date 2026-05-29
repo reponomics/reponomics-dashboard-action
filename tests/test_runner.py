@@ -95,6 +95,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "generate_readme": False,
+        "managed_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",
@@ -374,6 +375,51 @@ def test_input_normalization_from_env(
     assert config.publish_pages is True
     assert config.retention_days == 30
     assert config.generate_readme is False
+    assert config.managed_docs_sync is True
+
+
+def test_managed_docs_sync_uses_config_when_input_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("managed_docs_sync: false\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+    monkeypatch.delenv("REPONOMICS_MANAGED_DOCS_SYNC", raising=False)
+
+    config = run.load_config_from_env()
+
+    assert config.managed_docs_sync is False
+
+
+def test_managed_docs_sync_input_overrides_config(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("managed_docs_sync: false\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("REPONOMICS_MANAGED_DOCS_SYNC", "true")
+
+    config = run.load_config_from_env()
+
+    assert config.managed_docs_sync is True
+
+
+def test_managed_docs_sync_rejects_non_boolean_config(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text('managed_docs_sync: "false"\n', encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+    monkeypatch.delenv("REPONOMICS_MANAGED_DOCS_SYNC", raising=False)
+
+    with pytest.raises(run.ActionError, match="managed_docs_sync"):
+        run.load_config_from_env()
 
 
 @pytest.mark.parametrize(
@@ -423,6 +469,7 @@ def test_runtime_outputs_include_pages_path(
     output = output_path.read_text(encoding="utf-8")
     assert "publish-pages=true" in output
     assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
+    assert f"docs-bundle-version={run.VERSION}" in output
 
 
 def test_generate_readme_stages_readme_and_svg_assets_only(
@@ -462,6 +509,71 @@ def test_generate_readme_stages_readme_and_svg_assets_only(
     assert all(config.pages_index_path.as_posix() not in call for call in calls)
     assert all(chart_asset.as_posix() not in call for call in calls)
     assert all(export_asset.as_posix() not in call for call in calls)
+
+
+def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[list[str]] = []
+    output_path = tmp_path / "github-output.txt"
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, mode="docs-sync")
+
+    def fake_run(args, **kwargs):
+        command = list(args)
+        calls.append(command)
+        if command == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return subprocess.CompletedProcess(args, 0, stdout="true", stderr="")
+        if command == ["git", "diff", "--cached", "--quiet", "--", "docs/reponomics"]:
+            return subprocess.CompletedProcess(args, 1)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary_path))
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+
+    run.run_docs_sync(config)
+
+    output = output_path.read_text(encoding="utf-8")
+    summary = summary_path.read_text(encoding="utf-8")
+    assert (tmp_path / "docs" / "reponomics" / "README.md").is_file()
+    assert (tmp_path / "docs" / "reponomics" / ".manifest.json").is_file()
+    assert "docs-sync-state=updated" in output
+    assert f"docs-bundle-version={run.VERSION}" in output
+    assert "Managed Reponomics docs" in summary
+    assert ["git", "add", "--", "docs/reponomics"] in calls
+    assert any(command[:3] == ["git", "commit", "-m"] and command[-2:] == ["--", "docs/reponomics"] for command in calls)
+    assert ["git", "push"] in calls
+
+
+def test_docs_sync_mode_reports_permission_missing_for_push_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "github-output.txt"
+    config = _config(tmp_path, mode="docs-sync")
+
+    def fake_run(args, **kwargs):
+        command = list(args)
+        if command == ["git", "rev-parse", "--is-inside-work-tree"]:
+            return subprocess.CompletedProcess(args, 0, stdout="true", stderr="")
+        if command == ["git", "diff", "--cached", "--quiet", "--", "docs/reponomics"]:
+            return subprocess.CompletedProcess(args, 1)
+        if command == ["git", "push"]:
+            raise subprocess.CalledProcessError(1, args, stderr="remote: Permission denied 403")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+
+    run.run_docs_sync(config)
+
+    output = output_path.read_text(encoding="utf-8")
+    assert "docs-sync-state=permission_missing" in output
+    assert "Git push was not permitted" in output
 
 
 def test_bootstrap_creates_empty_data_files_and_manifest(
@@ -1133,6 +1245,38 @@ def test_publish_renders_expected_version_status_states(
     assert latest_value in dashboard
     assert "#1a7f37" in current_svg
     assert latest_color in latest_svg
+
+
+def test_publish_links_version_status_to_local_managed_docs_when_present(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run, "VERSION", VERSION_STATUS_TEST_VERSION)
+    monkeypatch.setattr(
+        run.version_status,
+        "_fetch_releases",
+        lambda: [
+            {
+                "tag_name": "v0.14.0",
+                "html_url": _version_status_release_url("v0.14.0"),
+                "draft": False,
+                "prerelease": False,
+            }
+        ],
+    )
+    managed_docs_dir = tmp_path / "docs" / "reponomics"
+    managed_docs_dir.mkdir(parents=True)
+    (managed_docs_dir / "README.md").write_text("local docs\n", encoding="utf-8")
+    config = _config(tmp_path, mode="publish", generate_readme=True)
+    _seed_log(config.data_dir)
+
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    assert "[View latest updates](docs/reponomics/README.md)" in readme
+    assert 'class="action-version-link" href="reponomics/README.md"' in dashboard
 
 
 def test_publish_renders_version_status_fallback_when_latest_unknown(

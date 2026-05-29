@@ -239,6 +239,26 @@ def test_main_dispatches_incident_reset_mode(
     assert called == ["incident-reset", "incident:incident-reset"]
 
 
+def test_main_dispatches_docs_sync_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    called: list[str] = []
+    config = _config_for_run_tests(tmp_path, mode="docs-sync")
+
+    monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
+    monkeypatch.setattr(
+        run,
+        "run_docs_sync",
+        lambda received: called.append(f"docs:{received.mode}"),
+    )
+
+    run.main(lambda: config)
+
+    assert called == ["docs-sync", "docs:docs-sync"]
+
+
 def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig:
     values: dict[str, Any] = {
         "mode": "collect",
@@ -252,6 +272,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "generate_readme": False,
+        "managed_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",

@@ -35,6 +35,7 @@ ASSET_OUTPUT_DIR = Path("docs") / "assets"
 ASSET_DISPLAY_DIR = Path("docs") / "assets"
 DEFAULT_REPO_TABLE_LIMIT = 10
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
+MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
 
 
 def _picture(dark_src: str, alt: str) -> str:
@@ -87,12 +88,13 @@ def _version_status_lines(status, badge_links):
         return []
     current_link = status["current_url"]
     latest_link = status["url"]
+    updates_link = os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or latest_link
     return [
         f"[![Your version: {_display_version(status['current_version'])}]"
         + f"({badge_links['current']})]({current_link}) "
         + f"[![Latest version: {_display_version(status['latest_version']) or 'unknown'}]"
         + f"({badge_links['latest']})]({latest_link}) "
-        + f"[View latest updates]({latest_link})",
+        + f"[View latest updates]({updates_link})",
         "",
     ]
 

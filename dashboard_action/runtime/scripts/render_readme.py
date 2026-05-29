@@ -234,7 +234,7 @@ def render():
         "# Reponomics Dashboard",
         "",
         "[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)]"
-        + "(../../actions/workflows/collect.yml)",
+        + "(.github/workflows/collect.yml)",
         "",
         f"<sub>Latest data capture: {latest_capture}</sub>",
         "",

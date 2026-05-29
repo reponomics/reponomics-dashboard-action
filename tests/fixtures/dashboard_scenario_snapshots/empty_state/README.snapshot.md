@@ -1,6 +1,6 @@
 # Reponomics Dashboard
 
-[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](../../actions/workflows/collect.yml)
+[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](.github/workflows/collect.yml)
 
 <sub>Latest data capture: not yet collected</sub>
 

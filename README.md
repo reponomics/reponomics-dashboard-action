@@ -42,7 +42,7 @@ This is a composite action that does a lot of different things for the Reponomic
 Use normal GitHub Action refs to choose the upgrade cadence:
 
 - `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.
-- `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; they receive update notices during `publish` runs when a compatible newer release advertises one.
+- `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; during `publish` runs the generated dashboard can show compact action version status with a link to the latest stable release.
 
 Retained dashboard data artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
 
@@ -92,7 +92,6 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 | `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
 | `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |
 | `readme-path` | README output path. | `README.md` |
-| `update-notices` | Best-effort metadata-only update notices from constrained Reponomics GitHub Release metadata. | `true` |
 
 ## Outputs
 
@@ -250,19 +249,6 @@ make preview-collection-quality-dashboard
 
 ## Maintainer Release Policy
 
-Release notes that should trigger an in-dashboard update notice must include one constrained metadata block:
-
-```markdown
-<!-- reponomics-update {"title":"Upgrade available","summary":"Compatible runtime and artifact migration update.","min_runtime_version":"0.1.0","action_refs":["v1"]} -->
-```
-
-Supported keys are `title`, `summary`, `min_runtime_version`, `max_runtime_version`, `action_refs`, and `action_repository`. `action_refs` may be `"*"` or a list of exact refs such as `["v1", "v1.2.3"]`. `action_repository`, when present, must be `reponomics/reponomics-dashboard-action`. Only the parsed metadata is rendered; arbitrary remote release Markdown is not rendered into user dashboards.
-
-Validate release-note files before publication:
-
-```bash
-venv/bin/python scripts/validate_release_notice.py path/to/release-notes.md
-make validate-release-notice
-```
+Generated dashboards render compact local action version status only: current runtime version, latest stable release when the GitHub Releases API check succeeds, whether an update is available, and a link to the release or releases page. Release bodies, summaries, Markdown, and HTML are never rendered into user repositories.
 
 Compatibility fixtures are part of the action CI policy. For each supported prior artifact/config shape, keep deterministic tests that run old config plus old retained artifact data through `collect`, `publish`, and encrypted `rotate-key` where encryption applies. These checks must verify migrated artifact schema, preserved historical data, rendered output compatibility, and that normal modes do not silently mutate user-owned `config.yaml`.

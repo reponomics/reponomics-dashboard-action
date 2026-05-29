@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import html
 from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
@@ -15,6 +16,11 @@ README_ASSET_FILENAMES = {
     "bar_chart": "bar-chart.svg",
     "activity": "activity.svg",
     "donut": "donut.svg",
+}
+
+VERSION_BADGE_FILENAMES = {
+    "current": "action-version-current.svg",
+    "latest": "action-version-latest.svg",
 }
 
 # Light-theme variants use this suffix
@@ -124,6 +130,28 @@ def _responsive_svg(inner: str, width: int, height: int) -> str:
         f'viewBox="0 0 {width} {height}" ' +
         f'width="{width}" height="{height}">\n'
     ) + inner + "\n</svg>"
+
+
+def svg_version_badge(label: str, value: str, color: str, height: int = 22) -> str:
+    """Generate a small static SVG badge for GitHub README rendering."""
+    label = label.strip()
+    value = value.strip()
+    label_width = max(72, _estimate_text_width(label, 11) + 18)
+    value_width = max(56, _estimate_text_width(value, 11) + 18)
+    width = label_width + value_width
+    label_text_x = label_width // 2
+    value_text_x = label_width + (value_width // 2)
+    safe_label = html.escape(label)
+    safe_value = html.escape(value)
+    safe_color = html.escape(color, quote=True)
+    inner = f"""  <rect width="{width}" height="{height}" fill="#555"/>
+  <rect x="{label_width}" width="{value_width}" height="{height}" fill="{safe_color}"/>
+  <rect x="{label_width}" width="4" height="{height}" fill="{safe_color}"/>
+  <text x="{label_text_x}" y="15" text-anchor="middle" fill="#fff"
+        font-size="11" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">{safe_label}</text>
+  <text x="{value_text_x}" y="15" text-anchor="middle" fill="#fff"
+        font-size="11" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">{safe_value}</text>"""
+    return _responsive_svg(inner, width, height)
 
 
 def _estimate_text_width(text: str, font_size: int = 11) -> int:
@@ -739,4 +767,30 @@ def write_readme_svg_assets(output_dir: Path | str, asset_data: dict) -> dict[st
         asset_data["share_repo_labels"], asset_data["share_repo_views"],
     )
 
+    return files
+
+
+def write_version_badge_assets(
+    output_dir: Path | str,
+    *,
+    current_version: str,
+    latest_version: str,
+) -> dict[str, Path]:
+    """Write static action-version badge SVG assets and return paths by badge key."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    latest_color = "#0969da" if latest_version and latest_version != current_version else "#1a7f37"
+    if not latest_version:
+        latest_color = "#6e7781"
+
+    badges = {
+        "current": ("your version", current_version, "#1a7f37"),
+        "latest": ("latest version", latest_version or "unknown", latest_color),
+    }
+    files: dict[str, Path] = {}
+    for key, (label, value, color) in badges.items():
+        path = output_dir / VERSION_BADGE_FILENAMES[key]
+        path.write_text(svg_version_badge(label, value, color), encoding="utf-8")
+        files[key] = path
     return files

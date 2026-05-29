@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-o4+GcsWZqbO2kYxTD7xari6MthTA4z7ODAippYa4baU=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-xqgZF4INLeK/aH0xI5pDDvWrFd3SE16qfYl1NsQ3UdQ=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-o4+GcsWZqbO2kYxTD7xari6MthTA4z7ODAippYa4baU=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-5+PNCdP1i2CPFb7MH5Rv5bwCK8XLnJVPKiggTUGzSuM=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
 
   <script src="assets/chart.umd.min.js"></script>
   <style>
@@ -154,6 +154,60 @@
       overflow-wrap: break-word;
       word-break: normal;
       text-wrap: pretty;
+    }
+    .action-version-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      align-items: center;
+    }
+    .action-version-badge {
+      display: inline-flex;
+      align-items: stretch;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.74rem;
+      line-height: 1;
+      text-decoration: none;
+      box-shadow: 0 1px 0 var(--inset-highlight) inset;
+      white-space: nowrap;
+    }
+    .action-version-badge:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .action-version-badge .badge-label {
+      background: #555555;
+      color: #ffffff;
+      padding: 0.32rem 0.5rem;
+    }
+    .action-version-badge .badge-value {
+      background: #1a7f37;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 0.32rem 0.5rem;
+    }
+    .action-version-badge.latest .badge-value { background: #1a7f37; }
+    .action-version-badge.latest.different .badge-value { background: #0969da; }
+    .action-version-badge.latest.unknown .badge-value { background: #6e7781; }
+    .action-version-link {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-bottom: 1px dotted currentColor;
+    }
+    .action-version-link:hover {
+      color: var(--text);
+      border-bottom-color: currentColor;
+    }
+    .action-version-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
     .tagline {
       color: var(--text-muted);
@@ -1240,8 +1294,7 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    body.auth-locked > footer,
-    body.auth-locked .update-notice {
+    body.auth-locked > footer {
       display: none;
     }
     #auth-shell {
@@ -1517,23 +1570,6 @@
     .auth-footer .footer-subline {
       margin-top: 6px;
     }
-    .update-notice {
-      max-width: 980px;
-      margin: 2rem auto 0;
-      padding: 0.85rem 1rem;
-      border: 1px solid var(--border-soft);
-      border-radius: 8px;
-      background: var(--bg-card-2);
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      line-height: 1.45;
-    }
-    .update-notice strong { color: var(--text); }
-    .update-notice a {
-      color: var(--accent);
-      text-decoration: none;
-      border-bottom: 1px dotted currentColor;
-    }
     input[type="checkbox"] {
       width: 16px;
       height: 16px;
@@ -1756,6 +1792,11 @@
           <div class="brand-eyebrow">Dashboard</div>
         </div>
         <p class="updated" id="updated-text">Last updated: 2026-05-28 12:00 UTC | Tracking 0 repositories | 0 days of data</p>
+        <div class="action-version-badges" role="group" aria-label="Reponomics action version status">
+          <a class="action-version-badge current" href="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1"><span class="badge-label">your version</span><span class="badge-value">v0.13.1</span></a>
+          <a class="action-version-badge latest" href="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1"><span class="badge-label">latest version</span><span class="badge-value">v0.13.1</span></a>
+          <a class="action-version-link" href="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1">View latest updates</a>
+        </div>
       </div>
       <div class="hero-toolbar">
         <div class="hero-toolbar-controls">
@@ -1990,7 +2031,6 @@
       <div id="repo-table"></div>
     </div>
   </div>
-
 
 
   <footer>

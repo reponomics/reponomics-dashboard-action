@@ -2,6 +2,8 @@
 
 [![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](../../actions/workflows/collect.yml)
 
+[![Your version: v0.13.1](docs/assets/action-version-current.svg)](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1) [![Latest version: v0.13.1](docs/assets/action-version-latest.svg)](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1) [View latest updates](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1)
+
 <sub>Latest data capture: 2026-05-15 12:00 UTC</sub>
 
 <picture>

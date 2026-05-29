@@ -12,7 +12,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 import zipfile
@@ -87,7 +86,6 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "generate_readme": False,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
-        "update_notices": False,
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
         "incident_confirm_irreversible": "",
@@ -96,6 +94,11 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
     }
     values.update(overrides)
     return run.RuntimeConfig(**values)
+
+
+@pytest.fixture(autouse=True)
+def _stub_version_status_releases(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(run.version_status, "_fetch_releases", lambda: [])
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -896,8 +899,8 @@ def test_publish_dashboard_toolbar_layout_and_status_regression(
     assert "const shaMatch = /SHA-256:\\\\s*([0-9a-f]{16,})/i.exec(rawMessage);" not in dashboard
 
 
-def test_release_notice_semver_comparison() -> None:
-    compare = run.release_notice.compare_semver
+def test_version_status_semver_comparison() -> None:
+    compare = run.version_status.compare_semver
 
     assert compare("v1.2.4", "1.2.3") == 1
     assert compare("1.2.3", "1.2.3") == 0
@@ -905,200 +908,80 @@ def test_release_notice_semver_comparison() -> None:
     assert compare("1.2.3", "1.2.3-rc.1") == 1
 
 
-def test_release_notice_parses_only_constrained_update_block() -> None:
-    body = """
-    Regular release notes with **markdown**.
-    <!-- reponomics-update {"title":"Update <b>now</b>","summary":"Use v0.2.0","min_runtime_version":"0.1.0"} -->
-    More arbitrary markdown that must not be rendered.
-    """
-
-    parsed = run.release_notice.parse_update_block(body)
-
-    assert parsed == {
-        "title": "Update <b>now</b>",
-        "summary": "Use v0.2.0",
-        "min_runtime_version": "0.1.0",
-    }
-    assert run.release_notice.parse_update_block("<!-- other {\"title\":\"no\"} -->") is None
-
-
-def test_release_notice_validation_cli_accepts_valid_block(tmp_path: Path) -> None:
-    notes = tmp_path / "release.md"
-    notes.write_text(
-        "\n".join([
-            "# v0.2.0",
-            "",
-            "<!-- reponomics-update {"
-            + "\"title\":\"Upgrade available\","
-            + "\"summary\":\"Compatible runtime and artifact migration update.\","
-            + "\"min_runtime_version\":\"0.1.0\","
-            + "\"action_refs\":[\"v0.1.0\"]"
-            + "} -->",
-        ]),
-        encoding="utf-8",
-    )
-
-    result = subprocess.run(
-        [sys.executable, "scripts/validate_release_notice.py", str(notes)],
-        check=False,
-        cwd=Path(__file__).resolve().parents[1],
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0
-    assert "ok" in result.stdout
-
-
-def test_release_notice_validation_cli_rejects_malformed_block(tmp_path: Path) -> None:
-    notes = tmp_path / "release.md"
-    notes.write_text(
-        "<!-- reponomics-update {\"title\":\"Missing summary\",\"markdown\":\"**no**\"} -->",
-        encoding="utf-8",
-    )
-
-    result = subprocess.run(
-        [sys.executable, "scripts/validate_release_notice.py", str(notes)],
-        check=False,
-        cwd=Path(__file__).resolve().parents[1],
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 1
-    assert "summary is required" in result.stderr
-    assert "unsupported reponomics-update key(s): markdown" in result.stderr
-
-
-def test_release_notice_validation_reports_compatibility_errors() -> None:
-    body = "\n".join([
-        "<!-- reponomics-update {",
-        "\"title\":\"Upgrade available\",",
-        "\"summary\":\"Compatible runtime and artifact migration update.\",",
-        "\"min_runtime_version\":\"0.3.0\",",
-        "\"max_runtime_version\":\"0.2.0\",",
-        "\"action_repository\":\"elsewhere/action\",",
-        "\"action_refs\":[]",
-        "} -->",
-    ])
-
-    errors = run.release_notice.validate_update_block(body)
-
-    assert "min_runtime_version must not exceed max_runtime_version" in errors
-    assert "action_repository must be reponomics/reponomics-dashboard-action when present" in errors
-    assert "action_refs must be '*' or a non-empty list of action ref strings" in errors
-
-
-def test_release_notice_validation_allows_absent_optional_block() -> None:
-    assert run.release_notice.validate_update_block("plain release notes", require_block=False) == []
-    assert run.release_notice.validate_update_block("plain release notes") == [
-        "missing reponomics-update block"
-    ]
-
-
-def test_release_notice_selects_first_compatible_newer_release(
+def test_version_status_selects_latest_stable_release(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     releases = [
         {
             "tag_name": "v0.5.0",
             "draft": False,
-            "prerelease": False,
-            "body": (
-                "<!-- reponomics-update {"
-                + "\"title\":\"Future runtime only\","
-                + "\"summary\":\"Not for this runtime.\","
-                + "\"min_runtime_version\":\"0.5.0\""
-                + "} -->"
-            ),
+            "prerelease": True,
         },
         {
             "tag_name": "v0.4.0",
             "draft": True,
             "prerelease": False,
-            "body": (
-                "<!-- reponomics-update {"
-                + "\"title\":\"Draft\","
-                + "\"summary\":\"Draft releases are ignored.\""
-                + "} -->"
-            ),
         },
         {
             "tag_name": "v0.3.0",
             "draft": False,
             "prerelease": False,
             "html_url": "https://malicious.example/release",
-            "body": (
-                "<!-- reponomics-update {"
-                + "\"title\":\"Compatible <b>release</b>\","
-                + "\"summary\":\"Use the minor floating tag.\","
-                + "\"action_refs\":[\"v0.2\"]"
-                + "} -->"
-            ),
+            "name": "Compatible <b>release</b>",
         },
     ]
 
-    def fake_fetch_releases(_token: str):
+    def fake_fetch_releases():
         return releases
 
-    monkeypatch.setattr(run.release_notice, "_fetch_releases", fake_fetch_releases)
-    notice = run.release_notice.find_update_notice(
-        token="",
+    monkeypatch.setattr(run.version_status, "_fetch_releases", fake_fetch_releases)
+    status = run.version_status.build_status_payload(
         current_version="0.2.0",
-        action_ref="v0.2",
+        action_ref="v0.2.0",
         action_repository="reponomics/reponomics-dashboard-action",
+        check_latest=True,
     )
 
-    assert notice == {
-        "version": "v0.3.0",
-        "title": "Compatible release",
-        "summary": "Use the minor floating tag.",
+    assert status == {
+        "current_version": "0.2.0",
+        "current_url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.2.0",
+        "action_ref": "v0.2.0",
+        "latest_version": "v0.3.0",
+        "latest_title": "Compatible release",
+        "update_available": True,
         "url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.3.0",
     }
 
 
-def test_release_notice_disabled_mode_does_not_call_api(
+def test_version_status_api_failure_is_non_fatal(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    called = False
-
-    def fail_if_called(_token: str):
-        nonlocal called
-        called = True
-        raise AssertionError("release API should not be called")
-
-    monkeypatch.setattr(run.release_notice, "_fetch_releases", fail_if_called)
-    config = _config(tmp_path, mode="publish", update_notices=False)
-
-    run._set_update_notice_env(config)
-
-    assert called is False
-    assert "REPONOMICS_UPDATE_NOTICE_JSON" not in os.environ
-
-
-def test_release_notice_api_failure_is_non_fatal(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    def raise_failure(_token: str):
+    def raise_failure():
         raise requests.RequestException("boom")
 
-    monkeypatch.setattr(run.release_notice, "_fetch_releases", raise_failure)
-    config = _config(tmp_path, mode="publish", update_notices=True)
+    monkeypatch.setattr(run.version_status, "_fetch_releases", raise_failure)
+    config = _config(tmp_path, mode="publish")
 
-    run._set_update_notice_env(config)
+    run._set_version_status_env(config)
 
-    assert "REPONOMICS_UPDATE_NOTICE_JSON" not in os.environ
+    status = json.loads(os.environ["REPONOMICS_VERSION_STATUS_JSON"])
+    assert status == {
+        "current_version": run.VERSION,
+        "current_url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1",
+        "action_ref": "v0.1.0",
+        "update_available": False,
+        "url": "https://github.com/reponomics/reponomics-dashboard-action/releases",
+    }
 
 
-def test_publish_renders_sanitized_release_notice(
+def test_publish_renders_sanitized_version_status(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    def fake_releases(_token: str):
+    def fake_releases():
         return [
             {
                 "tag_name": "v0.2.0",
@@ -1106,23 +989,15 @@ def test_publish_renders_sanitized_release_notice(
                 "html_url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.2.0",
                 "draft": False,
                 "prerelease": False,
-                "body": (
-                    "ignored **markdown**\n"
-                    + "<!-- reponomics-update {"
-                    + "\"title\":\"Update <script>alert(1)</script>\","
-                    + "\"summary\":\"Safe metadata only; no **markdown**\","
-                    + "\"min_runtime_version\":\"0.1.0\""
-                    + "} -->"
-                ),
+                "body": "ignored **markdown** and never rendered",
             }
         ]
 
-    monkeypatch.setattr(run.release_notice, "_fetch_releases", fake_releases)
+    monkeypatch.setattr(run.version_status, "_fetch_releases", fake_releases)
     config = _config(
         tmp_path,
         mode="publish",
         generate_readme=True,
-        update_notices=True,
     )
     _seed_log(config.data_dir)
 
@@ -1130,14 +1005,54 @@ def test_publish_renders_sanitized_release_notice(
 
     readme = config.readme_path.read_text(encoding="utf-8")
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "View v0.2.0" in readme
-    assert "View v0.2.0" in dashboard
-    assert "Safe metadata only; no markdown" in readme
+    assert "[![Your version: v0.13.1](docs/assets/action-version-current.svg)]" in readme
+    assert "[![Latest version: v0.2.0](docs/assets/action-version-latest.svg)]" in readme
+    assert (tmp_path / "docs" / "assets" / "action-version-current.svg").is_file()
+    assert (tmp_path / "docs" / "assets" / "action-version-latest.svg").is_file()
+    assert 'class="action-version-badge current"' in dashboard
+    assert 'class="action-version-badge latest different"' in dashboard
+    assert ">your version</span><span class=\"badge-value\">v0.13.1</span>" in dashboard
+    assert ">latest version</span><span class=\"badge-value\">v0.2.0</span>" in dashboard
+    assert "View latest updates" in readme
+    assert "View latest updates" in dashboard
+    assert "v0.2.0" in readme
+    assert "Remote markdown" not in readme
+    assert "Remote markdown" not in dashboard
     assert "ignored **markdown**" not in readme
     assert "alert(1)" not in readme
     assert "alert(1)" not in dashboard
     assert "<script>alert(1)</script>" not in readme
     assert "<script>alert(1)</script>" not in dashboard
+
+
+def test_publish_renders_version_status_fallback_when_latest_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    def raise_failure():
+        raise requests.RequestException("boom")
+
+    monkeypatch.setattr(run.version_status, "_fetch_releases", raise_failure)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        generate_readme=True,
+    )
+    _seed_log(config.data_dir)
+
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    assert "[![Your version: v0.13.1](docs/assets/action-version-current.svg)]" in readme
+    assert "[![Latest version: unknown](docs/assets/action-version-latest.svg)]" in readme
+    assert ">latest version</span><span class=\"badge-value\">unknown</span>" in dashboard
+    assert "View latest updates" in readme
+    assert "View latest updates" in dashboard
+    assert "Check latest release" not in readme
+    assert "Check latest release" not in dashboard
 
 
 def test_rotate_key_fixture_reencrypts_with_next_secret(

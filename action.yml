@@ -58,10 +58,6 @@ inputs:
     description: README output path.
     required: false
     default: README.md
-  update-notices:
-    description: "Best-effort metadata-only update notices from constrained Reponomics GitHub Release blocks: true or false."
-    required: false
-    default: "true"
 
 outputs:
   tracked-repos:
@@ -121,7 +117,6 @@ runs:
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
-        REPONOMICS_UPDATE_NOTICES: ${{ inputs.update-notices }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}

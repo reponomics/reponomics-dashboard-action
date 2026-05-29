@@ -3,7 +3,7 @@
 .PHONY: help install pre-commit-install pre-commit-run ci
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
-.PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
+.PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -74,7 +74,7 @@ lint: install ## Run lint checks
 type-check: install ## Run static type checks
 	$(PYTHON) -m mypy
 
-validate: validate-action validate-workflows validate-action-pins validate-runtime-lock validate-vendored-assets validate-release-notice ## Run validation checks
+validate: validate-action validate-workflows validate-action-pins validate-runtime-lock validate-vendored-assets ## Run validation checks
 
 validate-action: install ## Validate action.yml
 	$(PYTHON) -c "import pathlib, yaml; data = yaml.safe_load(pathlib.Path('action.yml').read_text()); assert data['runs']['using'] == 'composite'"
@@ -91,10 +91,7 @@ validate-vendored-assets: install ## Validate vendored third-party assets
 update-vendored-assets: install ## Update vendored third-party assets from upstream package registries
 	$(PYTHON) scripts/update_vendored_assets.py
 
-validate-release-notice: install ## Validate release notice tooling
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_release_notice_validation_cli_accepts_valid_block tests/test_runner.py::test_release_notice_validation_cli_rejects_malformed_block -v
-
-ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-release-notice validate-runtime-lock validate-vendored-assets ## Run CI checks
+ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-runtime-lock validate-vendored-assets ## Run CI checks
 
 fixtures: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard ## Run fixture checks
 

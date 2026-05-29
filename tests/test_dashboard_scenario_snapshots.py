@@ -18,6 +18,7 @@ from scripts import dashboard_scenarios
 SNAPSHOT_ROOT = Path(__file__).parent / "fixtures" / "dashboard_scenario_snapshots"
 UPDATE_SNAPSHOTS = os.environ.get("UPDATE_DASHBOARD_SCENARIO_SNAPSHOTS") == "1"
 FIXED_GENERATED_AT = datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc)
+SNAPSHOT_ACTION_VERSION = "0.13.1"
 README_SVG_REF_RE = re.compile(r'(?:src|srcset)="([^"]+\.svg)"')
 README_MARKDOWN_IMAGE_REF_RE = re.compile(r"!\[[^\]]*]\(([^)\s]+\.svg)(?:\s+[^)]*)?\)")
 
@@ -82,6 +83,7 @@ def _render_production_outputs(
     data_dir = workdir / "data"
     workdir.mkdir(parents=True)
     monkeypatch.chdir(workdir)
+    monkeypatch.setattr(run, "VERSION", SNAPSHOT_ACTION_VERSION)
     monkeypatch.setattr(run.render_dashboard, "datetime", FixedDashboardDatetime)
     monkeypatch.setattr(
         run.version_status,

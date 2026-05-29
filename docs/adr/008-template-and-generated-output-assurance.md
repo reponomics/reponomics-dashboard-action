@@ -44,6 +44,8 @@ For the action repository specifically, add a future `validate-dashboard-securit
 
 For the template/development repository relationship, introduce a release-candidate promotion flow. Before a template release or major action release is treated as ready for users, automation should generate the template repository from the development repository, instantiate a clean template-derived fixture, run collect/publish/rotate-key or equivalent fixture workflows, validate generated output, and fail on drift. Before v1, it is acceptable to run this for every release candidate even if that is stricter than the eventual release policy.
 
+After the full gate exists and has enough history to be trusted, the project can add risk-based release classes that allow lighter validation for changes that cannot plausibly affect generated repositories or dashboard behavior, such as a typo-only edit in user-facing documentation. That optimization should be a later policy, not the starting assumption. Any change touching privacy modes, encryption, artifact storage, workflow permissions, action inputs, template generation, renderer code, scenario data contracts, README disclosure rules, Pages publication, dependency/runtime behavior, or generated-dashboard assets should continue to require the full release-gate path.
+
 This flow should explicitly classify controls into three buckets:
 
 - Embedded controls: files or settings that are actually present in the generated template, such as workflows, permissions, action refs, Dependabot configuration, issue templates, documentation, default privacy mode, and recommended secrets names.
@@ -173,14 +175,14 @@ The project will need to describe assurance at the product level rather than onl
 
 The action repository remains responsible for runtime and generated dashboard invariants. The dashboard development repository remains responsible for generating the template repository and proving the generated template is current. The template repository remains responsible for presenting a clean user-facing setup surface and may carry only minimal validation of its own if generated from the development repository.
 
-Generated dashboard security tests should become release gates before v1. Template promotion tests can start as scheduled or manually triggered checks, then become required for releases that change workflow contracts, action inputs, privacy modes, generated dashboard structure, or setup documentation.
+Generated dashboard security tests should become release gates before v1. Template promotion tests can start as scheduled or manually triggered checks, then become required for releases that change workflow contracts, action inputs, privacy modes, generated dashboard structure, or setup documentation. Later, once the full gate is reliable, maintainers may define a lighter docs-only or metadata-only path, but that path should be explicit and conservative.
 
 This decision introduces an additional assurance layer. That layer is justified because the template is the user's entry point, but it must be kept bounded. The project should not attempt to prove that every development-repository quality signal is recreated in every generated repository. Instead, it should prove the smaller and more useful claim that the generated template contains the intended embedded controls and that a clean template consumer produces secure expected output.
 
 ## Open Questions
 
 - What is the exact repository name and ownership boundary for the dashboard development repository, and is it the only source of truth for the template repository?
-- Should every action release trigger template regeneration tests, or only releases that change setup/workflow/output contracts?
+- After the full release gate is established, which low-risk release classes, if any, can use a lighter validation path without weakening privacy or generated-output guarantees?
 - Should template promotion update the template repository directly, open a pull request, or publish a signed/generated release artifact that maintainers manually promote?
 - Should the generated template repository be tested as a local fixture, a temporary GitHub repository, or a persistent demo/test repository?
 - Which provenance artifacts should be uploaded for template generation: generated diff, source commit, template commit, action ref, SBOM, artifact attestation, or all of these?

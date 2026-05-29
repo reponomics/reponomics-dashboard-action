@@ -1,6 +1,6 @@
 # Reponomics Dashboard
 
-[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](.github/workflows/collect.yml)
+[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](../../actions/workflows/collect.yml)
 
 <sub>Latest data capture: 2026-05-15 12:00 UTC</sub>
 

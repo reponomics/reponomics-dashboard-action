@@ -45,6 +45,15 @@ def sync_managed_docs(
 ) -> ManagedDocsResult:
     """Sync the bundled docs into the managed namespace without committing."""
     namespace = Path(namespace)
+    symlink = _first_symlink_in_namespace(namespace)
+    if symlink:
+        return _result(
+            STATE_MANIFEST_INCONSISTENT,
+            f"Managed docs namespace contains a symlink: {symlink}",
+            docs_bundle_version,
+            "",
+            namespace,
+        )
     if not enabled:
         return _result(
             STATE_DISABLED,
@@ -212,7 +221,7 @@ def _load_bundle(
 def _namespace_has_unowned_files(namespace: Path) -> bool:
     if not namespace.exists():
         return False
-    return any(path.is_file() for path in namespace.rglob("*"))
+    return any(path.is_file() or path.is_symlink() for path in namespace.rglob("*"))
 
 
 def _read_manifest(manifest_path: Path) -> dict[str, Any]:
@@ -265,6 +274,8 @@ def _validate_relative_path(relative: str) -> None:
 def _first_hash_conflict(namespace: Path, file_hashes: dict[str, str]) -> str:
     for relative, expected_hash in sorted(file_hashes.items()):
         path = namespace / relative
+        if path.is_symlink():
+            return relative
         if not path.is_file():
             return relative
         if _sha_file(path) != expected_hash:
@@ -274,13 +285,35 @@ def _first_hash_conflict(namespace: Path, file_hashes: dict[str, str]) -> str:
 
 def _first_untracked_file(namespace: Path, file_hashes: dict[str, str]) -> str:
     for path in sorted(namespace.rglob("*")):
-        if not path.is_file():
+        if not path.is_file() and not path.is_symlink():
             continue
         relative = path.relative_to(namespace).as_posix()
         if relative == MANIFEST_NAME:
             continue
         if relative not in file_hashes:
             return relative
+    return ""
+
+
+def _first_symlink_component(path: Path) -> str:
+    current = Path(path.anchor) if path.is_absolute() else Path()
+    start = 1 if path.anchor else 0
+    for part in path.parts[start:]:
+        current = current / part
+        if current.is_symlink():
+            return current.as_posix()
+    return ""
+
+
+def _first_symlink_in_namespace(namespace: Path) -> str:
+    symlink = _first_symlink_component(namespace)
+    if symlink:
+        return symlink
+    if not namespace.exists():
+        return ""
+    for path in sorted(namespace.rglob("*")):
+        if path.is_symlink():
+            return path.relative_to(namespace).as_posix()
     return ""
 
 

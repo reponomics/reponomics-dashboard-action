@@ -4,6 +4,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from dashboard_action import run
 
 
@@ -111,6 +113,52 @@ def test_sync_blocks_untracked_file_inside_managed_namespace(tmp_path: Path) -> 
 
     assert second.state == managed_docs.STATE_MANIFEST_INCONSISTENT
     assert (second.namespace / "notes.md").read_text(encoding="utf-8") == "user note\n"
+
+
+def test_sync_blocks_managed_file_symlink_even_when_target_hash_matches(tmp_path: Path) -> None:
+    first = _sync(tmp_path, files={"README.md": "generated\n"})
+    outside = tmp_path / "outside.md"
+    outside.write_text("generated\n", encoding="utf-8")
+    readme = first.namespace / "README.md"
+    readme.unlink()
+    try:
+        readme.symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"symlinks are unavailable: {exc}")
+
+    second = _sync(
+        tmp_path,
+        files={"README.md": "new generated\n"},
+        action_version="1.1.0",
+        docs_bundle_version="1.1.0",
+    )
+
+    assert second.state == managed_docs.STATE_MANIFEST_INCONSISTENT
+    assert outside.read_text(encoding="utf-8") == "generated\n"
+
+
+def test_sync_blocks_symlinked_namespace_parent(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    outside = tmp_path / "outside-docs"
+    outside.mkdir()
+    repo.mkdir()
+    try:
+        (repo / "docs").symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlinks are unavailable: {exc}")
+    bundle_dir = _write_bundle(tmp_path / "bundle", {"README.md": "generated\n"})
+
+    result = managed_docs.sync_managed_docs(
+        namespace=repo / "docs" / "reponomics",
+        bundle_dir=bundle_dir,
+        action_repository="reponomics/reponomics-dashboard-action",
+        action_version="1.0.0",
+        docs_bundle_version="1.0.0",
+        enabled=True,
+    )
+
+    assert result.state == managed_docs.STATE_MANIFEST_INCONSISTENT
+    assert not (outside / "reponomics" / "README.md").exists()
 
 
 def test_sync_disabled_writes_nothing(tmp_path: Path) -> None:

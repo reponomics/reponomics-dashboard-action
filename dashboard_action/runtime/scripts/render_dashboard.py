@@ -68,6 +68,16 @@ AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
+DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+DOCS_SYNC_REASON_ENV = "REPONOMICS_DOCS_SYNC_REASON"
+DOCS_STATE_LABELS = {
+    "disabled": "sync disabled",
+    "manifest_inconsistent": "needs manual review",
+    "permission_missing": "workflow cannot update docs",
+    "push_race": "update not pushed",
+    "stale": "not current",
+    "user_modified_conflict": "local edits block updates",
+}
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
@@ -258,6 +268,15 @@ BASE_STYLES = """
     .action-version-link:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
+    }
+    .managed-docs-status {
+      flex-basis: 100%;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .managed-docs-status strong {
+      color: var(--text);
     }
     .tagline {
       color: var(--text-muted);
@@ -4987,6 +5006,7 @@ def _render_version_badges():
     updates_href = html.escape(os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True)
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
+    docs_status = _render_docs_sync_status()
     return (
         '        <div class="action-version-badges" role="group" '
         + 'aria-label="Reponomics action version status">\n'
@@ -4997,7 +5017,21 @@ def _render_version_badges():
         + '<span class="badge-label">latest version</span>'
         + f'<span class="badge-value">{latest_value}</span></a>\n'
         + f'          <a class="action-version-link" href="{updates_href}">View latest updates</a>\n'
+        + docs_status
         + "        </div>"
+    )
+
+
+def _render_docs_sync_status():
+    state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+    if not state or state in {"up_to_date", "updated"}:
+        return ""
+    label = html.escape(DOCS_STATE_LABELS.get(state, state.replace("_", " ")))
+    reason = html.escape(os.environ.get(DOCS_SYNC_REASON_ENV, "").strip())
+    detail = f" {reason}" if reason else ""
+    return (
+        '          <div class="managed-docs-status">Local docs: '
+        + f"<strong>{label}</strong>.{detail}</div>\n"
     )
 
 

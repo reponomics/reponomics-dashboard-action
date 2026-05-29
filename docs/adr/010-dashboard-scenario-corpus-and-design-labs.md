@@ -71,6 +71,8 @@ Production scenario snapshots are allowed to choose a small representative priva
 
 Production snapshot tests may use structural assertions, targeted snapshots, or normalized golden files. They should avoid brittle visual snapshots unless the output is already produced by the production renderer and the snapshot has clear release value.
 
+The value of these snapshot tests is the renderer and design regression loop, not full release certification. They are especially useful for non-RC changes to dashboard composition, SVG assets, README-compatible layout, HTML structure, and scenario handling. Release candidates still need the template-consumer and generated-artifact gates described in ADR 008.
+
 ### Repository Ownership
 
 Renderer scenario snapshots belong in `reponomics-dashboard-action` because the action repository owns the runtime scripts that collect, load, derive, and render the README and HTML dashboard outputs. A snapshot test in this repository can run the same production code path that an end-user workflow runs when it uses `reponomics/reponomics-dashboard-action@REF`.

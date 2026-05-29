@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.13.1...v0.14.0) (2026-05-29)
+
+
+### Features
+
+* replace release notices with version status ([2b8d46b](https://github.com/reponomics/reponomics-dashboard-action/commit/2b8d46b814faf9179c00c8db89245dfa4b07baca))
+
 ## [0.13.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.13.0...v0.13.1) (2026-05-29)
 
 

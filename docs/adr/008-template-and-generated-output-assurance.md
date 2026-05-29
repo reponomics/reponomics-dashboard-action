@@ -78,6 +78,10 @@ Full Cartesian expansion is reserved for high-risk changes: privacy-mode changes
 
 For non-RC pull requests that change only the generated dashboard renderer, dashboard assets, scenario data, or snapshot expectations, the production scenario snapshot jobs can be the primary dashboard-surface evidence. That does not make them release evidence for the full product path: they do not prove template workflow wiring, repository permissions, artifact upload/deploy behavior, or every privacy-mode lifecycle. They are still worth running because they are the tightest regression loop for the generated surfaces themselves.
 
+### Release PR Snapshot Invariant
+
+Release Please PRs may skip production dashboard scenario snapshot jobs only under an explicit invariant: the PR is generated from a base commit that has already passed the normal snapshot gate, and the PR diff is limited to release metadata such as changelog, release manifest, version metadata, and release notes. Under that invariant the release PR is not testing new renderer or action code, so CI should spend the release-candidate budget on template-consumer and generated-artifact end-to-end gates instead of rerunning equivalent snapshots. If the release PR contains runtime, renderer, workflow, dependency, scenario, asset, or template-affecting changes, or if the base commit has not passed the snapshot gate, the invariant is false and the release PR must run snapshots or be regenerated.
+
 ## Generated Dashboard Security Invariants
 
 The generated dashboard validator should eventually check at least:

@@ -19,6 +19,7 @@ SNAPSHOT_ROOT = Path(__file__).parent / "fixtures" / "dashboard_scenario_snapsho
 UPDATE_SNAPSHOTS = os.environ.get("UPDATE_DASHBOARD_SCENARIO_SNAPSHOTS") == "1"
 FIXED_GENERATED_AT = datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc)
 README_SVG_REF_RE = re.compile(r'(?:src|srcset)="([^"]+\.svg)"')
+README_MARKDOWN_IMAGE_REF_RE = re.compile(r"!\[[^\]]*]\(([^)\s]+\.svg)(?:\s+[^)]*)?\)")
 
 
 @dataclass(frozen=True)
@@ -154,6 +155,10 @@ def _readme_svg_refs(readme: str) -> set[str]:
     return set(README_SVG_REF_RE.findall(readme))
 
 
+def _readme_image_refs(readme: str) -> set[str]:
+    return _readme_svg_refs(readme) | set(README_MARKDOWN_IMAGE_REF_RE.findall(readme))
+
+
 def _assert_readme_contract(rendered: RenderedScenario) -> None:
     lower_readme = rendered.readme.lower()
     assert "<script" not in lower_readme
@@ -180,6 +185,18 @@ def _assert_readme_asset_snapshots(rendered: RenderedScenario, snapshot_dir: Pat
         asset_path = rendered.workdir / ref
         assert asset_path.is_file(), ref
         _assert_snapshot(_normalize(asset_path.read_text(encoding="utf-8")), snapshot_dir / ref)
+
+
+def _assert_snapshot_image_refs_resolve(snapshot_path: Path) -> None:
+    # Navigation links can remain product-relative; image references must be backed by fixtures.
+    readme = snapshot_path.read_text(encoding="utf-8")
+    refs = _readme_image_refs(readme)
+    assert refs, "README snapshot should include image references"
+
+    for ref in sorted(refs):
+        assert not ref.startswith("/")
+        assert "://" not in ref
+        assert (snapshot_path.parent / ref).is_file(), ref
 
 
 def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
@@ -212,3 +229,12 @@ def test_production_dashboard_outputs_match_scenario_snapshots(
     _assert_snapshot(rendered.readme, snapshot_dir / "README.snapshot.md")
     _assert_readme_asset_snapshots(rendered, snapshot_dir)
     _assert_snapshot(rendered.dashboard, snapshot_dir / "dashboard.snapshot.html")
+
+
+@pytest.mark.parametrize(
+    "snapshot_path",
+    sorted(SNAPSHOT_ROOT.glob("*/README.snapshot.md")),
+    ids=lambda path: path.parent.name,
+)
+def test_readme_snapshot_image_references_resolve(snapshot_path: Path) -> None:
+    _assert_snapshot_image_refs_resolve(snapshot_path)

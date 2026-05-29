@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="520" height="100">
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }</style>
+  <defs>
+    <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#58a6ff" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="#0a0e14" rx="8"/>
+  <line x1="8" y1="65.5" x2="512" y2="65.5" stroke="#21262d" stroke-width="1"/><line x1="8" y1="51.0" x2="512" y2="51.0" stroke="#21262d" stroke-width="1"/><line x1="8" y1="36.5" x2="512" y2="36.5" stroke="#21262d" stroke-width="1"/>
+  <polygon points="8,80 8.0,38.0 25.4,45.3 42.8,40.0 60.1,22.0 77.5,80.0 94.9,62.0 112.3,44.0 129.7,38.7 147.0,46.0 164.4,40.7 181.8,35.3 199.2,42.7 216.6,37.3 233.9,32.0 251.3,52.0 268.7,46.7 286.1,41.3 303.4,48.7 320.8,43.3 338.2,38.0 355.6,45.3 373.0,40.0 390.3,22.0 407.7,80.0 425.1,62.0 442.5,44.0 459.9,38.7 477.2,46.0 494.6,40.7 512.0,35.3 512,80" fill="url(#sparkFill)" />
+  <polyline points="8.0,38.0 25.4,45.3 42.8,40.0 60.1,22.0 77.5,80.0 94.9,62.0 112.3,44.0 129.7,38.7 147.0,46.0 164.4,40.7 181.8,35.3 199.2,42.7 216.6,37.3 233.9,32.0 251.3,52.0 268.7,46.7 286.1,41.3 303.4,48.7 320.8,43.3 338.2,38.0 355.6,45.3 373.0,40.0 390.3,22.0 407.7,80.0 425.1,62.0 442.5,44.0 459.9,38.7 477.2,46.0 494.6,40.7 512.0,35.3" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2000" stroke-dashoffset="2000"><animate attributeName="stroke-dashoffset" values="2000;0;0;2000" keyTimes="0;0.1;0.92;1" dur="12s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"/></polyline>
+  <circle cx="60.1" cy="22.0" r="3" fill="#58a6ff" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.08;0.1;0.92;1" dur="12s" repeatCount="indefinite"/></circle><text x="60.1" y="14.0" text-anchor="middle" font-size="10" fill="#e6edf3" font-weight="600" opacity="0">279<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.09;0.11;0.92;1" dur="12s" repeatCount="indefinite"/></text>
+  <circle cx="512.0" cy="35.3" r="2.5" fill="#8b949e"/><text x="506.0" y="28.3" text-anchor="end" font-size="9" fill="#8b949e">259</text>
+  <text x="8" y="96" font-size="9" fill="#6e7681">2026-04-16</text><text x="512" y="96" text-anchor="end" font-size="9" fill="#6e7681">2026-05-15</text>
+</svg>

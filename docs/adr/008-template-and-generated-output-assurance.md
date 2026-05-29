@@ -42,7 +42,11 @@ Adopt a product-surface assurance model with four separately validated layers:
 
 For the action repository specifically, add a future `validate-dashboard-security` gate that renders representative encrypted and private plain dashboard outputs and checks generated-output invariants. This should be a repo-native validator or focused pytest suite first, not a generic website scanner. Generic scanners can be added later only if they provide signal for static generated artifacts without excessive false positives.
 
+Production dashboard scenario snapshot tests remain valuable even after the template-consumer release gate exists. Their role is the fast renderer-surface gate: they run representative scenario data through the production README and HTML renderers, make intentional output changes explicit, catch missing assets and structural regressions close to the code that caused them, and give design/rendering PRs useful evidence before the project spends time on slower cross-repository promotion. For a release candidate, these snapshots are necessary but not sufficient; the RC also needs the template-source, template-consumer, and generated-artifact gates before the project can say the user-facing path is shippable.
+
 For the template/development repository relationship, introduce a release-candidate promotion flow. Before a template release or major action release is treated as ready for users, automation should generate the template repository from the development repository, instantiate a clean template-derived fixture, run collect/publish/rotate-key or equivalent fixture workflows, validate generated output, and fail on drift. Before v1, it is acceptable to run this for every release candidate even if that is stricter than the eventual release policy.
+
+After the full gate exists and has enough history to be trusted, the project can add risk-based release classes that allow lighter validation for changes that cannot plausibly affect generated repositories or dashboard behavior, such as a typo-only edit in user-facing documentation. That optimization should be a later policy, not the starting assumption. Any change touching privacy modes, encryption, artifact storage, workflow permissions, action inputs, template generation, renderer code, scenario data contracts, README disclosure rules, Pages publication, dependency/runtime behavior, or generated-dashboard assets should continue to require the full release-gate path.
 
 This flow should explicitly classify controls into three buckets:
 
@@ -62,9 +66,21 @@ The long-term release gate should answer these questions before publishing or re
 - Can a fresh template-derived repository run the documented setup/collect/publish lifecycle without private shortcuts?
 - Does encrypted publish output include only expected same-origin assets, strict CSP, encrypted payload metadata, export manifest metadata, and no committed private data?
 - Does private plain publish output remain artifact-only and avoid Pages publication?
-- Do README/dashboard outputs match expected disclosure rules for public/private repositories?
+- Do README/dashboard outputs match expected disclosure rules for public/private repositories, including the rule that public repositories cannot generate the README dashboard?
 - Are release notes, update notices, and version compatibility metadata consistent across action, dashboard development, and template surfaces?
 - Can provenance documentation point a reviewer from a user-visible template commit to the action ref it consumes and to the generated dashboard artifact properties that were tested?
+
+The release gate should be matrix-shaped, but constrained to valid product states rather than a full Cartesian product. The required minimum is coverage across every supported template version, every release-critical scenario family, and every supported privacy mode, with at least one end-to-end consumer run for each privacy mode: `strong`, `casual`, and `plain`. Some combinations are invalid by design and should be tested as rejections, not rendered snapshots. For example, public repositories cannot use `plain` privacy mode and cannot generate the README dashboard, so README dashboard snapshots are a private-repository surface rather than a public/private Cartesian axis.
+
+The matrix can pair valid axes deliberately instead of multiplying all of them, for example by running all scenarios against the current template in the default encrypted private-repository README configuration, one smoke scenario against each supported template version, and targeted privacy-mode runs that prove `strong` secret enforcement and encrypted artifact behavior, `casual` weak-secret allowance with encrypted artifact behavior, and `plain` private-only non-Pages artifact behavior.
+
+Full Cartesian expansion is reserved for high-risk changes: privacy-mode changes, encryption or artifact-format changes, template workflow rewrites, Pages publication changes, generated-dashboard payload changes, README disclosure-rule changes, or release candidates where previous matrix failures show that the axes are interacting unexpectedly.
+
+For non-RC pull requests that change only the generated dashboard renderer, dashboard assets, scenario data, or snapshot expectations, the production scenario snapshot jobs can be the primary dashboard-surface evidence. That does not make them release evidence for the full product path: they do not prove template workflow wiring, repository permissions, artifact upload/deploy behavior, or every privacy-mode lifecycle. They are still worth running because they are the tightest regression loop for the generated surfaces themselves.
+
+### Release PR Snapshot Invariant
+
+Release Please PRs may skip production dashboard scenario snapshot jobs only under an explicit invariant: the PR is generated from a base commit that has already passed the normal snapshot gate, and the PR diff is limited to release metadata such as changelog, release manifest, version metadata, and release notes. Under that invariant the release PR is not testing new renderer or action code, so CI should spend the release-candidate budget on template-consumer and generated-artifact end-to-end gates instead of rerunning equivalent snapshots. If the release PR contains runtime, renderer, workflow, dependency, scenario, asset, or template-affecting changes, or if the base commit has not passed the snapshot gate, the invariant is false and the release PR must run snapshots or be regenerated.
 
 ## Generated Dashboard Security Invariants
 
@@ -83,6 +99,8 @@ The generated dashboard validator should eventually check at least:
 - Export download verifies ciphertext digest and plaintext ZIP digest before handing bytes to the user.
 - Plain mode refuses public repositories and does not publish plaintext GitHub Pages output.
 - Offline artifact instructions remain accurate for encrypted Pages artifacts and private plain dashboard artifacts.
+
+Privacy-mode coverage is mission-critical and should not be inferred from renderer snapshots alone. At least one template-consumer release-gate run must prove each mode through the user-shaped workflow path: `strong` rejects weak secrets and emits encrypted retained/dashboard artifacts when configured with a high-entropy secret; `casual` accepts a low-entropy non-empty secret while still emitting encrypted retained/dashboard artifacts; and `plain` is rejected for public repositories, avoids Pages publication, and uploads the plain HTML dashboard only as the private workflow artifact path.
 
 ## Provenance Model
 
@@ -165,14 +183,14 @@ The project will need to describe assurance at the product level rather than onl
 
 The action repository remains responsible for runtime and generated dashboard invariants. The dashboard development repository remains responsible for generating the template repository and proving the generated template is current. The template repository remains responsible for presenting a clean user-facing setup surface and may carry only minimal validation of its own if generated from the development repository.
 
-Generated dashboard security tests should become release gates before v1. Template promotion tests can start as scheduled or manually triggered checks, then become required for releases that change workflow contracts, action inputs, privacy modes, generated dashboard structure, or setup documentation.
+Generated dashboard security tests should become release gates before v1. Template promotion tests can start as scheduled or manually triggered checks, then become required for releases that change workflow contracts, action inputs, privacy modes, generated dashboard structure, or setup documentation. Later, once the full gate is reliable, maintainers may define a lighter docs-only or metadata-only path, but that path should be explicit and conservative.
 
 This decision introduces an additional assurance layer. That layer is justified because the template is the user's entry point, but it must be kept bounded. The project should not attempt to prove that every development-repository quality signal is recreated in every generated repository. Instead, it should prove the smaller and more useful claim that the generated template contains the intended embedded controls and that a clean template consumer produces secure expected output.
 
 ## Open Questions
 
 - What is the exact repository name and ownership boundary for the dashboard development repository, and is it the only source of truth for the template repository?
-- Should every action release trigger template regeneration tests, or only releases that change setup/workflow/output contracts?
+- After the full release gate is established, which low-risk release classes, if any, can use a lighter validation path without weakening privacy or generated-output guarantees?
 - Should template promotion update the template repository directly, open a pull request, or publish a signed/generated release artifact that maintainers manually promote?
 - Should the generated template repository be tested as a local fixture, a temporary GitHub repository, or a persistent demo/test repository?
 - Which provenance artifacts should be uploaded for template generation: generated diff, source commit, template commit, action ref, SBOM, artifact attestation, or all of these?
@@ -184,6 +202,6 @@ This decision introduces an additional assurance layer. That layer is justified 
 
 1. In the action repository, add `make validate-dashboard-security` with generated-output tests for CSP, local assets, dangerous browser APIs, storage boundaries, export integrity, and plain-mode publication rules.
 2. In the dashboard development repository, add a template generation verification job that fails if generated template output differs from committed template output.
-3. Add a template-consumer fixture or demo repository path that runs the documented collect/publish lifecycle with mocked GitHub API responses.
+3. Add a template-consumer fixture or demo repository path that runs the documented collect/publish lifecycle with mocked GitHub API responses, including at least one end-to-end run for each supported privacy mode without requiring a full template-version/scenario/privacy Cartesian product.
 4. Extend provenance documentation to include action, template, template-consumer, and generated-dashboard layers.
 5. Decide before v1 which of these checks are release-blocking and which are scheduled advisory checks.

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 372 180" width="372" height="180">
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }</style>
+  <rect width="100%" height="100%" fill="#ffffff" rx="8"/>
+  <path d="M 90.0 12.0 A 78 78 0 1 1 20.3 124.9 L 51.6 109.2 A 42.900000000000006 42.900000000000006 0 1 0 90.0 47.1 Z" fill="#0969da" opacity="0"><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.030;0.92;1" dur="12s" repeatCount="indefinite"/><title>demo/sudden-breakout: 2,060 (67.6%)</title></path><path d="M 20.3 124.9 A 78 78 0 0 1 90.0 12.0 L 90.0 47.1 A 42.900000000000006 42.900000000000006 0 0 0 51.6 109.2 Z" fill="#1a7f37" opacity="0"><animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.037;0.92;1" dur="12s" repeatCount="indefinite"/><title>demo/steady-companion: 987 (32.4%)</title></path>
+  <text x="90" y="88" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">3.0k</text><text x="90" y="104" text-anchor="middle" font-size="9" fill="#6e7781">total views</text>
+  <circle cx="202" cy="14" r="5" fill="#0969da"/><text x="214" y="18" font-size="10" fill="#1f2328" font-weight="600" font-variant-numeric="tabular-nums">67.6%</text><text x="252" y="18" font-size="11" fill="#57606a">sudden-breakout</text><circle cx="202" cy="36" r="5" fill="#1a7f37"/><text x="214" y="40" font-size="10" fill="#1f2328" font-weight="600" font-variant-numeric="tabular-nums">32.4%</text><text x="252" y="40" font-size="11" fill="#57606a">steady-companion</text>
+</svg>

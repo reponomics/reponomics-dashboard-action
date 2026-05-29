@@ -62,9 +62,15 @@ The long-term release gate should answer these questions before publishing or re
 - Can a fresh template-derived repository run the documented setup/collect/publish lifecycle without private shortcuts?
 - Does encrypted publish output include only expected same-origin assets, strict CSP, encrypted payload metadata, export manifest metadata, and no committed private data?
 - Does private plain publish output remain artifact-only and avoid Pages publication?
-- Do README/dashboard outputs match expected disclosure rules for public/private repositories?
+- Do README/dashboard outputs match expected disclosure rules for public/private repositories, including the rule that public repositories cannot generate the README dashboard?
 - Are release notes, update notices, and version compatibility metadata consistent across action, dashboard development, and template surfaces?
 - Can provenance documentation point a reviewer from a user-visible template commit to the action ref it consumes and to the generated dashboard artifact properties that were tested?
+
+The release gate should be matrix-shaped, but constrained to valid product states rather than a full Cartesian product. The required minimum is coverage across every supported template version, every release-critical scenario family, and every supported privacy mode, with at least one end-to-end consumer run for each privacy mode: `strong`, `casual`, and `plain`. Some combinations are invalid by design and should be tested as rejections, not rendered snapshots. For example, public repositories cannot use `plain` privacy mode and cannot generate the README dashboard, so README dashboard snapshots are a private-repository surface rather than a public/private Cartesian axis.
+
+The matrix can pair valid axes deliberately instead of multiplying all of them, for example by running all scenarios against the current template in the default encrypted private-repository README configuration, one smoke scenario against each supported template version, and targeted privacy-mode runs that prove `strong` secret enforcement and encrypted artifact behavior, `casual` weak-secret allowance with encrypted artifact behavior, and `plain` private-only non-Pages artifact behavior.
+
+Full Cartesian expansion is reserved for high-risk changes: privacy-mode changes, encryption or artifact-format changes, template workflow rewrites, Pages publication changes, generated-dashboard payload changes, README disclosure-rule changes, or release candidates where previous matrix failures show that the axes are interacting unexpectedly.
 
 ## Generated Dashboard Security Invariants
 
@@ -83,6 +89,8 @@ The generated dashboard validator should eventually check at least:
 - Export download verifies ciphertext digest and plaintext ZIP digest before handing bytes to the user.
 - Plain mode refuses public repositories and does not publish plaintext GitHub Pages output.
 - Offline artifact instructions remain accurate for encrypted Pages artifacts and private plain dashboard artifacts.
+
+Privacy-mode coverage is mission-critical and should not be inferred from renderer snapshots alone. At least one template-consumer release-gate run must prove each mode through the user-shaped workflow path: `strong` rejects weak secrets and emits encrypted retained/dashboard artifacts when configured with a high-entropy secret; `casual` accepts a low-entropy non-empty secret while still emitting encrypted retained/dashboard artifacts; and `plain` is rejected for public repositories, avoids Pages publication, and uploads the plain HTML dashboard only as the private workflow artifact path.
 
 ## Provenance Model
 
@@ -184,6 +192,6 @@ This decision introduces an additional assurance layer. That layer is justified 
 
 1. In the action repository, add `make validate-dashboard-security` with generated-output tests for CSP, local assets, dangerous browser APIs, storage boundaries, export integrity, and plain-mode publication rules.
 2. In the dashboard development repository, add a template generation verification job that fails if generated template output differs from committed template output.
-3. Add a template-consumer fixture or demo repository path that runs the documented collect/publish lifecycle with mocked GitHub API responses.
+3. Add a template-consumer fixture or demo repository path that runs the documented collect/publish lifecycle with mocked GitHub API responses, including at least one end-to-end run for each supported privacy mode without requiring a full template-version/scenario/privacy Cartesian product.
 4. Extend provenance documentation to include action, template, template-consumer, and generated-dashboard layers.
 5. Decide before v1 which of these checks are release-blocking and which are scheduled advisory checks.

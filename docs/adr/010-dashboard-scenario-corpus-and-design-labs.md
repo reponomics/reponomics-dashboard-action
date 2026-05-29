@@ -67,6 +67,8 @@ README-specific tests should also verify:
 
 HTML-specific tests should also verify the generated artifact invariants described in ADR 008, including local asset loading, CSP, privacy boundaries, export integrity, and plain-mode publication behavior.
 
+Production scenario snapshots are allowed to choose a small representative privacy-mode pairing instead of rendering every scenario under every privacy mode. Snapshot coverage should also respect invalid product states: public repositories cannot generate the README dashboard, and `plain` is private-repository only, so those combinations should be rejection tests or workflow-contract tests rather than missing-output snapshots. The release-gate obligation is stronger than the snapshot obligation: every supported privacy mode must be exercised end-to-end somewhere in the template-consumer matrix, but the scenario corpus does not need a full `scenario x privacy mode` golden-file expansion unless a change affects privacy behavior or shows evidence of axis interaction.
+
 Production snapshot tests may use structural assertions, targeted snapshots, or normalized golden files. They should avoid brittle visual snapshots unless the output is already produced by the production renderer and the snapshot has clear release value.
 
 ### Repository Ownership
@@ -188,12 +190,13 @@ The cost is that successful experiments need a promotion step. Rendering logic s
 ## Initial Implementation Plan
 
 1. Extract public-safe scenarios from the harness into a committed shared scenario corpus, or document the current scenario builder as an interim corpus until file-based fixtures are introduced.
-2. Add scenario tests that run the production HTML and README generation paths for every public scenario.
+2. Add scenario tests that run the production HTML and README generation paths for every public-safe scenario, using representative valid visibility/privacy pairings rather than a full Cartesian matrix unless the changed behavior requires it.
 3. Add shared scenario validators for canonical CSV loading, derived data integrity, scenario manifest completeness, and deterministic ordering.
 4. Add README-output validators for JavaScript absence, no inline SVG in Markdown, external SVG existence, light/dark pairing, and stable relative paths.
-5. Keep local design harnesses pointed at the same scenario corpus and writing only ignored scratch output.
-6. Promote candidate components by moving rendering code into the appropriate production renderer or into shared modules imported by production renderers.
-7. Replace temporary validation scripts with real tests or documented developer scripts before public promotion.
+5. Add or link the template-consumer privacy-mode gate described in ADR 008 so that `strong`, `casual`, and `plain` are each proven through at least one user-shaped end-to-end run.
+6. Keep local design harnesses pointed at the same scenario corpus and writing only ignored scratch output.
+7. Promote candidate components by moving rendering code into the appropriate production renderer or into shared modules imported by production renderers.
+8. Replace temporary validation scripts with real tests or documented developer scripts before public promotion.
 
 ## Open Questions
 

@@ -25,6 +25,17 @@ from dashboard_action import run
 OLD_KEY = "old-dashboard-secret-" + ("x" * 40)
 NEXT_KEY = "next-dashboard-secret-" + ("y" * 40)
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+VERSION_STATUS_TEST_VERSION = "0.13.1"
+VERSION_STATUS_TEST_TAG = f"v{VERSION_STATUS_TEST_VERSION}"
+VERSION_STATUS_RELEASES_URL = "https://github.com/reponomics/reponomics-dashboard-action/releases"
+
+
+def _version_status_tag(version: str) -> str:
+    return version if version.startswith("v") else f"v{version}"
+
+
+def _version_status_release_url(tag: str) -> str:
+    return f"{VERSION_STATUS_RELEASES_URL}/tag/{tag}"
 
 
 class DashboardHtmlParser(HTMLParser):
@@ -966,12 +977,13 @@ def test_version_status_api_failure_is_non_fatal(
     run._set_version_status_env(config)
 
     status = json.loads(os.environ["REPONOMICS_VERSION_STATUS_JSON"])
+    current_tag = _version_status_tag(run.VERSION)
     assert status == {
         "current_version": run.VERSION,
-        "current_url": "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1",
+        "current_url": _version_status_release_url(current_tag),
         "action_ref": "v0.1.0",
         "update_available": False,
-        "url": "https://github.com/reponomics/reponomics-dashboard-action/releases",
+        "url": VERSION_STATUS_RELEASES_URL,
     }
 
 
@@ -980,6 +992,9 @@ def test_publish_renders_sanitized_version_status(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    current_version = "0.1.0"
+    current_tag = _version_status_tag(current_version)
+    monkeypatch.setattr(run, "VERSION", current_version)
 
     def fake_releases():
         return [
@@ -1005,13 +1020,13 @@ def test_publish_renders_sanitized_version_status(
 
     readme = config.readme_path.read_text(encoding="utf-8")
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "[![Your version: v0.13.1](docs/assets/action-version-current.svg)]" in readme
+    assert f"[![Your version: {current_tag}](docs/assets/action-version-current.svg)]" in readme
     assert "[![Latest version: v0.2.0](docs/assets/action-version-latest.svg)]" in readme
     assert (tmp_path / "docs" / "assets" / "action-version-current.svg").is_file()
     assert (tmp_path / "docs" / "assets" / "action-version-latest.svg").is_file()
     assert 'class="action-version-badge current"' in dashboard
     assert 'class="action-version-badge latest different"' in dashboard
-    assert ">your version</span><span class=\"badge-value\">v0.13.1</span>" in dashboard
+    assert f">your version</span><span class=\"badge-value\">{current_tag}</span>" in dashboard
     assert ">latest version</span><span class=\"badge-value\">v0.2.0</span>" in dashboard
     assert "View latest updates" in readme
     assert "View latest updates" in dashboard
@@ -1025,11 +1040,107 @@ def test_publish_renders_sanitized_version_status(
     assert "<script>alert(1)</script>" not in dashboard
 
 
+@pytest.mark.parametrize(
+    ("latest_tag", "latest_display", "latest_url", "latest_class", "latest_color"),
+    [
+        (
+            VERSION_STATUS_TEST_TAG,
+            VERSION_STATUS_TEST_TAG,
+            _version_status_release_url(VERSION_STATUS_TEST_TAG),
+            'class="action-version-badge latest"',
+            "#1a7f37",
+        ),
+        (
+            "v0.14.0",
+            "v0.14.0",
+            _version_status_release_url("v0.14.0"),
+            'class="action-version-badge latest different"',
+            "#0969da",
+        ),
+        (
+            "",
+            "unknown",
+            VERSION_STATUS_RELEASES_URL,
+            'class="action-version-badge latest unknown"',
+            "#6e7781",
+        ),
+    ],
+)
+def test_publish_renders_expected_version_status_states(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    latest_tag: str,
+    latest_display: str,
+    latest_url: str,
+    latest_class: str,
+    latest_color: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run, "VERSION", VERSION_STATUS_TEST_VERSION)
+
+    if latest_tag:
+        monkeypatch.setattr(
+            run.version_status,
+            "_fetch_releases",
+            lambda: [
+                {
+                    "tag_name": latest_tag,
+                    "html_url": latest_url,
+                    "draft": False,
+                    "prerelease": False,
+                }
+            ],
+        )
+    else:
+        def raise_failure():
+            raise requests.RequestException("boom")
+
+        monkeypatch.setattr(run.version_status, "_fetch_releases", raise_failure)
+
+    config = _config(tmp_path, mode="publish", generate_readme=True)
+    _seed_log(config.data_dir)
+
+    run.run_publish(config, restore_artifact=False)
+
+    current_url = _version_status_release_url(VERSION_STATUS_TEST_TAG)
+    readme = config.readme_path.read_text(encoding="utf-8")
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    current_svg = (tmp_path / "docs" / "assets" / "action-version-current.svg").read_text(
+        encoding="utf-8",
+    )
+    latest_svg = (tmp_path / "docs" / "assets" / "action-version-latest.svg").read_text(
+        encoding="utf-8",
+    )
+
+    current_badge = (
+        f"[![Your version: {VERSION_STATUS_TEST_TAG}]"
+        + f"(docs/assets/action-version-current.svg)]({current_url})"
+    )
+    latest_badge = (
+        f"[![Latest version: {latest_display}]"
+        + f"(docs/assets/action-version-latest.svg)]({latest_url})"
+    )
+    current_value = f">your version</span><span class=\"badge-value\">{VERSION_STATUS_TEST_TAG}</span>"
+    latest_value = f">latest version</span><span class=\"badge-value\">{latest_display}</span>"
+
+    assert current_badge in readme
+    assert latest_badge in readme
+    assert f"[View latest updates]({latest_url})" in readme
+    assert 'class="action-version-badge current"' in dashboard
+    assert latest_class in dashboard
+    assert f'href="{latest_url}"' in dashboard
+    assert current_value in dashboard
+    assert latest_value in dashboard
+    assert "#1a7f37" in current_svg
+    assert latest_color in latest_svg
+
+
 def test_publish_renders_version_status_fallback_when_latest_unknown(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run, "VERSION", VERSION_STATUS_TEST_VERSION)
 
     def raise_failure():
         raise requests.RequestException("boom")
@@ -1046,7 +1157,7 @@ def test_publish_renders_version_status_fallback_when_latest_unknown(
 
     readme = config.readme_path.read_text(encoding="utf-8")
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "[![Your version: v0.13.1](docs/assets/action-version-current.svg)]" in readme
+    assert f"[![Your version: {VERSION_STATUS_TEST_TAG}](docs/assets/action-version-current.svg)]" in readme
     assert "[![Latest version: unknown](docs/assets/action-version-latest.svg)]" in readme
     assert ">latest version</span><span class=\"badge-value\">unknown</span>" in dashboard
     assert "View latest updates" in readme

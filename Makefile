@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets validate-release-notice
-.PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard clean
+.PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard update-dashboard-scenario-snapshots clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -124,6 +124,9 @@ preview-collection-quality-dashboard: install ## Render dashboard from collectio
 	@grep -q '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
 	@grep -q '"date":"2026-04-30","status":"gaps_detected"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
 	@echo "Preview ready: $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html"
+
+update-dashboard-scenario-snapshots: install ## Refresh production dashboard scenario snapshots
+	UPDATE_DASHBOARD_SCENARIO_SNAPSHOTS=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_dashboard_scenario_snapshots.py -v
 
 clean: ## Remove local generated state
 	rm -rf $(VENV) .pytest_cache .ruff_cache .coverage coverage.xml data dist docs/assets docs/index.html .dashboard-data-artifact .tmp

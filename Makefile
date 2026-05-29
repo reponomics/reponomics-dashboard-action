@@ -16,7 +16,7 @@ PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
-PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
+PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --upgrade --no-header --quiet
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 

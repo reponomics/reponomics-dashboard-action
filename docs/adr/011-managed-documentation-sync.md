@@ -91,3 +91,143 @@ Users who disable docs sync or remove write permission can still use the dashboa
 - Should Reponomics publish an RSS or release-announcement feed for users who want an active update channel?
 - What public and opt-in signals should the project use to estimate adoption without implying a precise install count?
 - When, if ever, should optional PR mode be added?
+
+---
+
+## Appendix A: Proposed Emendments (2026-05-29)
+
+This appendix records implementation-level clarifications without changing the
+main ADR text above.
+
+### A1. Comparator Source Of Truth
+
+Use a machine marker in the managed docs namespace manifest as the comparator
+source of truth. Do not use README/dashboard version badges as the control
+marker for sync decisions.
+
+Required manifest fields:
+
+- `schema_version`
+- `managed_namespace`
+- `action_repository`
+- `action_version`
+- `docs_bundle_version`
+- `files` (map of relative path -> sha256)
+
+The manifest should be deterministic. Avoid volatile fields that change on every
+run (for example, `generated_at` timestamps) unless they are excluded from diff
+and ownership checks.
+
+### A2. Default Execution Model
+
+Default template wiring should run docs sync in a dedicated job before
+collection/publish jobs. The job should compare:
+
+- currently running action version and docs bundle version
+- manifest `action_version` and `docs_bundle_version`
+- current managed-file bytes against manifest hashes
+
+Recommended state outcomes:
+
+- `up_to_date` (no write needed)
+- `updated` (managed docs written and manifest advanced)
+- `disabled` (opt-out config)
+- `permission_missing` (insufficient write permission)
+- `user_modified_conflict` (managed file diverged from prior generated hash)
+- `manifest_inconsistent` (ownership cannot be proven)
+- `push_race` (write intent valid, but commit/push could not be completed)
+
+If state is not `updated` or `up_to_date`, write a clear step summary and expose
+the state as a machine-readable output for downstream surfacing.
+
+### A3. Write Boundary And Commit Rules
+
+Managed docs sync may stage and commit only files inside the managed namespace.
+No writes are allowed outside that namespace as part of this feature.
+
+Commit rules:
+
+- use the consuming repository `GITHUB_TOKEN` by default
+- commit only when staged bytes differ
+- include action version and docs bundle version in the commit message
+- include `[skip ci]` in the commit message for direct-write mode
+- if push fails due to non-fast-forward, retry with a bounded reconciliation
+  strategy; on failure, emit `push_race`
+
+### A4. Concurrency And Permissions
+
+Serialize docs-sync writes per branch/ref with workflow/job concurrency so only
+one docs-sync writer can push at a time for a given ref.
+
+Keep top-level workflow permissions minimal/read-only. Grant `contents: write`
+only at the docs-sync job level when direct-write mode is enabled.
+
+### A5. Failure Policy
+
+Docs sync is advisory to dashboard publication and collection continuity:
+
+- `permission_missing`, `disabled`, `user_modified_conflict`,
+  `manifest_inconsistent`, and `push_race` should not fail collection/publish by
+  default
+- these states must still be surfaced in workflow summary and status outputs
+
+### A6. Surface Contract
+
+Expose docs-sync status through explicit outputs so template workflows and UI
+surfaces can consume stable semantics:
+
+- `docs-sync-state`
+- `docs-sync-reason`
+- `docs-bundle-version`
+- `docs-manifest-action-version`
+
+README/dashboard/version-status surfaces should display a local-docs freshness
+indicator based on these outputs when available.
+
+### A7. Opt-Out Contract
+
+Define one canonical opt-out key and precedence to avoid drift across template,
+action runtime, and docs:
+
+- canonical key: `managed_docs_sync`
+- default: `true`
+- accepted locations in first pass:
+  - workflow/action input
+  - `config.yaml` key
+- precedence: explicit workflow/action input overrides `config.yaml`; otherwise
+  `config.yaml`; otherwise default `true`
+
+### A8. Ownership Recovery Path
+
+When state is `manifest_inconsistent`, the sync helper must not guess ownership
+or overwrite files. Recovery should be explicit and auditable.
+
+Required behavior:
+
+- fail closed for write operations in that run
+- emit remediation instructions in workflow summary
+- require explicit operator intent for recovery (for example, an adopt/reset
+  flag or a documented manual reset procedure)
+- on successful recovery, emit `updated` with a fresh manifest that rebinds
+  ownership to the managed namespace
+
+### A9. Open-Question Dispositions
+
+This section captures what is now considered resolved by this appendix and what
+remains intentionally deferred.
+
+Resolved now:
+
+- managed docs namespace path: use `docs/reponomics/`
+- execution model: run docs sync as a dedicated pre-collect/pre-publish job
+- opt-out key: `managed_docs_sync` with precedence rules in A7
+- freshness indicator contract: expose `docs-sync-*` outputs and render a
+  local-docs freshness indicator in README/dashboard/version-status surfaces
+
+Deferred (not blocked by first implementation):
+
+- whether to publish an RSS or release-announcement feed
+- which external/public/opt-in adoption signals to treat as advisory inputs
+  (without claiming precise install counts)
+- when optional PR mode should be added; default remains direct-write unless
+  direct-write proves operationally insufficient

@@ -348,6 +348,8 @@ def _remove_empty_dirs(namespace: Path) -> None:
         try:
             path.rmdir()
         except OSError:
+            # Best-effort cleanup: directory may be non-empty or changed concurrently.
+            # This is non-fatal for managed docs synchronization.
             pass
 
 

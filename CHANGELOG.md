@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.13.0...v0.13.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* commit generated README dashboard SVG assets ([42176bb](https://github.com/reponomics/reponomics-dashboard-action/commit/42176bb2976a30846ea3a0a35aad56ea95b0fceb))
+
 ## [0.13.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.12.0...v0.13.0) (2026-05-28)
 
 

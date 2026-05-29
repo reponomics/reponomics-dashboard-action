@@ -5,7 +5,6 @@ via the shared load_data module to produce a markdown summary that
 agrees on core totals with the HTML dashboard.
 """
 
-import html
 import json
 import os
 from datetime import datetime, timezone
@@ -27,6 +26,7 @@ from load_data import (
 from readme_assets import (
     build_readme_asset_data,
     write_readme_svg_assets,
+    write_version_badge_assets,
     LIGHT_SUFFIX,
 )
 
@@ -34,7 +34,7 @@ OUTPUT_PATH = "README.md"
 ASSET_OUTPUT_DIR = Path("docs") / "assets"
 ASSET_DISPLAY_DIR = Path("docs") / "assets"
 DEFAULT_REPO_TABLE_LIMIT = 10
-UPDATE_NOTICE_ENV = "REPONOMICS_UPDATE_NOTICE_JSON"
+VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 
 
 def _picture(dark_src: str, alt: str) -> str:
@@ -49,37 +49,50 @@ def _picture(dark_src: str, alt: str) -> str:
     )
 
 
-def _load_update_notice():
-    raw = os.environ.get(UPDATE_NOTICE_ENV, "")
+def _load_version_status():
+    raw = os.environ.get(VERSION_STATUS_ENV, "")
     if not raw:
         return None
     try:
-        notice = json.loads(raw)
+        status = json.loads(raw)
     except json.JSONDecodeError:
         return None
-    if not isinstance(notice, dict):
+    if not isinstance(status, dict):
         return None
-    version = str(notice.get("version") or "").strip()
-    title = str(notice.get("title") or "").strip()
-    url = str(notice.get("url") or "").strip()
-    summary = str(notice.get("summary") or "").strip()
-    if not version or not title or not url:
+    current_version = str(status.get("current_version") or "").strip()
+    current_url = str(status.get("current_url") or "").strip()
+    latest_version = str(status.get("latest_version") or "").strip()
+    url = str(status.get("url") or "").strip()
+    update_available = bool(status.get("update_available"))
+    if not current_version or not url:
         return None
-    return {"version": version, "title": title, "url": url, "summary": summary}
+    return {
+        "current_version": current_version,
+        "current_url": current_url or url,
+        "latest_version": latest_version,
+        "update_available": update_available,
+        "url": url,
+    }
 
 
-def _update_notice_lines():
-    notice = _load_update_notice()
-    if not notice:
+def _display_version(version: str) -> str:
+    value = version.strip()
+    if not value:
+        return ""
+    return value if value.startswith("v") else f"v{value}"
+
+
+def _version_status_lines(status, badge_links):
+    if not status:
         return []
-    summary = f" {html.escape(notice['summary'])}" if notice["summary"] else ""
+    current_link = status["current_url"]
+    latest_link = status["url"]
     return [
-        "<sub>"
-        + f"<strong>{html.escape(notice['title'])}</strong>"
-        + f"{summary} "
-        + f"<a href=\"{html.escape(notice['url'], quote=True)}\">"
-        + f"View {html.escape(notice['version'])}</a>."
-        + "</sub>",
+        f"[![Your version: {_display_version(status['current_version'])}]"
+        + f"({badge_links['current']})]({current_link}) "
+        + f"[![Latest version: {_display_version(status['latest_version']) or 'unknown'}]"
+        + f"({badge_links['latest']})]({latest_link}) "
+        + f"[View latest updates]({latest_link})",
         "",
     ]
 
@@ -229,6 +242,19 @@ def render():
         name: (ASSET_DISPLAY_DIR / path.name).as_posix()
         for name, path in asset_files.items()
     }
+    version_status = _load_version_status()
+    version_badge_files = {}
+    version_badge_links = {}
+    if version_status:
+        version_badge_files = write_version_badge_assets(
+            ASSET_OUTPUT_DIR,
+            current_version=_display_version(version_status["current_version"]),
+            latest_version=_display_version(version_status["latest_version"]),
+        )
+        version_badge_links = {
+            name: (ASSET_DISPLAY_DIR / path.name).as_posix()
+            for name, path in version_badge_files.items()
+        }
 
     lines = [
         "# Reponomics Dashboard",
@@ -236,9 +262,14 @@ def render():
         "[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)]"
         + "(../../actions/workflows/collect.yml)",
         "",
-        f"<sub>Latest data capture: {latest_capture}</sub>",
-        "",
     ]
+    lines.extend(_version_status_lines(version_status, version_badge_links))
+    lines.extend(
+        [
+            f"<sub>Latest data capture: {latest_capture}</sub>",
+            "",
+        ]
+    )
 
     # --- Hero stat banner (replaces markdown summary table) ---
     lines.extend(
@@ -442,7 +473,6 @@ def render():
             "",
         ]
     )
-    lines.extend(_update_notice_lines())
     lines.extend(
         [
             "[Setup & Docs](docs/README.md)",
@@ -462,7 +492,7 @@ def render():
         f"README.md updated ({len(daily_rows)} daily rows, "
         + f"{len(totals['repos'])} repos, "
         + f"{len(ref_list)} referrers, {len(path_list)} paths, "
-        + f"{len(asset_files)} SVG assets)"
+        + f"{len(asset_files) + len(version_badge_files)} SVG assets)"
     )
 
 

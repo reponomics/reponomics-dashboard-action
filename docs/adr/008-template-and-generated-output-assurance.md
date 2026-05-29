@@ -67,7 +67,7 @@ The long-term release gate should answer these questions before publishing or re
 - Does encrypted publish output include only expected same-origin assets, strict CSP, encrypted payload metadata, export manifest metadata, and no committed private data?
 - Does private plain publish output remain artifact-only and avoid Pages publication?
 - Do README/dashboard outputs match expected disclosure rules for public/private repositories, including the rule that public repositories cannot generate the README dashboard?
-- Are release notes, update notices, and version compatibility metadata consistent across action, dashboard development, and template surfaces?
+- Are action version-status links and compatibility metadata consistent across action, dashboard development, and template surfaces?
 - Can provenance documentation point a reviewer from a user-visible template commit to the action ref it consumes and to the generated dashboard artifact properties that were tested?
 
 The release gate should be matrix-shaped, but constrained to valid product states rather than a full Cartesian product. The required minimum is coverage across every supported template version, every release-critical scenario family, and every supported privacy mode, with at least one end-to-end consumer run for each privacy mode: `strong`, `casual`, and `plain`. Some combinations are invalid by design and should be tested as rejections, not rendered snapshots. For example, public repositories cannot use `plain` privacy mode and cannot generate the README dashboard, so README dashboard snapshots are a private-repository surface rather than a public/private Cartesian axis.

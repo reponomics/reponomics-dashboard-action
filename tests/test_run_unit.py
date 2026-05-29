@@ -254,7 +254,6 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "generate_readme": False,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
-        "update_notices": False,
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
         "incident_confirm_irreversible": "",

@@ -4,7 +4,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 ## Workflows
 
-- [`ci.yml`](ci.yml) is the aggregate pull request and main-branch quality gate. It calls the reusable validation workflows, validates release-notice fixtures, runs linting, type checking, action/workflow parsing, tests across supported Python versions, and uploads coverage as a short-lived artifact.
+- [`ci.yml`](ci.yml) is the aggregate pull request and main-branch quality gate. It calls the reusable validation workflows, runs linting, type checking, action/workflow parsing, tests across supported Python versions, and uploads coverage as a short-lived artifact.
 
 - [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
 

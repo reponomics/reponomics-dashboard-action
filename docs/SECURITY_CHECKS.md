@@ -92,20 +92,6 @@ The Anchore SBOM action's dependency snapshot upload is also disabled. GitHub's 
 
 This repository is a composite action consumed by Git ref, not a package pushed to a package registry. The release attestation therefore covers the source archive produced from the release checkout rather than a registry package.
 
-## Release Notice Blocks
+## Version Status
 
-`scripts/validate_release_notice.py` validates the constrained `<!-- reponomics-update {...} -->` block used in release notes. The dashboard runtime parses this JSON metadata to show compatible upgrade notices to users of pinned action versions. It does not render arbitrary remote release Markdown. The purpose of this is to enable end users (owners of repos created from the `reponomics-dashboard` template) to use a strict, full-SHA-pinned version of this action, while also providing a channel to stay informed of product updates without having to manually track our releases.
-
-The supported schema and an example block are documented in `README.md#maintainer-release-policy`.
-
-Run the CLI against a release-note Markdown file with:
-
-```bash
-venv/bin/python scripts/validate_release_notice.py path/to/release-notes.md
-```
-
-Run the release-notice fixture tests with:
-
-```bash
-make validate-release-notice
-```
+Generated dashboards expose compact local action version status rather than host-authored update prose. During publish, the action performs an unauthenticated GitHub Releases lookup for the latest stable SemVer tag and renders current runtime version, latest version, update availability, and a centralized release link. The caller token is not sent with this request. If the API check fails, publish continues and the generated output falls back to the local current version plus the generic releases page. Remote release bodies, Markdown, summaries, and HTML are not rendered into user repositories.

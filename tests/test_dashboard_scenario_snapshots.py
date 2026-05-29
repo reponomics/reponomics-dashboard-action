@@ -83,6 +83,17 @@ def _render_production_outputs(
     workdir.mkdir(parents=True)
     monkeypatch.chdir(workdir)
     monkeypatch.setattr(run.render_dashboard, "datetime", FixedDashboardDatetime)
+    monkeypatch.setattr(
+        run.version_status,
+        "_fetch_releases",
+        lambda: [
+            {
+                "tag_name": "v0.13.1",
+                "draft": False,
+                "prerelease": False,
+            }
+        ],
+    )
     _write_scenario_data(data_dir, dataset)
 
     config = run.RuntimeConfig(
@@ -99,7 +110,6 @@ def _render_production_outputs(
         generate_readme=True,
         pages_index_path=workdir / "docs" / "index.html",
         readme_path=workdir / "README.md",
-        update_notices=False,
         incident_confirm_mode="",
         incident_confirm_purge="",
         incident_confirm_irreversible="",
@@ -179,11 +189,16 @@ def _assert_readme_contract(rendered: RenderedScenario) -> None:
         dark_ref = ref.removesuffix("-light.svg") + ".svg"
         assert dark_ref in svg_refs
 
+    for ref in sorted(_readme_image_refs(rendered.readme)):
+        if ref.startswith("docs/assets/"):
+            assert (rendered.workdir / ref).is_file(), ref
+
 
 def _assert_readme_asset_snapshots(rendered: RenderedScenario, snapshot_dir: Path) -> None:
-    for ref in sorted(_readme_svg_refs(rendered.readme)):
+    for ref in sorted(_readme_image_refs(rendered.readme)):
         asset_path = rendered.workdir / ref
-        assert asset_path.is_file(), ref
+        if not asset_path.is_file():
+            continue
         _assert_snapshot(_normalize(asset_path.read_text(encoding="utf-8")), snapshot_dir / ref)
 
 

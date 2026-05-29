@@ -40,9 +40,9 @@ import load_data  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
 import render_readme  # noqa: E402
-import release_notice  # noqa: E402
 import repo_config  # noqa: E402
 import storage  # noqa: E402
+import version_status  # noqa: E402
 
 
 class ActionError(RuntimeError):
@@ -64,7 +64,6 @@ class RuntimeConfig:
     generate_readme: bool
     pages_index_path: Path
     readme_path: Path
-    update_notices: bool
     incident_confirm_mode: str
     incident_confirm_purge: str
     incident_confirm_irreversible: str
@@ -191,10 +190,6 @@ def load_config_from_env() -> RuntimeConfig:
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
         pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
-        update_notices=_parse_bool(
-            _env("REPONOMICS_UPDATE_NOTICES", "true"),
-            name="update-notices",
-        ),
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
         incident_confirm_purge=_env("REPONOMICS_INCIDENT_CONFIRM_PURGE"),
         incident_confirm_irreversible=_env("REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE"),
@@ -342,29 +337,26 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
         os.environ["REPONOMICS_ACTION_REPOSITORY"] = config.action_repository
 
 
-def _set_update_notice_env(config: RuntimeConfig) -> None:
-    os.environ.pop("REPONOMICS_UPDATE_NOTICE_JSON", None)
-    if not config.update_notices:
-        print("Update notice check disabled.")
-        return
-    if not config.action_ref or not config.action_repository:
-        print("Update notice check skipped outside a GitHub action ref context.")
-        return
-    notice = release_notice.find_update_notice(
-        token=config.github_token,
+def _set_version_status_env(config: RuntimeConfig) -> None:
+    os.environ.pop("REPONOMICS_VERSION_STATUS_JSON", None)
+    status = version_status.build_status_payload(
         current_version=VERSION,
         action_ref=config.action_ref,
         action_repository=config.action_repository,
+        check_latest=True,
     )
-    if not notice:
+    if not status:
         return
     import json
 
-    os.environ["REPONOMICS_UPDATE_NOTICE_JSON"] = json.dumps(
-        notice,
+    os.environ["REPONOMICS_VERSION_STATUS_JSON"] = json.dumps(
+        status,
         separators=(",", ":"),
     )
-    print(f"Update notice available for {notice['version']}.")
+    if status.get("latest_version"):
+        print(f"Version status available for {status['latest_version']}.")
+    else:
+        print("Version status available without latest-release details.")
 
 
 def _sha(path: Path) -> str:
@@ -802,7 +794,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
-    _set_update_notice_env(config)
+    _set_version_status_env(config)
     _render_outputs(config, generate_readme=config.generate_readme)
     _git_commit_readme(config, "chore: publish Reponomics README dashboard [skip ci]")
     _write_outputs(config, before)

@@ -158,6 +158,41 @@ def test_write_readme_svg_assets_creates_expected_dark_and_light_files(
     assert all(call["theme"] is assets.LIGHT for call_list in calls.values() for call in call_list[1::2])
 
 
+def test_write_version_badge_assets_creates_static_badges(tmp_path: Path) -> None:
+    returned = assets.write_version_badge_assets(
+        tmp_path,
+        current_version="v0.13.1",
+        latest_version="v0.14.0",
+    )
+
+    assert returned == {
+        key: tmp_path / filename
+        for key, filename in assets.VERSION_BADGE_FILENAMES.items()
+    }
+    current = returned["current"].read_text(encoding="utf-8")
+    latest = returned["latest"].read_text(encoding="utf-8")
+    assert "your version" in current
+    assert "v0.13.1" in current
+    assert "latest version" in latest
+    assert "v0.14.0" in latest
+    assert "#1a7f37" in current
+    assert "#0969da" in latest
+
+
+def test_write_version_badge_assets_uses_matching_green_for_synced_versions(tmp_path: Path) -> None:
+    returned = assets.write_version_badge_assets(
+        tmp_path,
+        current_version="v0.13.1",
+        latest_version="v0.13.1",
+    )
+
+    current = returned["current"].read_text(encoding="utf-8")
+    latest = returned["latest"].read_text(encoding="utf-8")
+    assert "#1a7f37" in current
+    assert "#1a7f37" in latest
+    assert "#0969da" not in latest
+
+
 def test_write_readme_svg_assets_defaults_missing_totals(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

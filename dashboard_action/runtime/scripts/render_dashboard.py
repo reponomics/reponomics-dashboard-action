@@ -66,7 +66,7 @@ PBKDF2_ITERATIONS = 600_000
 PBKDF2_SALT_BYTES = 16
 AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-UPDATE_NOTICE_ENV = "REPONOMICS_UPDATE_NOTICE_JSON"
+VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
@@ -203,6 +203,60 @@ BASE_STYLES = """
       overflow-wrap: break-word;
       word-break: normal;
       text-wrap: pretty;
+    }
+    .action-version-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      align-items: center;
+    }
+    .action-version-badge {
+      display: inline-flex;
+      align-items: stretch;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.74rem;
+      line-height: 1;
+      text-decoration: none;
+      box-shadow: 0 1px 0 var(--inset-highlight) inset;
+      white-space: nowrap;
+    }
+    .action-version-badge:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .action-version-badge .badge-label {
+      background: #555555;
+      color: #ffffff;
+      padding: 0.32rem 0.5rem;
+    }
+    .action-version-badge .badge-value {
+      background: #1a7f37;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 0.32rem 0.5rem;
+    }
+    .action-version-badge.latest .badge-value { background: #1a7f37; }
+    .action-version-badge.latest.different .badge-value { background: #0969da; }
+    .action-version-badge.latest.unknown .badge-value { background: #6e7781; }
+    .action-version-link {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-bottom: 1px dotted currentColor;
+    }
+    .action-version-link:hover {
+      color: var(--text);
+      border-bottom-color: currentColor;
+    }
+    .action-version-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
     .tagline {
       color: var(--text-muted);
@@ -1289,8 +1343,7 @@ BASE_STYLES = """
       flex-direction: column;
       min-height: 100vh;
     }
-    body.auth-locked > footer,
-    body.auth-locked .update-notice {
+    body.auth-locked > footer {
       display: none;
     }
     #auth-shell {
@@ -1565,23 +1618,6 @@ BASE_STYLES = """
     }
     .auth-footer .footer-subline {
       margin-top: 6px;
-    }
-    .update-notice {
-      max-width: 980px;
-      margin: 2rem auto 0;
-      padding: 0.85rem 1rem;
-      border: 1px solid var(--border-soft);
-      border-radius: 8px;
-      background: var(--bg-card-2);
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      line-height: 1.45;
-    }
-    .update-notice strong { color: var(--text); }
-    .update-notice a {
-      color: var(--accent);
-      text-decoration: none;
-      border-bottom: 1px dotted currentColor;
     }
     input[type="checkbox"] {
       width: 16px;
@@ -4900,37 +4936,66 @@ def _encrypt_payload(payload, dashboard_key):
     }
 
 
-def _load_update_notice():
-    raw = os.environ.get(UPDATE_NOTICE_ENV, "")
+def _load_version_status():
+    raw = os.environ.get(VERSION_STATUS_ENV, "")
     if not raw:
         return None
     try:
-        notice = json.loads(raw)
+        status = json.loads(raw)
     except json.JSONDecodeError:
         return None
-    if not isinstance(notice, dict):
+    if not isinstance(status, dict):
         return None
-    version = str(notice.get("version") or "").strip()
-    title = str(notice.get("title") or "").strip()
-    url = str(notice.get("url") or "").strip()
-    summary = str(notice.get("summary") or "").strip()
-    if not version or not title or not url:
+    current_version = str(status.get("current_version") or "").strip()
+    current_url = str(status.get("current_url") or "").strip()
+    latest_version = str(status.get("latest_version") or "").strip()
+    url = str(status.get("url") or "").strip()
+    update_available = bool(status.get("update_available"))
+    if not current_version or not url:
         return None
-    return {"version": version, "title": title, "url": url, "summary": summary}
+    return {
+        "current_version": current_version,
+        "current_url": current_url or url,
+        "latest_version": latest_version,
+        "update_available": update_available,
+        "url": url,
+    }
 
 
-def _render_update_notice():
-    notice = _load_update_notice()
-    if not notice:
+def _display_version(version):
+    value = str(version or "").strip()
+    if not value:
         return ""
-    summary = f" {html.escape(notice['summary'])}" if notice["summary"] else ""
+    return value if value.startswith("v") else f"v{value}"
+
+
+def _render_version_badges():
+    status = _load_version_status()
+    if not status:
+        return ""
+    current_display = _display_version(status["current_version"])
+    latest_display = _display_version(status["latest_version"])
+    latest_state = ""
+    if latest_display and latest_display != current_display:
+        latest_state = " different"
+    if not latest_display:
+        latest_state = " unknown"
+    latest_value = latest_display or "unknown"
+    current_href = html.escape(status["current_url"], quote=True)
+    latest_href = html.escape(status["url"], quote=True)
+    current_value = html.escape(current_display)
+    latest_value = html.escape(latest_value)
     return (
-        '\n  <div class="update-notice" role="note">' +
-        f"<strong>{html.escape(notice['title'])}</strong>" +
-        f"{summary} " +
-        f'<a href="{html.escape(notice["url"], quote=True)}">' +
-        f'View {html.escape(notice["version"])}</a>.' +
-        "</div>\n"
+        '        <div class="action-version-badges" role="group" '
+        + 'aria-label="Reponomics action version status">\n'
+        + f'          <a class="action-version-badge current" href="{current_href}">'
+        + '<span class="badge-label">your version</span>'
+        + f'<span class="badge-value">{current_value}</span></a>\n'
+        + f'          <a class="action-version-badge latest{latest_state}" href="{latest_href}">'
+        + '<span class="badge-label">latest version</span>'
+        + f'<span class="badge-value">{latest_value}</span></a>\n'
+        + f'          <a class="action-version-link" href="{latest_href}">View latest updates</a>\n'
+        + "        </div>"
     )
 
 
@@ -4947,6 +5012,7 @@ def _build_dashboard_shell(updated_text, stat_values, hidden=False):
           <div class="brand-eyebrow">Dashboard</div>
         </div>
         <p class="updated" id="updated-text">{updated_text}</p>
+{_render_version_badges()}
       </div>
       <div class="hero-toolbar">
         <div class="hero-toolbar-controls">
@@ -5252,7 +5318,6 @@ def _wrap_html(
 </head>
 <body{body_attribute_text}>
 {body}
-{_render_update_notice()}
 
   <footer>
     <div class="footer-line footer-promises">

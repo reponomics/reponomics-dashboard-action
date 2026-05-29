@@ -150,6 +150,10 @@ def _assert_snapshot(actual: str, path: Path) -> None:
     pytest.fail(f"snapshot mismatch for {path}\n{diff}")
 
 
+def _readme_svg_refs(readme: str) -> set[str]:
+    return set(README_SVG_REF_RE.findall(readme))
+
+
 def _assert_readme_contract(rendered: RenderedScenario) -> None:
     lower_readme = rendered.readme.lower()
     assert "<script" not in lower_readme
@@ -157,7 +161,7 @@ def _assert_readme_contract(rendered: RenderedScenario) -> None:
     assert "<svg" not in lower_readme
     assert "data:image/svg" not in lower_readme
 
-    svg_refs = set(README_SVG_REF_RE.findall(rendered.readme))
+    svg_refs = _readme_svg_refs(rendered.readme)
     assert svg_refs, "README output should reference generated SVG assets"
     for ref in sorted(svg_refs):
         assert not ref.startswith("/")
@@ -169,6 +173,13 @@ def _assert_readme_contract(rendered: RenderedScenario) -> None:
             continue
         dark_ref = ref.removesuffix("-light.svg") + ".svg"
         assert dark_ref in svg_refs
+
+
+def _assert_readme_asset_snapshots(rendered: RenderedScenario, snapshot_dir: Path) -> None:
+    for ref in sorted(_readme_svg_refs(rendered.readme)):
+        asset_path = rendered.workdir / ref
+        assert asset_path.is_file(), ref
+        _assert_snapshot(_normalize(asset_path.read_text(encoding="utf-8")), snapshot_dir / ref)
 
 
 def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
@@ -199,4 +210,5 @@ def test_production_dashboard_outputs_match_scenario_snapshots(
 
     snapshot_dir = SNAPSHOT_ROOT / scenario_key
     _assert_snapshot(rendered.readme, snapshot_dir / "README.snapshot.md")
+    _assert_readme_asset_snapshots(rendered, snapshot_dir)
     _assert_snapshot(rendered.dashboard, snapshot_dir / "dashboard.snapshot.html")

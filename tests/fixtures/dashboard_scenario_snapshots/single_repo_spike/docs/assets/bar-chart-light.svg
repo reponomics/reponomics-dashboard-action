@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 72" width="520" height="72">
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }</style>
+  <rect width="100%" height="100%" fill="#ffffff" rx="8"/>
+  <rect x="122" y="8" width="308" height="22" fill="#ffffff" rx="4"/><rect x="122" y="8" width="308.0" height="22" fill="#0969da" rx="4" opacity="0.85"/><text x="114" y="23" text-anchor="end" font-size="11" fill="#1f2328">sudden-breakout</text><text x="438" y="23" font-size="10" fill="#1f2328">2.1k <tspan fill="#6e7781">68%</tspan></text><rect x="122" y="38" width="308" height="22" fill="#ffffff" rx="4"/><rect x="122" y="38" width="147.6" height="22" fill="#0969da" rx="4" opacity="0.85"/><text x="114" y="53" text-anchor="end" font-size="11" fill="#1f2328">steady-companion</text><text x="438" y="53" font-size="10" fill="#1f2328">987 <tspan fill="#6e7781">32%</tspan></text>
+</svg>

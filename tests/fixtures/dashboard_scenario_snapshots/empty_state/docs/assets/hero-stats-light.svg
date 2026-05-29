@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="520" height="100">
+  <rect width="100%" height="100%" fill="#ffffff" rx="8"/>
+  <rect x="1" y="1" width="518" height="98" fill="none" stroke="#d0d7de" rx="8"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+        font-size="14" fill="#57606a"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">No traffic data yet.</text>
+</svg>

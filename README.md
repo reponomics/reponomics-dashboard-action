@@ -91,7 +91,7 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 | `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
 | `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
 | `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |
-| `managed-docs-sync` | Override managed documentation sync into `docs/reponomics/`. Leave blank to use `managed_docs_sync` in `config.yaml`, or default `true` when config is unset. | `""` |
+| `allow-docs-sync` | Allow Reponomics to update managed documentation in `docs/reponomics/`. Leave blank to use `allow_docs_sync` in `config.yaml`; defaults to `true` when unset. | `""` |
 | `readme-path` | README output path. | `README.md` |
 
 ## Outputs
@@ -110,7 +110,6 @@ The action emits metadata for workflow summaries and later automation:
 - `runtime-version`
 - `docs-sync-state`
 - `docs-sync-reason`
-- `docs-bundle-version`
 - `docs-manifest-action-version`
 
 `collect` updates only the retained `dashboard-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`html-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. `docs-sync` updates the Reponomics-managed local documentation namespace at `docs/reponomics/` when enabled. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `dashboard-data` artifacts tied to those old runs.

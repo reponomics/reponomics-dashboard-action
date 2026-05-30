@@ -1,6 +1,6 @@
 # Upgrade Notes
 
-This dashboard last received managed docs from Reponomics Dashboard Action {{ACTION_VERSION}} with docs bundle {{DOCS_BUNDLE_VERSION}}.
+This dashboard last received managed docs from Reponomics Dashboard Action {{ACTION_VERSION}}.
 
 If your workflow pins an exact action version such as `reponomics/reponomics-dashboard-action@v1.2.3`, you choose when to upgrade. If your workflow uses a floating major or minor ref such as `@v1`, a compatible Reponomics release can run in your repository without a workflow edit. Managed docs sync is the local receipt that the newer action ran and that current local guidance is available.
 

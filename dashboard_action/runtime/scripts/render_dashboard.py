@@ -5036,7 +5036,7 @@ def _render_docs_sync_status():
 
 
 def _build_dashboard_shell(updated_text, stat_values, hidden=False):
-    """Build the shared dashboard markup used by public and secure pages."""
+    """Build the shared dashboard markup used by plain and encrypted pages."""
     hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
   <div id="dashboard-app"{hidden_attr}>

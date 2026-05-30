@@ -34,7 +34,6 @@ MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
 MANAGED_DOCS_DASHBOARD_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
 DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
 DOCS_SYNC_REASON_ENV = "REPONOMICS_DOCS_SYNC_REASON"
-DOCS_BUNDLE_VERSION_ENV = "REPONOMICS_DOCS_BUNDLE_VERSION"
 DOCS_MANIFEST_ACTION_VERSION_ENV = "REPONOMICS_DOCS_MANIFEST_ACTION_VERSION"
 DOCS_STATE_STALE = "stale"
 
@@ -74,7 +73,7 @@ class RuntimeConfig:
     data_dir: Path
     retention_days: int
     generate_readme: bool
-    managed_docs_sync: bool
+    allow_docs_sync: bool
     pages_index_path: Path
     readme_path: Path
     incident_confirm_mode: str
@@ -140,30 +139,26 @@ def _parse_retention_days(raw: str) -> int:
     return value
 
 
-def _docs_bundle_version() -> str:
-    return VERSION
-
-
-def _config_managed_docs_sync(config_path: Path) -> bool | None:
+def _config_allow_docs_sync(config_path: Path) -> bool | None:
     if not config_path.exists():
         return None
     try:
         payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
-        raise ActionError(f"Could not read managed_docs_sync from {config_path}.") from exc
-    if not isinstance(payload, dict) or "managed_docs_sync" not in payload:
+        raise ActionError(f"Could not read allow_docs_sync from {config_path}.") from exc
+    if not isinstance(payload, dict) or "allow_docs_sync" not in payload:
         return None
-    value = payload["managed_docs_sync"]
+    value = payload["allow_docs_sync"]
     if isinstance(value, bool):
         return value
-    raise ActionError("managed_docs_sync in config.yaml must be a YAML boolean.")
+    raise ActionError("allow_docs_sync in config.yaml must be a YAML boolean.")
 
 
-def _managed_docs_sync_from_env(config_path: Path) -> bool:
-    raw = _env("REPONOMICS_MANAGED_DOCS_SYNC")
+def _allow_docs_sync_from_env(config_path: Path) -> bool:
+    raw = _env("REPONOMICS_ALLOW_DOCS_SYNC")
     if raw:
-        return _parse_bool(raw, name="managed-docs-sync")
-    configured = _config_managed_docs_sync(config_path)
+        return _parse_bool(raw, name="allow-docs-sync")
+    configured = _config_allow_docs_sync(config_path)
     if configured is not None:
         return configured
     return True
@@ -231,7 +226,7 @@ def load_config_from_env() -> RuntimeConfig:
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
-        managed_docs_sync=_managed_docs_sync_from_env(config_path),
+        allow_docs_sync=_allow_docs_sync_from_env(config_path),
         pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
@@ -382,14 +377,11 @@ def _set_managed_docs_link_env(config: RuntimeConfig) -> None:
 def _set_empty_managed_docs_status_env() -> None:
     os.environ[DOCS_SYNC_STATE_ENV] = ""
     os.environ[DOCS_SYNC_REASON_ENV] = ""
-    os.environ[DOCS_BUNDLE_VERSION_ENV] = _docs_bundle_version()
     os.environ[DOCS_MANIFEST_ACTION_VERSION_ENV] = ""
 
 
 def _set_managed_docs_status_env() -> None:
     if os.environ.get(DOCS_SYNC_STATE_ENV, "").strip():
-        if not os.environ.get(DOCS_BUNDLE_VERSION_ENV, "").strip():
-            os.environ[DOCS_BUNDLE_VERSION_ENV] = _docs_bundle_version()
         return
 
     manifest_path = MANAGED_DOCS_NAMESPACE / managed_docs.MANIFEST_NAME
@@ -402,18 +394,12 @@ def _set_managed_docs_status_env() -> None:
     except (OSError, json.JSONDecodeError):
         os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_MANIFEST_INCONSISTENT
         os.environ[DOCS_SYNC_REASON_ENV] = "Local managed docs manifest is not readable."
-        os.environ[DOCS_BUNDLE_VERSION_ENV] = _docs_bundle_version()
         os.environ[DOCS_MANIFEST_ACTION_VERSION_ENV] = ""
         return
 
     manifest_action_version = str(manifest.get("action_version") or "")
-    manifest_docs_bundle_version = str(manifest.get("docs_bundle_version") or "")
-    os.environ[DOCS_BUNDLE_VERSION_ENV] = manifest_docs_bundle_version or _docs_bundle_version()
     os.environ[DOCS_MANIFEST_ACTION_VERSION_ENV] = manifest_action_version
-    if (
-        manifest_action_version == VERSION
-        and manifest_docs_bundle_version == _docs_bundle_version()
-    ):
+    if manifest_action_version == VERSION:
         os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_UP_TO_DATE
         os.environ[DOCS_SYNC_REASON_ENV] = "Local managed docs match this action version."
         return
@@ -582,7 +568,6 @@ def _docs_result_with_state(
     return managed_docs.ManagedDocsResult(
         state=state,
         reason=reason,
-        docs_bundle_version=result.docs_bundle_version,
         manifest_action_version=result.manifest_action_version,
         namespace=result.namespace,
         changed=result.changed,
@@ -673,10 +658,7 @@ def _git_commit_managed_docs(
         )
 
     namespace = MANAGED_DOCS_NAMESPACE.as_posix()
-    message = (
-        "docs: update Reponomics managed docs "
-        + f"for action v{VERSION} docs {_docs_bundle_version()} [skip ci]"
-    )
+    message = f"docs: update Reponomics managed docs for action v{VERSION} [skip ci]"
     try:
         subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
         subprocess.run(
@@ -740,13 +722,11 @@ def _docs_sync_output_values(
         return {
             "docs-sync-state": "",
             "docs-sync-reason": "",
-            "docs-bundle-version": _docs_bundle_version(),
             "docs-manifest-action-version": "",
         }
     return {
         "docs-sync-state": result.state,
         "docs-sync-reason": result.reason,
-        "docs-bundle-version": result.docs_bundle_version,
         "docs-manifest-action-version": result.manifest_action_version,
     }
 
@@ -1007,7 +987,7 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         "",
         f"- State: `{result.state}`",
         f"- Details: {result.reason}",
-        f"- Docs bundle version: `{result.docs_bundle_version}`",
+        f"- Action version: `{VERSION}`",
     ]
     if result.manifest_action_version:
         lines.append(f"- Manifest action version: `{result.manifest_action_version}`")
@@ -1015,7 +995,7 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         lines.extend(
             [
                 "",
-                "Grant `contents: write` to the docs sync job or disable managed docs sync with `managed_docs_sync: false` in `config.yaml`.",
+                "Grant `contents: write` to the docs sync job or disable docs sync with `allow_docs_sync: false` in `config.yaml`.",
             ]
         )
     elif result.state == managed_docs.STATE_USER_MODIFIED_CONFLICT:
@@ -1164,8 +1144,7 @@ def run_docs_sync(config: RuntimeConfig) -> None:
             bundle_dir=MANAGED_DOCS_BUNDLE_DIR,
             action_repository=config.action_repository or version_status.ACTION_REPOSITORY,
             action_version=VERSION,
-            docs_bundle_version=_docs_bundle_version(),
-            enabled=config.managed_docs_sync,
+            allowed=config.allow_docs_sync,
         )
     except managed_docs.ManagedDocsError as exc:
         raise ActionError(str(exc)) from exc

@@ -73,16 +73,15 @@ def test_publish_pages_replaces_dashboard_mode_output() -> None:
     assert "GitHub Pages" in description
 
 
-def test_managed_docs_sync_metadata_contract() -> None:
+def test_allow_docs_sync_metadata_contract() -> None:
     action = _action()
     inputs = action["inputs"]
     outputs = action["outputs"]
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
     assert "docs-sync" in inputs["mode"]["description"]
-    assert inputs["managed-docs-sync"]["default"] == ""
-    assert runtime_env["REPONOMICS_MANAGED_DOCS_SYNC"] == "${{ inputs.managed-docs-sync }}"
+    assert inputs["allow-docs-sync"]["default"] == ""
+    assert runtime_env["REPONOMICS_ALLOW_DOCS_SYNC"] == "${{ inputs.allow-docs-sync }}"
     assert outputs["docs-sync-state"]["value"] == "${{ steps.runtime.outputs.docs-sync-state }}"
     assert outputs["docs-sync-reason"]["value"] == "${{ steps.runtime.outputs.docs-sync-reason }}"
-    assert outputs["docs-bundle-version"]["value"] == "${{ steps.runtime.outputs.docs-bundle-version }}"
     assert outputs["docs-manifest-action-version"]["value"] == "${{ steps.runtime.outputs.docs-manifest-action-version }}"

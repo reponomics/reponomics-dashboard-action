@@ -28,8 +28,7 @@ def _sync(
     *,
     files: dict[str, str],
     action_version: str = "1.0.0",
-    docs_bundle_version: str = "1.0.0",
-    enabled: bool = True,
+    allowed: bool = True,
 ) -> managed_docs.ManagedDocsResult:
     bundle_dir = _write_bundle(tmp_path / "bundle", files)
     return managed_docs.sync_managed_docs(
@@ -37,15 +36,14 @@ def _sync(
         bundle_dir=bundle_dir,
         action_repository="reponomics/reponomics-dashboard-action",
         action_version=action_version,
-        docs_bundle_version=docs_bundle_version,
-        enabled=enabled,
+        allowed=allowed,
     )
 
 
 def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     result = _sync(
         tmp_path,
-        files={"README.md": "Action {{ACTION_VERSION}}, docs {{DOCS_BUNDLE_VERSION}}\n"},
+        files={"README.md": "Action {{ACTION_VERSION}}\n"},
     )
 
     namespace = result.namespace
@@ -53,10 +51,9 @@ def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
 
     assert result.state == managed_docs.STATE_UPDATED
     assert result.changed is True
-    assert (namespace / "README.md").read_text(encoding="utf-8") == "Action 1.0.0, docs 1.0.0\n"
+    assert (namespace / "README.md").read_text(encoding="utf-8") == "Action 1.0.0\n"
     assert manifest["managed_namespace"] == namespace.as_posix()
     assert manifest["action_version"] == "1.0.0"
-    assert manifest["docs_bundle_version"] == "1.0.0"
     assert sorted(manifest["files"]) == ["README.md"]
 
 
@@ -65,14 +62,12 @@ def test_sync_updates_clean_managed_docs_and_removes_stale_files(tmp_path: Path)
         tmp_path,
         files={"README.md": "old\n", "stale.md": "remove me\n"},
         action_version="1.0.0",
-        docs_bundle_version="1.0.0",
     )
 
     second = _sync(
         tmp_path,
         files={"README.md": "new\n"},
         action_version="1.1.0",
-        docs_bundle_version="1.1.0",
     )
 
     manifest = json.loads((second.namespace / ".manifest.json").read_text(encoding="utf-8"))
@@ -92,7 +87,6 @@ def test_sync_blocks_user_modified_file(tmp_path: Path) -> None:
         tmp_path,
         files={"README.md": "new generated\n"},
         action_version="1.1.0",
-        docs_bundle_version="1.1.0",
     )
 
     assert second.state == managed_docs.STATE_USER_MODIFIED_CONFLICT
@@ -108,7 +102,6 @@ def test_sync_blocks_untracked_file_inside_managed_namespace(tmp_path: Path) -> 
         tmp_path,
         files={"README.md": "new generated\n"},
         action_version="1.1.0",
-        docs_bundle_version="1.1.0",
     )
 
     assert second.state == managed_docs.STATE_MANIFEST_INCONSISTENT
@@ -130,7 +123,6 @@ def test_sync_blocks_managed_file_symlink_even_when_target_hash_matches(tmp_path
         tmp_path,
         files={"README.md": "new generated\n"},
         action_version="1.1.0",
-        docs_bundle_version="1.1.0",
     )
 
     assert second.state == managed_docs.STATE_MANIFEST_INCONSISTENT
@@ -153,8 +145,7 @@ def test_sync_blocks_symlinked_namespace_parent(tmp_path: Path) -> None:
         bundle_dir=bundle_dir,
         action_repository="reponomics/reponomics-dashboard-action",
         action_version="1.0.0",
-        docs_bundle_version="1.0.0",
-        enabled=True,
+        allowed=True,
     )
 
     assert result.state == managed_docs.STATE_MANIFEST_INCONSISTENT
@@ -162,7 +153,7 @@ def test_sync_blocks_symlinked_namespace_parent(tmp_path: Path) -> None:
 
 
 def test_sync_disabled_writes_nothing(tmp_path: Path) -> None:
-    result = _sync(tmp_path, files={"README.md": "generated\n"}, enabled=False)
+    result = _sync(tmp_path, files={"README.md": "generated\n"}, allowed=False)
 
     assert result.state == managed_docs.STATE_DISABLED
     assert result.changed is False
@@ -190,7 +181,6 @@ def test_sync_rejects_manifest_path_traversal_without_writing_outside_namespace(
                 "managed_namespace": namespace.as_posix(),
                 "action_repository": "reponomics/reponomics-dashboard-action",
                 "action_version": "1.0.0",
-                "docs_bundle_version": "1.0.0",
                 "files": {"../escape.md": "0" * 64},
             }
         ),

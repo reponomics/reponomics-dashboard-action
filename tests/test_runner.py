@@ -95,7 +95,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "generate_readme": False,
-        "managed_docs_sync": True,
+        "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",
@@ -375,50 +375,50 @@ def test_input_normalization_from_env(
     assert config.publish_pages is True
     assert config.retention_days == 30
     assert config.generate_readme is False
-    assert config.managed_docs_sync is True
+    assert config.allow_docs_sync is True
 
 
-def test_managed_docs_sync_uses_config_when_input_is_unset(
+def test_allow_docs_sync_uses_config_when_input_is_unset(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("managed_docs_sync: false\n", encoding="utf-8")
+    config_path.write_text("allow_docs_sync: false\n", encoding="utf-8")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.delenv("REPONOMICS_MANAGED_DOCS_SYNC", raising=False)
+    monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
 
     config = run.load_config_from_env()
 
-    assert config.managed_docs_sync is False
+    assert config.allow_docs_sync is False
 
 
-def test_managed_docs_sync_input_overrides_config(
+def test_allow_docs_sync_input_overrides_config(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("managed_docs_sync: false\n", encoding="utf-8")
+    config_path.write_text("allow_docs_sync: false\n", encoding="utf-8")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.setenv("REPONOMICS_MANAGED_DOCS_SYNC", "true")
+    monkeypatch.setenv("REPONOMICS_ALLOW_DOCS_SYNC", "true")
 
     config = run.load_config_from_env()
 
-    assert config.managed_docs_sync is True
+    assert config.allow_docs_sync is True
 
 
-def test_managed_docs_sync_rejects_non_boolean_config(
+def test_allow_docs_sync_rejects_non_boolean_config(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text('managed_docs_sync: "false"\n', encoding="utf-8")
+    config_path.write_text('allow_docs_sync: "false"\n', encoding="utf-8")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.delenv("REPONOMICS_MANAGED_DOCS_SYNC", raising=False)
+    monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
 
-    with pytest.raises(run.ActionError, match="managed_docs_sync"):
+    with pytest.raises(run.ActionError, match="allow_docs_sync"):
         run.load_config_from_env()
 
 
@@ -469,7 +469,6 @@ def test_runtime_outputs_include_pages_path(
     output = output_path.read_text(encoding="utf-8")
     assert "publish-pages=true" in output
     assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
-    assert f"docs-bundle-version={run.VERSION}" in output
 
 
 def test_generate_readme_stages_readme_and_svg_assets_only(
@@ -541,7 +540,6 @@ def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
     assert (tmp_path / "docs" / "reponomics" / "README.md").is_file()
     assert (tmp_path / "docs" / "reponomics" / ".manifest.json").is_file()
     assert "docs-sync-state=updated" in output
-    assert f"docs-bundle-version={run.VERSION}" in output
     assert "Managed Reponomics docs" in summary
     assert ["git", "add", "--", "docs/reponomics"] in calls
     assert any(command[:3] == ["git", "commit", "-m"] and command[-2:] == ["--", "docs/reponomics"] for command in calls)
@@ -1279,7 +1277,7 @@ def test_publish_links_version_status_to_local_managed_docs_when_present(
     assert 'class="action-version-link" href="reponomics/README.md"' in dashboard
 
 
-def test_publish_surfaces_blocked_managed_docs_sync_status(
+def test_publish_surfaces_blocked_managed_docs_status(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1320,7 +1318,6 @@ def test_publish_surfaces_stale_local_managed_docs_manifest(
                 "managed_namespace": "docs/reponomics",
                 "action_repository": "reponomics/reponomics-dashboard-action",
                 "action_version": "0.12.0",
-                "docs_bundle_version": "0.12.0",
                 "files": {},
             }
         ),

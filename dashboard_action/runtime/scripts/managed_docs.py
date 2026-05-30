@@ -28,7 +28,6 @@ class ManagedDocsError(RuntimeError):
 class ManagedDocsResult:
     state: str
     reason: str
-    docs_bundle_version: str
     manifest_action_version: str
     namespace: Path
     changed: bool = False
@@ -40,8 +39,7 @@ def sync_managed_docs(
     bundle_dir: Path,
     action_repository: str,
     action_version: str,
-    docs_bundle_version: str,
-    enabled: bool,
+    allowed: bool,
 ) -> ManagedDocsResult:
     """Sync the bundled docs into the managed namespace without committing."""
     namespace = Path(namespace)
@@ -50,15 +48,13 @@ def sync_managed_docs(
         return _result(
             STATE_MANIFEST_INCONSISTENT,
             f"Managed docs namespace contains a symlink: {symlink}",
-            docs_bundle_version,
             "",
             namespace,
         )
-    if not enabled:
+    if not allowed:
         return _result(
             STATE_DISABLED,
             "Managed documentation sync is disabled.",
-            docs_bundle_version,
             "",
             namespace,
         )
@@ -66,7 +62,6 @@ def sync_managed_docs(
     bundle_files = _load_bundle(
         bundle_dir,
         action_version=action_version,
-        docs_bundle_version=docs_bundle_version,
     )
     next_hashes = {path: _sha_bytes(content) for path, content in bundle_files.items()}
     manifest_path = namespace / MANIFEST_NAME
@@ -76,7 +71,6 @@ def sync_managed_docs(
             return _result(
                 STATE_MANIFEST_INCONSISTENT,
                 "Managed docs namespace exists without a valid manifest.",
-                docs_bundle_version,
                 "",
                 namespace,
             )
@@ -88,14 +82,12 @@ def sync_managed_docs(
                 namespace=namespace,
                 action_repository=action_repository,
                 action_version=action_version,
-                docs_bundle_version=docs_bundle_version,
                 file_hashes=next_hashes,
             ),
         )
         return _result(
             STATE_UPDATED,
             "Managed documentation was written.",
-            docs_bundle_version,
             action_version,
             namespace,
             changed=True,
@@ -112,7 +104,6 @@ def sync_managed_docs(
         return _result(
             STATE_MANIFEST_INCONSISTENT,
             str(exc),
-            docs_bundle_version,
             "",
             namespace,
         )
@@ -123,7 +114,6 @@ def sync_managed_docs(
         return _result(
             STATE_MANIFEST_INCONSISTENT,
             f"Managed docs namespace contains a file outside the manifest: {untracked}",
-            docs_bundle_version,
             manifest_action_version,
             namespace,
         )
@@ -132,21 +122,14 @@ def sync_managed_docs(
         return _result(
             STATE_USER_MODIFIED_CONFLICT,
             f"Managed docs file differs from manifest: {conflict}",
-            docs_bundle_version,
             manifest_action_version,
             namespace,
         )
 
-    current_bundle_version = str(manifest.get("docs_bundle_version") or "")
-    if (
-        manifest_action_version == action_version
-        and current_bundle_version == docs_bundle_version
-        and previous_hashes == next_hashes
-    ):
+    if manifest_action_version == action_version and previous_hashes == next_hashes:
         return _result(
             STATE_UP_TO_DATE,
             "Managed documentation is current.",
-            docs_bundle_version,
             manifest_action_version,
             namespace,
         )
@@ -159,14 +142,12 @@ def sync_managed_docs(
             namespace=namespace,
             action_repository=action_repository,
             action_version=action_version,
-            docs_bundle_version=docs_bundle_version,
             file_hashes=next_hashes,
         ),
     )
     return _result(
         STATE_UPDATED,
         "Managed documentation was updated.",
-        docs_bundle_version,
         action_version,
         namespace,
         changed=True,
@@ -176,7 +157,6 @@ def sync_managed_docs(
 def _result(
     state: str,
     reason: str,
-    docs_bundle_version: str,
     manifest_action_version: str,
     namespace: Path,
     *,
@@ -185,7 +165,6 @@ def _result(
     return ManagedDocsResult(
         state=state,
         reason=reason,
-        docs_bundle_version=docs_bundle_version,
         manifest_action_version=manifest_action_version,
         namespace=namespace,
         changed=changed,
@@ -196,7 +175,6 @@ def _load_bundle(
     bundle_dir: Path,
     *,
     action_version: str,
-    docs_bundle_version: str,
 ) -> dict[str, bytes]:
     bundle_dir = Path(bundle_dir)
     if not bundle_dir.is_dir():
@@ -210,7 +188,6 @@ def _load_bundle(
         _validate_relative_path(relative)
         text = path.read_text(encoding="utf-8")
         text = text.replace("{{ACTION_VERSION}}", action_version)
-        text = text.replace("{{DOCS_BUNDLE_VERSION}}", docs_bundle_version)
         files[relative] = text.encode("utf-8")
 
     if not files:
@@ -358,7 +335,6 @@ def _build_manifest(
     namespace: Path,
     action_repository: str,
     action_version: str,
-    docs_bundle_version: str,
     file_hashes: dict[str, str],
 ) -> dict[str, Any]:
     return {
@@ -366,7 +342,6 @@ def _build_manifest(
         "managed_namespace": namespace.as_posix(),
         "action_repository": action_repository,
         "action_version": action_version,
-        "docs_bundle_version": docs_bundle_version,
         "files": dict(sorted(file_hashes.items())),
     }
 

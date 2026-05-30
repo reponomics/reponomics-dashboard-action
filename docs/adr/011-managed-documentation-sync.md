@@ -24,7 +24,7 @@ The default delivery mode is a direct write using the consuming workflow's `GITH
 
 The action may write only inside the managed docs namespace. It must not scatter files through user documentation, mutate `config.yaml`, or write retained dashboard data, tokens, secrets, or local machine paths.
 
-The managed namespace should include a manifest, for example `docs/reponomics/.manifest.json`, recording the docs bundle version, action version, managed file list, and generated content hashes.
+The managed namespace should include a manifest, for example `docs/reponomics/.manifest.json`, recording the action version, managed file list, and generated content hashes.
 
 Sync behavior:
 
@@ -46,7 +46,7 @@ The initial bundle should be the local user-facing subset: upgrade notes, config
 
 Users on floating refs such as `@v1` may receive a new action version without editing their workflow. For those users, docs sync is also the best available local receipt that a new version has actually run in their repository.
 
-The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version and docs bundle version. If it cannot write because docs sync is disabled, permissions are missing, or user edits block the update, the workflow summary and generated dashboard/version-status surface should report that local documentation is not current.
+The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or user edits block the update, the workflow summary and generated dashboard/version-status surface should report that local documentation is not current.
 
 This is not a perfect discovery mechanism: a user may ignore a dashboard indicator or workflow summary. PR mode would provide a stronger review signal for users who want it. Active upstream channels such as an RSS feed or release-announcement feed could also serve users who want to follow the product more closely. The first implementation should still use direct managed sync as the default, because it gives normal floating-ref users a concrete local update rather than only an upstream notice.
 
@@ -64,7 +64,7 @@ Do not add silent telemetry to generated repositories as part of this feature. A
 
 The first implementation should be small enough to delegate:
 
-1. Add a versioned docs bundle to the action package.
+1. Add a bundled managed-docs payload shipped with each action version.
 2. Add a sync helper that writes the bundle into one managed namespace.
 3. Add manifest/hash ownership checks.
 4. Add an opt-out config flag.
@@ -111,7 +111,6 @@ Required manifest fields:
 - `managed_namespace`
 - `action_repository`
 - `action_version`
-- `docs_bundle_version`
 - `files` (map of relative path -> sha256)
 
 The manifest should be deterministic. Avoid volatile fields that change on every
@@ -123,8 +122,8 @@ and ownership checks.
 Default template wiring should run docs sync in a dedicated job before
 collection/publish jobs. The job should compare:
 
-- currently running action version and docs bundle version
-- manifest `action_version` and `docs_bundle_version`
+- currently running action version
+- manifest `action_version`
 - current managed-file bytes against manifest hashes
 
 Recommended state outcomes:
@@ -149,7 +148,7 @@ Commit rules:
 
 - use the consuming repository `GITHUB_TOKEN` by default
 - commit only when staged bytes differ
-- include action version and docs bundle version in the commit message
+- include action version in the commit message
 - include `[skip ci]` in the commit message for direct-write mode
 - if push fails due to non-fast-forward, retry with a bounded reconciliation
   strategy; on failure, emit `push_race`
@@ -178,7 +177,6 @@ surfaces can consume stable semantics:
 
 - `docs-sync-state`
 - `docs-sync-reason`
-- `docs-bundle-version`
 - `docs-manifest-action-version`
 
 README/dashboard/version-status surfaces should display a local-docs freshness
@@ -189,7 +187,7 @@ indicator based on these outputs when available.
 Define one canonical opt-out key and precedence to avoid drift across template,
 action runtime, and docs:
 
-- canonical key: `managed_docs_sync`
+- canonical key: `allow_docs_sync`
 - default: `true`
 - accepted locations in first pass:
   - workflow/action input
@@ -220,7 +218,7 @@ Resolved now:
 
 - managed docs namespace path: use `docs/reponomics/`
 - execution model: run docs sync as a dedicated pre-collect/pre-publish job
-- opt-out key: `managed_docs_sync` with precedence rules in A7
+- opt-out key: `allow_docs_sync` with precedence rules in A7
 - freshness indicator contract: expose `docs-sync-*` outputs and render a
   local-docs freshness indicator in README/dashboard/version-status surfaces
 

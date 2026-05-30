@@ -54,8 +54,8 @@ inputs:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
     default: "false"
-  managed-docs-sync:
-    description: Override managed Reponomics documentation sync. Set true or false, or leave blank to use config.yaml/default true.
+  allow-docs-sync:
+    description: Allow Reponomics to update managed documentation in docs/reponomics. Set true or false, or leave blank to use config.yaml; defaults to true when unset.
     required: false
     default: ""
   readme-path:
@@ -100,9 +100,6 @@ outputs:
   docs-sync-reason:
     description: Managed documentation sync reason.
     value: ${{ steps.runtime.outputs.docs-sync-reason }}
-  docs-bundle-version:
-    description: Managed documentation bundle version shipped with the action runtime.
-    value: ${{ steps.runtime.outputs.docs-bundle-version }}
   docs-manifest-action-version:
     description: Action version recorded in the managed documentation manifest.
     value: ${{ steps.runtime.outputs.docs-manifest-action-version }}
@@ -132,7 +129,7 @@ runs:
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
-        REPONOMICS_MANAGED_DOCS_SYNC: ${{ inputs.managed-docs-sync }}
+        REPONOMICS_ALLOW_DOCS_SYNC: ${{ inputs.allow-docs-sync }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}

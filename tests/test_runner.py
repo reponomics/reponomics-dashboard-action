@@ -86,6 +86,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
     values: dict[str, Any] = {
         "mode": "collect",
         "collection_token": "ghp_collection",
+        "use_github_app": False,
         "github_token": "ghp_test",
         "dashboard_secret": OLD_KEY,
         "dashboard_next_secret": "",
@@ -338,6 +339,32 @@ def test_validate_token_403_names_required_permission(
     assert "Administration: read" in output
 
 
+def test_validate_token_github_app_uses_installation_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    seen_url = ""
+
+    def fake_get(
+        url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        nonlocal seen_url
+        seen_url = url
+        return _response(200, payload={"total_count": 0, "repositories": []})
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+
+    run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert seen_url.startswith("https://api.github.com/installation/repositories")
+    assert "Authenticated as GitHub App installation token" in output
+
+
 @pytest.mark.parametrize(
     ("github_event_repository_private", "expected_repo_is_public"),
     [
@@ -366,6 +393,7 @@ def test_input_normalization_from_env(
 
     assert config.mode == "collect"
     assert config.collection_token == "ghp_collection"
+    assert config.use_github_app is False
     assert config.github_token == "ghp_test"
     assert config.data_dir == Path("data")
     assert config.pages_index_path == Path("docs/index.html")
@@ -420,6 +448,27 @@ def test_allow_docs_sync_rejects_non_boolean_config(
 
     with pytest.raises(run.ActionError, match="allow_docs_sync"):
         run.load_config_from_env()
+
+
+def test_use_github_app_input_normalization_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("REPONOMICS_MODE", "collect")
+    monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghs_installation_token")
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+    monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
+    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
+    monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
+    monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
+
+    config = run.load_config_from_env()
+
+    assert config.use_github_app is True
 
 
 @pytest.mark.parametrize(
@@ -1728,6 +1777,36 @@ def test_collect_fetch_json_confirms_not_found_before_skipping(
     assert exc_info.value.attempts == attempts
 
 
+def test_discover_repositories_uses_installation_listing_for_github_app(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    urls: list[str] = []
+
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        urls.append(url)
+        if "page=1" in url:
+            return {
+                "total_count": 1,
+                "repositories": [
+                    {
+                        "full_name": "demo/repo",
+                        "permissions": {"pull": True},
+                    }
+                ],
+            }
+        return {"total_count": 1, "repositories": []}
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+
+    discovered = run.collect_mod.discover_repositories({})
+
+    assert discovered == [{"full_name": "demo/repo", "permissions": {"pull": True}}]
+    assert urls[0].startswith("https://api.github.com/installation/repositories?")
+    assert "per_page=100" in urls[0]
+    assert "page=1" in urls[0]
+
+
 def test_resolve_repositories_applies_stable_auto_selection(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1804,6 +1883,36 @@ def test_resolve_repositories_applies_stable_auto_selection(
         "auto_seeded_at": "2026-01-01T00:00:00Z",
         "auto_cutoff_created_at": "2025-03-01T00:00:00Z",
     }
+
+
+def test_resolve_repositories_accepts_pull_only_permissions_for_github_app(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    discovered: list[run.collect_mod.RepoMetadata] = [
+        {
+            "full_name": "demo/read-only",
+            "permissions": {"pull": True, "push": False, "admin": False},
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
+    config: dict[str, Any] = {
+        "include_only": [],
+        "include": [],
+        "exclude": [],
+        "max_repos": 5,
+        "include_others": True,
+        "include_private": True,
+        "include_new": True,
+    }
+    manifest: dict[str, Any] = {"selection_state": {"auto_seeded_at": "", "auto_cutoff_created_at": ""}}
+
+    resolved, _updated_manifest, metadata = run.collect_mod.resolve_repositories({}, config, manifest)
+
+    assert resolved == ["demo/read-only"]
+    assert sorted(metadata) == ["demo/read-only"]
 
 
 def test_growth_analytics_totals_deltas_and_visitor_conversion() -> None:

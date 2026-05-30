@@ -74,13 +74,16 @@ For `collection-token`, use a [fine-grained personal access token](https://githu
 
 This action accepts one `collection-token`. Fine-grained personal access tokens are scoped to one GitHub resource owner, so a fine-grained token is the right fit only when the dashboard collects from one user or organization owner. If one dashboard must span multiple owners today, the current single-token fallback is a classic PAT with `repo` scope where the relevant organizations allow it.
 
+Advanced users may use a user-owned GitHub App installation token instead of a PAT for `collect` mode. Reponomics does not provide or operate a shared app for user dashboards; you create and control your own GitHub App installation. In that path, mint a short-lived installation token in the workflow, pass it as `collection-token`, and set `use-github-app: true`.
+
 > [!NOTE]
 > We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
 
 | Input | Description | Default |
 |---|---|---|
 | `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`, `docs-sync`. | `collect` |
-| `collection-token` | Token for GitHub repository data collection APIs. | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow. |
+| `collection-token` | Token for GitHub repository data collection APIs. Usually a fine-grained PAT; advanced option: user-owned GitHub App installation token minted in-workflow. | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow. |
+| `use-github-app` | Advanced collect-mode toggle. Set `true` when `collection-token` is a GitHub App installation token (user-owned app), so discovery/validation uses app-installation endpoints. | `false` |
 | `github-token` | Token for artifact/repository workflow operations. | Value of `${{ github.token }}` in the consuming repository workflow/job. |
 | `dashboard-secret` | Current dashboard/artifact encryption key (required for `strong` and `casual`). | Value of `${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}` in the consuming repository workflow. |
 | `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset` (required for `strong` and `casual` rotate-key/incident-reset runs). | Value of `${{ secrets.DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |

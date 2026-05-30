@@ -263,6 +263,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
     values: dict[str, Any] = {
         "mode": "collect",
         "collection_token": "ghp_collection",
+        "use_github_app": False,
         "github_token": "",
         "dashboard_secret": "dashboard-secret-" + ("x" * 40),
         "dashboard_next_secret": "",

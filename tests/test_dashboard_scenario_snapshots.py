@@ -101,6 +101,7 @@ def _render_production_outputs(
     config = run.RuntimeConfig(
         mode="publish",
         collection_token="ghp_collection",
+        use_github_app=False,
         github_token="ghp_test",
         dashboard_secret="",
         dashboard_next_secret="",

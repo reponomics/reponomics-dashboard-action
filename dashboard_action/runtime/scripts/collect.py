@@ -44,6 +44,7 @@ REQUEST_PACING_MAX_SECONDS = 1.0
 SECONDARY_LIMIT_FALLBACK_SECONDS = 60
 NOT_FOUND_RETRIES = 2
 TOKEN_VALIDATION_URL = "https://api.github.com/user"
+APP_TOKEN_VALIDATION_URL = "https://api.github.com/installation/repositories?per_page=1&page=1"
 TOKEN_CREATION_URL = "".join(
     [
         "https://github.com/settings/personal-access-tokens/new",
@@ -54,6 +55,7 @@ TOKEN_CREATION_URL = "".join(
     ]
 )
 REPO_DISCOVERY_URL = "https://api.github.com/user/repos"
+APP_REPO_DISCOVERY_URL = "https://api.github.com/installation/repositories"
 REPO_DISCOVERY_PAGE_SIZE = 100
 CURRENT_REPOSITORY_ENV_KEYS = ("GITHUB_REPOSITORY", "GH_REPO")
 
@@ -410,11 +412,27 @@ def load_config() -> dict[str, Any]:
         sys.exit(1)
 
 
+def _use_github_app_collection_token() -> bool:
+    raw = (os.environ.get("REPONOMICS_USE_GITHUB_APP") or "").strip().lower()
+    if raw in {"", "0", "false", "no", "off"}:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    print("Error: REPONOMICS_USE_GITHUB_APP must be true or false.")
+    sys.exit(1)
+
+
 def get_headers() -> dict[str, str]:
     token = os.environ.get("GH_TOKEN")
     if not token:
         print("Error: GH_TOKEN environment variable is not set.")
-        print("Set the COLLECTION_TOKEN secret in your repository settings.")
+        if _use_github_app_collection_token():
+            print(
+                "Set collection-token (or COLLECTION_TOKEN) to a GitHub App "
+                + "installation token minted by your workflow."
+            )
+        else:
+            print("Set the COLLECTION_TOKEN secret in your repository settings.")
         sys.exit(1)
     return {
         "Authorization": f"Bearer {token}",
@@ -423,15 +441,57 @@ def get_headers() -> dict[str, str]:
     }
 
 
-def validate_token(headers: Headers) -> None:
+def validate_token(headers: Headers, *, use_github_app: bool | None = None) -> None:
     """Verify the token is valid before starting collection."""
+    if use_github_app is None:
+        use_github_app = _use_github_app_collection_token()
+    validation_url = APP_TOKEN_VALIDATION_URL if use_github_app else TOKEN_VALIDATION_URL
     try:
-        resp = _perform_get(TOKEN_VALIDATION_URL, headers=headers, timeout=15)
+        resp = _perform_get(validation_url, headers=headers, timeout=15)
     except requests.RequestException as exc:
-        _record_network_warning(TOKEN_VALIDATION_URL, 1, exc)
+        _record_network_warning(validation_url, 1, exc)
         _write_step_summary("failed", errors=["token validation"])
         print(f"Error: could not reach GitHub API: {exc}")
         sys.exit(1)
+
+    if use_github_app:
+        if resp.status_code == 401:
+            print("Error: the GitHub App installation token is invalid or expired.")
+            print(
+                "Mint a fresh installation token in the workflow and make sure "
+                + "the app is installed on the repositories you collect."
+            )
+            sys.exit(1)
+        if resp.status_code == 403:
+            print("Error: the GitHub App installation token lacks required permissions.")
+            print("The app installation needs repository Administration: read access.")
+            sys.exit(1)
+        if resp.status_code >= 400:
+            print(
+                f"Error: GitHub API returned status {resp.status_code} "
+                + "during GitHub App token validation."
+            )
+            sys.exit(1)
+        payload = resp.json()
+        if not isinstance(payload, dict):
+            print(
+                "Error: token validation response for app installation token "
+                + "was not a JSON object."
+            )
+            sys.exit(1)
+        repos = payload.get("repositories")
+        if not isinstance(repos, list):
+            print(
+                "Error: token validation response for app installation token "
+                + "did not include a repositories list."
+            )
+            sys.exit(1)
+        print(
+            "Authenticated as GitHub App installation token "
+            + f"(accessible repositories in first page: {len(repos)})."
+        )
+        return
+
     if resp.status_code == 401:
         print("Error: COLLECTION_TOKEN is invalid or expired.")
         print(f"Create a fine-grained personal access token: {TOKEN_CREATION_URL}")
@@ -524,15 +584,32 @@ def fetch_json(
 
 def discover_repositories(headers: Headers) -> list[RepoMetadata]:
     """Return all accessible repositories visible to the authenticated user."""
+    use_github_app = _use_github_app_collection_token()
     page = 1
-    discovered = []
+    discovered: list[RepoMetadata] = []
     while True:
-        url = (
-            f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member" +
-            f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}" +
-            f"&page={page}"
-        )
-        page_rows = fetch_json(url, headers)
+        if use_github_app:
+            url = (
+                f"{APP_REPO_DISCOVERY_URL}?per_page={REPO_DISCOVERY_PAGE_SIZE}" +
+                f"&page={page}"
+            )
+            response = fetch_json(url, headers)
+            if not isinstance(response, dict):
+                raise requests.HTTPError(
+                    "Expected JSON object from app installation repository listing"
+                )
+            page_rows = response.get("repositories")
+            if not isinstance(page_rows, list):
+                raise requests.HTTPError(
+                    "App installation repository listing response did not include repositories"
+                )
+        else:
+            url = (
+                f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member" +
+                f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}" +
+                f"&page={page}"
+            )
+            page_rows = fetch_json(url, headers)
         if not page_rows:
             break
         discovered.extend(page_rows)
@@ -542,7 +619,7 @@ def discover_repositories(headers: Headers) -> list[RepoMetadata]:
     return discovered
 
 
-def _is_trackable_repo(repo: RepoMetadata) -> bool:
+def _is_trackable_repo(repo: RepoMetadata, *, allow_pull: bool = False) -> bool:
     """Return whether a discovered repository is eligible for tracking."""
     permissions = repo.get("permissions") or {}
     return (
@@ -550,7 +627,11 @@ def _is_trackable_repo(repo: RepoMetadata) -> bool:
         and not repo.get("fork", False)
         and not repo.get("archived", False)
         and not repo.get("disabled", False)
-        and bool(permissions.get("push") or permissions.get("admin"))
+        and bool(
+            permissions.get("push")
+            or permissions.get("admin")
+            or (allow_pull and permissions.get("pull"))
+        )
     )
 
 
@@ -636,6 +717,7 @@ def resolve_repositories(
     manifest: dict[str, Any],
 ) -> tuple[list[str], dict[str, Any], dict[str, RepoMetadata]]:
     """Resolve the tracked repo set from explicit config plus stable auto-fill."""
+    use_github_app = _use_github_app_collection_token()
     discovered = discover_repositories(headers)
 
     eligible = {}
@@ -643,7 +725,7 @@ def resolve_repositories(
         full_name = (repo.get("full_name") or "").strip()
         if not full_name or full_name in eligible:
             continue
-        if _is_trackable_repo(repo):
+        if _is_trackable_repo(repo, allow_pull=use_github_app):
             eligible[full_name] = repo
 
     include_only = config["include_only"]

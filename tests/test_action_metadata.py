@@ -86,3 +86,11 @@ def test_allow_docs_sync_metadata_contract() -> None:
     assert "docs-sync-reason" not in outputs
     assert outputs["docs-action-version"]["value"] == "${{ steps.runtime.outputs.docs-action-version }}"
     assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"
+
+
+def test_use_github_app_input_metadata_contract() -> None:
+    action = _action()
+    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+
+    assert action["inputs"]["use-github-app"]["default"] == "false"
+    assert runtime_env["REPONOMICS_USE_GITHUB_APP"] == "${{ inputs.use-github-app }}"

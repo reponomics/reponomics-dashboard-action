@@ -14,6 +14,10 @@ inputs:
     description: Token used for GitHub repository data collection APIs.
     required: false
     default: ""
+  use-github-app:
+    description: Advanced option for collect mode. Set true when collection-token is a user-owned GitHub App installation token minted in the workflow.
+    required: false
+    default: "false"
   github-token:
     description: Token used for GitHub artifact/repository workflow operations.
     required: false
@@ -122,6 +126,7 @@ runs:
       env:
         REPONOMICS_MODE: ${{ inputs.mode }}
         REPONOMICS_COLLECTION_TOKEN: ${{ inputs.collection-token }}
+        REPONOMICS_USE_GITHUB_APP: ${{ inputs.use-github-app }}
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}

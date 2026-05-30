@@ -64,6 +64,7 @@ class ActionError(RuntimeError):
 class RuntimeConfig:
     mode: str
     collection_token: str
+    use_github_app: bool
     github_token: str
     dashboard_secret: str
     dashboard_next_secret: str
@@ -213,6 +214,10 @@ def load_config_from_env() -> RuntimeConfig:
             "COLLECTION_TOKEN",
             "REPONOMICS_GITHUB_TOKEN",
             "GH_TOKEN",
+        ),
+        use_github_app=_parse_bool(
+            _env("REPONOMICS_USE_GITHUB_APP", "false"),
+            name="use-github-app",
         ),
         github_token=_first_env("REPONOMICS_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"),
         dashboard_secret=_first_env("REPONOMICS_DASHBOARD_SECRET", "DASHBOARD_SECRET_DO_NOT_REPLACE"),
@@ -423,6 +428,7 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     )
     if config.collection_token:
         os.environ["GH_TOKEN"] = config.collection_token
+    os.environ["REPONOMICS_USE_GITHUB_APP"] = str(config.use_github_app).lower()
     if config.dashboard_secret:
         os.environ["DASHBOARD_SECRET_DO_NOT_REPLACE"] = config.dashboard_secret
     if config.dashboard_next_secret:

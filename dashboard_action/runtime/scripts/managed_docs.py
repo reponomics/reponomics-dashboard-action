@@ -12,8 +12,8 @@ from typing import Any
 
 MANIFEST_NAME = ".manifest.json"
 MANIFEST_SCHEMA_VERSION = 1
-STATE_UP_TO_DATE = "up_to_date"
-STATE_UPDATED = "updated"
+STATE_UNCHANGED = "unchanged"
+STATE_WRITTEN = "written"
 STATE_DISABLED = "disabled"
 STATE_PERMISSION_MISSING = "permission_missing"
 STATE_MANIFEST_INCONSISTENT = "manifest_inconsistent"
@@ -95,7 +95,7 @@ def sync_managed_docs(
         and current_hashes == next_hashes
     ):
         return _result(
-            STATE_UP_TO_DATE,
+            STATE_UNCHANGED,
             "Managed documentation is current.",
             manifest_action_version,
             docs_updated_at,
@@ -116,7 +116,7 @@ def sync_managed_docs(
         ),
     )
     return _result(
-        STATE_UPDATED,
+        STATE_WRITTEN,
         "Managed documentation was written.",
         action_version,
         updated_at,

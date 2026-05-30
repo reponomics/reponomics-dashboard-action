@@ -49,7 +49,7 @@ def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     namespace = result.namespace
     manifest = json.loads((namespace / ".manifest.json").read_text(encoding="utf-8"))
 
-    assert result.state == managed_docs.STATE_UPDATED
+    assert result.state == managed_docs.STATE_WRITTEN
     assert result.changed is True
     assert (namespace / "README.md").read_text(encoding="utf-8") == "Action 1.0.0\n"
     assert manifest["managed_namespace"] == namespace.as_posix()
@@ -73,8 +73,8 @@ def test_sync_updates_clean_managed_docs_and_removes_stale_files(tmp_path: Path)
     )
 
     manifest = json.loads((second.namespace / ".manifest.json").read_text(encoding="utf-8"))
-    assert first.state == managed_docs.STATE_UPDATED
-    assert second.state == managed_docs.STATE_UPDATED
+    assert first.state == managed_docs.STATE_WRITTEN
+    assert second.state == managed_docs.STATE_WRITTEN
     assert (second.namespace / "README.md").read_text(encoding="utf-8") == "new\n"
     assert not (second.namespace / "stale.md").exists()
     assert manifest["action_version"] == "1.1.0"
@@ -92,7 +92,7 @@ def test_sync_overwrites_local_file_edits_when_allowed(tmp_path: Path) -> None:
         action_version="1.1.0",
     )
 
-    assert second.state == managed_docs.STATE_UPDATED
+    assert second.state == managed_docs.STATE_WRITTEN
     assert second.changed is True
     assert (second.namespace / "README.md").read_text(encoding="utf-8") == "new generated\n"
 
@@ -107,7 +107,7 @@ def test_sync_removes_untracked_file_inside_managed_namespace_when_allowed(tmp_p
         action_version="1.1.0",
     )
 
-    assert second.state == managed_docs.STATE_UPDATED
+    assert second.state == managed_docs.STATE_WRITTEN
     assert not (second.namespace / "notes.md").exists()
 
 
@@ -118,7 +118,7 @@ def test_sync_replaces_local_directory_with_managed_file_when_allowed(tmp_path: 
 
     result = _sync(tmp_path, files={"README.md": "generated\n"})
 
-    assert result.state == managed_docs.STATE_UPDATED
+    assert result.state == managed_docs.STATE_WRITTEN
     assert (namespace / "README.md").read_text(encoding="utf-8") == "generated\n"
 
 
@@ -181,7 +181,7 @@ def test_sync_overwrites_namespace_without_manifest_when_allowed(tmp_path: Path)
 
     result = _sync(tmp_path, files={"README.md": "generated\n"})
 
-    assert result.state == managed_docs.STATE_UPDATED
+    assert result.state == managed_docs.STATE_WRITTEN
     assert (namespace / "README.md").read_text(encoding="utf-8") == "generated\n"
 
 
@@ -204,5 +204,5 @@ def test_sync_rejects_manifest_path_traversal_without_writing_outside_namespace(
 
     result = _sync(tmp_path, files={"README.md": "generated\n"})
 
-    assert result.state == managed_docs.STATE_UPDATED
+    assert result.state == managed_docs.STATE_WRITTEN
     assert not (tmp_path / "repo" / "docs" / "escape.md").exists()

@@ -5035,7 +5035,7 @@ def _render_version_badges():
 
 def _render_docs_sync_status():
     state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
-    if not state or state in {"up_to_date", "updated"}:
+    if not state or state in {"unchanged", "written"}:
         return ""
     label = html.escape(DOCS_STATE_LABELS.get(state, state.replace("_", " ")))
     detail = _render_docs_status_detail()

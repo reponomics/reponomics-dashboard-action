@@ -542,7 +542,7 @@ def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
     summary = summary_path.read_text(encoding="utf-8")
     assert (tmp_path / "docs" / "reponomics" / "README.md").is_file()
     assert (tmp_path / "docs" / "reponomics" / ".manifest.json").is_file()
-    assert "docs-sync-state=updated" in output
+    assert "docs-sync-state=written" in output
     assert f"docs-action-version={run.VERSION}" in output
     assert "docs-updated-at=" in output
     assert "Managed Reponomics docs" in summary

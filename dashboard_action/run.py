@@ -407,7 +407,7 @@ def _set_managed_docs_status_env() -> None:
     if existing_state:
         return
     if manifest_action_version == VERSION:
-        os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_UP_TO_DATE
+        os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_UNCHANGED
         return
 
     os.environ[DOCS_SYNC_STATE_ENV] = DOCS_STATE_STALE
@@ -676,7 +676,7 @@ def _git_commit_managed_docs(
         if diff.returncode == 0:
             return _docs_result_with_state(
                 result,
-                state=managed_docs.STATE_UP_TO_DATE,
+                state=managed_docs.STATE_UNCHANGED,
                 reason="Managed documentation was already committed.",
             )
         subprocess.run(["git", "commit", "-m", message, "--", namespace], check=True)
@@ -1007,7 +1007,7 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         lines.extend(
             [
                 "",
-                "Reponomics could not safely write the managed docs namespace. Check `docs/reponomics/` for symlinks or invalid managed-docs metadata.",
+                "Reponomics could not safely write the managed docs namespace. Avoid symlinks in `docs/reponomics/`, and check for invalid managed-docs metadata.",
             ]
         )
     elif result.state == managed_docs.STATE_PUSH_RACE:

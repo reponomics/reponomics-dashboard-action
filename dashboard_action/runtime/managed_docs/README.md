@@ -1,7 +1,7 @@
 # Reponomics Managed Docs
 
 > [!WARNING]
-> This directory is managed by Reponomics. If `allow_docs_sync` remains `true`, local edits in `docs/reponomics/` may be overwritten automatically when docs sync runs. Set `allow_docs_sync: false` before editing if you want to own this directory manually.
+> This directory is the default location for Reponomics managed documentation. If `allow_docs_sync` is `true`, local edits in `docs/reponomics/` may be overwritten automatically when docs sync runs. Set `allow_docs_sync: false` before editing if you want to own this directory manually.
 
 Generated for Reponomics Dashboard Action {{ACTION_VERSION}}.
 

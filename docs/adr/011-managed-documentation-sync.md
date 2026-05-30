@@ -31,10 +31,10 @@ Sync behavior:
 - Write missing managed files.
 - Replace existing files in the managed namespace when docs sync is allowed.
 - Treat `allow_docs_sync` as the user's control for whether Reponomics may write the managed namespace.
-- Fail closed if the managed namespace cannot be written safely, for example because a symlink could point outside the namespace.
+- Fail closed if the managed namespace cannot be written safely.
 - If workflow permissions are insufficient, skip docs sync with a clear message rather than failing dashboard publication by default.
 
-Workflow permissions should remain minimal at the top level. Any required `contents: write` permission should be declared only at the job level that performs docs sync or publish.
+Direct-write docs sync requires `contents: write` on the job that commits managed documentation.
 
 ## Bundle Source
 
@@ -42,9 +42,9 @@ The docs bundle should ship with the action release. A runtime workflow should n
 
 The initial bundle should be the local user-facing subset: upgrade notes, configuration reference, privacy-mode guidance, dashboard/artifact access instructions, and links to upstream release notes for longer history.
 
-## Floating Ref Receipt
+## Floating Ref Record
 
-Users on floating refs such as `@v1` may receive a new action version without editing their workflow. For those users, docs sync is also the best available local receipt that a new version has actually run in their repository.
+Users on floating refs such as `@v1` may receive a new action version without editing their workflow. For those users, docs sync is also the best available local record that a new version has actually run in their repository.
 
 The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or a safety boundary check blocks the update, the workflow summary and generated dashboard/version-status surface should report that the local docs version is out of sync with this repository's action version.
 
@@ -69,7 +69,7 @@ The first implementation should be small enough to delegate:
 3. Add manifest/hash freshness checks.
 4. Add an opt-out config flag.
 5. Add tests for first write, clean update, local overwrite behavior, opt-out, insufficient permission behavior, and no writes outside the namespace.
-6. Add tests for floating-ref receipt behavior when the running action version differs from the manifest version.
+6. Add tests for floating-ref version-record behavior when the running action version differs from the manifest version.
 7. Link generated README/HTML surfaces to local managed docs only when the local docs exist; otherwise fall back to upstream docs or release notes.
 
 Do not implement PR mode in the first pass unless direct writes reveal a blocking limitation.
@@ -96,14 +96,11 @@ Users who disable docs sync or remove write permission can still use the dashboa
 
 ## Appendix A: Proposed Emendments (2026-05-29)
 
-This appendix records implementation-level clarifications without changing the
-main ADR text above.
+This appendix records implementation-level clarifications without changing the main ADR text above.
 
 ### A1. Comparator Source Of Truth
 
-Use a machine marker in the managed docs namespace manifest as the comparator
-source of truth. Do not use README/dashboard version badges as the control
-marker for sync decisions.
+Use a machine marker in the managed docs namespace manifest as the comparator source of truth. Do not use README/dashboard version badges as the control marker for sync decisions.
 
 Required manifest fields:
 
@@ -118,8 +115,7 @@ The manifest should be deterministic except for explicit durable metadata such a
 
 ### A2. Default Execution Model
 
-Default template wiring should run docs sync in a dedicated job before
-collection/publish jobs. The job should compare:
+Default template wiring should run docs sync in a dedicated job before collection/publish jobs. The job should compare:
 
 - currently running action version
 - manifest `action_version`
@@ -127,20 +123,18 @@ collection/publish jobs. The job should compare:
 
 Recommended state outcomes:
 
-- `up_to_date` (no write needed)
-- `updated` (managed docs written and manifest advanced)
+- `unchanged` (no write needed)
+- `written` (managed docs written and manifest advanced)
 - `disabled` (opt-out config)
 - `permission_missing` (insufficient write permission)
-- `manifest_inconsistent` (the managed namespace cannot be written safely, for example because it contains symlinks)
+- `manifest_inconsistent` (the managed namespace cannot be written safely)
 - `push_race` (write intent valid, but commit/push could not be completed)
 
-If state is not `updated` or `up_to_date`, write a clear step summary and expose
-the state as a machine-readable output for downstream surfacing.
+If state is not `written` or `unchanged`, write a clear step summary and expose the state as a machine-readable output for downstream surfacing.
 
 ### A3. Write Boundary And Commit Rules
 
-Managed docs sync may stage and commit only files inside the managed namespace.
-No writes are allowed outside that namespace as part of this feature.
+Managed docs sync may stage and commit only files inside the managed namespace. No writes are allowed outside that namespace as part of this feature.
 
 When `allow_docs_sync` is true, Reponomics owns the managed namespace and may overwrite local edits there. Users who want to own local documentation under `docs/reponomics/` should set `allow_docs_sync: false` before editing. The sync helper should not use user-modified file detection as a write blocker; the permission flag is the ownership boundary.
 
@@ -150,16 +144,11 @@ Commit rules:
 - commit only when staged bytes differ
 - include action version in the commit message
 - include `[skip ci]` in the commit message for direct-write mode
-- if push fails due to non-fast-forward, retry with a bounded reconciliation
-  strategy; on failure, emit `push_race`
+- if push fails due to non-fast-forward, retry with a bounded reconciliation strategy; on failure, emit `push_race`
 
 ### A4. Concurrency And Permissions
 
-Serialize docs-sync writes per branch/ref with workflow/job concurrency so only
-one docs-sync writer can push at a time for a given ref.
-
-Keep top-level workflow permissions minimal/read-only. Grant `contents: write`
-only at the docs-sync job level when direct-write mode is enabled.
+Serialize docs-sync writes per branch/ref with workflow/job concurrency so only one docs-sync writer can push at a time for a given ref.
 
 ### A5. Failure Policy
 
@@ -170,8 +159,7 @@ Docs sync is advisory to dashboard publication and collection continuity:
 
 ### A6. Surface Contract
 
-Expose docs-sync status through explicit outputs so template workflows and UI
-surfaces can consume stable semantics:
+Expose docs-sync status through explicit outputs so template workflows and UI surfaces can consume stable semantics:
 
 - `docs-sync-state`
 - `docs-action-version`
@@ -181,16 +169,14 @@ README/dashboard/version-status surfaces should display a local-docs freshness i
 
 ### A7. Opt-Out Contract
 
-Define one canonical opt-out key and precedence to avoid drift across template,
-action runtime, and docs:
+Define one canonical opt-out key and precedence to avoid drift across template, action runtime, and docs:
 
 - canonical key: `allow_docs_sync`
 - default: `true`
 - accepted locations in first pass:
   - workflow/action input
   - `config.yaml` key
-- precedence: explicit workflow/action input overrides `config.yaml`; otherwise
-  `config.yaml`; otherwise default `true`
+- precedence: explicit workflow/action input overrides `config.yaml`; otherwise `config.yaml`; otherwise default `true`
 
 ### A8. Safety Boundary
 
@@ -201,25 +187,21 @@ Required behavior:
 - fail closed for write operations in that run
 - emit remediation instructions in workflow summary
 - require explicit operator review for recovery
-- on successful recovery, emit `updated` with a fresh manifest
+- on successful recovery, emit `written` with a fresh manifest
 
 ### A9. Open-Question Dispositions
 
-This section captures what is now considered resolved by this appendix and what
-remains intentionally deferred.
+This section captures what is now considered resolved by this appendix and what remains intentionally deferred.
 
 Resolved now:
 
 - managed docs namespace path: use `docs/reponomics/`
 - execution model: run docs sync as a dedicated pre-collect/pre-publish job
 - opt-out key: `allow_docs_sync` with precedence rules in A7
-- freshness indicator contract: expose `docs-sync-*` outputs and render a
-  local-docs freshness indicator in README/dashboard/version-status surfaces
+- freshness indicator contract: expose `docs-sync-*` outputs and render a local-docs freshness indicator in README/dashboard/version-status surfaces
 
 Deferred (not blocked by first implementation):
 
 - whether to publish an RSS or release-announcement feed
-- which external/public/opt-in adoption signals to treat as advisory inputs
-  (without claiming precise install counts)
-- when optional PR mode should be added; default remains direct-write unless
-  direct-write proves operationally insufficient
+- which external/public/opt-in adoption signals to treat as advisory inputs (without claiming precise install counts)
+- when optional PR mode should be added; default remains direct-write unless direct-write proves operationally insufficient

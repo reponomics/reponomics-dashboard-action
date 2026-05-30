@@ -111,7 +111,7 @@ def _version_status_lines(status, badge_links):
 
 def _docs_sync_status_lines():
     state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
-    if not state or state in {"up_to_date", "updated"}:
+    if not state or state in {"unchanged", "written"}:
         return []
     label = DOCS_STATE_LABELS.get(state, state.replace("_", " "))
     link = os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip()

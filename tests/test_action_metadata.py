@@ -83,5 +83,6 @@ def test_allow_docs_sync_metadata_contract() -> None:
     assert inputs["allow-docs-sync"]["default"] == ""
     assert runtime_env["REPONOMICS_ALLOW_DOCS_SYNC"] == "${{ inputs.allow-docs-sync }}"
     assert outputs["docs-sync-state"]["value"] == "${{ steps.runtime.outputs.docs-sync-state }}"
-    assert outputs["docs-sync-reason"]["value"] == "${{ steps.runtime.outputs.docs-sync-reason }}"
-    assert outputs["docs-manifest-action-version"]["value"] == "${{ steps.runtime.outputs.docs-manifest-action-version }}"
+    assert "docs-sync-reason" not in outputs
+    assert outputs["docs-action-version"]["value"] == "${{ steps.runtime.outputs.docs-action-version }}"
+    assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"

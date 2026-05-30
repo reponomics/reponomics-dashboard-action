@@ -46,7 +46,7 @@ The initial bundle should be the local user-facing subset: upgrade notes, config
 
 Users on floating refs such as `@v1` may receive a new action version without editing their workflow. For those users, docs sync is also the best available local receipt that a new version has actually run in their repository.
 
-The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or user edits block the update, the workflow summary and generated dashboard/version-status surface should report that local documentation is not current.
+The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or user edits block the update, the workflow summary and generated dashboard/version-status surface should report that the local docs version is out of sync with this repository's action version.
 
 This is not a perfect discovery mechanism: a user may ignore a dashboard indicator or workflow summary. PR mode would provide a stronger review signal for users who want it. Active upstream channels such as an RSS feed or release-announcement feed could also serve users who want to follow the product more closely. The first implementation should still use direct managed sync as the default, because it gives normal floating-ref users a concrete local update rather than only an upstream notice.
 
@@ -111,6 +111,7 @@ Required manifest fields:
 - `managed_namespace`
 - `action_repository`
 - `action_version`
+- `updated_at`
 - `files` (map of relative path -> sha256)
 
 The manifest should be deterministic. Avoid volatile fields that change on every
@@ -176,11 +177,10 @@ Expose docs-sync status through explicit outputs so template workflows and UI
 surfaces can consume stable semantics:
 
 - `docs-sync-state`
-- `docs-sync-reason`
-- `docs-manifest-action-version`
+- `docs-action-version`
+- `docs-updated-at`
 
-README/dashboard/version-status surfaces should display a local-docs freshness
-indicator based on these outputs when available.
+README/dashboard/version-status surfaces should display a local-docs freshness indicator based on these outputs when available. The state output is machine-readable; human-readable detail belongs in step summaries and renderer-owned copy, not in a separate prose output.
 
 ### A7. Opt-Out Contract
 

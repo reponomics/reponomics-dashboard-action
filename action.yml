@@ -97,12 +97,12 @@ outputs:
   docs-sync-state:
     description: Managed documentation sync state.
     value: ${{ steps.runtime.outputs.docs-sync-state }}
-  docs-sync-reason:
-    description: Managed documentation sync reason.
-    value: ${{ steps.runtime.outputs.docs-sync-reason }}
-  docs-manifest-action-version:
-    description: Action version recorded in the managed documentation manifest.
-    value: ${{ steps.runtime.outputs.docs-manifest-action-version }}
+  docs-action-version:
+    description: Action version that generated the local managed documentation.
+    value: ${{ steps.runtime.outputs.docs-action-version }}
+  docs-updated-at:
+    description: Timestamp recorded when the local managed documentation was last written.
+    value: ${{ steps.runtime.outputs.docs-updated-at }}
 
 runs:
   using: composite

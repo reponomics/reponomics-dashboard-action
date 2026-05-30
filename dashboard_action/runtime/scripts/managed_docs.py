@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ class ManagedDocsResult:
     state: str
     reason: str
     manifest_action_version: str
+    docs_updated_at: str
     namespace: Path
     changed: bool = False
 
@@ -49,12 +51,14 @@ def sync_managed_docs(
             STATE_MANIFEST_INCONSISTENT,
             f"Managed docs namespace contains a symlink: {symlink}",
             "",
+            "",
             namespace,
         )
     if not allowed:
         return _result(
             STATE_DISABLED,
             "Managed documentation sync is disabled.",
+            "",
             "",
             namespace,
         )
@@ -72,8 +76,10 @@ def sync_managed_docs(
                 STATE_MANIFEST_INCONSISTENT,
                 "Managed docs namespace exists without a valid manifest.",
                 "",
+                "",
                 namespace,
             )
+        updated_at = _utc_now()
         _write_bundle(
             namespace=namespace,
             bundle_files=bundle_files,
@@ -82,6 +88,7 @@ def sync_managed_docs(
                 namespace=namespace,
                 action_repository=action_repository,
                 action_version=action_version,
+                updated_at=updated_at,
                 file_hashes=next_hashes,
             ),
         )
@@ -89,6 +96,7 @@ def sync_managed_docs(
             STATE_UPDATED,
             "Managed documentation was written.",
             action_version,
+            updated_at,
             namespace,
             changed=True,
         )
@@ -105,16 +113,19 @@ def sync_managed_docs(
             STATE_MANIFEST_INCONSISTENT,
             str(exc),
             "",
+            "",
             namespace,
         )
 
     manifest_action_version = str(manifest.get("action_version") or "")
+    docs_updated_at = str(manifest.get("updated_at") or "")
     untracked = _first_untracked_file(namespace, previous_hashes)
     if untracked:
         return _result(
             STATE_MANIFEST_INCONSISTENT,
             f"Managed docs namespace contains a file outside the manifest: {untracked}",
             manifest_action_version,
+            docs_updated_at,
             namespace,
         )
     conflict = _first_hash_conflict(namespace, previous_hashes)
@@ -123,6 +134,7 @@ def sync_managed_docs(
             STATE_USER_MODIFIED_CONFLICT,
             f"Managed docs file differs from manifest: {conflict}",
             manifest_action_version,
+            docs_updated_at,
             namespace,
         )
 
@@ -131,9 +143,11 @@ def sync_managed_docs(
             STATE_UP_TO_DATE,
             "Managed documentation is current.",
             manifest_action_version,
+            docs_updated_at,
             namespace,
         )
 
+    updated_at = _utc_now()
     _write_bundle(
         namespace=namespace,
         bundle_files=bundle_files,
@@ -142,6 +156,7 @@ def sync_managed_docs(
             namespace=namespace,
             action_repository=action_repository,
             action_version=action_version,
+            updated_at=updated_at,
             file_hashes=next_hashes,
         ),
     )
@@ -149,6 +164,7 @@ def sync_managed_docs(
         STATE_UPDATED,
         "Managed documentation was updated.",
         action_version,
+        updated_at,
         namespace,
         changed=True,
     )
@@ -158,6 +174,7 @@ def _result(
     state: str,
     reason: str,
     manifest_action_version: str,
+    docs_updated_at: str,
     namespace: Path,
     *,
     changed: bool = False,
@@ -166,6 +183,7 @@ def _result(
         state=state,
         reason=reason,
         manifest_action_version=manifest_action_version,
+        docs_updated_at=docs_updated_at,
         namespace=namespace,
         changed=changed,
     )
@@ -223,6 +241,9 @@ def _validate_manifest(
         raise ManagedDocsError("managed docs manifest namespace does not match.")
     if manifest.get("action_repository") != action_repository:
         raise ManagedDocsError("managed docs manifest action repository does not match.")
+    updated_at = manifest.get("updated_at")
+    if not isinstance(updated_at, str) or not updated_at.strip():
+        raise ManagedDocsError("managed docs manifest updated_at is missing.")
     files = manifest.get("files")
     if not isinstance(files, dict):
         raise ManagedDocsError("managed docs manifest files must be a map.")
@@ -335,6 +356,7 @@ def _build_manifest(
     namespace: Path,
     action_repository: str,
     action_version: str,
+    updated_at: str,
     file_hashes: dict[str, str],
 ) -> dict[str, Any]:
     return {
@@ -342,8 +364,13 @@ def _build_manifest(
         "managed_namespace": namespace.as_posix(),
         "action_repository": action_repository,
         "action_version": action_version,
+        "updated_at": updated_at,
         "files": dict(sorted(file_hashes.items())),
     }
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _sha_file(path: Path) -> str:

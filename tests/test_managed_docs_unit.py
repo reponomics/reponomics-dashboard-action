@@ -54,6 +54,8 @@ def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     assert (namespace / "README.md").read_text(encoding="utf-8") == "Action 1.0.0\n"
     assert manifest["managed_namespace"] == namespace.as_posix()
     assert manifest["action_version"] == "1.0.0"
+    assert manifest["updated_at"] == result.docs_updated_at
+    assert result.docs_updated_at.endswith("Z")
     assert sorted(manifest["files"]) == ["README.md"]
 
 
@@ -76,6 +78,7 @@ def test_sync_updates_clean_managed_docs_and_removes_stale_files(tmp_path: Path)
     assert (second.namespace / "README.md").read_text(encoding="utf-8") == "new\n"
     assert not (second.namespace / "stale.md").exists()
     assert manifest["action_version"] == "1.1.0"
+    assert manifest["updated_at"] == second.docs_updated_at
     assert sorted(manifest["files"]) == ["README.md"]
 
 
@@ -181,6 +184,7 @@ def test_sync_rejects_manifest_path_traversal_without_writing_outside_namespace(
                 "managed_namespace": namespace.as_posix(),
                 "action_repository": "reponomics/reponomics-dashboard-action",
                 "action_version": "1.0.0",
+                "updated_at": "2026-05-29T12:00:00Z",
                 "files": {"../escape.md": "0" * 64},
             }
         ),

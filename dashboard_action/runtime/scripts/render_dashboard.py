@@ -69,13 +69,14 @@ WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
 DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
-DOCS_SYNC_REASON_ENV = "REPONOMICS_DOCS_SYNC_REASON"
+DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
+DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_LABELS = {
     "disabled": "sync disabled",
     "manifest_inconsistent": "needs manual review",
     "permission_missing": "workflow cannot update docs",
     "push_race": "update not pushed",
-    "stale": "not current",
+    "stale": "version is out of sync with this repository's action version",
     "user_modified_conflict": "local edits block updates",
 }
 EXPORT_ASSET_PREFIX = "export-data-"
@@ -4989,6 +4990,17 @@ def _display_version(version):
     return value if value.startswith("v") else f"v{value}"
 
 
+def _format_docs_timestamp(value):
+    if not value:
+        return ""
+    try:
+        normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _render_version_badges():
     status = _load_version_status()
     if not status:
@@ -5027,12 +5039,28 @@ def _render_docs_sync_status():
     if not state or state in {"up_to_date", "updated"}:
         return ""
     label = html.escape(DOCS_STATE_LABELS.get(state, state.replace("_", " ")))
-    reason = html.escape(os.environ.get(DOCS_SYNC_REASON_ENV, "").strip())
-    detail = f" {reason}" if reason else ""
+    detail = _render_docs_status_detail()
     return (
         '          <div class="managed-docs-status">Local docs: '
         + f"<strong>{label}</strong>.{detail}</div>\n"
     )
+
+
+def _render_docs_status_detail():
+    parts = []
+    docs_action_version = _display_version(os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip())
+    status = _load_version_status()
+    current_action_version = _display_version(status["current_version"]) if status else ""
+    docs_updated_at = _format_docs_timestamp(os.environ.get(DOCS_UPDATED_AT_ENV, "").strip())
+    if docs_action_version:
+        parts.append(f"Docs version: {docs_action_version}.")
+    if current_action_version:
+        parts.append(f"Action version: {current_action_version}.")
+    if docs_updated_at:
+        parts.append(f"Last docs update: {docs_updated_at}.")
+    if not parts:
+        return ""
+    return " " + html.escape(" ".join(parts))
 
 
 def _build_dashboard_shell(updated_text, stat_values, hidden=False):

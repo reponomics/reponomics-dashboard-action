@@ -109,8 +109,8 @@ The action emits metadata for workflow summaries and later automation:
 - `schema-version`
 - `runtime-version`
 - `docs-sync-state`
-- `docs-sync-reason`
-- `docs-manifest-action-version`
+- `docs-action-version`
+- `docs-updated-at`
 
 `collect` updates only the retained `dashboard-data` artifact. `publish` restores that artifact and always renders dashboard output from retained data. For `strong` and `casual`, publish deploys an encrypted Pages dashboard. For private `plain`, publish uploads a non-Pages plain dashboard artifact (`html-dashboard-plain`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. `docs-sync` updates the Reponomics-managed local documentation namespace at `docs/reponomics/` when enabled. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output. `incident-reset` re-encrypts retained state with `dashboard-next-secret`, deletes prior runs from the same workflow, and deletes any remaining `dashboard-data` artifacts tied to those old runs.
 

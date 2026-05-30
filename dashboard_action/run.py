@@ -1003,18 +1003,11 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
                 "Grant `contents: write` to the docs sync job or disable docs sync with `allow_docs_sync: false` in `config.yaml`.",
             ]
         )
-    elif result.state == managed_docs.STATE_USER_MODIFIED_CONFLICT:
-        lines.extend(
-            [
-                "",
-                "A managed docs file was edited after Reponomics generated it. Keep your edits by disabling managed docs sync, or restore the generated file and rerun the workflow.",
-            ]
-        )
     elif result.state == managed_docs.STATE_MANIFEST_INCONSISTENT:
         lines.extend(
             [
                 "",
-                "Reponomics could not prove ownership of the managed docs namespace. Remove or reset `docs/reponomics/` only after reviewing any local changes you want to keep.",
+                "Reponomics could not safely write the managed docs namespace. Check `docs/reponomics/` for symlinks or invalid managed-docs metadata.",
             ]
         )
     elif result.state == managed_docs.STATE_PUSH_RACE:

@@ -6,6 +6,6 @@ If your workflow pins an exact action version such as `reponomics/reponomics-das
 
 When a new action version introduces optional features, the action may add or update documentation here. It will not change your `config.yaml` for you. Review the relevant docs, then opt into new configuration when you want the behavior.
 
-If docs sync reports `user_modified_conflict`, at least one managed file changed after Reponomics generated it. Keep your edits by disabling managed docs sync, or restore the generated file and rerun the workflow.
+If you want to keep local edits in `docs/reponomics/`, disable managed docs sync before making those edits. When docs sync is allowed, Reponomics may regenerate this directory during action upgrades.
 
 If docs sync reports `permission_missing`, grant `contents: write` to the docs sync job or disable managed docs sync. Top-level workflow permissions should remain minimal; grant write permission only to the job that needs to commit managed documentation.

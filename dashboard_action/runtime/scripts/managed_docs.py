@@ -16,7 +16,6 @@ STATE_UP_TO_DATE = "up_to_date"
 STATE_UPDATED = "updated"
 STATE_DISABLED = "disabled"
 STATE_PERMISSION_MISSING = "permission_missing"
-STATE_USER_MODIFIED_CONFLICT = "user_modified_conflict"
 STATE_MANIFEST_INCONSISTENT = "manifest_inconsistent"
 STATE_PUSH_RACE = "push_race"
 
@@ -45,19 +44,20 @@ def sync_managed_docs(
 ) -> ManagedDocsResult:
     """Sync the bundled docs into the managed namespace without committing."""
     namespace = Path(namespace)
+    if not allowed:
+        return _result(
+            STATE_DISABLED,
+            "Managed documentation sync is disabled.",
+            "",
+            "",
+            namespace,
+        )
+
     symlink = _first_symlink_in_namespace(namespace)
     if symlink:
         return _result(
             STATE_MANIFEST_INCONSISTENT,
             f"Managed docs namespace contains a symlink: {symlink}",
-            "",
-            "",
-            namespace,
-        )
-    if not allowed:
-        return _result(
-            STATE_DISABLED,
-            "Managed documentation sync is disabled.",
             "",
             "",
             namespace,
@@ -69,76 +69,31 @@ def sync_managed_docs(
     )
     next_hashes = {path: _sha_bytes(content) for path, content in bundle_files.items()}
     manifest_path = namespace / MANIFEST_NAME
+    current_hashes = _current_file_hashes(namespace)
 
-    if not manifest_path.exists():
-        if _namespace_has_unowned_files(namespace):
-            return _result(
-                STATE_MANIFEST_INCONSISTENT,
-                "Managed docs namespace exists without a valid manifest.",
-                "",
-                "",
-                namespace,
-            )
-        updated_at = _utc_now()
-        _write_bundle(
-            namespace=namespace,
-            bundle_files=bundle_files,
-            previous_files={},
-            manifest=_build_manifest(
+    manifest_action_version = ""
+    docs_updated_at = ""
+    manifest_hashes: dict[str, str] = {}
+    try:
+        if manifest_path.exists():
+            manifest = _read_manifest(manifest_path)
+            manifest_hashes = _validate_manifest(
+                manifest,
                 namespace=namespace,
                 action_repository=action_repository,
-                action_version=action_version,
-                updated_at=updated_at,
-                file_hashes=next_hashes,
-            ),
-        )
-        return _result(
-            STATE_UPDATED,
-            "Managed documentation was written.",
-            action_version,
-            updated_at,
-            namespace,
-            changed=True,
-        )
+            )
+            manifest_action_version = str(manifest.get("action_version") or "")
+            docs_updated_at = str(manifest.get("updated_at") or "")
+    except ManagedDocsError:
+        manifest_hashes = {}
+        manifest_action_version = ""
+        docs_updated_at = ""
 
-    try:
-        manifest = _read_manifest(manifest_path)
-        previous_hashes = _validate_manifest(
-            manifest,
-            namespace=namespace,
-            action_repository=action_repository,
-        )
-    except ManagedDocsError as exc:
-        return _result(
-            STATE_MANIFEST_INCONSISTENT,
-            str(exc),
-            "",
-            "",
-            namespace,
-        )
-
-    manifest_action_version = str(manifest.get("action_version") or "")
-    docs_updated_at = str(manifest.get("updated_at") or "")
-    untracked = _first_untracked_file(namespace, previous_hashes)
-    if untracked:
-        return _result(
-            STATE_MANIFEST_INCONSISTENT,
-            f"Managed docs namespace contains a file outside the manifest: {untracked}",
-            manifest_action_version,
-            docs_updated_at,
-            namespace,
-        )
-    conflict = _first_hash_conflict(namespace, previous_hashes)
-    if conflict:
-        return _result(
-            STATE_USER_MODIFIED_CONFLICT,
-            f"Managed docs file differs from manifest: {conflict}",
-            manifest_action_version,
-            docs_updated_at,
-            namespace,
-        )
-
-    if manifest_action_version == action_version and previous_hashes == next_hashes:
+    if (
+        manifest_action_version == action_version
+        and manifest_hashes == next_hashes
+        and current_hashes == next_hashes
+    ):
         return _result(
             STATE_UP_TO_DATE,
             "Managed documentation is current.",
@@ -151,7 +106,7 @@ def sync_managed_docs(
     _write_bundle(
         namespace=namespace,
         bundle_files=bundle_files,
-        previous_files=previous_hashes,
+        previous_files=current_hashes,
         manifest=_build_manifest(
             namespace=namespace,
             action_repository=action_repository,
@@ -162,7 +117,7 @@ def sync_managed_docs(
     )
     return _result(
         STATE_UPDATED,
-        "Managed documentation was updated.",
+        "Managed documentation was written.",
         action_version,
         updated_at,
         namespace,
@@ -211,12 +166,6 @@ def _load_bundle(
     if not files:
         raise ManagedDocsError("managed docs bundle is empty.")
     return files
-
-
-def _namespace_has_unowned_files(namespace: Path) -> bool:
-    if not namespace.exists():
-        return False
-    return any(path.is_file() or path.is_symlink() for path in namespace.rglob("*"))
 
 
 def _read_manifest(manifest_path: Path) -> dict[str, Any]:
@@ -269,28 +218,18 @@ def _validate_relative_path(relative: str) -> None:
         raise ManagedDocsError(f"invalid managed docs relative path: {relative!r}")
 
 
-def _first_hash_conflict(namespace: Path, file_hashes: dict[str, str]) -> str:
-    for relative, expected_hash in sorted(file_hashes.items()):
-        path = namespace / relative
-        if path.is_symlink():
-            return relative
-        if not path.is_file():
-            return relative
-        if _sha_file(path) != expected_hash:
-            return relative
-    return ""
-
-
-def _first_untracked_file(namespace: Path, file_hashes: dict[str, str]) -> str:
+def _current_file_hashes(namespace: Path) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    if not namespace.exists():
+        return hashes
     for path in sorted(namespace.rglob("*")):
         if not path.is_file() and not path.is_symlink():
             continue
         relative = path.relative_to(namespace).as_posix()
         if relative == MANIFEST_NAME:
             continue
-        if relative not in file_hashes:
-            return relative
-    return ""
+        hashes[relative] = _sha_file(path)
+    return hashes
 
 
 def _first_symlink_component(path: Path) -> str:
@@ -329,6 +268,7 @@ def _write_bundle(
         if stale_path.exists():
             stale_path.unlink()
 
+    _remove_empty_dirs(namespace)
     for relative, content in sorted(bundle_files.items()):
         path = namespace / relative
         path.parent.mkdir(parents=True, exist_ok=True)

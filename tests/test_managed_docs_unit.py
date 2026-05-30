@@ -82,7 +82,7 @@ def test_sync_updates_clean_managed_docs_and_removes_stale_files(tmp_path: Path)
     assert sorted(manifest["files"]) == ["README.md"]
 
 
-def test_sync_blocks_user_modified_file(tmp_path: Path) -> None:
+def test_sync_overwrites_local_file_edits_when_allowed(tmp_path: Path) -> None:
     first = _sync(tmp_path, files={"README.md": "generated\n"})
     (first.namespace / "README.md").write_text("user edit\n", encoding="utf-8")
 
@@ -92,12 +92,12 @@ def test_sync_blocks_user_modified_file(tmp_path: Path) -> None:
         action_version="1.1.0",
     )
 
-    assert second.state == managed_docs.STATE_USER_MODIFIED_CONFLICT
-    assert second.changed is False
-    assert (second.namespace / "README.md").read_text(encoding="utf-8") == "user edit\n"
+    assert second.state == managed_docs.STATE_UPDATED
+    assert second.changed is True
+    assert (second.namespace / "README.md").read_text(encoding="utf-8") == "new generated\n"
 
 
-def test_sync_blocks_untracked_file_inside_managed_namespace(tmp_path: Path) -> None:
+def test_sync_removes_untracked_file_inside_managed_namespace_when_allowed(tmp_path: Path) -> None:
     first = _sync(tmp_path, files={"README.md": "generated\n"})
     (first.namespace / "notes.md").write_text("user note\n", encoding="utf-8")
 
@@ -107,8 +107,19 @@ def test_sync_blocks_untracked_file_inside_managed_namespace(tmp_path: Path) -> 
         action_version="1.1.0",
     )
 
-    assert second.state == managed_docs.STATE_MANIFEST_INCONSISTENT
-    assert (second.namespace / "notes.md").read_text(encoding="utf-8") == "user note\n"
+    assert second.state == managed_docs.STATE_UPDATED
+    assert not (second.namespace / "notes.md").exists()
+
+
+def test_sync_replaces_local_directory_with_managed_file_when_allowed(tmp_path: Path) -> None:
+    namespace = tmp_path / "repo" / "docs" / "reponomics"
+    (namespace / "README.md").mkdir(parents=True)
+    (namespace / "README.md" / "notes.md").write_text("local note\n", encoding="utf-8")
+
+    result = _sync(tmp_path, files={"README.md": "generated\n"})
+
+    assert result.state == managed_docs.STATE_UPDATED
+    assert (namespace / "README.md").read_text(encoding="utf-8") == "generated\n"
 
 
 def test_sync_blocks_managed_file_symlink_even_when_target_hash_matches(tmp_path: Path) -> None:
@@ -163,15 +174,15 @@ def test_sync_disabled_writes_nothing(tmp_path: Path) -> None:
     assert not result.namespace.exists()
 
 
-def test_sync_blocks_namespace_without_manifest(tmp_path: Path) -> None:
+def test_sync_overwrites_namespace_without_manifest_when_allowed(tmp_path: Path) -> None:
     namespace = tmp_path / "repo" / "docs" / "reponomics"
     namespace.mkdir(parents=True)
     (namespace / "README.md").write_text("existing\n", encoding="utf-8")
 
     result = _sync(tmp_path, files={"README.md": "generated\n"})
 
-    assert result.state == managed_docs.STATE_MANIFEST_INCONSISTENT
-    assert (namespace / "README.md").read_text(encoding="utf-8") == "existing\n"
+    assert result.state == managed_docs.STATE_UPDATED
+    assert (namespace / "README.md").read_text(encoding="utf-8") == "generated\n"
 
 
 def test_sync_rejects_manifest_path_traversal_without_writing_outside_namespace(tmp_path: Path) -> None:
@@ -193,5 +204,5 @@ def test_sync_rejects_manifest_path_traversal_without_writing_outside_namespace(
 
     result = _sync(tmp_path, files={"README.md": "generated\n"})
 
-    assert result.state == managed_docs.STATE_MANIFEST_INCONSISTENT
+    assert result.state == managed_docs.STATE_UPDATED
     assert not (tmp_path / "repo" / "docs" / "escape.md").exists()

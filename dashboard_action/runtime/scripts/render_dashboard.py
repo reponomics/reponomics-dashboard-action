@@ -77,7 +77,6 @@ DOCS_STATE_LABELS = {
     "permission_missing": "workflow cannot update docs",
     "push_race": "update not pushed",
     "stale": "version is out of sync with this repository's action version",
-    "user_modified_conflict": "local edits block updates",
 }
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"

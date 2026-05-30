@@ -1289,7 +1289,7 @@ def test_publish_surfaces_blocked_managed_docs_status(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(run, "VERSION", VERSION_STATUS_TEST_VERSION)
-    monkeypatch.setenv("REPONOMICS_DOCS_SYNC_STATE", "user_modified_conflict")
+    monkeypatch.setenv("REPONOMICS_DOCS_SYNC_STATE", "manifest_inconsistent")
     managed_docs_dir = tmp_path / "docs" / "reponomics"
     managed_docs_dir.mkdir(parents=True)
     (managed_docs_dir / "README.md").write_text("local docs\n", encoding="utf-8")
@@ -1300,9 +1300,9 @@ def test_publish_surfaces_blocked_managed_docs_status(
 
     readme = config.readme_path.read_text(encoding="utf-8")
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "**Local docs:** local edits block updates." in readme
+    assert "**Local docs:** needs manual review." in readme
     assert "Local docs:" in dashboard
-    assert "local edits block updates" in dashboard
+    assert "needs manual review" in dashboard
 
 
 def test_publish_surfaces_stale_local_managed_docs_manifest(

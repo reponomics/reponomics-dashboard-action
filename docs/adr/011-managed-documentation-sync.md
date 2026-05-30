@@ -29,9 +29,9 @@ The managed namespace should include a manifest, for example `docs/reponomics/.m
 Sync behavior:
 
 - Write missing managed files.
-- Replace existing managed files only when they match the previous generated hash.
-- Leave user-modified managed files untouched and report that manual review is needed.
-- If managed files exist but the manifest is missing or inconsistent, fail closed or skip rather than guessing ownership.
+- Replace existing files in the managed namespace when docs sync is allowed.
+- Treat `allow_docs_sync` as the user's control for whether Reponomics may write the managed namespace.
+- Fail closed if the managed namespace cannot be written safely, for example because a symlink could point outside the namespace.
 - If workflow permissions are insufficient, skip docs sync with a clear message rather than failing dashboard publication by default.
 
 Workflow permissions should remain minimal at the top level. Any required `contents: write` permission should be declared only at the job level that performs docs sync or publish.
@@ -46,7 +46,7 @@ The initial bundle should be the local user-facing subset: upgrade notes, config
 
 Users on floating refs such as `@v1` may receive a new action version without editing their workflow. For those users, docs sync is also the best available local receipt that a new version has actually run in their repository.
 
-The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or user edits block the update, the workflow summary and generated dashboard/version-status surface should report that the local docs version is out of sync with this repository's action version.
+The risk is not mainly that users will be surprised or upset by the update. The larger product risk is that users will not notice newly available opt-in features, configuration choices, or workflow improvements. When the running action version differs from the version recorded in the managed docs manifest, docs sync should attempt to update the local docs and manifest on the next publish run. If it writes a commit, the commit message should include the action version. If it cannot write because docs sync is disabled, permissions are missing, or a safety boundary check blocks the update, the workflow summary and generated dashboard/version-status surface should report that the local docs version is out of sync with this repository's action version.
 
 This is not a perfect discovery mechanism: a user may ignore a dashboard indicator or workflow summary. PR mode would provide a stronger review signal for users who want it. Active upstream channels such as an RSS feed or release-announcement feed could also serve users who want to follow the product more closely. The first implementation should still use direct managed sync as the default, because it gives normal floating-ref users a concrete local update rather than only an upstream notice.
 
@@ -66,9 +66,9 @@ The first implementation should be small enough to delegate:
 
 1. Add a bundled managed-docs payload shipped with each action version.
 2. Add a sync helper that writes the bundle into one managed namespace.
-3. Add manifest/hash ownership checks.
+3. Add manifest/hash freshness checks.
 4. Add an opt-out config flag.
-5. Add tests for first write, clean update, user-modified conflict, opt-out, insufficient permission behavior, and no writes outside the namespace.
+5. Add tests for first write, clean update, local overwrite behavior, opt-out, insufficient permission behavior, and no writes outside the namespace.
 6. Add tests for floating-ref receipt behavior when the running action version differs from the manifest version.
 7. Link generated README/HTML surfaces to local managed docs only when the local docs exist; otherwise fall back to upstream docs or release notes.
 
@@ -78,7 +78,7 @@ Do not implement PR mode in the first pass unless direct writes reveal a blockin
 
 Generated dashboard repositories become more self-contained after action upgrades, and users who want managed updates get them by default.
 
-The action takes on a new responsibility to preserve a strict managed-file boundary. Manifest-based ownership checks are therefore part of the feature, not a later hardening task.
+The action takes on a new responsibility to preserve a strict managed-file boundary. Path and symlink safety checks are therefore part of the feature, not a later hardening task.
 
 Users who disable docs sync or remove write permission can still use the dashboard, but they must read upstream documentation manually.
 
@@ -114,9 +114,7 @@ Required manifest fields:
 - `updated_at`
 - `files` (map of relative path -> sha256)
 
-The manifest should be deterministic. Avoid volatile fields that change on every
-run (for example, `generated_at` timestamps) unless they are excluded from diff
-and ownership checks.
+The manifest should be deterministic except for explicit durable metadata such as `updated_at`, which changes only when managed docs are written.
 
 ### A2. Default Execution Model
 
@@ -125,7 +123,7 @@ collection/publish jobs. The job should compare:
 
 - currently running action version
 - manifest `action_version`
-- current managed-file bytes against manifest hashes
+- current managed-file bytes against bundled managed-docs bytes
 
 Recommended state outcomes:
 
@@ -133,8 +131,7 @@ Recommended state outcomes:
 - `updated` (managed docs written and manifest advanced)
 - `disabled` (opt-out config)
 - `permission_missing` (insufficient write permission)
-- `user_modified_conflict` (managed file diverged from prior generated hash)
-- `manifest_inconsistent` (ownership cannot be proven)
+- `manifest_inconsistent` (the managed namespace cannot be written safely, for example because it contains symlinks)
 - `push_race` (write intent valid, but commit/push could not be completed)
 
 If state is not `updated` or `up_to_date`, write a clear step summary and expose
@@ -144,6 +141,8 @@ the state as a machine-readable output for downstream surfacing.
 
 Managed docs sync may stage and commit only files inside the managed namespace.
 No writes are allowed outside that namespace as part of this feature.
+
+When `allow_docs_sync` is true, Reponomics owns the managed namespace and may overwrite local edits there. Users who want to own local documentation under `docs/reponomics/` should set `allow_docs_sync: false` before editing. The sync helper should not use user-modified file detection as a write blocker; the permission flag is the ownership boundary.
 
 Commit rules:
 
@@ -166,9 +165,7 @@ only at the docs-sync job level when direct-write mode is enabled.
 
 Docs sync is advisory to dashboard publication and collection continuity:
 
-- `permission_missing`, `disabled`, `user_modified_conflict`,
-  `manifest_inconsistent`, and `push_race` should not fail collection/publish by
-  default
+- `permission_missing`, `disabled`, `manifest_inconsistent`, and `push_race` should not fail collection/publish by default
 - these states must still be surfaced in workflow summary and status outputs
 
 ### A6. Surface Contract
@@ -195,19 +192,16 @@ action runtime, and docs:
 - precedence: explicit workflow/action input overrides `config.yaml`; otherwise
   `config.yaml`; otherwise default `true`
 
-### A8. Ownership Recovery Path
+### A8. Safety Boundary
 
-When state is `manifest_inconsistent`, the sync helper must not guess ownership
-or overwrite files. Recovery should be explicit and auditable.
+When state is `manifest_inconsistent`, the sync helper could not safely write the managed namespace. This state is reserved for boundary/safety problems, not ordinary local edits.
 
 Required behavior:
 
 - fail closed for write operations in that run
 - emit remediation instructions in workflow summary
-- require explicit operator intent for recovery (for example, an adopt/reset
-  flag or a documented manual reset procedure)
-- on successful recovery, emit `updated` with a fresh manifest that rebinds
-  ownership to the managed namespace
+- require explicit operator review for recovery
+- on successful recovery, emit `updated` with a fresh manifest
 
 ### A9. Open-Question Dispositions
 

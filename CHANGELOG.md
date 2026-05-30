@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.14.0...v0.15.0) (2026-05-30)
+
+
+### Features
+
+* add managed documentation sync ([dc428ee](https://github.com/reponomics/reponomics-dashboard-action/commit/dc428ee5f4aa8d6551c23b6bdc377ffe7f13656b))
+
 ## [0.14.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.13.1...v0.14.0) (2026-05-29)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.15.0...v0.16.0) (2026-05-30)
+
+
+### Features
+
+* add optional github app installation token flow ([3283701](https://github.com/reponomics/reponomics-dashboard-action/commit/3283701cd8665a1d163cfcf94e538e0cd0bff312))
+
 ## [0.15.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.14.0...v0.15.0) (2026-05-30)
 
 

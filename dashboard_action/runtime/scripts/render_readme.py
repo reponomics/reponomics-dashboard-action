@@ -35,6 +35,17 @@ ASSET_OUTPUT_DIR = Path("docs") / "assets"
 ASSET_DISPLAY_DIR = Path("docs") / "assets"
 DEFAULT_REPO_TABLE_LIMIT = 10
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
+MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
+DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
+DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
+DOCS_STATE_LABELS = {
+    "disabled": "sync disabled",
+    "manifest_inconsistent": "needs manual review",
+    "permission_missing": "workflow cannot update docs",
+    "push_race": "update not pushed",
+    "stale": "version is out of sync with this repository's action version",
+}
 
 
 def _picture(dark_src: str, alt: str) -> str:
@@ -87,14 +98,47 @@ def _version_status_lines(status, badge_links):
         return []
     current_link = status["current_url"]
     latest_link = status["url"]
+    updates_link = os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or latest_link
     return [
         f"[![Your version: {_display_version(status['current_version'])}]"
         + f"({badge_links['current']})]({current_link}) "
         + f"[![Latest version: {_display_version(status['latest_version']) or 'unknown'}]"
         + f"({badge_links['latest']})]({latest_link}) "
-        + f"[View latest updates]({latest_link})",
+        + f"[View latest updates]({updates_link})",
         "",
     ]
+
+
+def _docs_sync_status_lines():
+    state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+    if not state or state in {"unchanged", "written"}:
+        return []
+    label = DOCS_STATE_LABELS.get(state, state.replace("_", " "))
+    link = os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip()
+    line = f"> **Local docs:** {label}."
+    details = _docs_status_detail()
+    if details:
+        line += f" {details}"
+    if link:
+        line += f" [Open local docs]({link})."
+    return [line, ""]
+
+
+def _docs_status_detail():
+    parts = []
+    docs_action_version = _display_version(os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip())
+    current_action_version = ""
+    status = _load_version_status()
+    if status:
+        current_action_version = _display_version(status["current_version"])
+    docs_updated_at = os.environ.get(DOCS_UPDATED_AT_ENV, "").strip()
+    if docs_action_version:
+        parts.append(f"Docs version: {docs_action_version}.")
+    if current_action_version:
+        parts.append(f"Action version: {current_action_version}.")
+    if docs_updated_at:
+        parts.append(f"Last docs update: {_format_capture_timestamp(docs_updated_at)}.")
+    return " ".join(parts)
 
 
 def _latest_capture_timestamp(*row_groups) -> str:
@@ -264,6 +308,7 @@ def render():
         "",
     ]
     lines.extend(_version_status_lines(version_status, version_badge_links))
+    lines.extend(_docs_sync_status_lines())
     lines.extend(
         [
             f"<sub>Latest data capture: {latest_capture}</sub>",

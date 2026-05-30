@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import requests
+import yaml
 
 
 VERSION = "0.14.0"  # x-release-please-version
@@ -26,8 +28,16 @@ INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
 INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
+MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
+MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
+MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
+MANAGED_DOCS_DASHBOARD_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
+DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
+DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
+DOCS_STATE_STALE = "stale"
 
-VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset"}
+VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "docs-sync"}
 VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
 
 if str(SCRIPTS_DIR) not in sys.path:
@@ -37,6 +47,7 @@ import collect as collect_mod  # noqa: E402
 import bootstrap  # noqa: E402
 import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
+import managed_docs  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
 import render_readme  # noqa: E402
@@ -62,6 +73,7 @@ class RuntimeConfig:
     data_dir: Path
     retention_days: int
     generate_readme: bool
+    allow_docs_sync: bool
     pages_index_path: Path
     readme_path: Path
     incident_confirm_mode: str
@@ -127,6 +139,31 @@ def _parse_retention_days(raw: str) -> int:
     return value
 
 
+def _config_allow_docs_sync(config_path: Path) -> bool | None:
+    if not config_path.exists():
+        return None
+    try:
+        payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
+        raise ActionError(f"Could not read allow_docs_sync from {config_path}.") from exc
+    if not isinstance(payload, dict) or "allow_docs_sync" not in payload:
+        return None
+    value = payload["allow_docs_sync"]
+    if isinstance(value, bool):
+        return value
+    raise ActionError("allow_docs_sync in config.yaml must be a YAML boolean.")
+
+
+def _allow_docs_sync_from_env(config_path: Path) -> bool:
+    raw = _env("REPONOMICS_ALLOW_DOCS_SYNC")
+    if raw:
+        return _parse_bool(raw, name="allow-docs-sync")
+    configured = _config_allow_docs_sync(config_path)
+    if configured is not None:
+        return configured
+    return True
+
+
 def _repo_is_public() -> bool:
     value = _env("GITHUB_EVENT_REPOSITORY_PRIVATE")
     if value:
@@ -168,6 +205,7 @@ def load_config_from_env() -> RuntimeConfig:
         _first_env("REPONOMICS_PRIVACY_MODE", "REPONOMICS_ARTIFACT_SECURITY_MODE") or "strong",
         repo_is_public=repo_is_public,
     )
+    config_path = Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml"))
     return RuntimeConfig(
         mode=mode,
         collection_token=_first_env(
@@ -184,10 +222,11 @@ def load_config_from_env() -> RuntimeConfig:
         ),
         privacy_mode=privacy_mode,
         repo_is_public=repo_is_public,
-        config_path=Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml")),
+        config_path=config_path,
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
+        allow_docs_sync=_allow_docs_sync_from_env(config_path),
         pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
@@ -314,6 +353,66 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
     render_readme.ASSET_DISPLAY_DIR = display_assets
 
 
+def _relative_link_if_present(target: Path, base_dir: Path) -> str:
+    if not target.is_file():
+        return ""
+    return Path(os.path.relpath(target, base_dir)).as_posix()
+
+
+def _set_managed_docs_link_env(config: RuntimeConfig) -> None:
+    managed_index = MANAGED_DOCS_NAMESPACE / "README.md"
+    readme_parent = config.readme_path.parent
+    dashboard_parent = config.pages_index_path.parent
+    os.environ[MANAGED_DOCS_README_LINK_ENV] = _relative_link_if_present(
+        managed_index,
+        readme_parent,
+    )
+    os.environ[MANAGED_DOCS_DASHBOARD_LINK_ENV] = _relative_link_if_present(
+        managed_index,
+        dashboard_parent,
+    )
+    _set_managed_docs_status_env()
+
+
+def _set_empty_managed_docs_status_env() -> None:
+    os.environ[DOCS_SYNC_STATE_ENV] = ""
+    os.environ[DOCS_ACTION_VERSION_ENV] = ""
+    os.environ[DOCS_UPDATED_AT_ENV] = ""
+
+
+def _set_managed_docs_status_env() -> None:
+    existing_state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+
+    manifest_path = MANAGED_DOCS_NAMESPACE / managed_docs.MANIFEST_NAME
+    if not manifest_path.is_file():
+        if not existing_state:
+            _set_empty_managed_docs_status_env()
+        return
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        if existing_state:
+            return
+        os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_MANIFEST_INCONSISTENT
+        os.environ[DOCS_ACTION_VERSION_ENV] = ""
+        os.environ[DOCS_UPDATED_AT_ENV] = ""
+        return
+
+    manifest_action_version = str(manifest.get("action_version") or "")
+    if not os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip():
+        os.environ[DOCS_ACTION_VERSION_ENV] = manifest_action_version
+    if not os.environ.get(DOCS_UPDATED_AT_ENV, "").strip():
+        os.environ[DOCS_UPDATED_AT_ENV] = str(manifest.get("updated_at") or "")
+    if existing_state:
+        return
+    if manifest_action_version == VERSION:
+        os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_UNCHANGED
+        return
+
+    os.environ[DOCS_SYNC_STATE_ENV] = DOCS_STATE_STALE
+
+
 def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
@@ -335,6 +434,7 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
         os.environ["REPONOMICS_ACTION_REF"] = config.action_ref
     if config.action_repository:
         os.environ["REPONOMICS_ACTION_REPOSITORY"] = config.action_repository
+    _set_managed_docs_link_env(config)
 
 
 def _set_version_status_env(config: RuntimeConfig) -> None:
@@ -461,6 +561,142 @@ def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
     subprocess.run(["git", "push"], check=True)
 
 
+def _docs_result_with_state(
+    result: managed_docs.ManagedDocsResult,
+    *,
+    state: str,
+    reason: str,
+) -> managed_docs.ManagedDocsResult:
+    return managed_docs.ManagedDocsResult(
+        state=state,
+        reason=reason,
+        manifest_action_version=result.manifest_action_version,
+        docs_updated_at=result.docs_updated_at,
+        namespace=result.namespace,
+        changed=result.changed,
+    )
+
+
+def _git_failure_text(exc: subprocess.CalledProcessError) -> str:
+    chunks = []
+    stdout = getattr(exc, "stdout", "")
+    stderr = getattr(exc, "stderr", "")
+    if isinstance(stdout, str) and stdout.strip():
+        chunks.append(stdout.strip())
+    if isinstance(stderr, str) and stderr.strip():
+        chunks.append(stderr.strip())
+    if not chunks:
+        chunks.append(str(exc))
+    return " ".join(chunks)
+
+
+def _is_permission_failure(text: str) -> bool:
+    normalized = text.lower()
+    return any(
+        marker in normalized
+        for marker in (
+            "403",
+            "authentication failed",
+            "could not read username",
+            "not authorized",
+            "permission denied",
+            "protected branch",
+            "repository not found",
+            "write access",
+        )
+    )
+
+
+def _is_push_race(text: str) -> bool:
+    normalized = text.lower()
+    return any(
+        marker in normalized
+        for marker in (
+            "fetch first",
+            "non-fast-forward",
+            "stale info",
+            "updates were rejected",
+        )
+    )
+
+
+def _run_git_capture(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(args, check=True, capture_output=True, text=True)
+
+
+def _push_managed_docs_with_retry() -> None:
+    try:
+        _run_git_capture(["git", "push"])
+        return
+    except subprocess.CalledProcessError as first_exc:
+        first_text = _git_failure_text(first_exc)
+        if _is_permission_failure(first_text) or not _is_push_race(first_text):
+            raise
+
+    try:
+        _run_git_capture(["git", "pull", "--rebase"])
+        _run_git_capture(["git", "push"])
+    except subprocess.CalledProcessError:
+        raise
+
+
+def _git_commit_managed_docs(
+    config: RuntimeConfig,
+    result: managed_docs.ManagedDocsResult,
+) -> managed_docs.ManagedDocsResult:
+    if not result.changed:
+        return result
+    in_repo = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    in_repo_stdout = in_repo.stdout.strip() if isinstance(in_repo.stdout, str) else ""
+    if in_repo.returncode != 0 or in_repo_stdout != "true":
+        return _docs_result_with_state(
+            result,
+            state=managed_docs.STATE_PERMISSION_MISSING,
+            reason="Managed docs were written locally but could not be committed outside a git worktree.",
+        )
+
+    namespace = MANAGED_DOCS_NAMESPACE.as_posix()
+    message = f"docs: update Reponomics managed docs for action v{VERSION} [skip ci]"
+    try:
+        subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
+            check=True,
+        )
+        subprocess.run(["git", "add", "--", namespace], check=True)
+        diff = subprocess.run(
+            ["git", "diff", "--cached", "--quiet", "--", namespace],
+            check=False,
+        )
+        if diff.returncode == 0:
+            return _docs_result_with_state(
+                result,
+                state=managed_docs.STATE_UNCHANGED,
+                reason="Managed documentation was already committed.",
+            )
+        subprocess.run(["git", "commit", "-m", message, "--", namespace], check=True)
+        _push_managed_docs_with_retry()
+    except subprocess.CalledProcessError as exc:
+        text = _git_failure_text(exc)
+        if _is_permission_failure(text):
+            return _docs_result_with_state(
+                result,
+                state=managed_docs.STATE_PERMISSION_MISSING,
+                reason="Managed docs were written locally but Git push was not permitted.",
+            )
+        return _docs_result_with_state(
+            result,
+            state=managed_docs.STATE_PUSH_RACE,
+            reason="Managed docs were written locally but Git push did not complete after retry.",
+        )
+    return result
+
+
 def _tracked_repos(data_dir: Path) -> list[str]:
     repos: set[str] = set()
     for filename in ("traffic-daily.csv", "traffic-log.csv", "traffic-snapshots.csv"):
@@ -482,7 +718,28 @@ def _manifest_value(data_dir: Path, key: str) -> str:
         return ""
 
 
-def _write_outputs(config: RuntimeConfig, before: dict[str, str]) -> None:
+def _docs_sync_output_values(
+    result: managed_docs.ManagedDocsResult | None,
+) -> dict[str, str]:
+    if result is None:
+        return {
+            "docs-sync-state": "",
+            "docs-action-version": "",
+            "docs-updated-at": "",
+        }
+    return {
+        "docs-sync-state": result.state,
+        "docs-action-version": result.manifest_action_version,
+        "docs-updated-at": result.docs_updated_at,
+    }
+
+
+def _write_outputs(
+    config: RuntimeConfig,
+    before: dict[str, str],
+    *,
+    docs_result: managed_docs.ManagedDocsResult | None = None,
+) -> None:
     after = _snapshot_outputs(config)
     outputs = {
         "tracked-repos": ",".join(_tracked_repos(config.data_dir)),
@@ -495,6 +752,7 @@ def _write_outputs(config: RuntimeConfig, before: dict[str, str]) -> None:
         "schema-version": storage.SCHEMA_VERSION,
         "runtime-version": VERSION,
     }
+    outputs.update(_docs_sync_output_values(docs_result))
     output_path = _env("GITHUB_OUTPUT")
     if output_path:
         with Path(output_path).open("a", encoding="utf-8") as handle:
@@ -726,6 +984,47 @@ def _summarize_incident_reset(*, deleted_runs: int, deleted_artifacts: int) -> N
         print("\n".join(lines))
 
 
+def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
+    lines = [
+        "## Managed Reponomics docs",
+        "",
+        f"- State: `{result.state}`",
+        f"- Details: {result.reason}",
+        f"- Action version: `{VERSION}`",
+    ]
+    if result.manifest_action_version:
+        lines.append(f"- Docs action version: `{result.manifest_action_version}`")
+    if result.docs_updated_at:
+        lines.append(f"- Docs updated at: `{result.docs_updated_at}`")
+    if result.state == managed_docs.STATE_PERMISSION_MISSING:
+        lines.extend(
+            [
+                "",
+                "Grant `contents: write` to the docs sync job or disable docs sync with `allow_docs_sync: false` in `config.yaml`.",
+            ]
+        )
+    elif result.state == managed_docs.STATE_MANIFEST_INCONSISTENT:
+        lines.extend(
+            [
+                "",
+                "Reponomics could not safely write the managed docs namespace. Avoid symlinks in `docs/reponomics/`, and check for invalid managed-docs metadata.",
+            ]
+        )
+    elif result.state == managed_docs.STATE_PUSH_RACE:
+        lines.extend(
+            [
+                "",
+                "The docs update was prepared but could not be pushed after a bounded retry. Rerun the workflow after the branch settles.",
+            ]
+        )
+    summary_path = _env("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with Path(summary_path).open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    else:
+        print("\n".join(lines))
+
+
 def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
     owner, repo = _github_repository()
     current_run_id = _github_run_id()
@@ -834,6 +1133,24 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     _write_outputs(config, before)
 
 
+def run_docs_sync(config: RuntimeConfig) -> None:
+    _patch_runtime_paths(config)
+    before = _snapshot_outputs(config)
+    try:
+        result = managed_docs.sync_managed_docs(
+            namespace=MANAGED_DOCS_NAMESPACE,
+            bundle_dir=MANAGED_DOCS_BUNDLE_DIR,
+            action_repository=config.action_repository or version_status.ACTION_REPOSITORY,
+            action_version=VERSION,
+            allowed=config.allow_docs_sync,
+        )
+    except managed_docs.ManagedDocsError as exc:
+        raise ActionError(str(exc)) from exc
+    result = _git_commit_managed_docs(config, result)
+    _summarize_docs_sync(result)
+    _write_outputs(config, before, docs_result=result)
+
+
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
     try:
         config = loader()
@@ -845,6 +1162,8 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
             run_publish(config)
         elif config.mode == "rotate-key":
             run_rotate_key(config)
+        elif config.mode == "docs-sync":
+            run_docs_sync(config)
         else:
             run_incident_reset(config)
     except ActionError as exc:

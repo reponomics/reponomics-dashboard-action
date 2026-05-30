@@ -7,7 +7,7 @@ branding:
 
 inputs:
   mode:
-    description: "Runtime mode: collect, publish, rotate-key, or incident-reset."
+    description: "Runtime mode: collect, publish, rotate-key, incident-reset, or docs-sync."
     required: true
     default: collect
   collection-token:
@@ -54,6 +54,10 @@ inputs:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
     default: "false"
+  allow-docs-sync:
+    description: Optional override for managed documentation updates in docs/reponomics. Set true or false; blank uses config.yaml, then allows sync.
+    required: false
+    default: ""
   readme-path:
     description: README output path.
     required: false
@@ -90,6 +94,15 @@ outputs:
   runtime-version:
     description: Reponomics action runtime version.
     value: ${{ steps.runtime.outputs.runtime-version }}
+  docs-sync-state:
+    description: Managed documentation sync state.
+    value: ${{ steps.runtime.outputs.docs-sync-state }}
+  docs-action-version:
+    description: Action version that generated the local managed documentation.
+    value: ${{ steps.runtime.outputs.docs-action-version }}
+  docs-updated-at:
+    description: Timestamp recorded when the local managed documentation was last written.
+    value: ${{ steps.runtime.outputs.docs-updated-at }}
 
 runs:
   using: composite
@@ -116,6 +129,7 @@ runs:
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
+        REPONOMICS_ALLOW_DOCS_SYNC: ${{ inputs.allow-docs-sync }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
@@ -152,7 +166,7 @@ runs:
         overwrite: true
 
     - name: Upload encrypted dashboard data artifact
-      if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' }}
+      if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data
@@ -161,7 +175,7 @@ runs:
         overwrite: true
 
     - name: Upload dashboard data artifact
-      if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' }}
+      if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data

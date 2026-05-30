@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-mxMCvutesJLHQNlpPW5opWTt+JuVE6pQsnApziqIy3o=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-5+PNCdP1i2CPFb7MH5Rv5bwCK8XLnJVPKiggTUGzSuM=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-mxMCvutesJLHQNlpPW5opWTt+JuVE6pQsnApziqIy3o=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-6LlIo9ZyVQGbYLHFaFItutdSRt+5YNTizK/pxm1RLq4=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
 
   <script src="assets/chart.umd.min.js"></script>
   <style>
@@ -208,6 +208,15 @@
     .action-version-link:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
+    }
+    .managed-docs-status {
+      flex-basis: 100%;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .managed-docs-status strong {
+      color: var(--text);
     }
     .tagline {
       color: var(--text-muted);

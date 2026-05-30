@@ -67,6 +67,17 @@ PBKDF2_SALT_BYTES = 16
 AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
+MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
+DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
+DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
+DOCS_STATE_LABELS = {
+    "disabled": "sync disabled",
+    "manifest_inconsistent": "needs manual review",
+    "permission_missing": "workflow cannot update docs",
+    "push_race": "update not pushed",
+    "stale": "version is out of sync with this repository's action version",
+}
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
@@ -257,6 +268,15 @@ BASE_STYLES = """
     .action-version-link:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
+    }
+    .managed-docs-status {
+      flex-basis: 100%;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .managed-docs-status strong {
+      color: var(--text);
     }
     .tagline {
       color: var(--text-muted);
@@ -4969,6 +4989,17 @@ def _display_version(version):
     return value if value.startswith("v") else f"v{value}"
 
 
+def _format_docs_timestamp(value):
+    if not value:
+        return ""
+    try:
+        normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _render_version_badges():
     status = _load_version_status()
     if not status:
@@ -4983,8 +5014,10 @@ def _render_version_badges():
     latest_value = latest_display or "unknown"
     current_href = html.escape(status["current_url"], quote=True)
     latest_href = html.escape(status["url"], quote=True)
+    updates_href = html.escape(os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True)
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
+    docs_status = _render_docs_sync_status()
     return (
         '        <div class="action-version-badges" role="group" '
         + 'aria-label="Reponomics action version status">\n'
@@ -4994,13 +5027,43 @@ def _render_version_badges():
         + f'          <a class="action-version-badge latest{latest_state}" href="{latest_href}">'
         + '<span class="badge-label">latest version</span>'
         + f'<span class="badge-value">{latest_value}</span></a>\n'
-        + f'          <a class="action-version-link" href="{latest_href}">View latest updates</a>\n'
+        + f'          <a class="action-version-link" href="{updates_href}">View latest updates</a>\n'
+        + docs_status
         + "        </div>"
     )
 
 
+def _render_docs_sync_status():
+    state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+    if not state or state in {"unchanged", "written"}:
+        return ""
+    label = html.escape(DOCS_STATE_LABELS.get(state, state.replace("_", " ")))
+    detail = _render_docs_status_detail()
+    return (
+        '          <div class="managed-docs-status">Local docs: '
+        + f"<strong>{label}</strong>.{detail}</div>\n"
+    )
+
+
+def _render_docs_status_detail():
+    parts = []
+    docs_action_version = _display_version(os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip())
+    status = _load_version_status()
+    current_action_version = _display_version(status["current_version"]) if status else ""
+    docs_updated_at = _format_docs_timestamp(os.environ.get(DOCS_UPDATED_AT_ENV, "").strip())
+    if docs_action_version:
+        parts.append(f"Docs version: {docs_action_version}.")
+    if current_action_version:
+        parts.append(f"Action version: {current_action_version}.")
+    if docs_updated_at:
+        parts.append(f"Last docs update: {docs_updated_at}.")
+    if not parts:
+        return ""
+    return " " + html.escape(" ".join(parts))
+
+
 def _build_dashboard_shell(updated_text, stat_values, hidden=False):
-    """Build the shared dashboard markup used by public and secure pages."""
+    """Build the shared dashboard markup used by plain and encrypted pages."""
     hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
   <div id="dashboard-app"{hidden_attr}>

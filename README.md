@@ -91,7 +91,7 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 | `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
 | `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
 | `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |
-| `allow-docs-sync` | Allow Reponomics to update managed documentation in `docs/reponomics/`. Leave blank to use `allow_docs_sync` in `config.yaml`; defaults to `true` when unset. | `""` |
+| `allow-docs-sync` | Optional override for managed documentation updates in `docs/reponomics/`; set `true` or `false`. | Uses `allow_docs_sync` in `config.yaml`; otherwise allows sync. |
 | `readme-path` | README output path. | `README.md` |
 
 ## Outputs

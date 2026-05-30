@@ -55,7 +55,7 @@ inputs:
     required: false
     default: "false"
   allow-docs-sync:
-    description: Allow Reponomics to update managed documentation in docs/reponomics. Set true or false, or leave blank to use config.yaml; defaults to true when unset.
+    description: Optional override for managed documentation updates in docs/reponomics. Set true or false; blank uses config.yaml, then allows sync.
     required: false
     default: ""
   readme-path:

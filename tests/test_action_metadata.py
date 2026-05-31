@@ -63,7 +63,9 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     plain_data = _step_by_name("Upload dashboard data artifact")
 
     assert upload_pages["if"] == PAGES_DEPLOYMENT_IF
+    assert upload_pages["with"]["name"] == "html-dashboard-encrypted"
     assert deploy_pages["if"] == PAGES_DEPLOYMENT_IF
+    assert deploy_pages["with"]["artifact_name"] == "html-dashboard-encrypted"
     assert plain_dashboard["if"] == PLAIN_DASHBOARD_ARTIFACT_IF
     assert plain_dashboard["with"]["name"] == "html-dashboard-plain"
     assert encrypted_dashboard["if"] == ENCRYPTED_DASHBOARD_ARTIFACT_IF

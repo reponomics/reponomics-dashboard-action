@@ -137,18 +137,18 @@ Do not select **Deploy from a branch** for Reponomics dashboard publishing. Do n
 
 Generated dashboard files are not committed to the repository. This keeps retained history out of git, but it means offline viewing starts from a workflow artifact rather than from a tracked dashboard file in the repo.
 
-After a successful encrypted `publish` run, open the workflow run's **Summary** page and download either the GitHub Pages artifact (`publish-pages: true`) or the `html-dashboard-encrypted` artifact (`publish-pages: false`) before it expires. Extract it and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
+After a successful encrypted `publish` run, open the workflow run's **Summary** page and download the `html-dashboard-encrypted` artifact before it expires. Extract it and open `index.html`. Use the same dashboard key that unlocks the hosted Pages dashboard.
 
 For private repositories in `privacy-mode: plain`, `publish` uploads a plain dashboard artifact named `html-dashboard-plain`. Download that artifact from the workflow run and open `index.html` directly.
 
 You can also download the dashboard with GitHub CLI if you have repository read access. Replace `OWNER/REPO` with the dashboard repository, use `gh run list --repo OWNER/REPO --status success --limit 10` to find the latest successful `publish` workflow run, and replace `RUN_ID` with that run ID.
 
-For encrypted `strong` or `casual` output with `publish-pages: true`, download the GitHub Pages artifact:
+For encrypted `strong` or `casual` output with `publish-pages: true`, download the encrypted dashboard artifact:
 
 ```bash
 rm -rf .reponomics-dashboard
 mkdir -p .reponomics-dashboard
-gh run download RUN_ID --repo OWNER/REPO --name github-pages --dir .reponomics-dashboard
+gh run download RUN_ID --repo OWNER/REPO --name html-dashboard-encrypted --dir .reponomics-dashboard
 tar -xf .reponomics-dashboard/artifact.tar -C .reponomics-dashboard
 python3 -m http.server 8000 --directory .reponomics-dashboard
 ```
@@ -163,6 +163,8 @@ mkdir -p .reponomics-dashboard
 gh run download RUN_ID --repo OWNER/REPO --name html-dashboard-encrypted --dir .reponomics-dashboard
 python3 -m http.server 8000 --directory .reponomics-dashboard
 ```
+
+When `publish-pages: true`, the downloaded artifact contains `artifact.tar`; extract it before serving. When `publish-pages: false`, files are available directly after `gh run download`.
 
 For private `plain` output, download the plain dashboard artifact:
 

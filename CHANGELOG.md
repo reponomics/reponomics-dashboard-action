@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.16.0...v0.17.0) (2026-05-31)
+
+
+### Features
+
+* add dashboard-dev release sync dispatch ([544c5f2](https://github.com/reponomics/reponomics-dashboard-action/commit/544c5f2f57bfe888d02850f6e0c14b6d0d387633))
+
 ## [0.16.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.15.0...v0.16.0) (2026-05-30)
 
 

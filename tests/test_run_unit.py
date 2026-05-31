@@ -79,6 +79,11 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
+    monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "sometimes")
+    with pytest.raises(run.ActionError, match="publish-pages must be true or false"):
+        run.load_config_from_env()
+
+    monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "true")
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "0")
     with pytest.raises(run.ActionError, match="retention-days must be between 1 and 90"):
         run.load_config_from_env()
@@ -98,6 +103,18 @@ def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> Non
 
     with pytest.raises(run.ActionError, match="generate-readme is only supported"):
         run.validate_config(config)
+
+
+def test_load_config_rejects_invalid_artifact_run_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_MODE", "publish")
+    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "plain")
+    monkeypatch.setenv("REPONOMICS_ARTIFACT_RUN_ID", "latest")
+
+    with pytest.raises(run.ActionError, match="artifact-run-id must be a positive integer"):
+        run.load_config_from_env()
 
 
 def test_restore_artifact_skips_without_github_context(
@@ -141,6 +158,38 @@ def test_restore_artifact_invokes_script_with_token(
     assert calls[0]["env"]["ARTIFACT_NAME"] == "dashboard-data"
     assert calls[0]["env"]["DATA_DIR"] == config.data_dir.as_posix()
     assert calls[0]["env"]["GH_TOKEN"] == "ghp_token"
+
+
+def test_restore_artifact_passes_run_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def fake_run(args: list[str], *, check: bool, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+        calls.append({"args": args, "check": check, "env": env})
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setattr(run.shutil, "which", lambda name: "/usr/bin/gh" if name == "gh" else None)
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+    config = _config_for_run_tests(tmp_path, artifact_run_id="123456")
+
+    run._restore_artifact(config)
+
+    assert calls[0]["env"]["ARTIFACT_RUN_ID"] == "123456"
+
+
+def test_run_scoped_artifact_restore_paginates_artifacts() -> None:
+    script = (run.SCRIPTS_DIR / "restore_artifact.sh").read_text(encoding="utf-8")
+    artifact_lookup = script.split("# Find the requested artifact.", 1)[1]
+    run_scoped_query = artifact_lookup.split('if [ -n "$ARTIFACT_RUN_ID" ]; then', 1)[1].split(
+        "else",
+        1,
+    )[0]
+
+    assert "gh api --paginate" in run_scoped_query
+    assert "actions/runs/${ARTIFACT_RUN_ID}/artifacts?per_page=100" in run_scoped_query
 
 
 def test_summarize_rotation_writes_github_step_summary(
@@ -272,6 +321,8 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "artifact_run_id": "",
+        "publish_pages_requested": True,
         "generate_readme": False,
         "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",

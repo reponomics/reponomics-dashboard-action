@@ -53,3 +53,54 @@ jobs:
           git tag --force "${major_tag}" "${release_sha}"
           git tag --force "${minor_tag}" "${release_sha}"
           git push --force origin "refs/tags/${major_tag}" "refs/tags/${minor_tag}"
+
+      - name: Create dashboard-dev dispatch token
+        if: ${{ steps.release.outputs.release_created }}
+        id: dashboard-dev-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard-dev
+          permission-contents: write
+
+      - name: Notify dashboard-dev action release
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ steps.dashboard-dev-token.outputs.token }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+          RELEASE_MAJOR: ${{ steps.release.outputs.major }}
+          RELEASE_MINOR: ${{ steps.release.outputs.minor }}
+          RELEASE_PATCH: ${{ steps.release.outputs.patch }}
+        run: |
+          set -euo pipefail
+
+          release_tag="${RELEASE_TAG:-}"
+          if [ -z "$release_tag" ]; then
+            release_tag="v${RELEASE_MAJOR}.${RELEASE_MINOR}.${RELEASE_PATCH}"
+          fi
+          release_url="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${release_tag}"
+          export RELEASE_TAG_RESOLVED="$release_tag"
+          export RELEASE_URL="$release_url"
+
+          python - <<'PY' > dispatch.json
+          import json
+          import os
+
+          payload = {
+              "event_type": "reponomics-dashboard-action-released",
+              "client_payload": {
+                  "tag": os.environ["RELEASE_TAG_RESOLVED"],
+                  "target_commitish": os.environ["RELEASE_SHA"],
+                  "release_url": os.environ["RELEASE_URL"],
+              },
+          }
+          print(json.dumps(payload, separators=(",", ":")))
+          PY
+
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY_OWNER}/reponomics-dashboard-dev/dispatches" \
+            --input dispatch.json

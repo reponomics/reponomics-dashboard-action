@@ -11,6 +11,11 @@ PLAIN_DASHBOARD_ARTIFACT_IF = (
     "${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == " +
     "'false' && steps.runtime.outputs.artifact-mode == 'plain' }}"
 )
+ENCRYPTED_DASHBOARD_ARTIFACT_IF = (
+    "${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && " +
+    "steps.runtime.outputs.publish-pages == 'false' && " +
+    "steps.runtime.outputs.artifact-mode == 'encrypted' }}"
+)
 DATA_ARTIFACT_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
 
 
@@ -53,13 +58,18 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     upload_pages = _step_by_uses("actions/upload-pages-artifact@")
     deploy_pages = _step_by_uses("actions/deploy-pages@")
     plain_dashboard = _step_by_name("Upload plain dashboard artifact")
+    encrypted_dashboard = _step_by_name("Upload encrypted dashboard artifact")
     encrypted_data = _step_by_name("Upload encrypted dashboard data artifact")
     plain_data = _step_by_name("Upload dashboard data artifact")
 
     assert upload_pages["if"] == PAGES_DEPLOYMENT_IF
+    assert upload_pages["with"]["name"] == "html-dashboard-encrypted"
     assert deploy_pages["if"] == PAGES_DEPLOYMENT_IF
+    assert deploy_pages["with"]["artifact_name"] == "html-dashboard-encrypted"
     assert plain_dashboard["if"] == PLAIN_DASHBOARD_ARTIFACT_IF
     assert plain_dashboard["with"]["name"] == "html-dashboard-plain"
+    assert encrypted_dashboard["if"] == ENCRYPTED_DASHBOARD_ARTIFACT_IF
+    assert encrypted_dashboard["with"]["name"] == "html-dashboard-encrypted"
     assert DATA_ARTIFACT_MODE_EXCLUSION in encrypted_data["if"]
     assert DATA_ARTIFACT_MODE_EXCLUSION in plain_data["if"]
 
@@ -86,6 +96,14 @@ def test_allow_docs_sync_metadata_contract() -> None:
     assert "docs-sync-reason" not in outputs
     assert outputs["docs-action-version"]["value"] == "${{ steps.runtime.outputs.docs-action-version }}"
     assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"
+
+
+def test_publish_pages_input_metadata_contract() -> None:
+    action = _action()
+    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+
+    assert action["inputs"]["publish-pages"]["default"] == "true"
+    assert runtime_env["REPONOMICS_PUBLISH_PAGES"] == "${{ inputs.publish-pages }}"
 
 
 def test_use_github_app_input_metadata_contract() -> None:

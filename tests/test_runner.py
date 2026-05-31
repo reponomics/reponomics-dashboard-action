@@ -95,6 +95,8 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "artifact_run_id": "",
+        "publish_pages_requested": True,
         "generate_readme": False,
         "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
@@ -472,27 +474,59 @@ def test_use_github_app_input_normalization_from_env(
 
 
 @pytest.mark.parametrize(
-    ("privacy_mode", "expected_artifact_mode", "expected_publish_pages"),
+    (
+        "privacy_mode",
+        "publish_pages_requested",
+        "expected_artifact_mode",
+        "expected_publish_pages",
+    ),
     [
-        ("strong", "encrypted", True),
-        ("casual", "encrypted", True),
-        ("plain", "plain", False),
+        ("strong", True, "encrypted", True),
+        ("strong", False, "encrypted", False),
+        ("casual", True, "encrypted", True),
+        ("casual", False, "encrypted", False),
+        ("plain", True, "plain", False),
+        ("plain", False, "plain", False),
     ],
 )
 def test_publish_pages_values_follow_privacy_mode(
     tmp_path: Path,
     privacy_mode: str,
+    publish_pages_requested: bool,
     expected_artifact_mode: str,
     expected_publish_pages: bool,
 ) -> None:
     config = _config(
         tmp_path,
         privacy_mode=privacy_mode,
+        publish_pages_requested=publish_pages_requested,
         dashboard_secret="" if privacy_mode == "plain" else OLD_KEY,
     )
 
     assert config.resolved_artifact_mode == expected_artifact_mode
     assert config.publish_pages is expected_publish_pages
+
+
+def test_publish_pages_input_normalization_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("REPONOMICS_MODE", "publish")
+    monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghp_collection")
+    monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
+    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "false")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
+    monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
+    monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
+
+    config = run.load_config_from_env()
+
+    assert config.publish_pages_requested is False
+    assert config.publish_pages is False
 
 
 def test_generate_readme_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:

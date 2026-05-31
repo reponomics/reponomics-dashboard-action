@@ -54,6 +54,10 @@ inputs:
     description: GitHub Actions artifact retention period.
     required: false
     default: "90"
+  publish-pages:
+    description: "Set false to render dashboard output without deploying GitHub Pages. Plain mode always disables Pages deployment."
+    required: false
+    default: "true"
   artifact-run-id:
     description: Optional workflow run ID whose dashboard-data artifact should be restored. Blank restores the latest available dashboard-data artifact.
     required: false
@@ -91,7 +95,7 @@ outputs:
     description: Whether the dashboard output changed.
     value: ${{ steps.runtime.outputs.dashboard-updated }}
   pages-path:
-    description: Rendered dashboard directory uploaded to Pages or the plain dashboard artifact.
+    description: Rendered dashboard directory uploaded to Pages or a downloadable dashboard artifact.
     value: ${{ steps.runtime.outputs.pages-path }}
   page-url:
     description: Deployed GitHub Pages URL when a Pages dashboard is published.
@@ -137,6 +141,7 @@ runs:
         REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_PUBLISH_PAGES: ${{ inputs.publish-pages }}
         REPONOMICS_ARTIFACT_RUN_ID: ${{ inputs.artifact-run-id }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_ALLOW_DOCS_SYNC: ${{ inputs.allow-docs-sync }}
@@ -171,6 +176,15 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: html-dashboard-plain
+        path: ${{ steps.runtime.outputs.pages-path }}
+        retention-days: ${{ inputs.retention-days }}
+        overwrite: true
+
+    - name: Upload encrypted dashboard artifact
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'encrypted' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: html-dashboard-encrypted
         path: ${{ steps.runtime.outputs.pages-path }}
         retention-days: ${{ inputs.retention-days }}
         overwrite: true

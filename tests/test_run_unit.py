@@ -79,6 +79,11 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
+    monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "sometimes")
+    with pytest.raises(run.ActionError, match="publish-pages must be true or false"):
+        run.load_config_from_env()
+
+    monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "true")
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "0")
     with pytest.raises(run.ActionError, match="retention-days must be between 1 and 90"):
         run.load_config_from_env()
@@ -317,6 +322,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "data_dir": tmp_path / "data",
         "retention_days": 90,
         "artifact_run_id": "",
+        "publish_pages_requested": True,
         "generate_readme": False,
         "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",

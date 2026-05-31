@@ -75,6 +75,7 @@ class RuntimeConfig:
     data_dir: Path
     retention_days: int
     artifact_run_id: str
+    publish_pages_requested: bool
     generate_readme: bool
     allow_docs_sync: bool
     pages_index_path: Path
@@ -91,7 +92,7 @@ class RuntimeConfig:
 
     @property
     def publish_pages(self) -> bool:
-        return self.privacy_mode != "plain"
+        return self.publish_pages_requested and self.privacy_mode != "plain"
 
 
 def _env(name: str, default: str = "") -> str:
@@ -241,6 +242,10 @@ def load_config_from_env() -> RuntimeConfig:
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
         artifact_run_id=_validate_artifact_run_id(_env("REPONOMICS_ARTIFACT_RUN_ID")),
+        publish_pages_requested=_parse_bool(
+            _env("REPONOMICS_PUBLISH_PAGES", "true"),
+            name="publish-pages",
+        ),
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
         allow_docs_sync=_allow_docs_sync_from_env(config_path),
         pages_index_path=Path("docs/index.html"),
@@ -435,7 +440,7 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
     os.environ["ARTIFACT_SECURITY_MODE"] = config.resolved_artifact_mode
     os.environ["DASHBOARD_ACCESS_MODE"] = (
-        "encrypted" if config.publish_pages else "public"
+        "public" if config.resolved_artifact_mode == "plain" else "encrypted"
     )
     if config.collection_token:
         os.environ["GH_TOKEN"] = config.collection_token

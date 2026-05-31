@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -73,6 +74,7 @@ class RuntimeConfig:
     config_path: Path
     data_dir: Path
     retention_days: int
+    artifact_run_id: str
     generate_readme: bool
     allow_docs_sync: bool
     pages_index_path: Path
@@ -138,6 +140,14 @@ def _parse_retention_days(raw: str) -> int:
     if value < 1 or value > 90:
         raise ActionError("retention-days must be between 1 and 90.")
     return value
+
+
+def _validate_artifact_run_id(raw: str) -> str:
+    if not raw:
+        return ""
+    if not re.fullmatch(r"[1-9]\d*", raw):
+        raise ActionError(f"artifact-run-id must be a positive integer, got {raw!r}.")
+    return raw
 
 
 def _config_allow_docs_sync(config_path: Path) -> bool | None:
@@ -230,6 +240,7 @@ def load_config_from_env() -> RuntimeConfig:
         config_path=config_path,
         data_dir=Path("data"),
         retention_days=_parse_retention_days(_env("REPONOMICS_RETENTION_DAYS", "90")),
+        artifact_run_id=_validate_artifact_run_id(_env("REPONOMICS_ARTIFACT_RUN_ID")),
         generate_readme=_parse_bool(_env("REPONOMICS_GENERATE_README", "false"), name="generate-readme"),
         allow_docs_sync=_allow_docs_sync_from_env(config_path),
         pages_index_path=Path("docs/index.html"),
@@ -486,6 +497,8 @@ def _restore_artifact(config: RuntimeConfig) -> None:
     env = os.environ.copy()
     env["ARTIFACT_NAME"] = "dashboard-data"
     env["DATA_DIR"] = config.data_dir.as_posix()
+    if config.artifact_run_id:
+        env["ARTIFACT_RUN_ID"] = config.artifact_run_id
     if config.github_token:
         env["GH_TOKEN"] = config.github_token
     subprocess.run(["bash", str(script)], check=True, env=env)

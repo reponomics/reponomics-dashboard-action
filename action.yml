@@ -54,6 +54,10 @@ inputs:
     description: GitHub Actions artifact retention period.
     required: false
     default: "90"
+  artifact-run-id:
+    description: Optional workflow run ID whose dashboard-data artifact should be restored. Blank restores the latest available dashboard-data artifact.
+    required: false
+    default: ""
   generate-readme:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
@@ -133,6 +137,7 @@ runs:
         REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_ARTIFACT_RUN_ID: ${{ inputs.artifact-run-id }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_ALLOW_DOCS_SYNC: ${{ inputs.allow-docs-sync }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}

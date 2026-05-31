@@ -110,6 +110,7 @@ def _render_production_outputs(
         config_path=workdir / "config.yaml",
         data_dir=data_dir,
         retention_days=90,
+        artifact_run_id="",
         generate_readme=True,
         allow_docs_sync=True,
         pages_index_path=workdir / "docs" / "index.html",

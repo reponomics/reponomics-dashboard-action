@@ -95,6 +95,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "artifact_run_id": "",
         "generate_readme": False,
         "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",

@@ -100,6 +100,18 @@ def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> Non
         run.validate_config(config)
 
 
+def test_load_config_rejects_invalid_artifact_run_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_MODE", "publish")
+    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "plain")
+    monkeypatch.setenv("REPONOMICS_ARTIFACT_RUN_ID", "latest")
+
+    with pytest.raises(run.ActionError, match="artifact-run-id must be a positive integer"):
+        run.load_config_from_env()
+
+
 def test_restore_artifact_skips_without_github_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -141,6 +153,27 @@ def test_restore_artifact_invokes_script_with_token(
     assert calls[0]["env"]["ARTIFACT_NAME"] == "dashboard-data"
     assert calls[0]["env"]["DATA_DIR"] == config.data_dir.as_posix()
     assert calls[0]["env"]["GH_TOKEN"] == "ghp_token"
+
+
+def test_restore_artifact_passes_run_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def fake_run(args: list[str], *, check: bool, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+        calls.append({"args": args, "check": check, "env": env})
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setattr(run.shutil, "which", lambda name: "/usr/bin/gh" if name == "gh" else None)
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+    config = _config_for_run_tests(tmp_path, artifact_run_id="123456")
+
+    run._restore_artifact(config)
+
+    assert calls[0]["env"]["ARTIFACT_RUN_ID"] == "123456"
+
 
 
 def test_summarize_rotation_writes_github_step_summary(
@@ -272,6 +305,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "artifact_run_id": "",
         "generate_readme": False,
         "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",

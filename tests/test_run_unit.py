@@ -175,6 +175,17 @@ def test_restore_artifact_passes_run_id(
     assert calls[0]["env"]["ARTIFACT_RUN_ID"] == "123456"
 
 
+def test_run_scoped_artifact_restore_paginates_artifacts() -> None:
+    script = (run.SCRIPTS_DIR / "restore_artifact.sh").read_text(encoding="utf-8")
+    artifact_lookup = script.split("# Find the requested artifact.", 1)[1]
+    run_scoped_query = artifact_lookup.split('if [ -n "$ARTIFACT_RUN_ID" ]; then', 1)[1].split(
+        "else",
+        1,
+    )[0]
+
+    assert "gh api --paginate" in run_scoped_query
+    assert "actions/runs/${ARTIFACT_RUN_ID}/artifacts?per_page=100" in run_scoped_query
+
 
 def test_summarize_rotation_writes_github_step_summary(
     monkeypatch: pytest.MonkeyPatch,

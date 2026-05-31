@@ -30,7 +30,7 @@ fi
 # Find the requested artifact. Without ARTIFACT_RUN_ID, the API returns
 # artifacts sorted by most recent first, preserving the historical fallback.
 if [ -n "$ARTIFACT_RUN_ID" ]; then
-  ARTIFACT_ID=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ARTIFACT_RUN_ID}/artifacts?per_page=100" \
+  ARTIFACT_ID=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${ARTIFACT_RUN_ID}/artifacts?per_page=100" \
     --jq ".artifacts[] | select(.name == \"${ARTIFACT_NAME}\") | .id" 2>/dev/null | head -n 1 || true)
 else
   ARTIFACT_ID=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${ARTIFACT_NAME}&per_page=1" \

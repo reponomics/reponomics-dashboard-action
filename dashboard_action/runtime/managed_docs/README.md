@@ -21,6 +21,5 @@ Start here:
 - [Provenance and supply chain verification](provenance.md)
 - [Security guidance](security.md)
 - [Support guidance](support.md)
-- [Template setup README](template-readme.md)
 
 For complete release history, see the upstream Reponomics Dashboard Action releases.

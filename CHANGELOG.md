@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.18.0...v0.19.0) (2026-06-05)
+
+
+### Features
+
+* add dashboard-data lineage cleanup ([#81](https://github.com/reponomics/reponomics-dashboard-action/issues/81)) ([7c7ffd6](https://github.com/reponomics/reponomics-dashboard-action/commit/7c7ffd634212ab9fc2983f8c0ac0c86791a37329))
+
 ## [0.18.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.17.0...v0.18.0) (2026-06-05)
 
 

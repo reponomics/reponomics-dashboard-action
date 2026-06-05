@@ -19,7 +19,7 @@ import requests
 import yaml
 
 
-VERSION = "0.18.0"  # x-release-please-version
+VERSION = "0.19.0"  # x-release-please-version
 ROOT = Path(__file__).resolve().parent
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_SECRET_LENGTH = 40

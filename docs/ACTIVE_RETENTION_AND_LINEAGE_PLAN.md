@@ -1,6 +1,6 @@
 # Active Retention And Lineage Implementation Plan
 
-Status: implementation plan for ADR 014.
+Status: action-side implementation in progress. Lineage writing, retained-row verification, and collect post-upload artifact cleanup are implemented in `reponomics-dashboard-action`; generated dashboard workflows still need the corresponding collect job `actions: write` wiring before this is fully shipped to users.
 
 The canonical policy is [ADR 014](./adr/014-canonical-artifact-lineage-and-active-retention.md).
 This document records the concrete transition plan so the project is not left

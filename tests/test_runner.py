@@ -770,8 +770,65 @@ def test_collect_fixture_updates_artifact_without_rendering_outputs(
     run.run_collect(config, restore_artifact=False, execute_collect=False)
 
     assert (tmp_path / ".dashboard-data-artifact" / "dashboard-data.enc").exists()
+    manifest = run.storage.read_manifest(config.data_dir.as_posix())
+    lineage_payload = manifest["lineage"]
+    assert lineage_payload["artifact_kind"] == "dashboard-data"
+    assert lineage_payload["operation"] == "collect"
+    assert lineage_payload["payload_digest"]
+    assert lineage_payload["semantic_root_digest"]
+    assert lineage_payload["verification"]["type"] == "retained-row-superset"
     assert not config.readme_path.exists()
     assert not config.pages_index_path.exists()
+
+
+def test_lineage_rejects_child_missing_retained_parent_row(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    run._patch_runtime_paths(config)
+    run._prepare_data_schema(config)
+    parent = run.lineage.snapshot_payload(config.data_dir)
+
+    _write_csv(config.data_dir / "traffic-log.csv", run.storage.LOG_FIELDS, [])
+
+    with pytest.raises(run.lineage.LineageError, match="does not preserve retained parent rows"):
+        run.lineage.write_verified_lineage(
+            config.data_dir,
+            parent=parent,
+            retention_days=config.retention_days,
+            action_version=run.VERSION,
+            operation="collect",
+        )
+
+
+def test_lineage_rejects_restored_payload_digest_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    run._patch_runtime_paths(config)
+    run._prepare_data_schema(config)
+    parent = run.lineage.snapshot_payload(config.data_dir)
+    run.lineage.write_verified_lineage(
+        config.data_dir,
+        parent=parent,
+        retention_days=config.retention_days,
+        action_version=run.VERSION,
+        operation="collect",
+    )
+
+    rows = run.storage.read_csv((config.data_dir / "traffic-log.csv").as_posix())
+    rows[0]["views_count"] = "99"
+    run.storage.write_csv((config.data_dir / "traffic-log.csv").as_posix(), rows, run.storage.LOG_FIELDS)
+    tampered = run.lineage.snapshot_payload(config.data_dir)
+
+    with pytest.raises(run.lineage.LineageError, match="payload_digest does not match"):
+        run.lineage.validate_snapshot_lineage(tampered)
 
 
 def test_publish_fixture_renders_outputs_without_live_api(
@@ -1569,6 +1626,53 @@ def test_purge_workflow_history_deletes_old_runs_and_related_artifacts(
     }
     assert captured_headers
     assert all(headers["Authorization"] == f"Bearer {config.github_token}" for headers in captured_headers)
+
+
+def test_collect_cleanup_deletes_only_next_superseded_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "400")
+
+    def fake_fetch_json(url: str, headers: dict[str, str], allow_not_found: bool = False) -> Any:
+        del headers, allow_not_found
+        if "/actions/artifacts" in url and "page=1" in url:
+            return {
+                "artifacts": [
+                    {"id": 50, "created_at": "2026-06-05T12:00:00Z", "workflow_run": {"id": 400}},
+                    {"id": 41, "created_at": "2026-06-04T12:00:00Z", "workflow_run": {"id": 399}},
+                    {"id": 31, "created_at": "2026-06-03T12:00:00Z", "workflow_run": {"id": 398}},
+                    {"id": 21, "created_at": "2026-06-02T12:00:00Z", "workflow_run": {"id": 397}},
+                    {"id": 11, "created_at": "2026-06-01T12:00:00Z", "workflow_run": {"id": 396}},
+                ]
+            }
+        if "/actions/artifacts" in url and "page=2" in url:
+            return {"artifacts": []}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    deleted_urls: list[str] = []
+
+    def fake_delete(url: str, *, headers: dict[str, str], timeout: int) -> requests.Response:
+        assert timeout == run.INCIDENT_API_TIMEOUT_SECONDS
+        assert headers["Authorization"] == f"Bearer {config.github_token}"
+        deleted_urls.append(url)
+        return _response(204)
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(run.requests, "delete", fake_delete)
+
+    result = run._cleanup_superseded_collect_artifacts(config)
+
+    assert result.prior_artifacts == 4
+    assert result.retained_prior_artifacts == 2
+    assert result.delete_candidates == 2
+    assert result.deleted_artifacts == 1
+    assert deleted_urls == [
+        "https://api.github.com/repos/demo/repo/actions/artifacts/21",
+    ]
+    assert not any("/actions/runs/" in url for url in deleted_urls)
 
 
 def test_incident_reset_reencrypts_without_rendering_outputs(

@@ -1,7 +1,7 @@
 # FAQ
 
-The user-facing FAQ lives with the generated dashboard template documentation:
+The user-facing FAQ lives in the action-bundled managed documentation and is synced into generated dashboard repositories at `docs/reponomics/faq.md`:
 
-- [Reponomics Dashboard FAQ](https://github.com/reponomics/reponomics-dashboard/blob/main/docs/FAQ.md)
+- [Reponomics Dashboard FAQ](../dashboard_action/runtime/managed_docs/faq.md)
 
 This action repository keeps runtime and maintainer references, including [CSV Export Architecture Guide](CSV_EXPORT.md), provenance notes, release process docs, and implementation ADRs.

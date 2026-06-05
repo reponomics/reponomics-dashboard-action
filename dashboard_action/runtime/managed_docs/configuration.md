@@ -1,5 +1,8 @@
 # Configuration Reference
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 The dashboard repository normally uses the Reponomics template workflows. Those workflows pass action inputs for runtime mode, tokens, privacy mode, retention, README rendering, and managed documentation sync.
 
 The main modes are `collect`, `publish`, `rotate-key`, `incident-reset`, and `docs-sync`. `collect` stores retained dashboard data in workflow artifacts. `publish` renders the dashboard from retained data. `rotate-key` re-encrypts retained data and generated encrypted assets with a new dashboard secret. `incident-reset` restores retained data, re-encrypts it with `DASHBOARD_NEXT_SECRET`, uploads the new encrypted artifact, then finds prior `dashboard-data` artifacts and deletes their associated workflow runs. `docs-sync` updates this managed documentation namespace.

@@ -63,4 +63,6 @@ repository, run a rehydrate workflow in the new dashboard repository with
 `contents: read` access to the seed repository, verify the seed hash, and upload
 it as the new repository's canonical `dashboard-data` artifact.
 
-This rehydrate workflow is not part of the current action contract.
+This rehydrate workflow is not part of the current action contract. The accepted
+policy direction is recorded in
+[ADR 015](./adr/015-extreme-recovery-repository-deletion-and-reseeding.md).

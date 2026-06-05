@@ -19,7 +19,7 @@ inputs:
     required: false
     default: "false"
   github-token:
-    description: Token used for GitHub artifact/repository workflow operations.
+    description: "Token used for GitHub artifact/repository workflow operations. Required for collect artifact cleanup and incident-reset history purge; pass github-token: ${{ github.token }} from the caller workflow."
     required: false
     default: ""
   dashboard-secret:
@@ -209,6 +209,17 @@ runs:
         path: data
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
+
+    - name: Clean up superseded dashboard data artifacts
+      if: ${{ inputs.mode == 'collect' }}
+      shell: bash
+      env:
+        REPONOMICS_MODE: collect
+        REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY: "true"
+      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
 
     - name: Purge incident reset history
       if: ${{ inputs.mode == 'incident-reset' }}

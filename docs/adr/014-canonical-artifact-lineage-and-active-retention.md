@@ -29,6 +29,8 @@ state under retention and migration rules.
 
 Treat each retained `dashboard-data` artifact as a lineage node.
 
+The concrete transition and implementation plan is tracked in [Active Retention And Lineage Implementation Plan](../ACTIVE_RETENTION_AND_LINEAGE_PLAN.md).
+
 The runtime should eventually include an artifact manifest inside the canonical
 retained payload. That manifest should record:
 

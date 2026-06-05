@@ -122,6 +122,23 @@ def test_incident_reset_purge_runs_after_data_upload() -> None:
     )
 
 
+def test_collect_cleanup_runs_after_data_upload_before_incident_purge() -> None:
+    cleanup = _step_by_name("Clean up superseded dashboard data artifacts")
+
+    assert cleanup["if"] == "${{ inputs.mode == 'collect' }}"
+    assert cleanup["env"]["REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY"] == "true"
+    assert cleanup["env"]["REPONOMICS_GITHUB_TOKEN"] == "${{ inputs.github-token }}"
+    assert _step_index("Clean up superseded dashboard data artifacts") > _step_index(
+        "Upload encrypted dashboard data artifact"
+    )
+    assert _step_index("Clean up superseded dashboard data artifacts") > _step_index(
+        "Upload dashboard data artifact"
+    )
+    assert _step_index("Clean up superseded dashboard data artifacts") < _step_index(
+        "Purge incident reset history"
+    )
+
+
 def test_publish_pages_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]

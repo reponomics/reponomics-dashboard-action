@@ -29,6 +29,7 @@ INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
 INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
+COLLECT_ROLLBACK_ARTIFACTS = 2
 MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
 MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
 MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
@@ -48,6 +49,7 @@ import collect as collect_mod  # noqa: E402
 import bootstrap  # noqa: E402
 import crypto_artifact  # noqa: E402
 import load_data  # noqa: E402
+import lineage  # noqa: E402
 import managed_docs  # noqa: E402
 import merge  # noqa: E402
 import render_dashboard  # noqa: E402
@@ -104,9 +106,18 @@ class IncidentPurgeResult:
 
 
 @dataclass(frozen=True)
+class ActiveRetentionCleanupResult:
+    prior_artifacts: int
+    retained_prior_artifacts: int
+    delete_candidates: int
+    deleted_artifacts: int
+
+
+@dataclass(frozen=True)
 class DashboardDataArtifactRef:
     artifact_id: int
     workflow_run_id: int | None
+    created_at: str = ""
 
 
 def _env(name: str, default: str = "") -> str:
@@ -275,6 +286,8 @@ def load_config_from_env() -> RuntimeConfig:
 def validate_config(config: RuntimeConfig) -> None:
     if config.mode == "collect" and not config.collection_token:
         raise ActionError("collection-token, COLLECTION_TOKEN, or GH_TOKEN is required for collect mode.")
+    if config.mode == "collect" and not config.github_token:
+        raise ActionError("github-token, GITHUB_TOKEN, or GH_TOKEN is required for collect mode.")
     if config.repo_is_public and config.privacy_mode == "plain":
         raise ActionError("privacy-mode plain is only supported for private repositories.")
     if config.repo_is_public and config.generate_readme:
@@ -314,6 +327,13 @@ def validate_config(config: RuntimeConfig) -> None:
         if not config.github_token:
             raise ActionError("github-token, GITHUB_TOKEN, or GH_TOKEN is required for incident-reset mode.")
         _validate_incident_confirmations(config)
+
+
+def validate_collect_cleanup_config(config: RuntimeConfig) -> None:
+    if config.mode != "collect":
+        raise ActionError("collect-retention-cleanup-only requires collect mode.")
+    if not config.github_token:
+        raise ActionError("github-token, GITHUB_TOKEN, or GH_TOKEN is required for collect artifact cleanup.")
 
 
 def _validate_secret(value: str, label: str, *, allow_weak: bool) -> None:
@@ -899,21 +919,21 @@ def _github_fetch_json(url: str, headers: dict[str, str]) -> Any:
 def _github_repository() -> tuple[str, str]:
     repository = _env("GITHUB_REPOSITORY")
     if "/" not in repository:
-        raise ActionError("incident-reset requires GITHUB_REPOSITORY in owner/repo format.")
+        raise ActionError("GitHub artifact maintenance requires GITHUB_REPOSITORY in owner/repo format.")
     owner, repo = repository.split("/", 1)
     if not owner or not repo:
-        raise ActionError("incident-reset requires GITHUB_REPOSITORY in owner/repo format.")
+        raise ActionError("GitHub artifact maintenance requires GITHUB_REPOSITORY in owner/repo format.")
     return owner, repo
 
 
 def _github_run_id() -> int:
     raw = _env("GITHUB_RUN_ID")
     if not raw:
-        raise ActionError("incident-reset requires GITHUB_RUN_ID.")
+        raise ActionError("GitHub artifact maintenance requires GITHUB_RUN_ID.")
     try:
         return int(raw)
     except ValueError as exc:
-        raise ActionError(f"incident-reset received invalid GITHUB_RUN_ID: {raw!r}.") from exc
+        raise ActionError(f"GitHub artifact maintenance received invalid GITHUB_RUN_ID: {raw!r}.") from exc
 
 
 def _current_workflow_id(owner: str, repo: str, run_id: int, headers: dict[str, str]) -> int:
@@ -978,10 +998,10 @@ def _list_old_dashboard_data_artifacts(
             headers,
         )
         if not isinstance(payload, dict):
-            raise ActionError("incident-reset received an unexpected artifact payload.")
+            raise ActionError("GitHub artifact maintenance received an unexpected artifact payload.")
         artifacts = payload.get("artifacts")
         if not isinstance(artifacts, list):
-            raise ActionError("incident-reset received an invalid artifacts list payload.")
+            raise ActionError("GitHub artifact maintenance received an invalid artifacts list payload.")
         if not artifacts:
             break
         for artifact in artifacts:
@@ -990,6 +1010,7 @@ def _list_old_dashboard_data_artifacts(
             artifact_id = artifact.get("id")
             workflow_run = artifact.get("workflow_run")
             artifact_run_id = workflow_run.get("id") if isinstance(workflow_run, dict) else None
+            created_at = artifact.get("created_at")
             if not isinstance(artifact_id, int):
                 continue
             if artifact_run_id == current_run_id:
@@ -998,6 +1019,7 @@ def _list_old_dashboard_data_artifacts(
                 DashboardDataArtifactRef(
                     artifact_id=artifact_id,
                     workflow_run_id=artifact_run_id if isinstance(artifact_run_id, int) else None,
+                    created_at=created_at if isinstance(created_at, str) else "",
                 )
             )
         if len(artifacts) < 100:
@@ -1044,6 +1066,25 @@ def _summarize_incident_reset_purge(result: IncidentPurgeResult) -> None:
         "repository access, Actions artifacts/runs, Pages output, local",
         "downloads, browser/cache copies, and anyone who already had the",
         "dashboard key.",
+    ]
+    summary_path = _env("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with Path(summary_path).open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    else:
+        print("\n".join(lines))
+
+
+def _summarize_active_retention_cleanup(result: ActiveRetentionCleanupResult) -> None:
+    lines = [
+        "## Dashboard data retention cleanup complete",
+        "",
+        f"- Prior dashboard-data artifacts found: {result.prior_artifacts}",
+        f"- Prior artifacts retained for rollback: {result.retained_prior_artifacts}",
+        f"- Superseded artifacts eligible this run: {result.delete_candidates}",
+        f"- Deleted superseded artifacts: {result.deleted_artifacts}",
+        "",
+        "Routine cleanup deletes only old `dashboard-data` artifacts after a fresh collect artifact has been uploaded. It does not delete workflow runs.",
     ]
     summary_path = _env("GITHUB_STEP_SUMMARY")
     if summary_path:
@@ -1141,6 +1182,65 @@ def _purge_workflow_history(config: RuntimeConfig) -> IncidentPurgeResult:
     )
 
 
+def _artifact_sort_key(artifact: DashboardDataArtifactRef) -> tuple[str, int]:
+    return (artifact.created_at, artifact.artifact_id)
+
+
+def _cleanup_superseded_collect_artifacts(config: RuntimeConfig) -> ActiveRetentionCleanupResult:
+    owner, repo = _github_repository()
+    current_run_id = _github_run_id()
+    headers = _github_api_headers(config.github_token)
+    artifact_refs = _list_old_dashboard_data_artifacts(
+        owner,
+        repo,
+        current_run_id=current_run_id,
+        headers=headers,
+    )
+    newest_first = sorted(artifact_refs, key=_artifact_sort_key, reverse=True)
+    retained = newest_first[:COLLECT_ROLLBACK_ARTIFACTS]
+    delete_candidates = newest_first[COLLECT_ROLLBACK_ARTIFACTS:]
+    deleted_artifacts = 0
+    if delete_candidates:
+        artifact = delete_candidates[0]
+        print(f"Deleting superseded dashboard-data artifact {artifact.artifact_id}.")
+        status = _github_delete(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts/{artifact.artifact_id}",
+            headers,
+        )
+        if status == 204:
+            deleted_artifacts += 1
+    return ActiveRetentionCleanupResult(
+        prior_artifacts=len(artifact_refs),
+        retained_prior_artifacts=len(retained),
+        delete_candidates=len(delete_candidates),
+        deleted_artifacts=deleted_artifacts,
+    )
+
+
+def _write_verified_lineage(config: RuntimeConfig, parent: lineage.PayloadSnapshot, *, operation: str) -> None:
+    try:
+        child = lineage.write_verified_lineage(
+            config.data_dir,
+            parent=parent,
+            retention_days=config.retention_days,
+            action_version=VERSION,
+            operation=operation,
+        )
+    except lineage.LineageError as exc:
+        raise ActionError(str(exc)) from exc
+    print(
+        "Verified dashboard-data lineage "
+        + f"({operation}); payload digest {child.payload_digest[:12]}, semantic root {child.semantic_root_digest[:12]}."
+    )
+
+
+def _validate_parent_lineage(parent: lineage.PayloadSnapshot) -> None:
+    try:
+        lineage.validate_snapshot_lineage(parent)
+    except lineage.LineageError as exc:
+        raise ActionError(str(exc)) from exc
+
+
 def run_collect(
     config: RuntimeConfig,
     *,
@@ -1153,10 +1253,14 @@ def run_collect(
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
+    parent = lineage.snapshot_payload(config.data_dir)
     if execute_collect:
         collect_mod.main()
     merge.main()
+    _write_verified_lineage(config, parent, operation="collect")
     _encrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _write_outputs(config, before)
 
@@ -1182,7 +1286,11 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
+    parent = lineage.snapshot_payload(config.data_dir)
+    _write_verified_lineage(config, parent, operation="rotate-key")
     _set_runtime_env(config, next_key=True)
     _render_outputs(config, generate_readme=config.generate_readme)
     _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
@@ -1198,8 +1306,12 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
+    parent = lineage.snapshot_payload(config.data_dir)
     _set_runtime_env(config, next_key=True)
+    _write_verified_lineage(config, parent, operation="incident-reset")
     _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
     _summarize_incident_reset_prepared()
     _write_outputs(config, before)
@@ -1208,6 +1320,11 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
 def run_incident_reset_purge(config: RuntimeConfig) -> None:
     result = _purge_workflow_history(config)
     _summarize_incident_reset_purge(result)
+
+
+def run_collect_retention_cleanup(config: RuntimeConfig) -> None:
+    result = _cleanup_superseded_collect_artifacts(config)
+    _summarize_active_retention_cleanup(result)
 
 
 def run_docs_sync(config: RuntimeConfig) -> None:
@@ -1232,6 +1349,13 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
     try:
         config = loader()
         _mask_config_secrets(config)
+        if _parse_bool(
+            _env("REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY", "false"),
+            name="collect-retention-cleanup-only",
+        ):
+            validate_collect_cleanup_config(config)
+            run_collect_retention_cleanup(config)
+            return
         validate_config(config)
         if config.mode == "collect":
             run_collect(config)

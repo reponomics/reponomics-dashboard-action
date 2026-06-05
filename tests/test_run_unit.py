@@ -117,6 +117,16 @@ def test_load_config_rejects_invalid_artifact_run_id(
         run.load_config_from_env()
 
 
+def test_load_config_rejects_invalid_incident_purge_max_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_INCIDENT_PURGE_MAX_RUNS", "0")
+
+    with pytest.raises(run.ActionError, match="incident-purge-max-runs"):
+        run.load_config_from_env()
+
+
 def test_restore_artifact_skips_without_github_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -288,6 +298,27 @@ def test_main_dispatches_incident_reset_mode(
     assert called == ["incident-reset", "incident:incident-reset"]
 
 
+def test_main_dispatches_incident_reset_purge_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    called: list[str] = []
+    config = _config_for_run_tests(tmp_path, mode="incident-reset")
+
+    monkeypatch.setenv("REPONOMICS_INCIDENT_RESET_PURGE_ONLY", "true")
+    monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
+    monkeypatch.setattr(
+        run,
+        "run_incident_reset_purge",
+        lambda received: called.append(f"purge:{received.mode}"),
+    )
+
+    run.main(lambda: config)
+
+    assert called == ["incident-reset", "purge:incident-reset"]
+
+
 def test_main_dispatches_docs_sync_mode(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -330,6 +361,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
         "incident_confirm_irreversible": "",
+        "incident_purge_max_runs": run.INCIDENT_PURGE_DEFAULT_MAX_RUNS,
         "action_ref": "v0.2.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
     }

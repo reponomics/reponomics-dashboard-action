@@ -29,6 +29,7 @@ INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
 INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
+INCIDENT_PURGE_DEFAULT_MAX_RUNS = 30
 MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
 MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
 MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
@@ -83,6 +84,7 @@ class RuntimeConfig:
     incident_confirm_mode: str
     incident_confirm_purge: str
     incident_confirm_irreversible: str
+    incident_purge_max_runs: int
     action_ref: str
     action_repository: str
 
@@ -93,6 +95,15 @@ class RuntimeConfig:
     @property
     def publish_pages(self) -> bool:
         return self.publish_pages_requested and self.privacy_mode != "plain"
+
+
+@dataclass(frozen=True)
+class IncidentPurgeResult:
+    candidate_runs: int
+    run_limit: int
+    deleted_runs: int
+    deleted_artifacts: int
+    skipped_runs: int
 
 
 def _env(name: str, default: str = "") -> str:
@@ -140,6 +151,16 @@ def _parse_retention_days(raw: str) -> int:
         raise ActionError(f"retention-days must be an integer, got {raw!r}.") from exc
     if value < 1 or value > 90:
         raise ActionError("retention-days must be between 1 and 90.")
+    return value
+
+
+def _parse_incident_purge_max_runs(raw: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ActionError(f"incident-purge-max-runs must be an integer, got {raw!r}.") from exc
+    if value < 1:
+        raise ActionError("incident-purge-max-runs must be at least 1.")
     return value
 
 
@@ -253,6 +274,12 @@ def load_config_from_env() -> RuntimeConfig:
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
         incident_confirm_purge=_env("REPONOMICS_INCIDENT_CONFIRM_PURGE"),
         incident_confirm_irreversible=_env("REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE"),
+        incident_purge_max_runs=_parse_incident_purge_max_runs(
+            _env(
+                "REPONOMICS_INCIDENT_PURGE_MAX_RUNS",
+                str(INCIDENT_PURGE_DEFAULT_MAX_RUNS),
+            )
+        ),
         action_ref=_env("REPONOMICS_ACTION_REF"),
         action_repository=_env("REPONOMICS_ACTION_REPOSITORY"),
     )
@@ -989,17 +1016,56 @@ def _list_old_dashboard_data_artifact_ids(
     return artifact_ids
 
 
-def _summarize_incident_reset(*, deleted_runs: int, deleted_artifacts: int) -> None:
+def _summarize_incident_reset_prepared() -> None:
     lines = [
-        "## Incident reset complete",
+        "## Incident reset artifact prepared",
         "",
-        f"- Deleted workflow runs: {deleted_runs}",
-        f"- Deleted fallback artifacts: {deleted_artifacts}",
-        "- Rotated runtime encryption to `DASHBOARD_NEXT_SECRET`.",
+        "Retained dashboard data was restored, decrypted with",
+        "`DASHBOARD_SECRET_DO_NOT_REPLACE`, and re-encrypted with",
+        "`DASHBOARD_NEXT_SECRET`.",
         "",
-        "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE` before normal runs.",
-        "Then delete `DASHBOARD_NEXT_SECRET`.",
+        "The composite action uploads the re-encrypted `dashboard-data`",
+        "artifact before the purge step starts. If this is a serious exposure,",
+        "make the repository private and disable any published Pages dashboard",
+        "before relying on the purge.",
     ]
+    summary_path = _env("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with Path(summary_path).open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    else:
+        print("\n".join(lines))
+
+
+def _summarize_incident_reset_purge(result: IncidentPurgeResult) -> None:
+    lines = [
+        "## Incident reset purge complete",
+        "",
+        f"- Candidate prior workflow runs: {result.candidate_runs}",
+        f"- Run deletion budget: {result.run_limit}",
+        f"- Deleted workflow runs: {result.deleted_runs}",
+        f"- Deleted fallback artifacts: {result.deleted_artifacts}",
+        f"- Runs left for a later purge pass: {result.skipped_runs}",
+        "",
+        "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`",
+        "before normal runs, then delete `DASHBOARD_NEXT_SECRET`.",
+        "",
+        "Forks do not preserve this repository's workflow runs, Actions",
+        "artifacts, or secrets. The relevant exposure surfaces are current",
+        "repository access, Actions artifacts/runs, Pages output, local",
+        "downloads, browser/cache copies, and anyone who already had the",
+        "dashboard key.",
+    ]
+    if result.skipped_runs:
+        lines.extend(
+            [
+                "",
+                "Rerun incident reset if you want to delete the remaining prior",
+                "workflow runs. The conservative budget is intentional to avoid",
+                "spending excessive Actions minutes or pushing into GitHub API",
+                "rate limits during an emergency.",
+            ]
+        )
     summary_path = _env("GITHUB_STEP_SUMMARY")
     if summary_path:
         with Path(summary_path).open("a", encoding="utf-8") as handle:
@@ -1049,18 +1115,20 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         print("\n".join(lines))
 
 
-def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
+def _purge_workflow_history(config: RuntimeConfig) -> IncidentPurgeResult:
     owner, repo = _github_repository()
     current_run_id = _github_run_id()
     headers = _github_api_headers(config.github_token)
     workflow_id = _current_workflow_id(owner, repo, current_run_id, headers)
-    old_run_ids = _list_workflow_run_ids(
+    all_old_run_ids = _list_workflow_run_ids(
         owner,
         repo,
         workflow_id,
         current_run_id=current_run_id,
         headers=headers,
     )
+    old_run_ids = all_old_run_ids[: config.incident_purge_max_runs]
+    skipped_runs = len(all_old_run_ids) - len(old_run_ids)
     deleted_runs = 0
     for run_id in old_run_ids:
         status = _github_delete(
@@ -1086,7 +1154,13 @@ def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
         )
         if status == 204:
             deleted_artifacts += 1
-    return deleted_runs, deleted_artifacts
+    return IncidentPurgeResult(
+        candidate_runs=len(all_old_run_ids),
+        run_limit=config.incident_purge_max_runs,
+        deleted_runs=deleted_runs,
+        deleted_artifacts=deleted_artifacts,
+        skipped_runs=skipped_runs,
+    )
 
 
 def run_collect(
@@ -1149,12 +1223,13 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     _prepare_data_schema(config)
     _set_runtime_env(config, next_key=True)
     _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
-    deleted_runs, deleted_artifacts = _purge_workflow_history(config)
-    _summarize_incident_reset(
-        deleted_runs=deleted_runs,
-        deleted_artifacts=deleted_artifacts,
-    )
+    _summarize_incident_reset_prepared()
     _write_outputs(config, before)
+
+
+def run_incident_reset_purge(config: RuntimeConfig) -> None:
+    result = _purge_workflow_history(config)
+    _summarize_incident_reset_purge(result)
 
 
 def run_docs_sync(config: RuntimeConfig) -> None:
@@ -1188,6 +1263,11 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
             run_rotate_key(config)
         elif config.mode == "docs-sync":
             run_docs_sync(config)
+        elif _parse_bool(
+            _env("REPONOMICS_INCIDENT_RESET_PURGE_ONLY", "false"),
+            name="incident-reset-purge-only",
+        ):
+            run_incident_reset_purge(config)
         else:
             run_incident_reset(config)
     except ActionError as exc:

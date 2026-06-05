@@ -41,6 +41,13 @@ def _step_by_name(name: str) -> dict:
     raise AssertionError(f"missing action step named {name}")
 
 
+def _step_index(name: str) -> int:
+    for index, step in enumerate(_steps()):
+        if step.get("name") == name:
+            return index
+    raise AssertionError(f"missing action step named {name}")
+
+
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:
     step = _step_by_uses("actions/configure-pages@")
 
@@ -96,6 +103,29 @@ def test_allow_docs_sync_metadata_contract() -> None:
     assert "docs-sync-reason" not in outputs
     assert outputs["docs-action-version"]["value"] == "${{ steps.runtime.outputs.docs-action-version }}"
     assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"
+
+
+def test_incident_reset_purge_runs_after_data_upload() -> None:
+    action = _action()
+    inputs = action["inputs"]
+    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+    purge = _step_by_name("Purge incident reset history")
+
+    assert "incident-reset" in inputs["mode"]["description"]
+    assert inputs["incident-purge-max-runs"]["default"] == "30"
+    assert (
+        runtime_env["REPONOMICS_INCIDENT_PURGE_MAX_RUNS"]
+        == "${{ inputs.incident-purge-max-runs }}"
+    )
+    assert purge["if"] == "${{ inputs.mode == 'incident-reset' }}"
+    assert purge["env"]["REPONOMICS_INCIDENT_RESET_PURGE_ONLY"] == "true"
+    assert (
+        purge["env"]["REPONOMICS_INCIDENT_PURGE_MAX_RUNS"]
+        == "${{ inputs.incident-purge-max-runs }}"
+    )
+    assert _step_index("Purge incident reset history") > _step_index(
+        "Upload encrypted dashboard data artifact"
+    )
 
 
 def test_publish_pages_input_metadata_contract() -> None:

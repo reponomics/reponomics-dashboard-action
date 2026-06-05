@@ -42,6 +42,10 @@ inputs:
     description: Destructive incident-reset confirmation. Must be IRREVERSIBLE_ACTION_CONFIRMED for incident-reset mode.
     required: false
     default: ""
+  incident-purge-max-runs:
+    description: Maximum prior workflow runs to delete during the post-upload incident-reset purge. Rerun incident-reset to continue purging older runs.
+    required: false
+    default: "30"
   privacy-mode:
     description: "Privacy model: strong, casual, or plain. Strong requires a high-entropy dashboard secret; casual encrypts with any non-empty dashboard secret for non-targeted access control; plain stores retained CSV artifacts without encryption for private-repository use."
     required: false
@@ -149,6 +153,7 @@ runs:
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
+        REPONOMICS_INCIDENT_PURGE_MAX_RUNS: ${{ inputs.incident-purge-max-runs }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
       run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
@@ -209,3 +214,20 @@ runs:
         path: data
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
+
+    - name: Purge incident reset history
+      if: ${{ inputs.mode == 'incident-reset' }}
+      shell: bash
+      env:
+        REPONOMICS_MODE: incident-reset
+        REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
+        REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
+        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
+        REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
+        REPONOMICS_INCIDENT_PURGE_MAX_RUNS: ${{ inputs.incident-purge-max-runs }}
+        REPONOMICS_INCIDENT_RESET_PURGE_ONLY: "true"
+      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"

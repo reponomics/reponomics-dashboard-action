@@ -123,7 +123,7 @@ simple. Content addressing belongs inside the manifest as digest metadata.
   actively delete only after verified replacement, and artifacts retain a
   reasonable expiration safety window, ordinary outages should not destroy the
   last known good artifact. A watchdog may still be useful later, but it should
-  not be the primary retention model.
+  not be the primary retention model. [CORRECTION: PREVIOUS "OUTAGE-SENTINEL" MODE IS SUPERCEDED BY THIS METHODOLOGY. THERE IS NO NEED FOR A SENTINEL - EACH ARTIFACT IS LONG-LIVED BY DEFAULT, BUT DELETED AS FRESH DATA IS COLLECTED.]
 
 ## Alternatives Considered
 

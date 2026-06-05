@@ -40,6 +40,40 @@ def _sync(
     )
 
 
+def test_bundled_managed_docs_include_user_guides() -> None:
+    files = {
+        path.relative_to(run.MANAGED_DOCS_BUNDLE_DIR).as_posix()
+        for path in run.MANAGED_DOCS_BUNDLE_DIR.rglob("*")
+        if path.is_file()
+    }
+
+    assert {
+        "README.md",
+        "configuration.md",
+        "faq.md",
+        "privacy-and-artifacts.md",
+        "privacy-configuration-matrix.md",
+        "provenance.md",
+        "repository-guide.md",
+        "secure-dashboard-key.md",
+        "security.md",
+        "support.md",
+        "template-readme.md",
+        "trust-boundary.md",
+        "upgrade.md",
+    } <= files
+
+    for path in run.MANAGED_DOCS_BUNDLE_DIR.rglob("*.md"):
+        text = path.read_text(encoding="utf-8")
+        assert "architecture/PRIVACY_CONFIGURATION_MATRIX.md" not in text
+        assert "SECURE_DASHBOARD_KEY.md" not in text
+        assert "TRUST_BOUNDARY.md" not in text
+        assert "PROVENANCE.md" not in text
+        assert "FAQ.md" not in text
+        assert "template-action-release.yml" not in text
+        assert "reponomics-dashboard-dev" not in text
+
+
 def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     result = _sync(
         tmp_path,

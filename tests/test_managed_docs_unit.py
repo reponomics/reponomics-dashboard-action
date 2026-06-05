@@ -84,10 +84,15 @@ def test_bundled_managed_docs_include_user_guides() -> None:
 
     support = (run.MANAGED_DOCS_BUNDLE_DIR / "support.md").read_text(encoding="utf-8")
     security = (run.MANAGED_DOCS_BUNDLE_DIR / "security.md").read_text(encoding="utf-8")
+    template_readme = (run.MANAGED_DOCS_BUNDLE_DIR / "template-readme.md").read_text(
+        encoding="utf-8"
+    )
     assert "placeholder support document" in support
     assert "does not define a support policy" in support
     assert "placeholder security document" in security
     assert "does not define a security policy" in security
+    assert "backup copy of the setup README" in template_readme
+    assert "Token Scope And Repository Owners" in template_readme
 
 
 def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:

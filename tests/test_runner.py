@@ -104,7 +104,6 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
         "incident_confirm_irreversible": "",
-        "incident_purge_max_runs": run.INCIDENT_PURGE_DEFAULT_MAX_RUNS,
         "action_ref": "v0.1.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
     }
@@ -1525,7 +1524,6 @@ def test_purge_workflow_history_deletes_old_runs_and_related_artifacts(
         tmp_path,
         mode="incident-reset",
         dashboard_next_secret=NEXT_KEY,
-        incident_purge_max_runs=2,
     )
     monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
     monkeypatch.setenv("GITHUB_RUN_ID", "400")
@@ -1534,25 +1532,13 @@ def test_purge_workflow_history_deletes_old_runs_and_related_artifacts(
     def fake_fetch_json(url: str, headers: dict[str, str], allow_not_found: bool = False) -> Any:
         del allow_not_found
         captured_headers.append(headers)
-        if url.endswith("/actions/runs/400"):
-            return {"workflow_id": 7}
-        if "/actions/workflows/7/runs" in url and "page=1" in url:
-            return {
-                "workflow_runs": [
-                    {"id": 400},
-                    {"id": 399},
-                    {"id": 398},
-                    {"id": 397},
-                ]
-            }
-        if "/actions/workflows/7/runs" in url and "page=2" in url:
-            return {"workflow_runs": []}
         if "/actions/artifacts" in url and "page=1" in url:
             return {
                 "artifacts": [
                     {"id": 11, "workflow_run": {"id": 399}},
                     {"id": 12, "workflow_run": {"id": 400}},
                     {"id": 13, "workflow_run": {"id": 397}},
+                    {"id": 14, "workflow_run": None},
                 ]
             }
         if "/actions/artifacts" in url and "page=2" in url:
@@ -1572,15 +1558,14 @@ def test_purge_workflow_history_deletes_old_runs_and_related_artifacts(
 
     result = run._purge_workflow_history(config)
 
-    assert result.candidate_runs == 3
-    assert result.run_limit == 2
+    assert result.candidate_artifacts == 3
+    assert result.candidate_runs == 2
     assert result.deleted_runs == 2
-    assert result.deleted_artifacts == 1
-    assert result.skipped_runs == 1
+    assert result.deleted_fallback_artifacts == 1
     assert set(deleted_urls) == {
         "https://api.github.com/repos/demo/repo/actions/runs/399",
-        "https://api.github.com/repos/demo/repo/actions/runs/398",
-        "https://api.github.com/repos/demo/repo/actions/artifacts/11",
+        "https://api.github.com/repos/demo/repo/actions/runs/397",
+        "https://api.github.com/repos/demo/repo/actions/artifacts/14",
     }
     assert captured_headers
     assert all(headers["Authorization"] == f"Bearer {config.github_token}" for headers in captured_headers)
@@ -1617,7 +1602,7 @@ def test_incident_reset_reencrypts_without_rendering_outputs(
     def fake_purge(_config: run.RuntimeConfig) -> run.IncidentPurgeResult:
         nonlocal purge_called
         purge_called = True
-        return run.IncidentPurgeResult(0, 0, 0, 0, 0)
+        return run.IncidentPurgeResult(0, 0, 0, 0)
 
     monkeypatch.setattr(run, "_purge_workflow_history", fake_purge)
 

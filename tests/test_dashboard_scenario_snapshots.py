@@ -119,7 +119,6 @@ def _render_production_outputs(
         incident_confirm_mode="",
         incident_confirm_purge="",
         incident_confirm_irreversible="",
-        incident_purge_max_runs=run.INCIDENT_PURGE_DEFAULT_MAX_RUNS,
         action_ref="v0.13.0",
         action_repository="reponomics/reponomics-dashboard-action",
     )

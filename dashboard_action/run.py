@@ -29,7 +29,6 @@ INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
 INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
-INCIDENT_PURGE_DEFAULT_MAX_RUNS = 30
 MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
 MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
 MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
@@ -84,7 +83,6 @@ class RuntimeConfig:
     incident_confirm_mode: str
     incident_confirm_purge: str
     incident_confirm_irreversible: str
-    incident_purge_max_runs: int
     action_ref: str
     action_repository: str
 
@@ -99,11 +97,16 @@ class RuntimeConfig:
 
 @dataclass(frozen=True)
 class IncidentPurgeResult:
+    candidate_artifacts: int
     candidate_runs: int
-    run_limit: int
     deleted_runs: int
-    deleted_artifacts: int
-    skipped_runs: int
+    deleted_fallback_artifacts: int
+
+
+@dataclass(frozen=True)
+class DashboardDataArtifactRef:
+    artifact_id: int
+    workflow_run_id: int | None
 
 
 def _env(name: str, default: str = "") -> str:
@@ -151,16 +154,6 @@ def _parse_retention_days(raw: str) -> int:
         raise ActionError(f"retention-days must be an integer, got {raw!r}.") from exc
     if value < 1 or value > 90:
         raise ActionError("retention-days must be between 1 and 90.")
-    return value
-
-
-def _parse_incident_purge_max_runs(raw: str) -> int:
-    try:
-        value = int(raw)
-    except ValueError as exc:
-        raise ActionError(f"incident-purge-max-runs must be an integer, got {raw!r}.") from exc
-    if value < 1:
-        raise ActionError("incident-purge-max-runs must be at least 1.")
     return value
 
 
@@ -274,12 +267,6 @@ def load_config_from_env() -> RuntimeConfig:
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
         incident_confirm_purge=_env("REPONOMICS_INCIDENT_CONFIRM_PURGE"),
         incident_confirm_irreversible=_env("REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE"),
-        incident_purge_max_runs=_parse_incident_purge_max_runs(
-            _env(
-                "REPONOMICS_INCIDENT_PURGE_MAX_RUNS",
-                str(INCIDENT_PURGE_DEFAULT_MAX_RUNS),
-            )
-        ),
         action_ref=_env("REPONOMICS_ACTION_REF"),
         action_repository=_env("REPONOMICS_ACTION_REPOSITORY"),
     )
@@ -975,15 +962,14 @@ def _list_workflow_run_ids(
     return run_ids
 
 
-def _list_old_dashboard_data_artifact_ids(
+def _list_old_dashboard_data_artifacts(
     owner: str,
     repo: str,
     *,
     current_run_id: int,
-    old_run_ids: set[int],
     headers: dict[str, str],
-) -> list[int]:
-    artifact_ids: list[int] = []
+) -> list[DashboardDataArtifactRef]:
+    artifact_refs: list[DashboardDataArtifactRef] = []
     page = 1
     while True:
         payload = _github_fetch_json(
@@ -1008,12 +994,16 @@ def _list_old_dashboard_data_artifact_ids(
                 continue
             if artifact_run_id == current_run_id:
                 continue
-            if isinstance(artifact_run_id, int) and artifact_run_id in old_run_ids:
-                artifact_ids.append(artifact_id)
+            artifact_refs.append(
+                DashboardDataArtifactRef(
+                    artifact_id=artifact_id,
+                    workflow_run_id=artifact_run_id if isinstance(artifact_run_id, int) else None,
+                )
+            )
         if len(artifacts) < 100:
             break
         page += 1
-    return artifact_ids
+    return artifact_refs
 
 
 def _summarize_incident_reset_prepared() -> None:
@@ -1041,11 +1031,10 @@ def _summarize_incident_reset_purge(result: IncidentPurgeResult) -> None:
     lines = [
         "## Incident reset purge complete",
         "",
-        f"- Candidate prior workflow runs: {result.candidate_runs}",
-        f"- Run deletion budget: {result.run_limit}",
+        f"- Prior dashboard-data artifacts found: {result.candidate_artifacts}",
+        f"- Associated workflow runs found: {result.candidate_runs}",
         f"- Deleted workflow runs: {result.deleted_runs}",
-        f"- Deleted fallback artifacts: {result.deleted_artifacts}",
-        f"- Runs left for a later purge pass: {result.skipped_runs}",
+        f"- Deleted fallback artifacts: {result.deleted_fallback_artifacts}",
         "",
         "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`",
         "before normal runs, then delete `DASHBOARD_NEXT_SECRET`.",
@@ -1056,16 +1045,6 @@ def _summarize_incident_reset_purge(result: IncidentPurgeResult) -> None:
         "downloads, browser/cache copies, and anyone who already had the",
         "dashboard key.",
     ]
-    if result.skipped_runs:
-        lines.extend(
-            [
-                "",
-                "Rerun incident reset if you want to delete the remaining prior",
-                "workflow runs. The conservative budget is intentional to avoid",
-                "spending excessive Actions minutes or pushing into GitHub API",
-                "rate limits during an emergency.",
-            ]
-        )
     summary_path = _env("GITHUB_STEP_SUMMARY")
     if summary_path:
         with Path(summary_path).open("a", encoding="utf-8") as handle:
@@ -1119,16 +1098,19 @@ def _purge_workflow_history(config: RuntimeConfig) -> IncidentPurgeResult:
     owner, repo = _github_repository()
     current_run_id = _github_run_id()
     headers = _github_api_headers(config.github_token)
-    workflow_id = _current_workflow_id(owner, repo, current_run_id, headers)
-    all_old_run_ids = _list_workflow_run_ids(
+    artifact_refs = _list_old_dashboard_data_artifacts(
         owner,
         repo,
-        workflow_id,
         current_run_id=current_run_id,
         headers=headers,
     )
-    old_run_ids = all_old_run_ids[: config.incident_purge_max_runs]
-    skipped_runs = len(all_old_run_ids) - len(old_run_ids)
+    old_run_ids = sorted(
+        {
+            artifact.workflow_run_id
+            for artifact in artifact_refs
+            if artifact.workflow_run_id is not None
+        }
+    )
     deleted_runs = 0
     for run_id in old_run_ids:
         status = _github_delete(
@@ -1138,28 +1120,24 @@ def _purge_workflow_history(config: RuntimeConfig) -> IncidentPurgeResult:
         if status == 204:
             deleted_runs += 1
 
-    old_run_id_set = set(old_run_ids)
-    artifact_ids = _list_old_dashboard_data_artifact_ids(
-        owner,
-        repo,
-        current_run_id=current_run_id,
-        old_run_ids=old_run_id_set,
-        headers=headers,
-    )
-    deleted_artifacts = 0
-    for artifact_id in artifact_ids:
+    fallback_artifact_ids = [
+        artifact.artifact_id
+        for artifact in artifact_refs
+        if artifact.workflow_run_id is None
+    ]
+    deleted_fallback_artifacts = 0
+    for artifact_id in fallback_artifact_ids:
         status = _github_delete(
             f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts/{artifact_id}",
             headers,
         )
         if status == 204:
-            deleted_artifacts += 1
+            deleted_fallback_artifacts += 1
     return IncidentPurgeResult(
-        candidate_runs=len(all_old_run_ids),
-        run_limit=config.incident_purge_max_runs,
+        candidate_artifacts=len(artifact_refs),
+        candidate_runs=len(old_run_ids),
         deleted_runs=deleted_runs,
-        deleted_artifacts=deleted_artifacts,
-        skipped_runs=skipped_runs,
+        deleted_fallback_artifacts=deleted_fallback_artifacts,
     )
 
 

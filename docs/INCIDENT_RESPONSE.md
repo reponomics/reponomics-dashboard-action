@@ -22,14 +22,17 @@ Before running the workflow:
 2. Decrypt retained data with `DASHBOARD_SECRET_DO_NOT_REPLACE`.
 3. Re-encrypt retained data with `DASHBOARD_NEXT_SECRET`.
 4. Upload the new encrypted `dashboard-data` artifact.
-5. Delete prior workflow runs from the same workflow, up to
-   `incident-purge-max-runs`.
-6. Delete remaining `dashboard-data` artifacts tied to those selected old runs.
+5. Find prior `dashboard-data` artifacts, excluding the artifact uploaded by the
+   current reset run.
+6. Delete workflow runs associated with those prior artifacts. GitHub deletes a
+   run's artifacts when the run is deleted.
+7. Delete only those old `dashboard-data` artifacts that GitHub reports without
+   an associated workflow run id.
 
-The default deletion budget is 30 prior workflow runs. This is deliberately
-conservative: deleting Actions history is a non-GET API workload, and emergency
-cleanup should avoid spending excessive Actions minutes or pushing into GitHub
-API rate limits. If more old runs remain, rerun `incident-reset`.
+This purge is expected to be small once canonical artifact lineage and active
+retention are in place. It is not a long-tail archival cleanup strategy; it is
+the incident-specific cleanup of remaining GitHub-hosted dashboard-data history
+after a fresh encrypted successor exists.
 
 After a successful run, promote `DASHBOARD_NEXT_SECRET` into
 `DASHBOARD_SECRET_DO_NOT_REPLACE`, then delete `DASHBOARD_NEXT_SECRET`.

@@ -286,6 +286,8 @@ def load_config_from_env() -> RuntimeConfig:
 def validate_config(config: RuntimeConfig) -> None:
     if config.mode == "collect" and not config.collection_token:
         raise ActionError("collection-token, COLLECTION_TOKEN, or GH_TOKEN is required for collect mode.")
+    if config.mode == "collect" and not config.github_token:
+        raise ActionError("github-token, GITHUB_TOKEN, or GH_TOKEN is required for collect mode.")
     if config.repo_is_public and config.privacy_mode == "plain":
         raise ActionError("privacy-mode plain is only supported for private repositories.")
     if config.repo_is_public and config.generate_readme:
@@ -1251,9 +1253,10 @@ def run_collect(
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
     parent = lineage.snapshot_payload(config.data_dir)
-    _validate_parent_lineage(parent)
     if execute_collect:
         collect_mod.main()
     merge.main()
@@ -1283,9 +1286,10 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
     parent = lineage.snapshot_payload(config.data_dir)
-    _validate_parent_lineage(parent)
     _write_verified_lineage(config, parent, operation="rotate-key")
     _set_runtime_env(config, next_key=True)
     _render_outputs(config, generate_readme=config.generate_readme)
@@ -1302,9 +1306,10 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     if restore_artifact:
         _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    restored_parent = lineage.snapshot_payload(config.data_dir)
+    _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
     parent = lineage.snapshot_payload(config.data_dir)
-    _validate_parent_lineage(parent)
     _set_runtime_env(config, next_key=True)
     _write_verified_lineage(config, parent, operation="incident-reset")
     _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")

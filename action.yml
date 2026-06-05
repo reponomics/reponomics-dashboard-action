@@ -19,7 +19,7 @@ inputs:
     required: false
     default: "false"
   github-token:
-    description: Token used for GitHub artifact/repository workflow operations.
+    description: "Token used for GitHub artifact/repository workflow operations. Required for collect artifact cleanup and incident-reset history purge; pass github-token: ${{ github.token }} from the caller workflow."
     required: false
     default: ""
   dashboard-secret:

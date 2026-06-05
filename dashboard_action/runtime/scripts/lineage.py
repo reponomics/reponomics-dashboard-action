@@ -133,6 +133,11 @@ def validate_snapshot_lineage(snapshot: PayloadSnapshot) -> None:
     if expected_kind and expected_kind != ARTIFACT_KIND:
         raise LineageError(f"Unexpected lineage artifact kind {expected_kind!r}.")
 
+    recorded_files = snapshot.lineage.get("files")
+    if isinstance(recorded_files, dict):
+        _validate_recorded_file_digests(snapshot, recorded_files)
+        return
+
     _validate_digest(
         label="payload_digest",
         expected=str(snapshot.lineage.get("payload_digest") or ""),
@@ -170,6 +175,19 @@ def _hash_json(payload: Any) -> str:
 def _validate_digest(*, label: str, expected: str, actual: str) -> None:
     if expected and expected != actual:
         raise LineageError(f"Restored dashboard-data lineage {label} does not match the current payload.")
+
+
+def _validate_recorded_file_digests(snapshot: PayloadSnapshot, recorded_files: dict[str, Any]) -> None:
+    for filename, raw_summary in recorded_files.items():
+        if not isinstance(filename, str) or not isinstance(raw_summary, dict):
+            continue
+        expected = str(raw_summary.get("sha256") or "")
+        actual = snapshot.files.get(filename, FileSummary("", 0, "", "")).sha256
+        if expected and expected != actual:
+            raise LineageError(
+                "Restored dashboard-data lineage file digest does not match the current payload "
+                + f"for {filename}."
+            )
 
 
 def _row_identity(filename: str, row: dict[str, str]) -> str:

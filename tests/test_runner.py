@@ -717,6 +717,13 @@ def test_secret_validation_for_encrypted_collect(tmp_path: Path) -> None:
         run.validate_config(config)
 
 
+def test_collect_requires_github_token_before_upload(tmp_path: Path) -> None:
+    config = _config(tmp_path, github_token="")
+
+    with pytest.raises(run.ActionError, match="github-token"):
+        run.validate_config(config)
+
+
 def test_casual_privacy_mode_allows_low_entropy_secret(tmp_path: Path) -> None:
     config = _config(
         tmp_path,
@@ -827,8 +834,40 @@ def test_lineage_rejects_restored_payload_digest_mismatch(
     run.storage.write_csv((config.data_dir / "traffic-log.csv").as_posix(), rows, run.storage.LOG_FIELDS)
     tampered = run.lineage.snapshot_payload(config.data_dir)
 
-    with pytest.raises(run.lineage.LineageError, match="payload_digest does not match"):
+    with pytest.raises(run.lineage.LineageError, match="file digest does not match"):
         run.lineage.validate_snapshot_lineage(tampered)
+
+
+def test_lineage_accepts_recorded_parent_before_additive_registry_migration(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path)
+    _seed_log(config.data_dir)
+    run._patch_runtime_paths(config)
+    run._prepare_data_schema(config)
+    parent = run.lineage.snapshot_payload(config.data_dir)
+    run.lineage.write_verified_lineage(
+        config.data_dir,
+        parent=parent,
+        retention_days=config.retention_days,
+        action_version=run.VERSION,
+        operation="collect",
+    )
+
+    original_registry = run.storage.CSV_REGISTRY
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_REGISTRY",
+        {
+            **original_registry,
+            "future-compatible.csv": (["repo", "ts", "schema_version"], "ts"),
+        },
+    )
+    restored = run.lineage.snapshot_payload(config.data_dir)
+
+    run.lineage.validate_snapshot_lineage(restored)
 
 
 def test_publish_fixture_renders_outputs_without_live_api(

@@ -99,6 +99,7 @@ def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> Non
         privacy_mode="strong",
         repo_is_public=True,
         generate_readme=True,
+        github_token="ghp_test",
     )
 
     with pytest.raises(run.ActionError, match="generate-readme is only supported"):

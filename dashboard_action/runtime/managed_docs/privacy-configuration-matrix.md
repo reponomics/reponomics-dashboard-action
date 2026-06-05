@@ -1,5 +1,8 @@
 # Reponomics Privacy Configuration Matrix
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 Status: current for action `{{ACTION_VERSION}}`.
 
 Repository visibility and Reponomics privacy mode are separate concepts. Repository visibility controls who can read the repository. `privacy-mode` controls how retained artifacts and hosted dashboard output are stored.

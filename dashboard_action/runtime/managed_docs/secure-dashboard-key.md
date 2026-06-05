@@ -1,5 +1,8 @@
 # Secure Dashboard Key Generation
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 `privacy-mode=strong` and `privacy-mode=casual` use
 `DASHBOARD_SECRET_DO_NOT_REPLACE` to encrypt retained artifacts and hosted dashboard
 data. Anyone with this key can decrypt the dashboard and CSV export. GitHub

@@ -1,5 +1,8 @@
 # Provenance And Supply Chain Verification
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 This document explains how a dashboard repository user can inspect the evidence behind the Reponomics action, generated template, vendored browser assets, release materials, and generated dashboard artifacts. It is intentionally conservative: a claim belongs here only if it is backed by repository files, CI, GitHub metadata, or a command a user can run.
 
 Most users should follow the setup guide and use the recommended action version. This document is for users, researchers, maintainers, or reviewers who want a higher-assurance review path.

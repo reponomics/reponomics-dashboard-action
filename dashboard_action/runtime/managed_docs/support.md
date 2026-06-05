@@ -1,7 +1,8 @@
 # Support Guidance
 
-This dashboard repository is owned by its repository owner. A copied dashboard repository does not create an ongoing support relationship with Reponomics.
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
-Current Reponomics-managed usage guidance lives in this directory when managed docs sync is enabled. Start with [Dashboard repository guide](repository-guide.md), [FAQ](faq.md), and [Privacy and artifacts](privacy-and-artifacts.md).
+This is a placeholder support document for repositories generated from the Reponomics Dashboard template. It does not define a support policy, availability promise, response timeline, maintenance commitment, or public-use readiness statement from Reponomics.
 
-Repository-specific problems such as secrets, workflow permissions, Pages settings, branch protections, collaborator access, and retained artifacts are controlled by the repository owner.
+Until Reponomics publishes authoritative support guidance, treat the rest of this managed documentation as provisional background only. Start with [Dashboard repository guide](repository-guide.md), [FAQ](faq.md), and [Privacy and artifacts](privacy-and-artifacts.md).

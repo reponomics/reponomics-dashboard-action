@@ -1,5 +1,8 @@
 # Repository Access And Trust Boundary
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 Reponomics stores its long-lived dashboard state in GitHub Actions artifacts and controls encrypted dashboard access through repository secrets and workflows. That means repository access is part of the dashboard security model, not just a source-code collaboration setting.
 
 The strongest practical rule is:

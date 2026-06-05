@@ -11,6 +11,14 @@ from dashboard_action import run
 
 managed_docs = run.managed_docs
 
+PRERELEASE_WARNING = " ".join(
+    [
+        "The Reponomics Dashboard template is currently in a pre-release public hardening phase.",
+        "It is not intended for public use, and documentation in this managed-docs bundle",
+        "should not be considered authoritative.",
+    ]
+)
+
 
 def _write_bundle(root: Path, files: dict[str, str]) -> Path:
     if root.exists():
@@ -65,6 +73,7 @@ def test_bundled_managed_docs_include_user_guides() -> None:
 
     for path in run.MANAGED_DOCS_BUNDLE_DIR.rglob("*.md"):
         text = path.read_text(encoding="utf-8")
+        assert PRERELEASE_WARNING in text
         assert "architecture/PRIVACY_CONFIGURATION_MATRIX.md" not in text
         assert "SECURE_DASHBOARD_KEY.md" not in text
         assert "TRUST_BOUNDARY.md" not in text
@@ -72,6 +81,13 @@ def test_bundled_managed_docs_include_user_guides() -> None:
         assert "FAQ.md" not in text
         assert "template-action-release.yml" not in text
         assert "reponomics-dashboard-dev" not in text
+
+    support = (run.MANAGED_DOCS_BUNDLE_DIR / "support.md").read_text(encoding="utf-8")
+    security = (run.MANAGED_DOCS_BUNDLE_DIR / "security.md").read_text(encoding="utf-8")
+    assert "placeholder support document" in support
+    assert "does not define a support policy" in support
+    assert "placeholder security document" in security
+    assert "does not define a security policy" in security
 
 
 def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:

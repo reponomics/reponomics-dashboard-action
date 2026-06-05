@@ -1,5 +1,8 @@
 # Privacy And Artifacts
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 Reponomics separates retained dashboard data from committed repository files. Collection writes retained data to GitHub Actions artifacts, not to git history.
 
 `strong` privacy mode encrypts retained data and hosted dashboard export assets with a high-entropy dashboard secret. Public dashboard repositories should normally use this mode.

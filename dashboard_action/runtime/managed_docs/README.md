@@ -1,6 +1,9 @@
 # Reponomics Managed Docs
 
 > [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
+> [!WARNING]
 > This directory is the default location for Reponomics managed documentation. If `allow_docs_sync` is `true`, local edits in `docs/reponomics/` may be overwritten automatically when docs sync runs. Set `allow_docs_sync: false` before editing if you want to own this directory manually.
 
 Generated for Reponomics Dashboard Action {{ACTION_VERSION}}.

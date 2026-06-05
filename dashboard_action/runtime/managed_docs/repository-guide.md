@@ -1,5 +1,8 @@
 # Reponomics Dashboard Documentation
 
+> [!WARNING]
+> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+
 The Reponomics Dashboard is a GitHub-native repository traffic and growth dashboard. It collects views, clones, top referrers, popular paths, and repository growth counters, then renders static dashboard output during the `publish` workflow.
 
 This generated repository is intentionally thin. The workflows call the pinned `reponomics-dashboard-action` release configured in this repository's workflow files. The action owns collection, artifact restore/upload, schema migration, encryption, README rendering, dashboard rendering, CSV export packaging, dashboard key rotation, incident reset behavior, and managed local documentation sync.

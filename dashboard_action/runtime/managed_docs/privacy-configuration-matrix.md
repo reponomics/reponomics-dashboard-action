@@ -11,9 +11,9 @@ Repository visibility and Reponomics privacy mode are separate concepts. Reposit
 
 | Mode | Repository visibility | Retained artifact | Hosted Pages dashboard | Downloadable dashboard artifact | README output | Secret policy |
 | --- | --- | --- | --- | --- | --- | --- |
-| `strong` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment | encrypted dashboard artifact when hosted publication is disabled | setup commits a static README; private repos may commit metrics when `generate-readme=true`; public repos do not commit README metrics | generated high-entropy `DASHBOARD_SECRET_DO_NOT_REPLACE` required |
+| `strong` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment | encrypted dashboard artifact when hosted publication is disabled | setup commits a static README; private repos may commit a markdown dashboard to the README when `generate-readme=true`; public repos do not commit README dashboards | generated high-entropy `DASHBOARD_SECRET_DO_NOT_REPLACE` required |
 | `casual` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment | encrypted dashboard artifact when hosted publication is disabled | same as `strong` | any non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE`; weak-secret risk is accepted |
-| `plain` | private only | plaintext retained CSV files | disabled | plaintext dashboard artifact | setup commits a static README; private repos may commit metrics when `generate-readme=true` | no dashboard secret |
+| `plain` | private only | plaintext retained CSV files | disabled | plaintext dashboard artifact | setup commits a static README; private repos may commit README dashboards when `generate-readme=true` | no dashboard secret |
 
 ## Strong
 
@@ -23,7 +23,7 @@ Use `strong` as the default. It protects retained artifacts and hosted dashboard
 - publication timing
 - encrypted payload size
 - workflow metadata
-- metrics deliberately committed to a private repository README
+- metrics included in a private repository's README dashboard
 
 `strong` is still a shared-secret model, not per-user authentication.
 

@@ -209,3 +209,19 @@ runs:
         path: data
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
+
+    - name: Purge incident reset history
+      if: ${{ inputs.mode == 'incident-reset' }}
+      shell: bash
+      env:
+        REPONOMICS_MODE: incident-reset
+        REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
+        REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
+        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
+        REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
+        REPONOMICS_INCIDENT_RESET_PURGE_ONLY: "true"
+      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"

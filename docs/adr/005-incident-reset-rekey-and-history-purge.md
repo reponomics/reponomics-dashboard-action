@@ -21,8 +21,10 @@ Add a dedicated runtime mode: `incident-reset`.
 1. Restores the current retained artifact.
 2. Decrypts retained state with `DASHBOARD_SECRET_DO_NOT_REPLACE`.
 3. Re-encrypts retained state with `DASHBOARD_NEXT_SECRET`.
-4. Deletes prior workflow runs from the same workflow as the currently executing incident-reset run.
-5. Deletes `dashboard-data` artifacts associated with those deleted runs.
+4. Uploads the new encrypted retained artifact.
+5. Finds prior `dashboard-data` artifacts, excluding the artifact uploaded by the current reset run.
+6. Deletes workflow runs associated with those prior artifacts. GitHub deletes a run's artifacts when the run is deleted.
+7. Deletes only old `dashboard-data` artifacts that GitHub reports without an associated workflow run id.
 
 The mode is intentionally destructive and requires explicit triple confirmation inputs:
 
@@ -38,14 +40,17 @@ The mode is intentionally destructive and requires explicit triple confirmation 
 - `github-token` with `actions: write`
 - GitHub Actions runtime context with `GITHUB_REPOSITORY` and `GITHUB_RUN_ID`
 
+The recommended operational response is to make the dashboard repository private
+and disable any published Pages dashboard before running `incident-reset`.
+
 ## Scope Clarification
 
 `incident-reset` is not a general outage-preservation tool and it does not render Pages or README outputs. It is an emergency rekey-and-purge operation.
 
 Deletion scope is intentionally bounded:
 
-- Workflow runs: all runs for the same workflow id, excluding the currently running incident-reset run.
-- Artifacts: `dashboard-data` artifacts tied to those old run ids, excluding artifacts tied to the current run.
+- Workflow runs: runs associated with prior `dashboard-data` artifacts, excluding the currently running incident-reset run.
+- Artifacts: only prior `dashboard-data` artifacts that GitHub reports without an associated workflow run id.
 
 This mode does not claim global repository cleanup outside those scopes.
 
@@ -63,6 +68,8 @@ Delete operations are executed through GitHub REST APIs with retry behavior alig
 - honor secondary rate-limit windows
 - retry on retryable throttle/server failures
 - treat `204` and `404` delete responses as non-fatal completion for that resource
+- delete sequentially, never concurrently
+- execute deletion sequentially so GitHub API throttling remains observable and retryable
 
 If required repository/run context is missing or malformed, the mode fails fast with a user-facing action error.
 
@@ -112,3 +119,17 @@ This ADR does not define:
 ## Implementation Status, 2026-05-25
 
 Implemented in `dashboard_action/run.py`, exposed in `action.yml`, documented in `README.md`, and covered by runtime tests in `tests/test_run_unit.py` and `tests/test_runner.py`.
+
+## Implementation Update, 2026-06-05
+
+The composite action now separates reset preparation from purge execution.
+`run_incident_reset` restores, decrypts, re-encrypts, and stages the new
+encrypted retained artifact. The composite action uploads that new
+`dashboard-data` artifact before invoking the post-upload purge step. This
+preserves a recovery checkpoint before destructive cleanup begins.
+
+The purge step is now artifact-driven rather than workflow-id-driven. It finds
+old `dashboard-data` artifacts repository-wide, deletes their associated
+workflow runs, and relies on GitHub's run deletion behavior to delete run-owned
+artifacts. Direct artifact deletion remains only a fallback for old artifacts
+that do not report an associated workflow run id.

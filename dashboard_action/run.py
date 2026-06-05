@@ -95,6 +95,20 @@ class RuntimeConfig:
         return self.publish_pages_requested and self.privacy_mode != "plain"
 
 
+@dataclass(frozen=True)
+class IncidentPurgeResult:
+    candidate_artifacts: int
+    candidate_runs: int
+    deleted_runs: int
+    deleted_fallback_artifacts: int
+
+
+@dataclass(frozen=True)
+class DashboardDataArtifactRef:
+    artifact_id: int
+    workflow_run_id: int | None
+
+
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
@@ -948,15 +962,14 @@ def _list_workflow_run_ids(
     return run_ids
 
 
-def _list_old_dashboard_data_artifact_ids(
+def _list_old_dashboard_data_artifacts(
     owner: str,
     repo: str,
     *,
     current_run_id: int,
-    old_run_ids: set[int],
     headers: dict[str, str],
-) -> list[int]:
-    artifact_ids: list[int] = []
+) -> list[DashboardDataArtifactRef]:
+    artifact_refs: list[DashboardDataArtifactRef] = []
     page = 1
     while True:
         payload = _github_fetch_json(
@@ -981,24 +994,56 @@ def _list_old_dashboard_data_artifact_ids(
                 continue
             if artifact_run_id == current_run_id:
                 continue
-            if isinstance(artifact_run_id, int) and artifact_run_id in old_run_ids:
-                artifact_ids.append(artifact_id)
+            artifact_refs.append(
+                DashboardDataArtifactRef(
+                    artifact_id=artifact_id,
+                    workflow_run_id=artifact_run_id if isinstance(artifact_run_id, int) else None,
+                )
+            )
         if len(artifacts) < 100:
             break
         page += 1
-    return artifact_ids
+    return artifact_refs
 
 
-def _summarize_incident_reset(*, deleted_runs: int, deleted_artifacts: int) -> None:
+def _summarize_incident_reset_prepared() -> None:
     lines = [
-        "## Incident reset complete",
+        "## Incident reset artifact prepared",
         "",
-        f"- Deleted workflow runs: {deleted_runs}",
-        f"- Deleted fallback artifacts: {deleted_artifacts}",
-        "- Rotated runtime encryption to `DASHBOARD_NEXT_SECRET`.",
+        "Retained dashboard data was restored, decrypted with",
+        "`DASHBOARD_SECRET_DO_NOT_REPLACE`, and re-encrypted with",
+        "`DASHBOARD_NEXT_SECRET`.",
         "",
-        "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE` before normal runs.",
-        "Then delete `DASHBOARD_NEXT_SECRET`.",
+        "The composite action uploads the re-encrypted `dashboard-data`",
+        "artifact before the purge step starts. If this is a serious exposure,",
+        "make the repository private and disable any published Pages dashboard",
+        "before relying on the purge.",
+    ]
+    summary_path = _env("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with Path(summary_path).open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+    else:
+        print("\n".join(lines))
+
+
+def _summarize_incident_reset_purge(result: IncidentPurgeResult) -> None:
+    lines = [
+        "## Incident reset purge complete",
+        "",
+        f"- Prior dashboard-data artifacts found: {result.candidate_artifacts}",
+        f"- Associated workflow runs found: {result.candidate_runs}",
+        f"- Deleted workflow runs: {result.deleted_runs}",
+        f"- Deleted fallback artifacts: {result.deleted_fallback_artifacts}",
+        "",
+        "Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`",
+        "before normal runs, then delete `DASHBOARD_NEXT_SECRET`.",
+        "",
+        "Forks do not preserve this repository's workflow runs, Actions",
+        "artifacts, or secrets. The relevant exposure surfaces are current",
+        "repository access, Actions artifacts/runs, Pages output, local",
+        "downloads, browser/cache copies, and anyone who already had the",
+        "dashboard key.",
     ]
     summary_path = _env("GITHUB_STEP_SUMMARY")
     if summary_path:
@@ -1049,17 +1094,22 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         print("\n".join(lines))
 
 
-def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
+def _purge_workflow_history(config: RuntimeConfig) -> IncidentPurgeResult:
     owner, repo = _github_repository()
     current_run_id = _github_run_id()
     headers = _github_api_headers(config.github_token)
-    workflow_id = _current_workflow_id(owner, repo, current_run_id, headers)
-    old_run_ids = _list_workflow_run_ids(
+    artifact_refs = _list_old_dashboard_data_artifacts(
         owner,
         repo,
-        workflow_id,
         current_run_id=current_run_id,
         headers=headers,
+    )
+    old_run_ids = sorted(
+        {
+            artifact.workflow_run_id
+            for artifact in artifact_refs
+            if artifact.workflow_run_id is not None
+        }
     )
     deleted_runs = 0
     for run_id in old_run_ids:
@@ -1070,23 +1120,25 @@ def _purge_workflow_history(config: RuntimeConfig) -> tuple[int, int]:
         if status == 204:
             deleted_runs += 1
 
-    old_run_id_set = set(old_run_ids)
-    artifact_ids = _list_old_dashboard_data_artifact_ids(
-        owner,
-        repo,
-        current_run_id=current_run_id,
-        old_run_ids=old_run_id_set,
-        headers=headers,
-    )
-    deleted_artifacts = 0
-    for artifact_id in artifact_ids:
+    fallback_artifact_ids = [
+        artifact.artifact_id
+        for artifact in artifact_refs
+        if artifact.workflow_run_id is None
+    ]
+    deleted_fallback_artifacts = 0
+    for artifact_id in fallback_artifact_ids:
         status = _github_delete(
             f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts/{artifact_id}",
             headers,
         )
         if status == 204:
-            deleted_artifacts += 1
-    return deleted_runs, deleted_artifacts
+            deleted_fallback_artifacts += 1
+    return IncidentPurgeResult(
+        candidate_artifacts=len(artifact_refs),
+        candidate_runs=len(old_run_ids),
+        deleted_runs=deleted_runs,
+        deleted_fallback_artifacts=deleted_fallback_artifacts,
+    )
 
 
 def run_collect(
@@ -1149,12 +1201,13 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     _prepare_data_schema(config)
     _set_runtime_env(config, next_key=True)
     _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
-    deleted_runs, deleted_artifacts = _purge_workflow_history(config)
-    _summarize_incident_reset(
-        deleted_runs=deleted_runs,
-        deleted_artifacts=deleted_artifacts,
-    )
+    _summarize_incident_reset_prepared()
     _write_outputs(config, before)
+
+
+def run_incident_reset_purge(config: RuntimeConfig) -> None:
+    result = _purge_workflow_history(config)
+    _summarize_incident_reset_purge(result)
 
 
 def run_docs_sync(config: RuntimeConfig) -> None:
@@ -1188,6 +1241,11 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
             run_rotate_key(config)
         elif config.mode == "docs-sync":
             run_docs_sync(config)
+        elif _parse_bool(
+            _env("REPONOMICS_INCIDENT_RESET_PURGE_ONLY", "false"),
+            name="incident-reset-purge-only",
+        ):
+            run_incident_reset_purge(config)
         else:
             run_incident_reset(config)
     except ActionError as exc:

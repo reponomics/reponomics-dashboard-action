@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.17.0...v0.18.0) (2026-06-05)
+
+
+### Features
+
+* harden incident reset purge sequencing ([73102c8](https://github.com/reponomics/reponomics-dashboard-action/commit/73102c88f978f82617b215b1a7b6135a46885562))
+
 ## [0.17.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.16.0...v0.17.0) (2026-05-31)
 
 

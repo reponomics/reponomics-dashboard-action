@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.19.0...v0.20.0) (2026-06-05)
+
+
+### Features
+
+* expand managed docs bundle ([#83](https://github.com/reponomics/reponomics-dashboard-action/issues/83)) ([4e963ae](https://github.com/reponomics/reponomics-dashboard-action/commit/4e963ae74943e956ed85f344ba8c44d8eac4f4d8))
+
 ## [0.19.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.18.0...v0.19.0) (2026-06-05)
 
 

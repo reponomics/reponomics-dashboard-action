@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.0...v0.20.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* update GitHub REST API version ([#87](https://github.com/reponomics/reponomics-dashboard-action/issues/87)) ([a2a078e](https://github.com/reponomics/reponomics-dashboard-action/commit/a2a078eb77ce1e6c283cb4cdcf8603638d21cc2b))
+
 ## [0.20.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.19.0...v0.20.0) (2026-06-05)
 
 

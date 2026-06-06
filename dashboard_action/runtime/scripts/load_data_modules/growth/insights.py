@@ -1,14 +1,14 @@
 """Cross-signal growth insight candidate orchestration."""
 
-from load_data_growth import growth_analytics
-from load_data_growth_attention import (
+from load_data_modules.growth.core import growth_analytics
+from load_data_modules.growth.attention import (
     _clone_heavy_star_light,
     _downstream_without_traffic_spike,
     _high_attention_low_interest,
     _quiet_resonance,
     _traffic_without_downstream_growth,
 )
-from load_data_growth_counters import (
+from load_data_modules.growth.counters import (
     _fork_spike,
     _negative_counter_movement,
     _watcher_subscriber_spike,

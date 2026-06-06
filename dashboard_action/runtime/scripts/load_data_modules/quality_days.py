@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from load_data_quality_summary import (
+from load_data_modules.quality_summary import (
     _all_quality_repos,
     _quality_status,
     _quality_summary_for_rows,

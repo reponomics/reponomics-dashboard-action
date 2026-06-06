@@ -2,7 +2,7 @@
 
 import math
 
-from load_data_growth_insight_support import (
+from load_data_modules.growth.insight_support import (
     _add_growth_candidate,
     _enough_for_growth,
 )

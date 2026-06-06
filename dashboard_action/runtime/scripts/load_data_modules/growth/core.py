@@ -1,9 +1,9 @@
 """Repository growth deltas and conversion analytics."""
 
-from load_data_constants import GROWTH_COUNTERS
-from load_data_daily import _empty_traffic_totals, _traffic_totals_by_repo
-from load_data_dates import _latest_date_from_rows, _window_cutoff
-from load_data_repo_metrics import (
+from load_data_modules.constants import GROWTH_COUNTERS
+from load_data_modules.daily import _empty_traffic_totals, _traffic_totals_by_repo
+from load_data_modules.dates import _latest_date_from_rows, _window_cutoff
+from load_data_modules.repo_metrics import (
     aggregate_repo_metrics,
     latest_repo_metrics_per_day,
     repo_growth_series,

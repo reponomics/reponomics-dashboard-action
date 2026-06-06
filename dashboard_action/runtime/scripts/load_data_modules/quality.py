@@ -1,7 +1,7 @@
 """Collection quality summaries for dashboard data."""
 
-from load_data_quality_days import collection_quality_days
-from load_data_quality_summary import (
+from load_data_modules.quality_days import collection_quality_days
+from load_data_modules.quality_summary import (
     UNKNOWN_COLLECTION_QUALITY,
     _gap_repos,
     _quality_message,

@@ -3,8 +3,8 @@
 from collections import defaultdict
 from typing import Any
 
-from load_data_growth_insights import _growth_insight_candidates
-from load_data_trend_insights import _spike_candidate, _window_change_candidate
+from load_data_modules.growth.insights import _growth_insight_candidates
+from load_data_modules.trend_insights import _spike_candidate, _window_change_candidate
 
 
 def actionable_insights(

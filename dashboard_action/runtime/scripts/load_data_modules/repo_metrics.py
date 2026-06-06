@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from load_data_parse import _bool_or_none, _counter_snapshot, _int_or_none
+from load_data_modules.parse import _bool_or_none, _counter_snapshot, _int_or_none
 
 
 def latest_repo_metrics(metric_rows):

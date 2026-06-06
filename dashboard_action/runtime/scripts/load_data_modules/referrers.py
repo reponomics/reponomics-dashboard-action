@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from load_data_snapshots import _latest_snapshot_rows
+from load_data_modules.snapshots import _latest_snapshot_rows
 
 
 def top_referrers(referrer_rows, limit=10):

@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from load_data_traffic_totals import _add_daily_traffic
+from load_data_modules.traffic_totals import _add_daily_traffic
 
 
 def aggregate_totals(daily_rows):

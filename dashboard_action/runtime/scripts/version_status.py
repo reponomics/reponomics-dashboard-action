@@ -152,7 +152,7 @@ def _compare_prerelease(left: tuple[str | int, ...], right: tuple[str | int, ...
 def _fetch_releases() -> list[dict[str, Any]]:
     headers = {
         "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
+        "X-GitHub-Api-Version": "2026-03-10",
         "User-Agent": "reponomics-dashboard-action-version-status",
     }
     response = requests.get(

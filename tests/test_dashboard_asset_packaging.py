@@ -34,12 +34,12 @@ def test_dashboard_static_assets_are_included_in_built_wheel(tmp_path: Path) -> 
     with zipfile.ZipFile(wheels[0]) as wheel:
         names = set(wheel.namelist())
 
-    script_root = "dashboard_action/runtime/scripts"
-    assert f"{script_root}/render_dashboard_access.py" in names
-    assert f"{script_root}/render_dashboard_html.py" in names
-    assert f"{script_root}/render_dashboard_status.py" in names
+    script_root = "dashboard_action/runtime/scripts/render_dashboard_support"
+    assert f"{script_root}/access.py" in names
+    assert f"{script_root}/html.py" in names
+    assert f"{script_root}/status.py" in names
 
-    asset_root = "dashboard_action/runtime/scripts/render_dashboard_assets/static"
+    asset_root = f"{script_root}/assets/static"
     assert f"{asset_root}/base.css" in names
     assert f"{asset_root}/app-runtime.js" in names
     assert f"{asset_root}/secure-runtime.js" in names

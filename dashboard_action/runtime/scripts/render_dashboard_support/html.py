@@ -8,11 +8,11 @@ import html
 import json
 from pathlib import Path
 
-from render_dashboard_assets import load_asset
-from render_dashboard_status import render_version_badges as _render_version_badges
+from render_dashboard_support.assets import load_asset
+from render_dashboard_support.status import render_version_badges as _render_version_badges
 
 
-ACTION_ROOT = Path(__file__).resolve().parents[3]
+ACTION_ROOT = Path(__file__).resolve().parents[4]
 VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
 VENDORED_MONO_FONT_PATH = (
     ACTION_ROOT / "vendor" / "jetbrains-mono" / "jetbrains-mono-latin-wght-normal.woff2"
@@ -551,5 +551,3 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
         extra_csp_scripts=[encrypted_payload_json, export_manifest_json],
     )
-
-

@@ -30,10 +30,10 @@ from pathlib import Path
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import render_dashboard_access as dashboard_access
-import render_dashboard_status as dashboard_status
-from render_dashboard_assets import load_asset
-from render_dashboard_html import (
+from render_dashboard_support import access as dashboard_access
+from render_dashboard_support import status as dashboard_status
+from render_dashboard_support.assets import load_asset
+from render_dashboard_support.html import (
     build_encrypted_html as _build_encrypted_html,
     build_public_html as _build_public_html,
 )

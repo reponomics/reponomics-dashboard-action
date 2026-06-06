@@ -299,10 +299,33 @@ names include opaque content hashes, HMAC-derived identifiers, or manifest
 indexes that are meaningless without the dashboard key. The authenticated
 manifest should map display repository names to chunk identifiers after unlock.
 
-The browser should derive the dashboard key once per unlock and reuse the
-derived key for chunk decryption. Decrypted chunks may be cached in memory for
-the current session, but they should not be persisted to local storage unless a
-separate explicit offline-cache design is approved.
+### Client Secret Handling
+
+Lazy decryption must not persist the user's dashboard secret on the client.
+
+The browser should derive a non-extractable `CryptoKey` once per unlock and
+reuse that in-memory key for chunk decryption. After key derivation, the raw
+secret string should be removed from form inputs and JavaScript state as soon as
+practical.
+
+The unlocked state is tab-session state only. Reloading the page, closing the
+tab, or opening the dashboard in a new browser context should require the user
+to enter the dashboard secret again.
+
+The dashboard must not write any of the following to `localStorage`,
+`sessionStorage`, IndexedDB, Cache Storage, cookies, URL fragments, logs, or
+downloaded files:
+
+- the raw dashboard secret;
+- password-derived key material;
+- extractable wrapped keys;
+- decrypted per-repository chunks;
+- decrypted manifest data that would disclose private repository choices or
+  traffic details in a public repository.
+
+Decrypted chunks may be cached in memory for the current unlocked tab session.
+Any persistent "remember this browser", offline cache, or trusted-device feature
+requires a separate ADR because it changes the privacy and threat model.
 
 If chunks are emitted as separate Pages assets, the downloadable standalone
 artifact must still work locally. That may require either a bundled standalone

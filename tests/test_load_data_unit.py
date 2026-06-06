@@ -91,6 +91,114 @@ def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
     assert calls == ["traffic-daily.csv", "traffic-log.csv"]
 
 
+def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    rows_by_file = {
+        "traffic-referrers.csv": [{"repo": "demo/app", "referrer": "github.com"}],
+        "traffic-paths.csv": [{"repo": "demo/app", "path": "/demo/app"}],
+        "repo-metrics.csv": [_metric_row("demo/app", "2026-05-01", 8, 2, 1)],
+        "collection-status.csv": [
+            _status_row("demo/app", "2026-05-01T12:00:00Z", "ok_with_data")
+        ],
+    }
+
+    def read_csv(path: str) -> list[dict[str, str]]:
+        return rows_by_file[os.path.basename(path)]
+
+    monkeypatch.setattr(load_data.storage, "read_csv", read_csv)
+    monkeypatch.setattr(load_data, "load_repo_config", lambda: {})
+
+    assert load_data.load_referrers(str(tmp_path)) is rows_by_file["traffic-referrers.csv"]
+    assert load_data.load_paths(str(tmp_path)) is rows_by_file["traffic-paths.csv"]
+    assert load_data.load_repo_metrics(str(tmp_path)) is rows_by_file["repo-metrics.csv"]
+    assert load_data.load_collection_status(str(tmp_path)) is rows_by_file[
+        "collection-status.csv"
+    ]
+
+
+def test_load_daily_uses_default_data_dir_when_not_supplied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(load_data.storage, "DATA_DIR", "/tmp/reponomics-data")
+    monkeypatch.setattr(load_data, "load_repo_config", lambda: {})
+
+    seen_paths: list[str] = []
+
+    def read_csv(path: str) -> list[dict[str, str]]:
+        seen_paths.append(path)
+        return [_daily_row("demo/app", "2026-05-01", 1)]
+
+    monkeypatch.setattr(load_data.storage, "read_csv", read_csv)
+
+    assert load_data.load_daily() == [_daily_row("demo/app", "2026-05-01", 1)]
+    assert seen_paths == ["/tmp/reponomics-data/traffic-daily.csv"]
+
+
+def test_latest_repo_metrics_and_aggregate_totals_use_latest_capture() -> None:
+    rows = [
+        _metric_row("demo/app", "2026-05-01", 8, 2, 1, "2026-05-01T09:00:00Z"),
+        _metric_row("demo/app", "2026-05-01", 10, 3, 2, "2026-05-01T18:00:00Z"),
+        _metric_row("demo/lib", "2026-05-01", "", "", "", "2026-05-01T12:00:00Z"),
+        _metric_row("", "2026-05-01", 99, 99, 99, "2026-05-01T12:00:00Z"),
+    ]
+
+    latest = load_data.latest_repo_metrics(rows)
+    assert latest["demo/app"]["stargazers_count"] == 10
+    assert latest["demo/lib"]["subscribers_count"] == 0
+
+    assert load_data.aggregate_repo_metrics(rows) == {
+        "repos": {"demo/app", "demo/lib"},
+        "total_stargazers": 10,
+        "total_stars": 10,
+        "total_subscribers": 3,
+        "total_forks": 2,
+    }
+
+
+def test_repo_growth_series_projects_normalized_daily_counters() -> None:
+    rows = [
+        _metric_row("demo/app", "2026-05-02", 10, 3, 2),
+        _metric_row("demo/app", "2026-05-01", 8, 2, 1),
+    ]
+
+    assert load_data.repo_growth_series(rows) == {
+        "demo/app": {
+            "dates": ["2026-05-01", "2026-05-02"],
+            "stargazers": [8, 10],
+            "subscribers": [2, 3],
+            "forks": [1, 2],
+            "samples": 2,
+        }
+    }
+
+
+def test_collection_quality_empty_and_days_skip_incomplete_rows() -> None:
+    assert load_data.collection_quality([]) == {
+        "available": False,
+        "status": "unknown",
+        "message": "",
+        "latest_captured_at": "",
+        "tracked_repos": 0,
+        "with_data_repos": 0,
+        "zero_traffic_repos": 0,
+        "skipped_repos": 0,
+        "error_repos": 0,
+        "coverage_ratio": 1.0,
+        "has_collection_gaps": False,
+        "repos": [],
+        "days": [],
+    }
+    assert load_data.collection_quality_days([]) == []
+    assert load_data.collection_quality_days(
+        [
+            {"repo": "demo/app", "ts": "", "captured_at": "2026-05-01T12:00:00Z"},
+            {"repo": "demo/lib", "ts": "2026-05-01", "captured_at": ""},
+        ]
+    ) == []
+
+
 def test_collection_quality_reports_gaps_for_skipped_and_error_repos() -> None:
     quality = load_data.collection_quality(
         [
@@ -256,6 +364,14 @@ def test_latest_repo_community_profiles_prefers_latest_capture_and_normalizes_ty
 
 
 def test_repo_metric_deltas_ignore_unobserved_counter_baselines() -> None:
+    assert load_data.repo_metric_deltas([]) == {
+        "repos": {},
+        "total_stargazers_delta": 0,
+        "total_stars_delta": 0,
+        "total_subscribers_delta": 0,
+        "total_forks_delta": 0,
+    }
+
     rows = [
         _metric_row("demo/app", "2026-05-01", 10, "", ""),
         _metric_row("demo/app", "2026-05-02", 11, 4, ""),
@@ -270,6 +386,43 @@ def test_repo_metric_deltas_ignore_unobserved_counter_baselines() -> None:
     assert deltas["total_stargazers_delta"] == 3
     assert deltas["total_subscribers_delta"] == 3
     assert deltas["total_forks_delta"] == 0
+
+
+def test_growth_analytics_combines_current_counters_deltas_and_traffic_ratios() -> None:
+    daily_rows = [
+        _daily_row("demo/app", "2026-05-01", 4, 0, 10, 5),
+        _daily_row("demo/app", "2026-05-02", 20, 4, 3, 2),
+        _daily_row("demo/lib", "2026-05-02", 4, 3, 1, 1),
+    ]
+    metric_rows = [
+        _metric_row("demo/app", "2026-05-01", 10, 2, 1),
+        _metric_row("demo/app", "2026-05-02", 14, 5, 3),
+        _metric_row("demo/metrics-only", "2026-05-02", 1, 1, 1),
+    ]
+
+    growth = load_data.growth_analytics(daily_rows, metric_rows, recent_days=2)
+
+    assert growth["cutoff"] == "2026-05-01"
+    assert set(growth["per_repo"]) == {"demo/app", "demo/lib", "demo/metrics-only"}
+    assert growth["per_repo"]["demo/app"]["traffic"]["views"] == 24
+    assert growth["per_repo"]["demo/app"]["conversion"]["stargazers"] == {
+        "value": 4 / 24,
+        "denominator": 24,
+        "denominator_metric": "views",
+    }
+    assert growth["per_repo"]["demo/lib"]["conversion"]["stargazers"] == {
+        "value": None,
+        "denominator": 0,
+        "denominator_metric": None,
+    }
+    assert growth["per_repo"]["demo/metrics-only"]["traffic"] == {
+        "views": 0,
+        "uniques": 0,
+        "clones": 0,
+        "clone_uniques": 0,
+        "sample_count": 0,
+    }
+    assert growth["totals"]["total_stargazers_delta"] == 4
 
 
 def test_traffic_totals_by_repo_applies_cutoff_and_skips_missing_repo() -> None:
@@ -299,6 +452,49 @@ def test_traffic_totals_by_repo_applies_cutoff_and_skips_missing_repo() -> None:
             "sample_count": 1,
         },
     }
+
+
+def test_aggregate_helpers_sum_daily_rows_by_total_date_and_repo() -> None:
+    rows = [
+        _daily_row("demo/app", "2026-05-01", 8, 3, 2, 1),
+        _daily_row("demo/app", "2026-05-02", 4, 2, 1, 1),
+        _daily_row("demo/lib", "2026-05-01", 20, 10, 5, 2),
+    ]
+
+    assert load_data.aggregate_totals(rows) == {
+        "repos": {"demo/app", "demo/lib"},
+        "total_views": 32,
+        "total_uniques": 15,
+        "total_clones": 8,
+        "total_clone_uniques": 4,
+        "days_tracked": 2,
+    }
+
+    dates, series = load_data.aggregate_by_date(rows)
+    assert dates == ["2026-05-01", "2026-05-02"]
+    assert series == {
+        "views": [28, 4],
+        "uniques": [13, 2],
+        "clones": [7, 1],
+        "clone_uniques": [3, 1],
+    }
+
+    assert load_data.aggregate_per_repo(rows) == [
+        {
+            "repo": "demo/lib",
+            "total_views": 20,
+            "total_uniques": 10,
+            "total_clones": 5,
+            "total_clone_uniques": 2,
+        },
+        {
+            "repo": "demo/app",
+            "total_views": 12,
+            "total_uniques": 5,
+            "total_clones": 3,
+            "total_clone_uniques": 2,
+        },
+    ]
 
 
 def test_top_referrers_uses_latest_snapshot_per_repo_without_overcounting() -> None:
@@ -373,6 +569,8 @@ def test_top_paths_labels_repository_overview_and_falls_back_to_path() -> None:
 
 
 def test_window_change_candidate_handles_new_activity_and_small_noise() -> None:
+    assert load_data._window_change_candidate("demo/app", "views", [1, 2, 3, 4, 5], 10) is None
+    assert load_data._window_change_candidate("demo/app", "views", [2, 2, 2, 2, 2, 2], 10) is None
     assert load_data._window_change_candidate("demo/app", "views", [0, 0, 0, 1, 0, 0], 10) is None
 
     candidate = load_data._window_change_candidate(
@@ -390,8 +588,21 @@ def test_window_change_candidate_handles_new_activity_and_small_noise() -> None:
     assert candidate["pct"] is None
     assert "new activity" in candidate["text"]
 
+    drop = load_data._window_change_candidate(
+        "demo/app",
+        "views",
+        [10, 10, 10, 4, 4, 4],
+        10,
+    )
+
+    assert drop is not None
+    assert drop["pct"] == -60.0
+    assert drop["delta"] == -18
+
 
 def test_spike_candidate_detects_latest_spike_after_stable_baseline() -> None:
+    assert load_data._spike_candidate("demo/app", "views", [10] * 6 + [12, 13]) is None
+
     assert load_data._spike_candidate("demo/app", "views", [10] * 7) is None
 
     candidate = load_data._spike_candidate("demo/app", "views", [10] * 7 + [40])
@@ -401,8 +612,21 @@ def test_spike_candidate_detects_latest_spike_after_stable_baseline() -> None:
     assert candidate["baseline"] == 10
     assert candidate["delta"] == 30
 
+    drop = load_data._spike_candidate("demo/app", "views", [30, 31, 29, 30, 31, 29, 30, 5])
+    assert drop is not None
+    assert drop["direction"] == "dropped"
+    assert drop["delta"] == -25
+
 
 def test_compute_momentum_handles_rows_without_parseable_dates() -> None:
+    assert load_data.compute_momentum([]) == {
+        "best_day": None,
+        "streak_days": 0,
+        "baseline": 0.0,
+        "days_since_peak": None,
+        "top_single_day": None,
+    }
+
     no_dated_rows = [
         {"repo": "demo/app", "ts": "", "views_count": "7"},
         {"repo": "demo/lib", "views_count": "9"},
@@ -425,3 +649,136 @@ def test_compute_momentum_handles_rows_without_parseable_dates() -> None:
 
     assert momentum["best_day"] == {"date": "not-a-date", "views": 9}
     assert momentum["days_since_peak"] is None
+
+
+def test_compute_momentum_reports_peak_distance_and_top_single_day() -> None:
+    momentum = load_data.compute_momentum(
+        [
+            _daily_row("demo/app", "2026-05-01", 4),
+            _daily_row("demo/lib", "2026-05-01", 7),
+            _daily_row("demo/app", "2026-05-02", 20),
+            _daily_row("demo/app", "2026-05-03", 8),
+        ]
+    )
+
+    assert momentum["best_day"] == {"date": "2026-05-02", "views": 20}
+    assert momentum["days_since_peak"] == 1
+    assert momentum["top_single_day"] == {
+        "repo": "demo/app",
+        "date": "2026-05-02",
+        "views": 20,
+    }
+
+
+def test_growth_insight_candidates_cover_cross_signal_subtypes() -> None:
+    growth = {
+        "per_repo": {
+            "demo/attention": {
+                "traffic": {"views": 100, "uniques": 20, "clones": 0, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 0,
+                    "subscribers_delta": 0,
+                    "forks_delta": 0,
+                },
+                "conversion": {},
+            },
+            "demo/quiet": {
+                "traffic": {"views": 20, "uniques": 5, "clones": 0, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 2,
+                    "subscribers_delta": 0,
+                    "forks_delta": 0,
+                },
+                "conversion": {},
+            },
+            "demo/clone": {
+                "traffic": {"views": 40, "uniques": 8, "clones": 15, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 0,
+                    "subscribers_delta": 0,
+                    "forks_delta": 0,
+                },
+                "conversion": {},
+            },
+            "demo/fork": {
+                "traffic": {"views": 60, "uniques": 20, "clones": 0, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 0,
+                    "subscribers_delta": 0,
+                    "forks_delta": 3,
+                },
+                "conversion": {"forks": {"denominator": 20, "value": 0.15}},
+            },
+            "demo/watchers": {
+                "traffic": {"views": 60, "uniques": 20, "clones": 0, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 0,
+                    "subscribers_delta": 4,
+                    "forks_delta": 0,
+                },
+                "conversion": {"subscribers": {"denominator": 20, "value": 0.2}},
+            },
+            "demo/downstream": {
+                "traffic": {"views": 20, "uniques": 6, "clones": 0, "sample_count": 3},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": 3,
+                    "subscribers_delta": 0,
+                    "forks_delta": 0,
+                },
+                "conversion": {},
+            },
+            "demo/negative": {
+                "traffic": {"views": 0, "uniques": 0, "clones": 0, "sample_count": 0},
+                "deltas": {
+                    "sample_count": 2,
+                    "stargazers_delta": -2,
+                    "subscribers_delta": -1,
+                    "forks_delta": -1,
+                },
+                "conversion": {},
+            },
+        }
+    }
+
+    assert load_data._growth_insight_candidates([], metric_rows=None) == []
+    candidates = load_data._growth_insight_candidates([], growth=growth)
+    subtypes = {candidate["subtype"] for candidate in candidates}
+
+    assert {
+        "high_attention_low_interest",
+        "quiet_resonance",
+        "clone_heavy_star_light",
+        "fork_spike",
+        "watcher_subscriber_spike",
+        "traffic_without_downstream_growth",
+        "downstream_without_traffic_spike",
+        "negative_counter_movement",
+    } <= subtypes
+
+
+def test_actionable_insights_rank_and_diversify_text_and_structured_outputs() -> None:
+    rows = [
+        _daily_row("demo/app", "2026-05-01", 1, clones=0),
+        _daily_row("demo/app", "2026-05-02", 1, clones=0),
+        _daily_row("demo/app", "2026-05-03", 1, clones=0),
+        _daily_row("demo/app", "2026-05-04", 10, clones=2),
+        _daily_row("demo/app", "2026-05-05", 10, clones=2),
+        _daily_row("demo/app", "2026-05-06", 10, clones=2),
+    ]
+
+    insights = load_data.actionable_insights(rows, 2)
+    assert len(insights) == 2
+    assert all("demo/app" in insight for insight in insights)
+    assert load_data.actionable_insights(rows, limit=0) == []
+
+    structured = load_data.actionable_insights_structured(rows, 2)
+    assert len(structured) == 2
+    assert all("score" not in insight for insight in structured)
+    assert {insight["metric"] for insight in structured} == {"views", "clones"}
+    assert load_data.actionable_insights_structured(rows, limit=0) == []

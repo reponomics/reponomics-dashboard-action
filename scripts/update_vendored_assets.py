@@ -23,20 +23,28 @@ def _parse_version_overrides(raw_overrides: list[str]) -> dict[str, str]:
     return overrides
 
 
-def _target_version(manifest: dict[str, Any], package_metadata: dict[str, Any], overrides: dict[str, str]) -> str:
+def _target_version(
+    manifest: dict[str, Any],
+    package_metadata: dict[str, Any],
+    overrides: dict[str, str],
+) -> str:
     package = manifest["package"]
     if package in overrides:
         return overrides[package]
     latest = package_metadata.get("dist-tags", {}).get("latest")
     if not latest:
-        raise ValueError(f"{package} registry metadata does not include a latest dist-tag")
+        raise ValueError(
+            f"{package} registry metadata does not include a latest dist-tag"
+        )
     return str(latest)
 
 
 def update_manifest(root: Path, manifest_path: Path, overrides: dict[str, str]) -> bool:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     package = manifest["package"]
-    package_metadata = validator._read_json(validator._registry_url(manifest["registry"], package))
+    package_metadata = validator._read_json(
+        validator._registry_url(manifest["registry"], package)
+    )
     version = _target_version(manifest, package_metadata, overrides)
     if version == manifest["version"]:
         print(f"{package} is already current at {version}")
@@ -89,7 +97,9 @@ def main() -> int:
     unknown_overrides = set(overrides) - seen_packages
     if unknown_overrides:
         unknown = ", ".join(sorted(unknown_overrides))
-        raise ValueError(f"--version specified packages not present in selected manifests: {unknown}")
+        raise ValueError(
+            f"--version specified packages not present in selected manifests: {unknown}"
+        )
     if not updated:
         print("No vendored asset updates were available.")
     return 0

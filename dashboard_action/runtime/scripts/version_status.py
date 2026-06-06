@@ -8,7 +8,6 @@ from typing import Any
 
 import requests
 
-
 ACTION_REPOSITORY = "reponomics/reponomics-dashboard-action"
 RELEASES_API_URL = f"https://api.github.com/repos/{ACTION_REPOSITORY}/releases"
 RELEASES_PAGE_URL = f"https://github.com/{ACTION_REPOSITORY}/releases"
@@ -88,7 +87,9 @@ def build_status_payload(
         "current_url": _status_url("", _release_tag(current_version)),
         "action_ref": action_ref,
         "update_available": False,
-        "url": _status_url(latest["html_url"] if latest else "", latest["tag_name"] if latest else ""),
+        "url": _status_url(
+            latest["html_url"] if latest else "", latest["tag_name"] if latest else ""
+        ),
     }
     if latest:
         tag = latest["tag_name"]
@@ -110,14 +111,18 @@ def latest_stable_release(releases: list[dict[str, Any]]) -> dict[str, str] | No
             continue
         if release.get("draft") or release.get("prerelease"):
             continue
-        candidates.append({
-            "tag_name": tag,
-            "name": str(release.get("name") or "").strip(),
-            "html_url": str(release.get("html_url") or "").strip(),
-        })
+        candidates.append(
+            {
+                "tag_name": tag,
+                "name": str(release.get("name") or "").strip(),
+                "html_url": str(release.get("html_url") or "").strip(),
+            }
+        )
     if not candidates:
         return None
-    return max(candidates, key=lambda item: parse_semver(item["tag_name"]) or SemVer(0, 0, 0))
+    return max(
+        candidates, key=lambda item: parse_semver(item["tag_name"]) or SemVer(0, 0, 0)
+    )
 
 
 def _parse_prerelease_part(value: str) -> str | int:
@@ -126,7 +131,9 @@ def _parse_prerelease_part(value: str) -> str | int:
     return value
 
 
-def _compare_prerelease(left: tuple[str | int, ...], right: tuple[str | int, ...]) -> int:
+def _compare_prerelease(
+    left: tuple[str | int, ...], right: tuple[str | int, ...]
+) -> int:
     if not left and not right:
         return 0
     if not left:

@@ -7,7 +7,6 @@ import json
 import os
 from datetime import datetime, timezone
 
-
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
 DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
@@ -80,7 +79,9 @@ def render_version_badges():
     latest_value = latest_display or "unknown"
     current_href = html.escape(status["current_url"], quote=True)
     latest_href = html.escape(status["url"], quote=True)
-    updates_href = html.escape(os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True)
+    updates_href = html.escape(
+        os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True
+    )
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
     docs_status = render_docs_sync_status()
@@ -93,7 +94,8 @@ def render_version_badges():
         + f'          <a class="action-version-badge latest{latest_state}" href="{latest_href}">'
         + '<span class="badge-label">latest version</span>'
         + f'<span class="badge-value">{latest_value}</span></a>\n'
-        + f'          <a class="action-version-link" href="{updates_href}">View latest updates</a>\n'
+        + f'          <a class="action-version-link" href="{updates_href}">'
+        + 'View latest updates</a>\n'
         + docs_status
         + "        </div>"
     )
@@ -113,10 +115,16 @@ def render_docs_sync_status():
 
 def render_docs_status_detail():
     parts = []
-    docs_action_version = display_version(os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip())
+    docs_action_version = display_version(
+        os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip()
+    )
     status = load_version_status()
-    current_action_version = display_version(status["current_version"]) if status else ""
-    docs_updated_at = format_docs_timestamp(os.environ.get(DOCS_UPDATED_AT_ENV, "").strip())
+    current_action_version = (
+        display_version(status["current_version"]) if status else ""
+    )
+    docs_updated_at = format_docs_timestamp(
+        os.environ.get(DOCS_UPDATED_AT_ENV, "").strip()
+    )
     if docs_action_version:
         parts.append(f"Docs version: {docs_action_version}.")
     if current_action_version:

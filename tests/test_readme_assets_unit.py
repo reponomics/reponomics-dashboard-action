@@ -154,8 +154,16 @@ def test_write_readme_svg_assets_creates_expected_dark_and_light_files(
     assert calls["bar_chart"][0]["args"] == (["demo/alpha"], [9])
     assert calls["activity"][0]["args"] == (["2026-01-01"], [4])
     assert calls["donut"][0]["args"] == (["demo/alpha"], [9])
-    assert all(call["theme"] is assets.DARK for call_list in calls.values() for call in call_list[::2])
-    assert all(call["theme"] is assets.LIGHT for call_list in calls.values() for call in call_list[1::2])
+    assert all(
+        call["theme"] is assets.DARK
+        for call_list in calls.values()
+        for call in call_list[::2]
+    )
+    assert all(
+        call["theme"] is assets.LIGHT
+        for call_list in calls.values()
+        for call in call_list[1::2]
+    )
 
 
 def test_write_version_badge_assets_creates_static_badges(tmp_path: Path) -> None:

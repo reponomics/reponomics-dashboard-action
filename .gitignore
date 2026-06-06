@@ -17,3 +17,5 @@ README.generated.md
 .DS_Store
 
 .tmp/
+
+build/

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.1...v0.20.2) (2026-06-06)
+
+
+### Bug Fixes
+
+* reduce complexity ([#90](https://github.com/reponomics/reponomics-dashboard-action/issues/90)) ([5fabba7](https://github.com/reponomics/reponomics-dashboard-action/commit/5fabba7b6fa289fd25541e906ce0f246d40c59e8))
+
 ## [0.20.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.0...v0.20.1) (2026-06-06)
 
 

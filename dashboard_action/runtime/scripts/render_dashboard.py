@@ -40,10 +40,16 @@ from render_dashboard_support.html import (
 
 import storage
 from load_data import (
-    load_daily, load_referrers, load_paths, load_repo_metrics,
+    load_daily,
+    load_referrers,
+    load_paths,
+    load_repo_metrics,
     load_collection_status,
-    aggregate_totals, aggregate_by_date, aggregate_per_repo,
-    top_referrers, top_paths,
+    aggregate_totals,
+    aggregate_by_date,
+    aggregate_per_repo,
+    top_referrers,
+    top_paths,
     actionable_insights,
     actionable_insights_structured,
     collection_quality,
@@ -55,7 +61,9 @@ PAGE_INDEX_OUTPUT_PATH = "docs/index.html"
 STANDALONE_OUTPUT_PATH = "dist/dashboard-standalone.html"
 ACTION_ROOT = Path(__file__).resolve().parents[3]
 VENDORED_CHART_JS_PATH = ACTION_ROOT / "vendor" / "chart.js" / "chart.umd.min.js"
-VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
+VENDORED_INTER_FONT_PATH = (
+    ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
+)
 VENDORED_MONO_FONT_PATH = (
     ACTION_ROOT / "vendor" / "jetbrains-mono" / "jetbrains-mono-latin-wght-normal.woff2"
 )
@@ -92,11 +100,11 @@ EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
-BASE_STYLES = load_asset('base.css')
+BASE_STYLES = load_asset("base.css")
 
-APP_RUNTIME_JS = load_asset('app-runtime.js')
+APP_RUNTIME_JS = load_asset("app-runtime.js")
 
-SECURE_RUNTIME_JS = load_asset('secure-runtime.js')
+SECURE_RUNTIME_JS = load_asset("secure-runtime.js")
 
 
 def _load_vendored_chart_js():
@@ -115,12 +123,16 @@ def _publish_vendored_chart_js(output_path: str) -> str:
 
 def _build_repo_series(daily_rows):
     """Build per-repo daily series for drill-down and comparison modes."""
-    by_repo = defaultdict(lambda: defaultdict(lambda: {
-        "views": 0,
-        "uniques": 0,
-        "clones": 0,
-        "clone_uniques": 0,
-    }))
+    by_repo = defaultdict(
+        lambda: defaultdict(
+            lambda: {
+                "views": 0,
+                "uniques": 0,
+                "clones": 0,
+                "clone_uniques": 0,
+            }
+        )
+    )
 
     for row in daily_rows:
         bucket = by_repo[row["repo"]][row["ts"]]
@@ -133,11 +145,11 @@ def _build_repo_series(daily_rows):
     for repo, values_by_date in by_repo.items():
         dates = sorted(values_by_date)
         series[repo] = {
-          "dates": dates,
-          "views": [values_by_date[date]["views"] for date in dates],
-          "uniques": [values_by_date[date]["uniques"] for date in dates],
-          "clones": [values_by_date[date]["clones"] for date in dates],
-          "clone_uniques": [values_by_date[date]["clone_uniques"] for date in dates],
+            "dates": dates,
+            "views": [values_by_date[date]["views"] for date in dates],
+            "uniques": [values_by_date[date]["uniques"] for date in dates],
+            "clones": [values_by_date[date]["clones"] for date in dates],
+            "clone_uniques": [values_by_date[date]["clone_uniques"] for date in dates],
         }
     return series
 
@@ -146,8 +158,7 @@ def _build_weekday_summary(daily_rows):
     """Build average views/clones by weekday for a daily row collection."""
     daily_totals = defaultdict(lambda: {"views": 0, "clones": 0})
     weekday_totals = {
-        label: {"views": 0, "clones": 0, "samples": 0}
-        for label in WEEKDAY_LABELS
+        label: {"views": 0, "clones": 0, "samples": 0} for label in WEEKDAY_LABELS
     }
 
     for row in daily_rows:
@@ -165,17 +176,25 @@ def _build_weekday_summary(daily_rows):
     return {
         "labels": WEEKDAY_LABELS,
         "views": [
-            round(
-                weekday_totals[label]["views"] / weekday_totals[label]["samples"],
-                1,
-            ) if weekday_totals[label]["samples"] else 0
+            (
+                round(
+                    weekday_totals[label]["views"] / weekday_totals[label]["samples"],
+                    1,
+                )
+                if weekday_totals[label]["samples"]
+                else 0
+            )
             for label in WEEKDAY_LABELS
         ],
         "clones": [
-            round(
-                weekday_totals[label]["clones"] / weekday_totals[label]["samples"],
-                1,
-            ) if weekday_totals[label]["samples"] else 0
+            (
+                round(
+                    weekday_totals[label]["clones"] / weekday_totals[label]["samples"],
+                    1,
+                )
+                if weekday_totals[label]["samples"]
+                else 0
+            )
             for label in WEEKDAY_LABELS
         ],
     }
@@ -186,10 +205,7 @@ def _build_repo_weekday_summary(daily_rows):
     rows_by_repo = defaultdict(list)
     for row in daily_rows:
         rows_by_repo[row["repo"]].append(row)
-    return {
-        repo: _build_weekday_summary(rows)
-        for repo, rows in rows_by_repo.items()
-    }
+    return {repo: _build_weekday_summary(rows) for repo, rows in rows_by_repo.items()}
 
 
 def _latest_snapshot_by_repo(rows):
@@ -232,27 +248,31 @@ def _build_payload(
     for row in per_repo:
         series_row = repo_series.get(row["repo"], {})
         community = community_profiles.get(row["repo"], {})
-        repos.append({
-            "name": row["repo"],
-            "views": row["total_views"],
-            "uniques": row["total_uniques"],
-            "clones": row["total_clones"],
-            "clone_uniques": row["total_clone_uniques"],
-            "days": len(series_row.get("dates", [])),
-            "community": {
-                "available": bool(community.get("available", False)),
-                "health_percentage": community.get("health_percentage"),
-                "documentation": community.get("documentation", ""),
-                "updated_at": community.get("updated_at", ""),
-                "content_reports_enabled": community.get("content_reports_enabled"),
-                "has_code_of_conduct": community.get("has_code_of_conduct"),
-                "has_contributing": community.get("has_contributing"),
-                "has_issue_template": community.get("has_issue_template"),
-                "has_pull_request_template": community.get("has_pull_request_template"),
-                "has_readme": community.get("has_readme"),
-                "has_license": community.get("has_license"),
-            },
-        })
+        repos.append(
+            {
+                "name": row["repo"],
+                "views": row["total_views"],
+                "uniques": row["total_uniques"],
+                "clones": row["total_clones"],
+                "clone_uniques": row["total_clone_uniques"],
+                "days": len(series_row.get("dates", [])),
+                "community": {
+                    "available": bool(community.get("available", False)),
+                    "health_percentage": community.get("health_percentage"),
+                    "documentation": community.get("documentation", ""),
+                    "updated_at": community.get("updated_at", ""),
+                    "content_reports_enabled": community.get("content_reports_enabled"),
+                    "has_code_of_conduct": community.get("has_code_of_conduct"),
+                    "has_contributing": community.get("has_contributing"),
+                    "has_issue_template": community.get("has_issue_template"),
+                    "has_pull_request_template": community.get(
+                        "has_pull_request_template"
+                    ),
+                    "has_readme": community.get("has_readme"),
+                    "has_license": community.get("has_license"),
+                },
+            }
+        )
 
     return {
         "meta": {
@@ -343,7 +363,9 @@ def _build_export_bundle(data_dir: str) -> bytes:
     return buffer.getvalue()
 
 
-def _build_encrypted_export_manifest(output_path: str, dashboard_key: str) -> dict[str, object]:
+def _build_encrypted_export_manifest(
+    output_path: str, dashboard_key: str
+) -> dict[str, object]:
     plaintext_bundle = _build_export_bundle(storage.DATA_DIR)
     plaintext_sha256 = hashlib.sha256(plaintext_bundle).hexdigest()
     salt, iv, ciphertext = _encrypt_bytes(plaintext_bundle, dashboard_key)
@@ -404,7 +426,9 @@ def render():
     community_profiles = latest_repo_community_profiles(metric_rows)
     data_quality = collection_quality(status_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
-    insights_structured = actionable_insights_structured(daily_rows, metric_rows, limit=3, growth=growth)
+    insights_structured = actionable_insights_structured(
+        daily_rows, metric_rows, limit=3, growth=growth
+    )
     payload = _build_payload(
         now,
         totals,
@@ -426,16 +450,17 @@ def render():
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:
-        dashboard_key = (
-            os.environ.get(DASHBOARD_KEY_ENV)
-            or os.environ.get(LEGACY_PASSPHRASE_ENV, "")
+        dashboard_key = os.environ.get(DASHBOARD_KEY_ENV) or os.environ.get(
+            LEGACY_PASSPHRASE_ENV, ""
         )
         if not dashboard_key:
             raise ValueError(
-                f"{DASHBOARD_KEY_ENV} must be set when " +
-                f"{ACCESS_MODE_ENV}={ACCESS_MODE_ENCRYPTED!r}."
+                f"{DASHBOARD_KEY_ENV} must be set when "
+                + f"{ACCESS_MODE_ENV}={ACCESS_MODE_ENCRYPTED!r}."
             )
-        export_manifest = _build_encrypted_export_manifest(PAGE_INDEX_OUTPUT_PATH, dashboard_key)
+        export_manifest = _build_encrypted_export_manifest(
+            PAGE_INDEX_OUTPUT_PATH, dashboard_key
+        )
         published_html = _build_encrypted_html(
             _encrypt_payload(payload, dashboard_key),
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
@@ -463,9 +488,9 @@ def render():
         f.write(standalone_html)
 
     print(
-        f"Dashboards written to {PAGE_INDEX_OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} " +
-        f"(mode={access_mode}, {len(daily_rows)} daily rows, {len(dates)} dates, " +
-        f"{len(ref_list)} referrers, {len(path_list)} paths)"
+        f"Dashboards written to {PAGE_INDEX_OUTPUT_PATH} and {STANDALONE_OUTPUT_PATH} "
+        + f"(mode={access_mode}, {len(daily_rows)} daily rows, {len(dates)} dates, "
+        + f"{len(ref_list)} referrers, {len(path_list)} paths)"
     )
 
 

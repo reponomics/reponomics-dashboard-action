@@ -12,7 +12,6 @@ from typing import Any
 
 import storage
 
-
 LINEAGE_SCHEMA_VERSION = "1"
 ARTIFACT_KIND = "dashboard-data"
 
@@ -59,10 +58,11 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
     for filename, (_fields, date_field) in storage.CSV_REGISTRY.items():
         path = root / filename
         rows = _read_rows(path)
-        dates = sorted(row.get(date_field, "") for row in rows if row.get(date_field, ""))
+        dates = sorted(
+            row.get(date_field, "") for row in rows if row.get(date_field, "")
+        )
         identity_dates = {
-            _row_identity(filename, row): row.get(date_field, "")
-            for row in rows
+            _row_identity(filename, row): row.get(date_field, "") for row in rows
         }
         files[filename] = FileSummary(
             sha256=_sha256(path),
@@ -76,8 +76,15 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
     manifest = storage.read_manifest(root.as_posix())
     return PayloadSnapshot(
         manifest_digest=_sha256(root / "manifest.json"),
-        payload_digest=_hash_json({filename: summary.sha256 for filename, summary in files.items()}),
-        semantic_root_digest=_hash_json({filename: sorted(identities) for filename, identities in row_identities.items()}),
+        payload_digest=_hash_json(
+            {filename: summary.sha256 for filename, summary in files.items()}
+        ),
+        semantic_root_digest=_hash_json(
+            {
+                filename: sorted(identities)
+                for filename, identities in row_identities.items()
+            }
+        ),
         files=files,
         row_identities=row_identities,
         row_dates=row_dates,
@@ -114,7 +121,9 @@ def write_verified_lineage(
             "manifest_digest": parent.manifest_digest,
             "payload_digest": parent.payload_digest,
             "semantic_root_digest": parent.semantic_root_digest,
-            "lineage_schema_version": str(parent.lineage.get("lineage_schema_version") or ""),
+            "lineage_schema_version": str(
+                parent.lineage.get("lineage_schema_version") or ""
+            ),
         },
         "verification": {
             "type": "retained-row-superset",
@@ -151,7 +160,9 @@ def validate_snapshot_lineage(snapshot: PayloadSnapshot) -> None:
 
 
 def retention_cutoff(retention_days: int) -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=retention_days)).strftime("%Y-%m-%d")
+    return (datetime.now(timezone.utc) - timedelta(days=retention_days)).strftime(
+        "%Y-%m-%d"
+    )
 
 
 def _read_rows(path: Path) -> list[dict[str, str]]:
@@ -174,10 +185,14 @@ def _hash_json(payload: Any) -> str:
 
 def _validate_digest(*, label: str, expected: str, actual: str) -> None:
     if expected and expected != actual:
-        raise LineageError(f"Restored dashboard-data lineage {label} does not match the current payload.")
+        raise LineageError(
+            f"Restored dashboard-data lineage {label} does not match the current payload."
+        )
 
 
-def _validate_recorded_file_digests(snapshot: PayloadSnapshot, recorded_files: dict[str, Any]) -> None:
+def _validate_recorded_file_digests(
+    snapshot: PayloadSnapshot, recorded_files: dict[str, Any]
+) -> None:
     for filename, raw_summary in recorded_files.items():
         if not isinstance(filename, str) or not isinstance(raw_summary, dict):
             continue
@@ -206,7 +221,9 @@ def _retained_parent_row_count(parent: PayloadSnapshot, cutoff: str) -> int:
     return count
 
 
-def _verify_parent_rows_preserved(parent: PayloadSnapshot, child: PayloadSnapshot, cutoff: str) -> None:
+def _verify_parent_rows_preserved(
+    parent: PayloadSnapshot, child: PayloadSnapshot, cutoff: str
+) -> None:
     missing: list[tuple[str, str]] = []
     for filename in storage.CSV_REGISTRY:
         for identity in sorted(parent.row_identities[filename]):
@@ -218,7 +235,9 @@ def _verify_parent_rows_preserved(parent: PayloadSnapshot, child: PayloadSnapsho
     if not missing:
         return
 
-    examples = ", ".join(f"{filename}:{identity[:12]}" for filename, identity in missing[:5])
+    examples = ", ".join(
+        f"{filename}:{identity[:12]}" for filename, identity in missing[:5]
+    )
     raise LineageError(
         "Child dashboard-data payload does not preserve retained parent rows: "
         + f"{len(missing)} missing row identities"
@@ -233,7 +252,9 @@ def _is_retained(value: str, cutoff: str) -> bool:
     return value[:10] >= cutoff
 
 
-def _json_file_summaries(files: dict[str, FileSummary]) -> dict[str, dict[str, str | int]]:
+def _json_file_summaries(
+    files: dict[str, FileSummary],
+) -> dict[str, dict[str, str | int]]:
     return {
         filename: {
             "sha256": summary.sha256,

@@ -291,7 +291,9 @@ def svg_sparkline(
     t = theme
     stroke_color = stroke_color or t.accent_blue
     if not values or len(values) < 2:
-        return _empty_state_svg("Not enough data for a trend chart.", width=width, height=height, theme=t)
+        return _empty_state_svg(
+            "Not enough data for a trend chart.", width=width, height=height, theme=t
+        )
 
     vals = list(values)
     min_val = min(vals)

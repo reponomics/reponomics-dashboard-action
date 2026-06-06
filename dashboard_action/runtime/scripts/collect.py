@@ -44,7 +44,9 @@ REQUEST_PACING_MAX_SECONDS = 1.0
 SECONDARY_LIMIT_FALLBACK_SECONDS = 60
 NOT_FOUND_RETRIES = 2
 TOKEN_VALIDATION_URL = "https://api.github.com/user"
-APP_TOKEN_VALIDATION_URL = "https://api.github.com/installation/repositories?per_page=1&page=1"
+APP_TOKEN_VALIDATION_URL = (
+    "https://api.github.com/installation/repositories?per_page=1&page=1"
+)
 TOKEN_CREATION_URL = "".join(
     [
         "https://github.com/settings/personal-access-tokens/new",
@@ -93,10 +95,10 @@ class SecondaryRateLimitError(requests.HTTPError):
         self.retry_at_utc = retry_at_utc
         self.retry_source = source
         message = (
-            "GitHub secondary rate limit encountered for " +
-            f"{url}. Do not retry until after " +
-            f"{retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')} " +
-            f"({retry_after_seconds}s, source: {source})."
+            "GitHub secondary rate limit encountered for "
+            + f"{url}. Do not retry until after "
+            + f"{retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')} "
+            + f"({retry_after_seconds}s, source: {source})."
         )
         super().__init__(message, response=response)
 
@@ -114,9 +116,9 @@ class RepoUnavailableError(requests.HTTPError):
         self.response = response
         self.attempts = attempts
         message = (
-            "Repository traffic endpoint remained unavailable after " +
-            f"{attempts} attempt(s): {url}. The repo may have been deleted, " +
-            "renamed, transferred, or may no longer be accessible."
+            "Repository traffic endpoint remained unavailable after "
+            + f"{attempts} attempt(s): {url}. The repo may have been deleted, "
+            + "renamed, transferred, or may no longer be accessible."
         )
         super().__init__(message, response=response)
 
@@ -137,12 +139,14 @@ def _record_network_warning(
     exc: requests.RequestException,
 ) -> None:
     """Track transient network problems for the workflow summary."""
-    _NETWORK_WARNINGS.append({
-        "url": url,
-        "attempt": attempt,
-        "error_type": exc.__class__.__name__,
-        "message": str(exc),
-    })
+    _NETWORK_WARNINGS.append(
+        {
+            "url": url,
+            "attempt": attempt,
+            "error_type": exc.__class__.__name__,
+            "message": str(exc),
+        }
+    )
 
 
 def _collection_status_row(
@@ -234,57 +238,67 @@ def _write_step_summary(
         lines.append(f"- Repositories with errors: {', '.join(errors)}")
     if skipped_repos:
         lines.append(
-            "- Repositories skipped as unavailable: "
-            + ", ".join(skipped_repos)
+            "- Repositories skipped as unavailable: " + ", ".join(skipped_repos)
         )
     if status_rows:
         counts = _collection_status_counts(status_rows)
-        lines.extend([
-            f"- Repositories collected with data: {counts['ok_with_data']}",
-            f"- Repositories collected with zero traffic: {counts['ok_zero_data']}",
-        ])
+        lines.extend(
+            [
+                f"- Repositories collected with data: {counts['ok_with_data']}",
+                f"- Repositories collected with zero traffic: {counts['ok_zero_data']}",
+            ]
+        )
 
     if secondary_limit is not None:
-        lines.extend([
-            "",
-            "### Secondary Rate Limit",
-            "",
-            f"- Endpoint: `{secondary_limit.url}`",
-            f"- Status: `{secondary_limit.response.status_code}`",
-            f"- Retry source: `{secondary_limit.retry_source}`",
-            f"- Retry after: `{secondary_limit.retry_after_seconds}` second(s)",
-            f"- Do not retry before: **{secondary_limit.retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}**",
-            "- Action: Stop rerunning the workflow until that time has passed.",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Secondary Rate Limit",
+                "",
+                f"- Endpoint: `{secondary_limit.url}`",
+                f"- Status: `{secondary_limit.response.status_code}`",
+                f"- Retry source: `{secondary_limit.retry_source}`",
+                f"- Retry after: `{secondary_limit.retry_after_seconds}` second(s)",
+                "- Do not retry before: ",
+                f"**{secondary_limit.retry_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}**",
+                "- Action: Stop rerunning the workflow until that time has passed.",
+            ]
+        )
 
     if _NETWORK_WARNINGS:
-        lines.extend([
-            "",
-            "### Network Warnings",
-            "",
-            "Transient network errors were observed during collection:",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Network Warnings",
+                "",
+                "Transient network errors were observed during collection:",
+            ]
+        )
         for warning in _NETWORK_WARNINGS:
             lines.append(
-                "- Attempt " +
-                f"{warning['attempt']} for `{warning['url']}` failed with " +
-                f"`{warning['error_type']}`: {warning['message']}"
+                "- Attempt "
+                + f"{warning['attempt']} for `{warning['url']}` failed with "
+                + f"`{warning['error_type']}`: {warning['message']}"
             )
 
     if _REPO_DETAIL_WARNINGS:
-        lines.extend([
-            "",
-            "### Repository Detail Warnings",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Repository Detail Warnings",
+                "",
+            ]
+        )
         lines.extend(f"- {warning}" for warning in _REPO_DETAIL_WARNINGS)
 
     if _REPO_COMMUNITY_WARNINGS:
-        lines.extend([
-            "",
-            "### Community Profile Warnings",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "### Community Profile Warnings",
+                "",
+            ]
+        )
         lines.extend(f"- {warning}" for warning in _REPO_COMMUNITY_WARNINGS)
 
     with open(summary_path, "a") as f:
@@ -294,6 +308,7 @@ def _write_step_summary(
 def _pace_request() -> None:
     """Serialize requests with a small random gap to avoid bursty polling."""
     global _LAST_REQUEST_COMPLETED_AT
+    _LAST_REQUEST_COMPLETED_AT = _LAST_REQUEST_COMPLETED_AT or None
     if _LAST_REQUEST_COMPLETED_AT is None:
         return
 
@@ -445,7 +460,9 @@ def validate_token(headers: Headers, *, use_github_app: bool | None = None) -> N
     """Verify the token is valid before starting collection."""
     if use_github_app is None:
         use_github_app = _use_github_app_collection_token()
-    validation_url = APP_TOKEN_VALIDATION_URL if use_github_app else TOKEN_VALIDATION_URL
+    validation_url = (
+        APP_TOKEN_VALIDATION_URL if use_github_app else TOKEN_VALIDATION_URL
+    )
     try:
         resp = _perform_get(validation_url, headers=headers, timeout=15)
     except requests.RequestException as exc:
@@ -463,7 +480,9 @@ def validate_token(headers: Headers, *, use_github_app: bool | None = None) -> N
             )
             sys.exit(1)
         if resp.status_code == 403:
-            print("Error: the GitHub App installation token lacks required permissions.")
+            print(
+                "Error: the GitHub App installation token lacks required permissions."
+            )
             print("The app installation needs repository Administration: read access.")
             sys.exit(1)
         if resp.status_code >= 400:
@@ -501,7 +520,9 @@ def validate_token(headers: Headers, *, use_github_app: bool | None = None) -> N
         print("The token needs repository Administration: read access.")
         sys.exit(1)
     if resp.status_code >= 400:
-        print(f"Error: GitHub API returned status {resp.status_code} during token validation.")
+        print(
+            f"Error: GitHub API returned status {resp.status_code} during token validation."
+        )
         sys.exit(1)
     user = resp.json().get("login", "unknown")
     print(f"Authenticated as: {user}")
@@ -514,6 +535,7 @@ def fetch_json(
 ) -> Any:
     """Fetch JSON from the GitHub API with pacing and targeted retries."""
     last_exc = None
+    resp = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             resp = _perform_get(url, headers=headers, timeout=30)
@@ -523,8 +545,8 @@ def fetch_json(
             if attempt < MAX_RETRIES:
                 wait = _retry_delay_with_jitter(attempt)
                 print(
-                    f"  Retry {attempt}/{MAX_RETRIES} after network error: {exc} " +
-                    f"(sleeping {wait:.2f}s)"
+                    f"  Retry {attempt}/{MAX_RETRIES} after network error: {exc} "
+                    + f"(sleeping {wait:.2f}s)"
                 )
                 time.sleep(wait)
                 continue
@@ -550,9 +572,7 @@ def fetch_json(
 
         if resp.status_code >= 500 and attempt < MAX_RETRIES:
             wait = _retry_delay_with_jitter(attempt)
-            print(
-                f"  Server error {resp.status_code} — retrying in {wait:.2f}s..."
-            )
+            print(f"  Server error {resp.status_code} — retrying in {wait:.2f}s...")
             time.sleep(wait)
             continue
 
@@ -560,16 +580,17 @@ def fetch_json(
             if allow_not_found and attempt <= NOT_FOUND_RETRIES:
                 wait = _retry_delay_with_jitter(attempt)
                 print(
-                    f"  404 for {url} — retrying in {wait:.2f}s to confirm the repo is unavailable..."
+                    f"  404 for {url} — retrying in {wait:.2f}s to "
+                    + "confirm the repo is unavailable..."
                 )
                 time.sleep(wait)
                 continue
             if allow_not_found:
                 raise RepoUnavailableError(url, resp, attempt)
-            print(f"  Warning: {url} returned 404 — repo may not exist or token lacks access.")
-            raise requests.HTTPError(
-                f"404 Not Found: {url}", response=resp
+            print(
+                f"  Warning: {url} returned 404 — repo may not exist or token lacks access."
             )
+            raise requests.HTTPError(f"404 Not Found: {url}", response=resp)
 
         resp.raise_for_status()
         return resp.json()
@@ -590,8 +611,8 @@ def discover_repositories(headers: Headers) -> list[RepoMetadata]:
     while True:
         if use_github_app:
             url = (
-                f"{APP_REPO_DISCOVERY_URL}?per_page={REPO_DISCOVERY_PAGE_SIZE}" +
-                f"&page={page}"
+                f"{APP_REPO_DISCOVERY_URL}?per_page={REPO_DISCOVERY_PAGE_SIZE}"
+                + f"&page={page}"
             )
             response = fetch_json(url, headers)
             if not isinstance(response, dict):
@@ -605,9 +626,9 @@ def discover_repositories(headers: Headers) -> list[RepoMetadata]:
                 )
         else:
             url = (
-                f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member" +
-                f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}" +
-                f"&page={page}"
+                f"{REPO_DISCOVERY_URL}?affiliation=owner,collaborator,organization_member"
+                + f"&sort=updated&direction=desc&per_page={REPO_DISCOVERY_PAGE_SIZE}"
+                + f"&page={page}"
             )
             page_rows = fetch_json(url, headers)
         if not page_rows:
@@ -751,15 +772,19 @@ def resolve_repositories(
             print("Error: no eligible repositories remain in 'include_only'.")
             sys.exit(1)
         print(
-            "Repository discovery: " +
-            f"{len(discovered)} accessible, {len(eligible)} eligible after filters, " +
-            f"tracking {len(resolved)} from include_only."
+            "Repository discovery: "
+            + f"{len(discovered)} accessible, {len(eligible)} eligible after filters, "
+            + f"tracking {len(resolved)} from include_only."
         )
-        return resolved, manifest, {
-            repo_name: eligible[repo_name]
-            for repo_name in resolved
-            if repo_name in eligible
-        }
+        return (
+            resolved,
+            manifest,
+            {
+                repo_name: eligible[repo_name]
+                for repo_name in resolved
+                if repo_name in eligible
+            },
+        )
 
     include_repos, missing_include = _resolve_named_repos(include, eligible)
     if missing_include:
@@ -795,18 +820,16 @@ def resolve_repositories(
         resolved.extend(repo["full_name"] for repo in selected_auto)
         auto_count = len(selected_auto)
         state["auto_cutoff_created_at"] = (
-            selected_auto[-1].get("created_at") or ""
-            if selected_auto
-            else ""
+            selected_auto[-1].get("created_at") or "" if selected_auto else ""
         )
     else:
         state["auto_cutoff_created_at"] = ""
 
     print(
-        "Repository discovery: " +
-        f"{len(discovered)} accessible, {len(eligible)} eligible after filters, " +
-        f"tracking {len(resolved)} " +
-        f"({explicit_count} explicit, {auto_count} automatic)."
+        "Repository discovery: "
+        + f"{len(discovered)} accessible, {len(eligible)} eligible after filters, "
+        + f"tracking {len(resolved)} "
+        + f"({explicit_count} explicit, {auto_count} automatic)."
     )
 
     if not resolved:
@@ -818,11 +841,15 @@ def resolve_repositories(
         )
         sys.exit(1)
 
-    return resolved, manifest, {
-        repo_name: eligible[repo_name]
-        for repo_name in resolved
-        if repo_name in eligible
-    }
+    return (
+        resolved,
+        manifest,
+        {
+            repo_name: eligible[repo_name]
+            for repo_name in resolved
+            if repo_name in eligible
+        },
+    )
 
 
 def collect_views_clones(
@@ -845,31 +872,35 @@ def collect_views_clones(
     for entry in views_data.get("views", []):
         ts = entry["timestamp"][:10]
         clone_entry = clones_by_date.pop(ts, {})
-        rows.append({
-            "repo": repo,
-            "ts": ts,
-            "views_count": entry.get("count", 0),
-            "views_uniques": entry.get("uniques", 0),
-            "clones_count": clone_entry.get("count", 0),
-            "clones_uniques": clone_entry.get("uniques", 0),
-            "captured_at": captured_at,
-            "source": "api",
-            "schema_version": SCHEMA_VERSION,
-        })
+        rows.append(
+            {
+                "repo": repo,
+                "ts": ts,
+                "views_count": entry.get("count", 0),
+                "views_uniques": entry.get("uniques", 0),
+                "clones_count": clone_entry.get("count", 0),
+                "clones_uniques": clone_entry.get("uniques", 0),
+                "captured_at": captured_at,
+                "source": "api",
+                "schema_version": SCHEMA_VERSION,
+            }
+        )
 
     # Remaining clone-only dates
     for ts, clone_entry in clones_by_date.items():
-        rows.append({
-            "repo": repo,
-            "ts": ts,
-            "views_count": 0,
-            "views_uniques": 0,
-            "clones_count": clone_entry.get("count", 0),
-            "clones_uniques": clone_entry.get("uniques", 0),
-            "captured_at": captured_at,
-            "source": "api",
-            "schema_version": SCHEMA_VERSION,
-        })
+        rows.append(
+            {
+                "repo": repo,
+                "ts": ts,
+                "views_count": 0,
+                "views_uniques": 0,
+                "clones_count": clone_entry.get("count", 0),
+                "clones_uniques": clone_entry.get("uniques", 0),
+                "captured_at": captured_at,
+                "source": "api",
+                "schema_version": SCHEMA_VERSION,
+            }
+        )
 
     return rows
 
@@ -965,52 +996,60 @@ def collect_repo_metrics(
     files = community_profile.get("files")
     if not isinstance(files, dict):
         files = {}
-    return [{
-        "repo": repo,
-        "repo_id": repo_detail.get("id", ""),
-        "node_id": repo_detail.get("node_id", ""),
-        "ts": captured_at[:10],
-        "captured_at": captured_at,
-        "stargazers_count": int(repo_detail.get("stargazers_count", 0) or 0),
-        "subscribers_count": int(repo_detail.get("subscribers_count", 0) or 0),
-        "forks_count": int(repo_detail.get("forks_count", 0) or 0),
-        "open_issues_count": int(repo_detail.get("open_issues_count", 0) or 0),
-        "size_kb": int(repo_detail.get("size", 0) or 0),
-        "created_at": repo_detail.get("created_at", ""),
-        "pushed_at": repo_detail.get("pushed_at", ""),
-        "updated_at": repo_detail.get("updated_at", ""),
-        "language": repo_detail.get("language", ""),
-        "visibility": repo_detail.get("visibility", ""),
-        "default_branch": repo_detail.get("default_branch", ""),
-        "has_pages": repo_detail.get("has_pages", ""),
-        "has_discussions": repo_detail.get("has_discussions", ""),
-        "archived": repo_detail.get("archived", ""),
-        "disabled": repo_detail.get("disabled", ""),
-        "community_health_percentage": _community_health_percentage(community_profile),
-        "community_documentation": community_profile.get("documentation", "") or "",
-        "community_updated_at": community_profile.get("updated_at", "") or "",
-        "community_content_reports_enabled": community_profile.get(
-            "content_reports_enabled",
-            "",
-        ),
-        "community_has_code_of_conduct": _community_has_file(files, "code_of_conduct"),
-        "community_has_contributing": _community_has_file(files, "contributing"),
-        "community_has_issue_template": _community_has_file(files, "issue_template"),
-        "community_has_pull_request_template": _community_has_file(
-            files,
-            "pull_request_template",
-        ),
-        "community_has_readme": _community_has_file(files, "readme"),
-        "community_has_license": _community_has_file(files, "license"),
-        "source": source,
-        "schema_version": SCHEMA_VERSION,
-    }]
+    return [
+        {
+            "repo": repo,
+            "repo_id": repo_detail.get("id", ""),
+            "node_id": repo_detail.get("node_id", ""),
+            "ts": captured_at[:10],
+            "captured_at": captured_at,
+            "stargazers_count": int(repo_detail.get("stargazers_count", 0) or 0),
+            "subscribers_count": int(repo_detail.get("subscribers_count", 0) or 0),
+            "forks_count": int(repo_detail.get("forks_count", 0) or 0),
+            "open_issues_count": int(repo_detail.get("open_issues_count", 0) or 0),
+            "size_kb": int(repo_detail.get("size", 0) or 0),
+            "created_at": repo_detail.get("created_at", ""),
+            "pushed_at": repo_detail.get("pushed_at", ""),
+            "updated_at": repo_detail.get("updated_at", ""),
+            "language": repo_detail.get("language", ""),
+            "visibility": repo_detail.get("visibility", ""),
+            "default_branch": repo_detail.get("default_branch", ""),
+            "has_pages": repo_detail.get("has_pages", ""),
+            "has_discussions": repo_detail.get("has_discussions", ""),
+            "archived": repo_detail.get("archived", ""),
+            "disabled": repo_detail.get("disabled", ""),
+            "community_health_percentage": _community_health_percentage(
+                community_profile
+            ),
+            "community_documentation": community_profile.get("documentation", "") or "",
+            "community_updated_at": community_profile.get("updated_at", "") or "",
+            "community_content_reports_enabled": community_profile.get(
+                "content_reports_enabled",
+                "",
+            ),
+            "community_has_code_of_conduct": _community_has_file(
+                files, "code_of_conduct"
+            ),
+            "community_has_contributing": _community_has_file(files, "contributing"),
+            "community_has_issue_template": _community_has_file(
+                files, "issue_template"
+            ),
+            "community_has_pull_request_template": _community_has_file(
+                files,
+                "pull_request_template",
+            ),
+            "community_has_readme": _community_has_file(files, "readme"),
+            "community_has_license": _community_has_file(files, "license"),
+            "source": source,
+            "schema_version": SCHEMA_VERSION,
+        }
+    ]
 
 
 def _fallback_repo_detail_warning(repo: str, exc: Exception) -> str:
     return (
-        f"{repo}: repository detail request failed ({exc}); " +
-        "traffic collection continued and repo metrics used discovery fallback."
+        f"{repo}: repository detail request failed ({exc}); "
+        + "traffic collection continued and repo metrics used discovery fallback."
     )
 
 
@@ -1070,13 +1109,23 @@ def main() -> None:
                 {k: v for k, v in row.items() if k in SNAPSHOT_FIELDS}
                 for row in vc_rows
             ]
-            append_csv(os.path.join(DATA_DIR, "traffic-snapshots.csv"), snapshot_rows, SNAPSHOT_FIELDS)
+            append_csv(
+                os.path.join(DATA_DIR, "traffic-snapshots.csv"),
+                snapshot_rows,
+                SNAPSHOT_FIELDS,
+            )
 
             ref_rows = collect_referrers(repo, headers, captured_at)
-            append_csv(os.path.join(DATA_DIR, "traffic-referrers.csv"), ref_rows, REFERRER_FIELDS)
+            append_csv(
+                os.path.join(DATA_DIR, "traffic-referrers.csv"),
+                ref_rows,
+                REFERRER_FIELDS,
+            )
 
             path_rows = collect_paths(repo, headers, captured_at)
-            append_csv(os.path.join(DATA_DIR, "traffic-paths.csv"), path_rows, PATH_FIELDS)
+            append_csv(
+                os.path.join(DATA_DIR, "traffic-paths.csv"), path_rows, PATH_FIELDS
+            )
 
             metric_rows = collect_repo_metrics(
                 repo,
@@ -1095,7 +1144,11 @@ def main() -> None:
                     repo=repo,
                     captured_at=captured_at,
                     run_id=run_id,
-                    status="ok_with_data" if _has_nonzero_traffic(vc_rows) else "ok_zero_data",
+                    status=(
+                        "ok_with_data"
+                        if _has_nonzero_traffic(vc_rows)
+                        else "ok_zero_data"
+                    ),
                     metric_source=metric_source,
                     traffic_days=len(vc_rows),
                     referrer_rows=len(ref_rows),
@@ -1104,8 +1157,8 @@ def main() -> None:
             )
 
             print(
-                f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), " +
-                f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s)"
+                f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), "
+                + f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s)"
             )
         except SecondaryRateLimitError as exc:
             errors.append(repo)
@@ -1124,7 +1177,9 @@ def main() -> None:
                 )
             )
             print(f"  Error collecting {repo}: {exc}")
-            print("  Stop rerunning this workflow until the reported retry window has passed.")
+            print(
+                "  Stop rerunning this workflow until the reported retry window has passed."
+            )
             _append_collection_status(status_rows[-1])
             _write_step_summary(
                 "failed",

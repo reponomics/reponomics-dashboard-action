@@ -9,9 +9,10 @@ from load_data_modules.quality_summary import (
     _quality_summary_for_rows,
     _rows_for_capture,
 )
+from load_data_modules.types import Result, Rows
 
 
-def collection_quality(status_rows):
+def collection_quality(status_rows: Rows) -> Result:
     """Summarize the latest collection run quality from collection-status.csv."""
     if not status_rows:
         return dict(UNKNOWN_COLLECTION_QUALITY)

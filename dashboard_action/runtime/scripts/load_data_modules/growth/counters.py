@@ -6,9 +6,11 @@ from load_data_modules.growth.insight_support import (
     _add_growth_candidate,
     _enough_for_growth,
 )
+from load_data_modules.types import Candidate
 
 
-def _fork_spike(candidates, context):
+def _fork_spike(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag meaningful fork growth in the selected window."""
     fork_delta = context["forks_delta"]
     if not (_enough_for_growth(context) and fork_delta >= 2):
         return
@@ -25,7 +27,8 @@ def _fork_spike(candidates, context):
     )
 
 
-def _watcher_subscriber_spike(candidates, context):
+def _watcher_subscriber_spike(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag meaningful watcher/subscriber growth in the selected window."""
     subscriber_delta = context["subscribers_delta"]
     if not (_enough_for_growth(context) and subscriber_delta >= 3):
         return
@@ -44,7 +47,10 @@ def _watcher_subscriber_spike(candidates, context):
     )
 
 
-def _conversion_adjusted_score(context, metric, delta, multiplier, cap):
+def _conversion_adjusted_score(
+    context: Candidate, metric: str, delta: int, multiplier: float, cap: float
+) -> tuple[float, int]:
+    """Score counter movement, boosting it when conversion data is reliable."""
     conversion = context["conversions"].get(metric, {})
     denom = conversion.get("denominator", 0) or 0
     value = conversion.get("value")
@@ -54,7 +60,8 @@ def _conversion_adjusted_score(context, metric, delta, multiplier, cap):
     return score, denom
 
 
-def _negative_counter_movement(candidates, context):
+def _negative_counter_movement(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag any observed negative downstream counter movement."""
     if not _enough_for_growth(context):
         return
     for metric, delta in _negative_deltas(context).items():
@@ -69,7 +76,8 @@ def _negative_counter_movement(candidates, context):
         )
 
 
-def _negative_deltas(context):
+def _negative_deltas(context: Candidate) -> dict[str, int]:
+    """Return downstream metrics whose window deltas are below zero."""
     return {
         metric: delta
         for metric, delta in {

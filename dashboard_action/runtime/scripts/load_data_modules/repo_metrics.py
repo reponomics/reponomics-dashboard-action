@@ -1,13 +1,15 @@
 """Repository metric snapshots from repo-metrics.csv rows."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 
 from load_data_modules.parse import _bool_or_none, _counter_snapshot, _int_or_none
+from load_data_modules.types import Result, Row, Rows
 
 
-def latest_repo_metrics(metric_rows):
+def latest_repo_metrics(metric_rows: Rows) -> dict[str, Result]:
     """Return latest aggregate repository counters keyed by repo."""
-    latest = {}
+    latest: dict[str, Result] = {}
     for row in metric_rows:
         repo = row.get("repo", "")
         captured_at = row.get("captured_at", "")
@@ -19,7 +21,8 @@ def latest_repo_metrics(metric_rows):
     return latest
 
 
-def _repo_metric_snapshot(row):
+def _repo_metric_snapshot(row: Row) -> Result:
+    """Normalize a repo-metrics row to the counter fields used downstream."""
     return {
         "repo": row.get("repo", ""),
         "ts": row.get("ts", ""),
@@ -30,9 +33,9 @@ def _repo_metric_snapshot(row):
     }
 
 
-def latest_repo_community_profiles(metric_rows):
+def latest_repo_community_profiles(metric_rows: Rows) -> dict[str, Result]:
     """Return latest community health metrics keyed by repo."""
-    latest = {}
+    latest: dict[str, Result] = {}
     for row in metric_rows:
         repo = row.get("repo", "")
         captured_at = row.get("captured_at", "")
@@ -45,7 +48,8 @@ def latest_repo_community_profiles(metric_rows):
     return latest
 
 
-def _community_profile(row, captured_at):
+def _community_profile(row: Row, captured_at: str) -> Result:
+    """Normalize optional GitHub community profile fields."""
     health = _int_or_none(row.get("community_health_percentage"))
     return {
         "captured_at": captured_at,
@@ -67,9 +71,9 @@ def _community_profile(row, captured_at):
     }
 
 
-def latest_repo_metrics_per_day(metric_rows):
+def latest_repo_metrics_per_day(metric_rows: Rows) -> dict[str, list[Result]]:
     """Return latest repo metric snapshot for each repo/day."""
-    by_repo_day = {}
+    by_repo_day: dict[tuple[str, str], Result] = {}
     for row in metric_rows:
         repo = row.get("repo", "")
         ts = row.get("ts", "")
@@ -79,7 +83,10 @@ def latest_repo_metrics_per_day(metric_rows):
     return _group_repo_day_rows(by_repo_day.values())
 
 
-def _store_latest_repo_day(by_repo_day, row, repo, ts):
+def _store_latest_repo_day(
+    by_repo_day: dict[tuple[str, str], Result], row: Row, repo: str, ts: str
+) -> None:
+    """Keep the latest capture for a single repo/date key."""
     key = (repo, ts)
     captured_at = row.get("captured_at", "")
     existing = by_repo_day.get(key)
@@ -92,8 +99,9 @@ def _store_latest_repo_day(by_repo_day, row, repo, ts):
         }
 
 
-def _group_repo_day_rows(rows):
-    by_repo = defaultdict(list)
+def _group_repo_day_rows(rows: Iterable[Result]) -> dict[str, list[Result]]:
+    """Group normalized repo/day snapshots by repo in chronological order."""
+    by_repo: defaultdict[str, list[Result]] = defaultdict(list)
     for row in rows:
         by_repo[row["repo"]].append(row)
     return {
@@ -102,7 +110,7 @@ def _group_repo_day_rows(rows):
     }
 
 
-def repo_growth_series(metric_rows):
+def repo_growth_series(metric_rows: Rows) -> dict[str, Result]:
     """Return per-repo growth counter series from normalized repo-metrics.csv."""
     return {
         repo: {
@@ -116,7 +124,7 @@ def repo_growth_series(metric_rows):
     }
 
 
-def aggregate_repo_metrics(metric_rows):
+def aggregate_repo_metrics(metric_rows: Rows) -> Result:
     """Compute current aggregate repository growth counters."""
     latest = latest_repo_metrics(metric_rows)
     stargazers = sum(row["stargazers_count"] for row in latest.values())

@@ -7,9 +7,11 @@ from load_data_modules.growth.insight_support import (
     _downstream,
     _enough_for_cross_signal,
 )
+from load_data_modules.types import Candidate
 
 
-def _high_attention_low_interest(candidates, context):
+def _high_attention_low_interest(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag traffic volume that did not translate into downstream counters."""
     downstream = _downstream(context)
     if not (
         _enough_for_cross_signal(context)
@@ -35,7 +37,8 @@ def _high_attention_low_interest(candidates, context):
     )
 
 
-def _quiet_resonance(candidates, context):
+def _quiet_resonance(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag downstream growth from comparatively low traffic volume."""
     downstream = _downstream(context)
     if not (_enough_for_cross_signal(context) and downstream >= 2 and context["views"] < 30):
         return
@@ -54,7 +57,8 @@ def _quiet_resonance(candidates, context):
     )
 
 
-def _clone_heavy_star_light(candidates, context):
+def _clone_heavy_star_light(candidates: list[Candidate], context: Candidate) -> None:
+    """Flag clone-heavy activity without matching star movement."""
     clone_ratio = context["clones"] / max(context["views"], 1)
     if not (
         _enough_for_cross_signal(context)
@@ -78,7 +82,10 @@ def _clone_heavy_star_light(candidates, context):
     )
 
 
-def _traffic_without_downstream_growth(candidates, context):
+def _traffic_without_downstream_growth(
+    candidates: list[Candidate], context: Candidate
+) -> None:
+    """Flag high traffic with no stars, watchers, or forks movement."""
     downstream = _downstream(context)
     if not (_enough_for_cross_signal(context) and context["views"] >= 80 and downstream <= 0):
         return
@@ -97,7 +104,10 @@ def _traffic_without_downstream_growth(candidates, context):
     )
 
 
-def _downstream_without_traffic_spike(candidates, context):
+def _downstream_without_traffic_spike(
+    candidates: list[Candidate], context: Candidate
+) -> None:
+    """Flag downstream movement that is not explained by traffic volume."""
     downstream = _downstream(context)
     if not (_enough_for_cross_signal(context) and downstream >= 3 and context["views"] < 40):
         return

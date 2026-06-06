@@ -1,14 +1,16 @@
 """Daily traffic aggregate projections."""
 
 from collections import defaultdict
+from collections.abc import Mapping
 
+from load_data_modules.types import Result, Rows
 from load_data_modules.traffic_totals import _add_daily_traffic
 
 
-def aggregate_totals(daily_rows):
+def aggregate_totals(daily_rows: Rows) -> Result:
     """Compute grand totals from daily rows."""
-    repos = set()
-    dates = set()
+    repos: set[str] = set()
+    dates: set[str] = set()
     totals = _empty_grand_totals()
 
     for row in daily_rows:
@@ -22,7 +24,8 @@ def aggregate_totals(daily_rows):
     return {"repos": repos, **totals, "days_tracked": len(dates)}
 
 
-def _empty_grand_totals():
+def _empty_grand_totals() -> dict[str, int]:
+    """Return a zeroed accumulator for traffic-wide totals."""
     return {
         "total_views": 0,
         "total_uniques": 0,
@@ -31,9 +34,9 @@ def _empty_grand_totals():
     }
 
 
-def aggregate_by_date(daily_rows):
+def aggregate_by_date(daily_rows: Rows) -> tuple[list[str], dict[str, list[int]]]:
     """Group daily rows by date, summing across repos."""
-    by_date = defaultdict(
+    by_date: defaultdict[str, dict[str, int]] = defaultdict(
         lambda: {"views": 0, "uniques": 0, "clones": 0, "clone_uniques": 0}
     )
     for row in daily_rows:
@@ -43,7 +46,10 @@ def aggregate_by_date(daily_rows):
     return dates, _series_for_dates(by_date, dates)
 
 
-def _series_for_dates(by_date, dates):
+def _series_for_dates(
+    by_date: Mapping[str, Mapping[str, int]], dates: list[str]
+) -> dict[str, list[int]]:
+    """Project date-keyed totals into chart-ready metric series."""
     return {
         "views": [by_date[d]["views"] for d in dates],
         "uniques": [by_date[d]["uniques"] for d in dates],
@@ -52,9 +58,9 @@ def _series_for_dates(by_date, dates):
     }
 
 
-def aggregate_per_repo(daily_rows):
+def aggregate_per_repo(daily_rows: Rows) -> list[Result]:
     """Compute per-repo totals from daily rows."""
-    by_repo = defaultdict(
+    by_repo: defaultdict[str, dict[str, int]] = defaultdict(
         lambda: {"views": 0, "uniques": 0, "clones": 0, "clone_uniques": 0}
     )
     for row in daily_rows:
@@ -65,7 +71,7 @@ def aggregate_per_repo(daily_rows):
     return result
 
 
-def _repo_total_row(repo, totals):
+def _repo_total_row(repo: str, totals: Mapping[str, int]) -> Result:
     return {
         "repo": repo,
         "total_views": totals["views"],

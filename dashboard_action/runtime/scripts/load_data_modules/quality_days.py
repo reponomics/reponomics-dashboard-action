@@ -8,9 +8,10 @@ from load_data_modules.quality_summary import (
     _quality_summary_for_rows,
     _rows_for_capture,
 )
+from load_data_modules.types import Result, Rows
 
 
-def collection_quality_days(status_rows):
+def collection_quality_days(status_rows: Rows) -> list[Result]:
     """Return daily quality summaries keyed from latest run per day."""
     return [
         _quality_day_summary(day, rows)
@@ -18,8 +19,9 @@ def collection_quality_days(status_rows):
     ]
 
 
-def _status_rows_by_day(status_rows):
-    by_day = defaultdict(list)
+def _status_rows_by_day(status_rows: Rows) -> dict[str, Rows]:
+    """Bucket status rows by collection date, ignoring incomplete captures."""
+    by_day: defaultdict[str, Rows] = defaultdict(list)
     for row in status_rows:
         ts = row.get("ts", "")
         captured_at = row.get("captured_at", "")
@@ -28,7 +30,7 @@ def _status_rows_by_day(status_rows):
     return by_day
 
 
-def _quality_day_summary(day, rows):
+def _quality_day_summary(day: str, rows: Rows) -> Result:
     run_timestamps = sorted({row.get("captured_at", "") for row in rows})
     latest_captured_at = run_timestamps[-1]
     summary = _quality_summary_for_rows(_rows_for_capture(rows, latest_captured_at))

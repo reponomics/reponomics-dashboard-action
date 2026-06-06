@@ -3,9 +3,10 @@
 from collections import defaultdict
 
 from load_data_modules.snapshots import _latest_snapshot_rows
+from load_data_modules.types import Result, Row, Rows
 
 
-def _content_label(row):
+def _content_label(row: Row) -> str:
     """Return a display label for a GitHub traffic path row."""
     repo = row.get("repo", "")
     path = row.get("path", "")
@@ -15,9 +16,11 @@ def _content_label(row):
     return title or path
 
 
-def top_paths(path_rows, limit=10):
+def top_paths(path_rows: Rows, limit: int = 10) -> list[Result]:
     """Return the top content paths from the latest snapshot for each repo."""
-    by_path = defaultdict(lambda: {"count": 0, "uniques": 0, "title": "", "repo": ""})
+    by_path: defaultdict[tuple[str, str], Result] = defaultdict(
+        lambda: {"count": 0, "uniques": 0, "title": "", "repo": ""}
+    )
     for row in _latest_snapshot_rows(path_rows):
         path_key = (row.get("repo", ""), row["path"])
         by_path[path_key]["repo"] = row.get("repo", "")
@@ -31,7 +34,7 @@ def top_paths(path_rows, limit=10):
     return result[:limit]
 
 
-def _path_result(path, values):
+def _path_result(path: str, values: Result) -> Result:
     return {
         "repo": values["repo"],
         "path": path,

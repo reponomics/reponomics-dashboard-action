@@ -1,12 +1,14 @@
 """Snapshot selection for rolling GitHub traffic endpoints."""
 
+from load_data_modules.types import Rows
 
-def _latest_snapshot_rows(rows):
+
+def _latest_snapshot_rows(rows: Rows) -> Rows:
     """Return only rows from the latest captured snapshot for each repo."""
     if not rows:
         return []
 
-    latest_by_repo = {}
+    latest_by_repo: dict[str, str] = {}
     for row in rows:
         repo = row["repo"]
         captured_at = row.get("captured_at", "")

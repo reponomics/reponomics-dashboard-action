@@ -13,6 +13,7 @@ from load_data_modules.growth.counters import (
     _negative_counter_movement,
     _watcher_subscriber_spike,
 )
+from load_data_modules.types import Candidate, Rows
 
 
 _GROWTH_CANDIDATE_BUILDERS = (
@@ -27,13 +28,15 @@ _GROWTH_CANDIDATE_BUILDERS = (
 )
 
 
-def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
+def _growth_insight_candidates(
+    daily_rows: Rows, metric_rows: Rows | None = None, growth: Candidate | None = None
+) -> list[Candidate]:
     """Return cross-signal insight candidates with volume/sample guards."""
     growth = _resolved_growth(daily_rows, metric_rows, growth)
     if growth is None:
         return []
 
-    candidates = []
+    candidates: list[Candidate] = []
     for repo, row in growth.get("per_repo", {}).items():
         context = _growth_context(repo, row)
         for builder in _GROWTH_CANDIDATE_BUILDERS:
@@ -41,7 +44,10 @@ def _growth_insight_candidates(daily_rows, metric_rows=None, growth=None):
     return candidates
 
 
-def _resolved_growth(daily_rows, metric_rows, growth):
+def _resolved_growth(
+    daily_rows: Rows, metric_rows: Rows | None, growth: Candidate | None
+) -> Candidate | None:
+    """Use precomputed growth analytics when supplied, otherwise compute them."""
     if growth is not None:
         return growth
     if metric_rows is None:
@@ -49,7 +55,8 @@ def _resolved_growth(daily_rows, metric_rows, growth):
     return growth_analytics(daily_rows, metric_rows)
 
 
-def _growth_context(repo, row):
+def _growth_context(repo: str, row: Candidate) -> Candidate:
+    """Flatten one per-repo growth row into rule-friendly scalar fields."""
     traffic = row.get("traffic", {})
     deltas = row.get("deltas", {})
     conversions = row.get("conversion", {})

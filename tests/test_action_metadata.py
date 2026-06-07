@@ -75,6 +75,21 @@ def test_action_descriptions_do_not_contain_actions_expressions() -> None:
     assert offenders == []
 
 
+def test_runtime_steps_execute_dashboard_action_as_module() -> None:
+    runtime_steps = [
+        _step_by_name("Run Reponomics runtime"),
+        _step_by_name("Clean up superseded dashboard data artifacts"),
+        _step_by_name("Purge incident reset history"),
+    ]
+
+    for step in runtime_steps:
+        command = step["run"]
+        assert command == (
+            'PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run'
+        )
+        assert "dashboard_action/run.py" not in command
+
+
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:
     step = _step_by_uses("actions/configure-pages@")
 

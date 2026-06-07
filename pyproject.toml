@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reponomics-dashboard-action"
-version = "0.18.0"  # x-release-please-version
+version = "0.20.2"  # x-release-please-version
 description = "GitHub Action for the Reponomics Dashboard."
 readme = "README.md"
 authors = [{ "name" = "Reponomics Contributors" }]
@@ -33,6 +33,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["dashboard_action*"]
+
+[tool.setuptools.package-data]
+"dashboard_action.runtime.scripts.render_dashboard_support.assets" = ["static/*"]
 
 [tool.mypy]
 python_version = "3.11"

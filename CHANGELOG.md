@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.20.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.1...v0.20.2) (2026-06-06)
+
+
+### Bug Fixes
+
+* reduce complexity ([#90](https://github.com/reponomics/reponomics-dashboard-action/issues/90)) ([5fabba7](https://github.com/reponomics/reponomics-dashboard-action/commit/5fabba7b6fa289fd25541e906ce0f246d40c59e8))
+
+## [0.20.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.0...v0.20.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* update GitHub REST API version ([#87](https://github.com/reponomics/reponomics-dashboard-action/issues/87)) ([a2a078e](https://github.com/reponomics/reponomics-dashboard-action/commit/a2a078eb77ce1e6c283cb4cdcf8603638d21cc2b))
+
+## [0.20.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.19.0...v0.20.0) (2026-06-05)
+
+
+### Features
+
+* expand managed docs bundle ([#83](https://github.com/reponomics/reponomics-dashboard-action/issues/83)) ([4e963ae](https://github.com/reponomics/reponomics-dashboard-action/commit/4e963ae74943e956ed85f344ba8c44d8eac4f4d8))
+
+## [0.19.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.18.0...v0.19.0) (2026-06-05)
+
+
+### Features
+
+* add dashboard-data lineage cleanup ([#81](https://github.com/reponomics/reponomics-dashboard-action/issues/81)) ([7c7ffd6](https://github.com/reponomics/reponomics-dashboard-action/commit/7c7ffd634212ab9fc2983f8c0ac0c86791a37329))
+
 ## [0.18.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.17.0...v0.18.0) (2026-06-05)
 
 

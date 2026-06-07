@@ -64,7 +64,11 @@ def validate_uses(uses: str) -> str | None:
     if uses.startswith(("./", "../", "docker://")):
         return None
     reusable_workflow = REMOTE_REUSABLE_WORKFLOW.fullmatch(uses)
-    if reusable_workflow and reusable_workflow.group("owner") not in TRUSTED_REMOTE_REUSABLE_WORKFLOW_OWNERS:
+    if (
+        reusable_workflow
+        and reusable_workflow.group("owner")
+        not in TRUSTED_REMOTE_REUSABLE_WORKFLOW_OWNERS
+    ):
         return "third-party remote reusable workflows are not allowed; inline pinned steps locally"
     if "@" not in uses:
         return "missing @ref"
@@ -98,7 +102,9 @@ def main() -> int:
     failures = collect_failures(args.paths)
 
     if failures:
-        print("GitHub Action imports must be pinned to full commit SHAs:", file=sys.stderr)
+        print(
+            "GitHub Action imports must be pinned to full commit SHAs:", file=sys.stderr
+        )
         for failure in failures:
             print(f"  - {failure}", file=sys.stderr)
         return 1

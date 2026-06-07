@@ -1,8 +1,10 @@
 from pathlib import Path
+import re
 
 import yaml
 
 
+ACTION_EXPRESSION = re.compile(r"\$\{\{.*?\}\}")
 PAGES_DEPLOYMENT_IF = (
     "${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && " +
     "steps.runtime.outputs.publish-pages == 'true' }}"
@@ -46,6 +48,31 @@ def _step_index(name: str) -> int:
         if step.get("name") == name:
             return index
     raise AssertionError(f"missing action step named {name}")
+
+
+def _description_fields(value: object, path: str = "action.yml") -> list[tuple[str, str]]:
+    descriptions: list[tuple[str, str]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key == "description" and isinstance(child, str):
+                descriptions.append((child_path, child))
+            descriptions.extend(_description_fields(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            descriptions.extend(_description_fields(child, f"{path}[{index}]"))
+    return descriptions
+
+
+def test_action_descriptions_do_not_contain_actions_expressions() -> None:
+    descriptions = _description_fields(_action())
+    offenders = [
+        path
+        for path, description in descriptions
+        if ACTION_EXPRESSION.search(description)
+    ]
+
+    assert offenders == []
 
 
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:

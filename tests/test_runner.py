@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import csv
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from html import unescape
 from html.parser import HTMLParser
@@ -114,6 +115,13 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
 @pytest.fixture(autouse=True)
 def _stub_version_status_releases(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(run.version_status, "_fetch_releases", lambda: [])
+
+
+@pytest.fixture(autouse=True)
+def _reset_collect_runtime_state() -> Generator[None, None, None]:
+    run.collect_mod._reset_runtime_state()
+    yield
+    run.collect_mod._reset_runtime_state()
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -365,6 +373,95 @@ def test_validate_token_github_app_uses_installation_endpoint(
     output = capsys.readouterr().out
     assert seen_url.startswith("https://api.github.com/installation/repositories")
     assert "Authenticated as GitHub App installation token" in output
+
+
+def test_validate_token_reports_network_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    summary_path = tmp_path / "summary.md"
+
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        raise requests.ConnectionError("offline")
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({})
+
+    output = capsys.readouterr().out
+    assert "could not reach GitHub API" in output
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "- Outcome: **failed**" in summary
+    assert "token validation" in summary
+    assert "Network Warnings" in summary
+
+
+@pytest.mark.parametrize(
+    ("status", "payload", "expected"),
+    [
+        (401, {"repositories": []}, "installation token is invalid or expired"),
+        (403, {"repositories": []}, "installation token lacks required permissions"),
+        (500, {"repositories": []}, "status 500"),
+        (200, [], "was not a JSON object"),
+        (200, {"total_count": 0}, "did not include a repositories list"),
+    ],
+)
+def test_validate_token_github_app_rejects_invalid_validation_responses(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    status: int,
+    payload: Any,
+    expected: str,
+) -> None:
+    def fake_get(
+        _url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        return _response(status, payload=payload)
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.validate_token({}, use_github_app=True)
+
+    assert expected in capsys.readouterr().out
+
+
+def test_get_headers_reports_missing_token_for_github_app(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.get_headers()
+
+    output = capsys.readouterr().out
+    assert "GH_TOKEN environment variable is not set" in output
+    assert "GitHub App installation token" in output
+
+
+def test_get_headers_returns_expected_github_api_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GH_TOKEN", "ghs_installation")
+
+    assert run.collect_mod.get_headers() == {
+        "Authorization": "Bearer ghs_installation",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2026-03-10",
+    }
 
 
 @pytest.mark.parametrize(
@@ -1877,11 +1974,125 @@ def test_collect_retry_after_parses_delta_and_http_date() -> None:
     future = datetime.now(timezone.utc) + timedelta(seconds=30)
     http_date = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
 
+    assert run.collect_mod._parse_retry_after_seconds(None) is None
     assert run.collect_mod._parse_retry_after_seconds("2.2") == 3
     parsed_date = run.collect_mod._parse_retry_after_seconds(http_date)
     assert parsed_date is not None
     assert 0 <= parsed_date <= 35
     assert run.collect_mod._parse_retry_after_seconds("not a date") is None
+
+
+def test_collect_status_row_truncates_multiline_error_messages() -> None:
+    row = run.collect_mod._collection_status_row(
+        repo="demo/reponomics",
+        captured_at="2026-05-16T12:00:00Z",
+        run_id="123",
+        status="error",
+        metric_source="repo-detail",
+        traffic_days=0,
+        referrer_rows=0,
+        path_rows=0,
+        error_type="RuntimeError",
+        error_message=("line one\n" + ("x" * 260)),
+    )
+
+    assert row["ts"] == "2026-05-16"
+    assert "\n" not in row["error_message"]
+    assert row["error_message"].endswith("...")
+    assert len(row["error_message"]) == 243
+
+
+def test_collect_step_summary_includes_collection_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    summary_path = tmp_path / "summary.md"
+    response = _response(403, text="secondary")
+    secondary = run.collect_mod.SecondaryRateLimitError(
+        "https://api.github.test/traffic",
+        response,
+        7,
+        datetime(2026, 5, 16, 12, 7, tzinfo=timezone.utc),
+        "Retry-After",
+    )
+    status_rows = [
+        {"status": "ok_with_data"},
+        {"status": "ok_zero_data"},
+        {"status": "skipped_unavailable"},
+    ]
+
+    run.collect_mod._reset_runtime_state()
+    run.collect_mod._record_network_warning(
+        "https://api.github.test/repos",
+        2,
+        requests.Timeout("slow"),
+    )
+    run.collect_mod._REPO_DETAIL_WARNINGS.append("detail fallback used")
+    run.collect_mod._REPO_COMMUNITY_WARNINGS.append("community profile skipped")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+
+    run.collect_mod._write_step_summary(
+        "failed",
+        errors=["demo/error"],
+        secondary_limit=secondary,
+        skipped_repos=["demo/missing"],
+        status_rows=status_rows,
+    )
+
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "- Repositories with errors: demo/error" in summary
+    assert "- Repositories skipped as unavailable: demo/missing" in summary
+    assert "- Repositories collected with data: 1" in summary
+    assert "- Retry after: `7` second(s)" in summary
+    assert "Network Warnings" in summary
+    assert "detail fallback used" in summary
+    assert "community profile skipped" in summary
+
+
+def test_collect_pacing_waits_after_completed_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+
+    run.collect_mod._LAST_REQUEST_COMPLETED_AT = 100.0
+    monkeypatch.setattr(run.collect_mod.random, "uniform", lambda _low, _high: 0.75)
+    monkeypatch.setattr(run.collect_mod.time, "monotonic", lambda: 100.2)
+    monkeypatch.setattr(run.collect_mod.time, "sleep", sleeps.append)
+
+    run.collect_mod._pace_request()
+
+    assert sleeps == [pytest.approx(0.55)]
+
+
+def test_collect_perform_get_marks_request_complete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _response(200, payload={"ok": True})
+
+    def fake_get(
+        url: str,
+        *,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        assert url == "https://api.github.test/repos"
+        assert headers == {"Authorization": "Bearer test"}
+        assert timeout == 15
+        return response
+
+    monkeypatch.setattr(run.collect_mod, "_pace_request", lambda: None)
+    monkeypatch.setattr(run.collect_mod.requests, "get", fake_get)
+    monkeypatch.setattr(run.collect_mod.time, "monotonic", lambda: 123.4)
+
+    assert (
+        run.collect_mod._perform_get(
+            "https://api.github.test/repos",
+            {"Authorization": "Bearer test"},
+            15,
+        )
+        is response
+    )
+    assert run.collect_mod._LAST_REQUEST_COMPLETED_AT == 123.4
 
 
 def test_collect_fetch_json_raises_secondary_limit_with_retry_window(
@@ -1935,6 +2146,29 @@ def test_collect_fetch_json_retries_transient_throttles(
     assert len(sleeps) == 2
 
 
+def test_collect_fetch_json_raises_after_network_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = 0
+
+    def fake_get(
+        url: str,
+        headers: run.collect_mod.Headers,
+        timeout: int,
+    ) -> requests.Response:
+        nonlocal attempts
+        attempts += 1
+        raise requests.ConnectionError("offline")
+
+    monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
+    monkeypatch.setattr(run.collect_mod.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(requests.ConnectionError):
+        run.collect_mod.fetch_json("https://api.github.test/repos", {})
+
+    assert attempts == run.collect_mod.MAX_RETRIES
+
+
 def test_collect_fetch_json_confirms_not_found_before_skipping(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1961,6 +2195,38 @@ def test_collect_fetch_json_confirms_not_found_before_skipping(
 
     assert attempts == run.collect_mod.NOT_FOUND_RETRIES + 1
     assert exc_info.value.attempts == attempts
+
+
+def test_collect_fetch_json_raises_plain_not_found_without_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        run.collect_mod,
+        "_perform_get",
+        lambda url, headers, timeout: _response(404, text="missing"),
+    )
+
+    with pytest.raises(requests.HTTPError):
+        run.collect_mod.fetch_json("https://api.github.test/repos/demo/missing", {})
+
+    assert "returned 404" in capsys.readouterr().out
+
+
+def test_collect_fetch_json_raises_after_retryable_server_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        run.collect_mod,
+        "_perform_get",
+        lambda url, headers, timeout: _response(500, text="server error"),
+    )
+    monkeypatch.setattr(run.collect_mod.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(requests.HTTPError) as exc_info:
+        run.collect_mod.fetch_json("https://api.github.test/repos", {})
+
+    assert "500 Server Error" in str(exc_info.value)
 
 
 def test_discover_repositories_uses_installation_listing_for_github_app(
@@ -1991,6 +2257,48 @@ def test_discover_repositories_uses_installation_listing_for_github_app(
     assert urls[0].startswith("https://api.github.com/installation/repositories?")
     assert "per_page=100" in urls[0]
     assert "page=1" in urls[0]
+
+
+def test_discover_repositories_paginates_user_repository_listing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    urls: list[str] = []
+    first_page = [
+        {"full_name": f"demo/repo-{index}", "permissions": {"push": True}}
+        for index in range(run.collect_mod.REPO_DISCOVERY_PAGE_SIZE)
+    ]
+    second_page = [{"full_name": "demo/final", "permissions": {"push": True}}]
+
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        urls.append(url)
+        return first_page if "&page=1" in url else second_page
+
+    monkeypatch.delenv("REPONOMICS_USE_GITHUB_APP", raising=False)
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    discovered = run.collect_mod.discover_repositories({})
+
+    assert len(discovered) == run.collect_mod.REPO_DISCOVERY_PAGE_SIZE + 1
+    assert "affiliation=owner,collaborator,organization_member" in urls[0]
+    assert "page=2" in urls[1]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"total_count": 1, "items": []},
+    ],
+)
+def test_discover_repositories_rejects_malformed_app_responses(
+    monkeypatch: pytest.MonkeyPatch,
+    payload: Any,
+) -> None:
+    monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
+    monkeypatch.setattr(run.collect_mod, "fetch_json", lambda _url, _headers: payload)
+
+    with pytest.raises(requests.HTTPError):
+        run.collect_mod.discover_repositories({})
 
 
 def test_resolve_repositories_applies_stable_auto_selection(
@@ -2099,6 +2407,227 @@ def test_resolve_repositories_accepts_pull_only_permissions_for_github_app(
 
     assert resolved == ["demo/read-only"]
     assert sorted(metadata) == ["demo/read-only"]
+
+
+def test_resolve_repositories_include_only_warns_and_exits_when_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    discovered = [
+        {
+            "full_name": "demo/fork",
+            "permissions": {"push": True},
+            "fork": True,
+        }
+    ]
+    config: dict[str, Any] = {
+        "include_only": ["demo/fork", "demo/missing"],
+        "include": [],
+        "exclude": [],
+        "max_repos": 5,
+        "include_others": False,
+        "include_private": True,
+        "include_new": True,
+    }
+
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.resolve_repositories({}, config, {})
+
+    output = capsys.readouterr().out
+    assert "include_only repos were not eligible" in output
+    assert "no eligible repositories remain in 'include_only'" in output
+
+
+def test_resolve_repositories_clears_auto_cutoff_when_auto_fill_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    discovered = [
+        {
+            "full_name": "demo/manual",
+            "permissions": {"admin": True},
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+    config: dict[str, Any] = {
+        "include_only": [],
+        "include": ["demo/manual", "demo/manual"],
+        "exclude": [],
+        "max_repos": 5,
+        "include_others": False,
+        "include_private": True,
+        "include_new": True,
+    }
+    manifest: dict[str, Any] = {
+        "selection_state": {
+            "auto_seeded_at": "2026-01-01T00:00:00Z",
+            "auto_cutoff_created_at": "2025-01-01T00:00:00Z",
+        }
+    }
+
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
+
+    resolved, updated_manifest, metadata = run.collect_mod.resolve_repositories(
+        {},
+        config,
+        manifest,
+    )
+
+    assert resolved == ["demo/manual"]
+    assert sorted(metadata) == ["demo/manual"]
+    assert updated_manifest["selection_state"]["auto_cutoff_created_at"] == ""
+
+
+def test_resolve_repositories_exits_when_no_repos_are_eligible(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config: dict[str, Any] = {
+        "include_only": [],
+        "include": [],
+        "exclude": [],
+        "max_repos": 5,
+        "include_others": False,
+        "include_private": True,
+        "include_new": True,
+    }
+
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: [])
+
+    with pytest.raises(SystemExit):
+        run.collect_mod.resolve_repositories({}, config, {})
+
+    assert "no eligible repositories found" in capsys.readouterr().out
+
+
+def test_collect_views_clones_joins_views_and_clone_only_dates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payloads = {
+        "views": {
+            "views": [
+                {"timestamp": "2026-05-15T00:00:00Z", "count": 10, "uniques": 4}
+            ]
+        },
+        "clones": {
+            "clones": [
+                {"timestamp": "2026-05-15T00:00:00Z", "count": 3, "uniques": 2},
+                {"timestamp": "2026-05-16T00:00:00Z", "count": 7, "uniques": 5},
+            ]
+        },
+    }
+
+    def fake_fetch_json(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        allow_not_found: bool = False,
+    ) -> Any:
+        assert allow_not_found is True
+        return payloads["clones" if url.endswith("/clones") else "views"]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    rows = run.collect_mod.collect_views_clones(
+        "demo/reponomics",
+        {},
+        "2026-05-16T12:00:00Z",
+    )
+
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-05-15",
+            "views_count": 10,
+            "views_uniques": 4,
+            "clones_count": 3,
+            "clones_uniques": 2,
+            "captured_at": "2026-05-16T12:00:00Z",
+            "source": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-05-16",
+            "views_count": 0,
+            "views_uniques": 0,
+            "clones_count": 7,
+            "clones_uniques": 5,
+            "captured_at": "2026-05-16T12:00:00Z",
+            "source": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+
+
+def test_collect_referrers_and_paths_shape_endpoint_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        allow_not_found: bool = False,
+    ) -> Any:
+        assert allow_not_found is True
+        if url.endswith("/referrers"):
+            return [{"referrer": "github.com", "count": 5, "uniques": 3}]
+        return [{"path": "/demo/reponomics", "title": "Overview", "count": 8, "uniques": 4}]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    assert run.collect_mod.collect_referrers(
+        "demo/reponomics",
+        {},
+        "2026-05-16T12:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-05-16T12:00:00Z",
+            "referrer": "github.com",
+            "count": 5,
+            "uniques": 3,
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert run.collect_mod.collect_paths(
+        "demo/reponomics",
+        {},
+        "2026-05-16T12:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-05-16T12:00:00Z",
+            "path": "/demo/reponomics",
+            "title": "Overview",
+            "count": 8,
+            "uniques": 4,
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
+def test_collect_repo_detail_and_community_profile_reject_non_object_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(run.collect_mod, "fetch_json", lambda _url, _headers: [])
+
+    with pytest.raises(requests.HTTPError, match="repository detail response"):
+        run.collect_mod.collect_repo_detail("demo/reponomics", {})
+    with pytest.raises(requests.HTTPError, match="community profile response"):
+        run.collect_mod.collect_repo_community_profile("demo/reponomics", {})
+
+
+def test_collect_repo_metrics_normalizes_invalid_community_profile() -> None:
+    rows = run.collect_mod.collect_repo_metrics(
+        "demo/reponomics",
+        {"stargazers_count": 1, "subscribers_count": 2, "forks_count": 3},
+        {"health_percentage": "unknown", "files": []},
+        "2026-05-16T12:00:00Z",
+    )
+
+    assert rows[0]["community_health_percentage"] == ""
+    assert rows[0]["community_has_code_of_conduct"] == ""
+    assert rows[0]["stargazers_count"] == 1
 
 
 def test_growth_analytics_totals_deltas_and_visitor_conversion() -> None:
@@ -2375,6 +2904,65 @@ def test_detail_failure_falls_back_without_losing_traffic(
     assert status_rows[-1]["metric_source"] == "discovery-fallback"
 
 
+def test_community_profile_failure_records_warning_without_losing_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_community_error(repo: str, headers):
+        raise requests.HTTPError("community unavailable")
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_community_profile",
+        raise_community_error,
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        metric_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert metric_rows[-1]["source"] == "repo-detail"
+    assert metric_rows[-1]["community_health_percentage"] == ""
+    assert "Community Profile Warnings" in summary
+    assert "community unavailable" in summary
+
+
 def test_collect_records_skipped_unavailable_repo_status(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -2429,6 +3017,118 @@ def test_collect_records_skipped_unavailable_repo_status(
     assert len(status_rows) == 1
     assert status_rows[0]["repo"] == "demo/reponomics"
     assert status_rows[0]["status"] == "skipped_unavailable"
+
+
+def test_collect_secondary_rate_limit_aborts_with_status_and_summary(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+    secondary = run.collect_mod.SecondaryRateLimitError(
+        "https://api.github.test/detail",
+        _response(403, text="secondary"),
+        60,
+        datetime(2026, 5, 16, 13, 0, tzinfo=timezone.utc),
+        "default-minimum",
+    )
+
+    def raise_secondary(repo: str, headers):
+        raise secondary
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(run.collect_mod, "collect_repo_detail", raise_secondary)
+
+    with pytest.raises(SystemExit):
+        run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert status_rows[-1]["status"] == "error_secondary_rate_limit"
+    assert status_rows[-1]["error_type"] == "SecondaryRateLimitError"
+    assert "Secondary Rate Limit" in summary
+    assert "default-minimum" in summary
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected_type"),
+    [
+        (requests.HTTPError("traffic failed"), "HTTPError"),
+        (requests.ConnectionError("network failed"), "ConnectionError"),
+    ],
+)
+def test_collect_records_generic_collection_errors_and_exits(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    exc: requests.RequestException,
+    expected_type: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_collection_error(repo: str, headers, captured_at: str):
+        raise exc
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", raise_collection_error)
+
+    with pytest.raises(SystemExit):
+        run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert status_rows[-1]["status"] == "error"
+    assert status_rows[-1]["error_type"] == expected_type
+    assert "- Outcome: **failed**" in summary
+    assert "- Repositories with errors: demo/reponomics" in summary
 
 
 def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(

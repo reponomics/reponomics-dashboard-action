@@ -14,7 +14,7 @@
         },
         {
           "type": "generic",
-          "path": "dashboard_action/run.py"
+          "path": "dashboard_action/run_modules/core.py"
         }
       ]
     }

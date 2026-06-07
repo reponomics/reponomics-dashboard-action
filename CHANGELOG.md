@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.2...v0.20.3) (2026-06-07)
+
+
+### Bug Fixes
+
+* avoid expressions in action descriptions ([#92](https://github.com/reponomics/reponomics-dashboard-action/issues/92)) ([6701e59](https://github.com/reponomics/reponomics-dashboard-action/commit/6701e59bb8613bca2286f3b3c6b4507768ec14e0))
+
 ## [0.20.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.1...v0.20.2) (2026-06-06)
 
 

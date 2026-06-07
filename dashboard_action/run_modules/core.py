@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-VERSION = "0.20.3"  # x-release-please-version
+VERSION = "0.20.4"  # x-release-please-version
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_SECRET_LENGTH = 40

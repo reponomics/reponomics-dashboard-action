@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.4](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.3...v0.20.4) (2026-06-07)
+
+
+### Bug Fixes
+
+* module entry point ([#94](https://github.com/reponomics/reponomics-dashboard-action/issues/94)) ([ce0a167](https://github.com/reponomics/reponomics-dashboard-action/commit/ce0a167a03b5131ebc82b6c326f6fd9c9b62c00d))
+
 ## [0.20.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.2...v0.20.3) (2026-06-07)
 
 

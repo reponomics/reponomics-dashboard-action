@@ -1,7 +1,10 @@
 from pathlib import Path
 import re
+import tomllib
 
 import yaml
+
+from dashboard_action.run_modules.core import VERSION
 
 
 ACTION_EXPRESSION = re.compile(r"\$\{\{.*?\}\}")
@@ -73,6 +76,40 @@ def test_action_descriptions_do_not_contain_actions_expressions() -> None:
     ]
 
     assert offenders == []
+
+
+def test_runtime_version_matches_release_metadata() -> None:
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    release_manifest = yaml.safe_load(
+        Path(".github/.release-please-manifest.json").read_text(encoding="utf-8")
+    )
+    release_config = yaml.safe_load(
+        Path(".github/release-please-config.json").read_text(encoding="utf-8")
+    )
+    extra_files = {
+        file["path"]
+        for file in release_config["packages"]["."]["extra-files"]
+    }
+
+    assert VERSION == project["project"]["version"]
+    assert release_manifest["."] == VERSION
+    assert "dashboard_action/run_modules/core.py" in extra_files
+    assert "dashboard_action/run.py" not in extra_files
+
+
+def test_runtime_steps_execute_dashboard_action_as_module() -> None:
+    runtime_steps = [
+        _step_by_name("Run Reponomics runtime"),
+        _step_by_name("Clean up superseded dashboard data artifacts"),
+        _step_by_name("Purge incident reset history"),
+    ]
+
+    for step in runtime_steps:
+        command = step["run"]
+        assert command == (
+            'PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run'
+        )
+        assert "dashboard_action/run.py" not in command
 
 
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:

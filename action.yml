@@ -151,7 +151,7 @@ runs:
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
-      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
+      run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run
 
     - name: Verify GitHub Pages configuration
       if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}
@@ -219,7 +219,7 @@ runs:
         REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY: "true"
-      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
+      run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run
 
     - name: Purge incident reset history
       if: ${{ inputs.mode == 'incident-reset' }}
@@ -235,4 +235,4 @@ runs:
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
         REPONOMICS_INCIDENT_RESET_PURGE_ONLY: "true"
-      run: python "$GITHUB_ACTION_PATH/dashboard_action/run.py"
+      run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run

@@ -26,7 +26,7 @@ Your repository owns:
 
 Your repository does not store any collected data in git. The dashboard HTML is rendered during `publish`; when hosted dashboard publication is enabled, encrypted dashboards are deployed as GitHub Pages artifacts, and otherwise the rendered dashboard remains a downloadable workflow artifact. The default collect-and-publish run publishes from the fresh `dashboard-data` and `reponomics-collect-provenance` artifacts uploaded by the same workflow run. Manual republish restores the latest retained data and requires collect provenance before rendering. This matters because `overwrite: true` keeps the logical artifact name stable, but each upload still belongs to a specific workflow run.
 
-Publish is latest-wins on `main`. If a later collect run completes while an older publish is pending or still running, the newer publish cancels the older one. That avoids an obsolete render becoming the final published dashboard after fresher retained data exists.
+Collect and publish runs are serialized for `main`. A later scheduled run waits for an older collect-and-publish run instead of cancelling it, so retained artifact lineage is updated in workflow order.
 
 Repository access is part of the dashboard security model. In personal private repositories, collaborators should be treated as trusted with the dashboard control plane, not merely as people who can read a report. See [Repository Access And Trust Boundary](trust-boundary.md).
 

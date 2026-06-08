@@ -44,11 +44,15 @@ def _commit_sha(value: str) -> str:
 
 
 def current_source_sha() -> str:
-    explicit = _commit_sha(_env("GITHUB_SHA"))
-    if explicit:
-        return explicit
     value = _git_output(["git", "rev-parse", "HEAD"])
-    return _commit_sha(value)
+    checkout_sha = _commit_sha(value)
+    if checkout_sha:
+        return checkout_sha
+    return _commit_sha(_env("GITHUB_SHA"))
+
+
+def collect_artifact_mode(provenance: CollectProvenance) -> str:
+    return "plain" if provenance.privacy_mode == "plain" else "encrypted"
 
 
 def current_action_sha() -> str:
@@ -207,6 +211,13 @@ def validate_collect_provenance(
             raise ActionError(f"Collect provenance {label} is not a commit SHA.")
     if provenance.privacy_mode not in {"strong", "casual", "plain"}:
         raise ActionError("Collect provenance privacy mode is invalid.")
+    if collect_artifact_mode(provenance) != config.resolved_artifact_mode:
+        raise ActionError(
+            "Collect provenance artifact mode "
+            + f"{collect_artifact_mode(provenance)} does not match this publish "
+            + f"configuration's artifact mode {config.resolved_artifact_mode}. "
+            + "Run collect again after changing retained artifact privacy mode."
+        )
     try:
         retention_days = int(provenance.retention_days)
     except ValueError as exc:

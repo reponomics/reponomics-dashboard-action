@@ -321,6 +321,12 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
             config,
             require_current_runtime=True,
         )
+        if config.artifact_run_id and provenance.workflow_run_id != config.artifact_run_id:
+            raise ActionError(
+                "Collect provenance workflow run ID "
+                + f"{provenance.workflow_run_id} does not match requested artifact-run-id "
+                + f"{config.artifact_run_id}."
+            )
     elif require_collect_provenance:
         raise ActionError("Publish requires collect provenance for the requested artifact run.")
     if restore_artifact:

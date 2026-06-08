@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.5](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.4...v0.20.5) (2026-06-08)
+
+
+### Code Refactoring
+
+* combine collect and publish ([995b168](https://github.com/reponomics/reponomics-dashboard-action/commit/995b1686ff095c122ed94c25a7572f39666f68fa))
+
 ## [0.20.4](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.3...v0.20.4) (2026-06-07)
 
 

@@ -4,21 +4,25 @@ from __future__ import annotations
 
 import json
 import re
+import requests
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
+from urllib.parse import quote
 
-from .config import _env
+from .config import _env, _first_env
 from .core import (
     COLLECT_PROVENANCE_PATH,
+    INCIDENT_API_TIMEOUT_SECONDS,
     VERSION,
     ActionError,
     CollectProvenance,
     RuntimeConfig,
 )
 
-SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 PROVENANCE_SCHEMA_VERSION = 1
+GITHUB_API_URL = "https://api.github.com"
 
 
 def _git_output(args: list[str], *, cwd: Path | None = None) -> str:
@@ -34,21 +38,78 @@ def _git_output(args: list[str], *, cwd: Path | None = None) -> str:
     return result.stdout.strip()
 
 
+def _commit_sha(value: str) -> str:
+    normalized = value.strip().lower()
+    return normalized if SHA_RE.fullmatch(normalized) else ""
+
+
 def current_source_sha() -> str:
+    explicit = _commit_sha(_env("GITHUB_SHA"))
+    if explicit:
+        return explicit
     value = _git_output(["git", "rev-parse", "HEAD"])
-    return value if SHA_RE.fullmatch(value) else ""
+    return _commit_sha(value)
 
 
 def current_action_sha() -> str:
-    explicit = _env("REPONOMICS_ACTION_SHA")
-    if SHA_RE.fullmatch(explicit):
+    explicit = _commit_sha(_env("REPONOMICS_ACTION_SHA"))
+    if explicit:
         return explicit
+    ref_sha = _commit_sha(_env("REPONOMICS_ACTION_REF"))
+    if ref_sha:
+        return ref_sha
     action_path = _env("GITHUB_ACTION_PATH")
     if action_path:
         value = _git_output(["git", "rev-parse", "HEAD"], cwd=Path(action_path))
-        if SHA_RE.fullmatch(value):
-            return value
+        action_path_sha = _commit_sha(value)
+        if action_path_sha:
+            return action_path_sha
+    return _resolve_action_ref_sha(
+        _env("REPONOMICS_ACTION_REPOSITORY"),
+        _env("REPONOMICS_ACTION_REF"),
+    )
+
+
+def _resolve_action_ref_sha(action_repository: str, action_ref: str) -> str:
+    if "/" not in action_repository or not action_ref:
+        return ""
+    owner_repo = action_repository.strip()
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2026-03-10",
+        "User-Agent": "reponomics-dashboard-action-runtime",
+    }
+    token = _first_env("REPONOMICS_GITHUB_TOKEN", "GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    for candidate in _action_ref_candidates(action_ref):
+        url = f"{GITHUB_API_URL}/repos/{owner_repo}/commits/{quote(candidate, safe='')}"
+        try:
+            response = requests.get(url, headers=headers, timeout=INCIDENT_API_TIMEOUT_SECONDS)
+        except requests.RequestException:
+            return ""
+        if response.status_code == 404:
+            continue
+        if response.status_code != 200:
+            return ""
+        try:
+            payload = response.json()
+        except ValueError:
+            return ""
+        if isinstance(payload, dict):
+            resolved = _commit_sha(str(payload.get("sha") or ""))
+            if resolved:
+                return resolved
     return ""
+
+
+def _action_ref_candidates(action_ref: str) -> list[str]:
+    raw = action_ref.strip()
+    candidates = [raw]
+    for prefix in ("refs/heads/", "refs/tags/"):
+        if raw.startswith(prefix):
+            candidates.append(raw.removeprefix(prefix))
+    return list(dict.fromkeys(candidate for candidate in candidates if candidate))
 
 
 def write_collect_provenance(config: RuntimeConfig) -> CollectProvenance:
@@ -88,7 +149,11 @@ def write_collect_provenance(config: RuntimeConfig) -> CollectProvenance:
 
 
 def should_write_collect_provenance() -> bool:
-    return bool(_env("GITHUB_REPOSITORY") and _env("GITHUB_RUN_ID"))
+    return bool(
+        _env("GITHUB_REPOSITORY")
+        and _env("GITHUB_RUN_ID")
+        and (_env("GITHUB_ACTION_PATH") or _env("REPONOMICS_ACTION_SHA"))
+    )
 
 
 def read_collect_provenance(path: Path = COLLECT_PROVENANCE_PATH) -> CollectProvenance:
@@ -136,7 +201,7 @@ def validate_collect_provenance(
         "source_sha": provenance.source_sha,
         "action_sha": provenance.action_sha,
     }.items():
-        if not SHA_RE.fullmatch(value):
+        if not _commit_sha(value):
             raise ActionError(f"Collect provenance {label} is not a commit SHA.")
     if provenance.privacy_mode not in {"strong", "casual", "plain"}:
         raise ActionError("Collect provenance privacy mode is invalid.")

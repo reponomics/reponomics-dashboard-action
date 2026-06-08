@@ -26,6 +26,7 @@ def _restore_run_environment() -> Any:
         "GITHUB_REPOSITORY",
         "GITHUB_RUN_ATTEMPT",
         "GITHUB_RUN_ID",
+        "GITHUB_SHA",
         "PUBLISH_PAGES",
         "REPONOMICS_ACTION_REF",
         "REPONOMICS_ACTION_REPOSITORY",
@@ -341,6 +342,68 @@ def test_collect_provenance_writes_runtime_contract(
         "workflow_run_attempt": "2",
         "workflow_run_id": "123",
     }
+
+
+def test_collect_provenance_skips_outside_action_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "123")
+    monkeypatch.delenv("GITHUB_ACTION_PATH", raising=False)
+    monkeypatch.delenv("REPONOMICS_ACTION_SHA", raising=False)
+
+    assert run.provenance_mod.should_write_collect_provenance() is False
+
+    monkeypatch.setenv("GITHUB_ACTION_PATH", "/tmp/action")
+
+    assert run.provenance_mod.should_write_collect_provenance() is True
+
+
+def test_current_source_sha_uses_github_sha(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_SHA", "A" * 40)
+    monkeypatch.setattr(run.provenance_mod, "_git_output", lambda *_args, **_kwargs: "")
+
+    assert run.provenance_mod.current_source_sha() == "a" * 40
+
+
+def test_current_action_sha_resolves_action_ref_from_github_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def fake_get(
+        url: str,
+        *,
+        headers: dict[str, str],
+        timeout: int,
+    ) -> requests.Response:
+        calls.append({"url": url, "headers": headers, "timeout": timeout})
+        response = requests.Response()
+        response.status_code = 200
+        response._content = json.dumps({"sha": "c" * 40}).encode("utf-8")
+        return response
+
+    monkeypatch.setenv("REPONOMICS_ACTION_REPOSITORY", "demo/action")
+    monkeypatch.setenv("REPONOMICS_ACTION_REF", "v1")
+    monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_token")
+    monkeypatch.setattr(run.provenance_mod.requests, "get", fake_get)
+    monkeypatch.setattr(run.provenance_mod, "_git_output", lambda *_args, **_kwargs: "")
+
+    assert run.provenance_mod.current_action_sha() == "c" * 40
+    assert calls == [
+        {
+            "url": "https://api.github.com/repos/demo/action/commits/v1",
+            "headers": {
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2026-03-10",
+                "User-Agent": "reponomics-dashboard-action-runtime",
+                "Authorization": "Bearer ghp_token",
+            },
+            "timeout": run.INCIDENT_API_TIMEOUT_SECONDS,
+        }
+    ]
 
 
 def test_publish_restores_and_validates_collect_provenance(

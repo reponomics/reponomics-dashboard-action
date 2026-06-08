@@ -31,6 +31,19 @@ VERSION_STATUS_TEST_TAG = f"v{VERSION_STATUS_TEST_VERSION}"
 VERSION_STATUS_RELEASES_URL = "https://github.com/reponomics/reponomics-dashboard-action/releases"
 
 
+@pytest.fixture(autouse=True)
+def _clear_action_runtime_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in {
+        "GITHUB_ACTION_PATH",
+        "GITHUB_REPOSITORY",
+        "GITHUB_RUN_ATTEMPT",
+        "GITHUB_RUN_ID",
+        "GITHUB_SHA",
+        "REPONOMICS_ACTION_SHA",
+    }:
+        monkeypatch.delenv(key, raising=False)
+
+
 def _version_status_tag(version: str) -> str:
     return version if version.startswith("v") else f"v{version}"
 

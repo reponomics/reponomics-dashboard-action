@@ -24,9 +24,9 @@ Your repository owns:
 - optional committed metric README output when `generate_readme` is enabled during setup in a private repository
 - optional Reponomics-managed local documentation under `docs/reponomics/`
 
-Your repository does not store any collected data in git. The dashboard HTML is rendered during `publish`; when hosted dashboard publication is enabled, encrypted dashboards are deployed as GitHub Pages artifacts, and otherwise the rendered dashboard remains a downloadable workflow artifact. Automatic publish runs consume the `reponomics-collect-provenance` artifact uploaded by the triggering collect run, then check out the recorded repository SHA and action SHA before rendering. They also restore `dashboard-data` from the triggering collect workflow run rather than from the latest artifact with that name. This matters because `overwrite: true` keeps the logical artifact name stable, but each upload still belongs to a specific workflow run.
+Your repository does not store any collected data in git. The dashboard HTML is rendered during `publish`; when hosted dashboard publication is enabled, encrypted dashboards are deployed as GitHub Pages artifacts, and otherwise the rendered dashboard remains a downloadable workflow artifact. The default collect-and-publish run publishes from the fresh `dashboard-data` and `reponomics-collect-provenance` artifacts uploaded by the same workflow run. Manual republish restores the latest retained data and requires collect provenance before rendering. This matters because `overwrite: true` keeps the logical artifact name stable, but each upload still belongs to a specific workflow run.
 
-Publish is latest-wins on `main`. If a later collect run completes while an older publish is pending or still running, the newer publish cancels the older one. That avoids an obsolete render becoming the final published dashboard after fresher retained data exists.
+Collect and publish runs are serialized for `main`. A later scheduled run waits for an older collect-and-publish run instead of cancelling it, so retained artifact lineage is updated in workflow order.
 
 Repository access is part of the dashboard security model. In personal private repositories, collaborators should be treated as trusted with the dashboard control plane, not merely as people who can read a report. See [Repository Access And Trust Boundary](trust-boundary.md).
 
@@ -68,8 +68,8 @@ Advanced option: use a user-owned GitHub App installation token for collection i
 The canonical data store is the `dashboard-data` GitHub Actions artifact.
 
 - `collect` restores the prior artifact, collects current GitHub data, merges and trims retained CSV history, verifies lineage, uploads a new `dashboard-data` artifact, then deletes at most one older superseded `dashboard-data` artifact while keeping rollback artifacts.
-- `collect` also uploads a `reponomics-collect-provenance` artifact when publishing is enabled. That artifact records the collected repository revision, accepted action tag, and accepted action commit SHA.
-- `publish` downloads that provenance for automatic runs, restores the `dashboard-data` artifact from the recorded collect run, renders dashboard output with the recorded action commit, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for `strong` and `casual` only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
+- `collect` also uploads a `reponomics-collect-provenance` artifact. That artifact records the collected repository revision, requested action ref, resolved action commit SHA, runtime version, and publication settings.
+- `publish` restores retained data and collect provenance, renders dashboard output, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for `strong` and `casual` only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
 - `rotate-key` restores encrypted retained state, decrypts with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, and publishes rotated encrypted outputs.
 - `incident-reset` is a manual emergency workflow for suspected dashboard-key exposure. Make the dashboard repository private and disable any exposed Pages dashboard first. The action restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, uploads the new retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts.
 - `docs-sync` runs before collection and writes the action-bundled managed documentation to `docs/reponomics/` when enabled.
@@ -97,7 +97,7 @@ For `plain`, download the `dashboard-data` workflow artifact directly.
 
 ## Offline Viewing
 
-The generated dashboard is not committed to this repository. To view an encrypted dashboard offline, open a successful **Publish Reponomics dashboard** workflow run and download the dashboard artifact before it expires. Extract the artifact and open `index.html` with the same dashboard key that unlocks the hosted Pages dashboard.
+The generated dashboard is not committed to this repository. To view an encrypted dashboard offline, open a successful **Collect And Publish Reponomics Dashboard** workflow run and download the dashboard artifact before it expires. Extract the artifact and open `index.html` with the same dashboard key that unlocks the hosted Pages dashboard.
 
 Some browsers block local `file://` fetches used by CSV export. If export fails offline, serve the extracted artifact directory over local HTTP or use the hosted Pages dashboard.
 

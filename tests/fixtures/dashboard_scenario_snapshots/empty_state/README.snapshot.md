@@ -1,6 +1,9 @@
 # Reponomics Dashboard
 
-[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)](../../actions/workflows/collect.yml)
+<!-- Workflow badge hidden pending a deliberate dashboard status design. -->
+<!--
+[![Reponomics Dashboard](../../actions/workflows/collect-and-publish.yml/badge.svg)](../../actions/workflows/collect-and-publish.yml)
+-->
 
 [![Your version: v0.13.1](docs/assets/action-version-current.svg)](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1) [![Latest version: v0.13.1](docs/assets/action-version-latest.svg)](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1) [View latest updates](https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.13.1)
 

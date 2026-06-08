@@ -18,6 +18,9 @@ INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
 COLLECT_ROLLBACK_ARTIFACTS = 2
+COLLECT_PROVENANCE_ARTIFACT_NAME = "reponomics-collect-provenance"
+COLLECT_PROVENANCE_DIR = Path(".reponomics") / "collect-provenance"
+COLLECT_PROVENANCE_PATH = COLLECT_PROVENANCE_DIR / "collect-provenance.json"
 MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
 MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
 MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
@@ -93,3 +96,20 @@ class DashboardDataArtifactRef:
     artifact_id: int
     workflow_run_id: int | None
     created_at: str = ""
+
+
+@dataclass(frozen=True)
+class CollectProvenance:
+    schema_version: int
+    source_repository: str
+    source_sha: str
+    workflow_run_id: str
+    workflow_run_attempt: str
+    action_repository: str
+    action_ref: str
+    action_sha: str
+    runtime_version: str
+    privacy_mode: str
+    retention_days: str
+    publish_pages: str
+    generate_readme: str

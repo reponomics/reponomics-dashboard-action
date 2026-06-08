@@ -31,16 +31,26 @@ def _snapshot_outputs(config: RuntimeConfig) -> dict[str, str]:
     }
 
 
-def _restore_artifact(config: RuntimeConfig) -> None:
+def _restore_artifact(
+    config: RuntimeConfig,
+    *,
+    artifact_name: str = "dashboard-data",
+    data_dir: Path | None = None,
+    required: bool | None = None,
+    artifact_run_id: str | None = None,
+) -> None:
     script = SCRIPTS_DIR / "restore_artifact.sh"
     if not _env("GITHUB_REPOSITORY") or not shutil.which("gh"):
         print("Skipping artifact restore outside GitHub Actions or without gh CLI.")
         return
     env = os.environ.copy()
-    env["ARTIFACT_NAME"] = "dashboard-data"
-    env["DATA_DIR"] = config.data_dir.as_posix()
-    if config.artifact_run_id:
-        env["ARTIFACT_RUN_ID"] = config.artifact_run_id
+    env["ARTIFACT_NAME"] = artifact_name
+    env["DATA_DIR"] = (data_dir or config.data_dir).as_posix()
+    restore_run_id = config.artifact_run_id if artifact_run_id is None else artifact_run_id
+    if restore_run_id:
+        env["ARTIFACT_RUN_ID"] = restore_run_id
+    if required is not None:
+        env["ARTIFACT_REQUIRED"] = str(required).lower()
     if config.github_token:
         env["GH_TOKEN"] = config.github_token
     subprocess.run(["bash", str(script)], check=True, env=env)

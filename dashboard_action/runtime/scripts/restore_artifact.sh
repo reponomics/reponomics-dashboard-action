@@ -13,6 +13,7 @@
 #   GITHUB_REPOSITORY — owner/repo (set automatically by Actions)
 #   ARTIFACT_NAME     — artifact name to restore (default: dashboard-data)
 #   ARTIFACT_RUN_ID   — optional workflow run ID to restore from
+#   ARTIFACT_REQUIRED — true to fail when no artifact is found without ARTIFACT_RUN_ID
 #   GH_TOKEN          — GitHub token for API access (set automatically by Actions)
 
 set -euo pipefail
@@ -20,6 +21,7 @@ set -euo pipefail
 ARTIFACT_NAME="${ARTIFACT_NAME:-dashboard-data}"
 DATA_DIR="${DATA_DIR:-data}"
 ARTIFACT_RUN_ID="${ARTIFACT_RUN_ID:-}"
+ARTIFACT_REQUIRED="${ARTIFACT_REQUIRED:-false}"
 
 if [ -n "$ARTIFACT_RUN_ID" ]; then
   echo "Looking for artifact: ${ARTIFACT_NAME} from workflow run ${ARTIFACT_RUN_ID}..."
@@ -42,6 +44,10 @@ if [ -z "$ARTIFACT_ID" ]; then
     echo "No ${ARTIFACT_NAME} artifact found for workflow run ${ARTIFACT_RUN_ID}."
     exit 1
   else
+    if [ "$ARTIFACT_REQUIRED" = "true" ]; then
+      echo "No previous ${ARTIFACT_NAME} artifact found."
+      exit 1
+    fi
     echo "No previous artifact found — this appears to be a first run."
     exit 0
   fi

@@ -303,8 +303,8 @@ def render():
     lines = [
         "# Reponomics Dashboard",
         "",
-        "[![Collect Reponomics Data](../../actions/workflows/collect.yml/badge.svg)]"
-        + "(../../actions/workflows/collect.yml)",
+        "[![Collect And Publish Reponomics Dashboard](../../actions/workflows/collect-and-publish.yml/badge.svg)]"
+        + "(../../actions/workflows/collect-and-publish.yml)",
         "",
     ]
     lines.extend(_version_status_lines(version_status, version_badge_links))

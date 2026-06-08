@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="190" height="20" role="img" aria-label="Collect Reponomics Data: mock">
-  <title>Collect Reponomics Data: mock</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="282" height="20" role="img" aria-label="Collect And Publish Reponomics Dashboard: mock">
+  <title>Collect And Publish Reponomics Dashboard: mock</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
@@ -13,8 +13,8 @@
     <rect width="190" height="20" fill="url(#s)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
-    <text x="69" y="15" fill="#010101" fill-opacity=".3">Collect Reponomics Data</text>
-    <text x="69" y="14">Collect Reponomics Data</text>
+    <text x="69" y="15" fill="#010101" fill-opacity=".3">Collect And Publish Reponomics Dashboard</text>
+    <text x="69" y="14">Collect And Publish Reponomics Dashboard</text>
     <text x="163" y="15" fill="#010101" fill-opacity=".3">mock</text>
     <text x="163" y="14">mock</text>
   </g>

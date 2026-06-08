@@ -21,6 +21,7 @@ FIXED_GENERATED_AT = datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc)
 SNAPSHOT_ACTION_VERSION = "0.13.1"
 README_SVG_REF_RE = re.compile(r'(?:src|srcset)="([^"]+\.svg)"')
 README_MARKDOWN_IMAGE_REF_RE = re.compile(r"!\[[^\]]*]\(([^)\s]+\.svg)(?:\s+[^)]*)?\)")
+README_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -168,11 +169,13 @@ def _assert_snapshot(actual: str, path: Path) -> None:
 
 
 def _readme_svg_refs(readme: str) -> set[str]:
-    return set(README_SVG_REF_RE.findall(readme))
+    visible_readme = README_HTML_COMMENT_RE.sub("", readme)
+    return set(README_SVG_REF_RE.findall(visible_readme))
 
 
 def _readme_image_refs(readme: str) -> set[str]:
-    return _readme_svg_refs(readme) | set(README_MARKDOWN_IMAGE_REF_RE.findall(readme))
+    visible_readme = README_HTML_COMMENT_RE.sub("", readme)
+    return _readme_svg_refs(readme) | set(README_MARKDOWN_IMAGE_REF_RE.findall(visible_readme))
 
 
 def _assert_readme_contract(rendered: RenderedScenario) -> None:

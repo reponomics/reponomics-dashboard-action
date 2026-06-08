@@ -197,6 +197,8 @@ def validate_collect_provenance(
         raise ActionError("Collect provenance schema version is unsupported.")
     if provenance.source_repository != _env("GITHUB_REPOSITORY"):
         raise ActionError("Collect provenance belongs to another repository.")
+    if not re.fullmatch(r"[1-9]\d*", provenance.workflow_run_id):
+        raise ActionError("Collect provenance workflow run ID is invalid.")
     for label, value in {
         "source_sha": provenance.source_sha,
         "action_sha": provenance.action_sha,

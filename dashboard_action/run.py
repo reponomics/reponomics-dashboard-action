@@ -313,7 +313,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
             data_dir=COLLECT_PROVENANCE_DIR,
             required=require_collect_provenance,
         )
-        _restore_artifact(config)
+    provenance = None
     if COLLECT_PROVENANCE_PATH.is_file():
         provenance = provenance_mod.read_collect_provenance()
         provenance_mod.validate_collect_provenance(
@@ -323,6 +323,11 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
         )
     elif require_collect_provenance:
         raise ActionError("Publish requires collect provenance for the requested artifact run.")
+    if restore_artifact:
+        if provenance is not None and not config.artifact_run_id:
+            _restore_artifact(config, artifact_run_id=provenance.workflow_run_id)
+        else:
+            _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     _set_version_status_env(config)

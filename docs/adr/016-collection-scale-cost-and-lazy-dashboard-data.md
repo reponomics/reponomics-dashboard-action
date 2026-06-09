@@ -279,25 +279,30 @@ Chart behavior should follow these rules:
 
 ### Lazy Encrypted Dashboard Data
 
-Encrypted dashboard data should be partitioned so the browser can decrypt and
-parse only what it needs.
+Generated dashboard data should be partitioned so the browser can parse only
+what it needs. Encrypted dashboards additionally decrypt only the summary and
+selected repository chunks.
 
-The encrypted dashboard should move toward this shape:
+The generated dashboard should move toward this shape:
 
-1. A small encrypted manifest/summary payload.
-2. Per-repository encrypted data chunks.
+1. A small manifest/summary payload.
+2. Per-repository data chunks.
 3. Optional aggregate chunks for all-repo summary views.
-4. Lazy loading and decryption when the user focuses, compares, searches, or
-   drills into a repository.
+4. Lazy loading, and lazy decryption for encrypted mode, when the user focuses,
+   compares, searches, or drills into a repository.
 
-Each chunk should be compressed before encryption. The current canonical data
-artifact already compresses before encryption; the encrypted Pages payload
-should follow the same principle.
+Encrypted chunks should be compressed before encryption. The current canonical
+data artifact already compresses before encryption; the encrypted Pages data
+object should follow the same principle. Plain dashboard artifacts should use
+the same summary/chunk boundary for runtime memory shaping, but without a
+confidentiality claim.
 
 Chunk names in public repositories must not reveal repository names. Acceptable
 names include opaque content hashes, HMAC-derived identifiers, or manifest
 indexes that are meaningless without the dashboard key. The authenticated
 manifest should map display repository names to chunk identifiers after unlock.
+For plaintext private artifacts, opaque chunk names are still preferred so the
+plain and encrypted runtime contracts stay complementary.
 
 ### Client Secret Handling
 
@@ -352,6 +357,8 @@ The cost is implementation complexity:
 - the renderer must support summary data separately from detailed repo chunks;
 - encrypted Pages and standalone artifact delivery must preserve the same
   privacy guarantees across chunked data;
+- plaintext dashboard artifacts must preserve the same summary/chunk runtime
+  boundary without implying encryption;
 - tests need large-corpus fixtures to prevent regressions.
 
 ## Initial Implementation Plan
@@ -369,13 +376,13 @@ The cost is implementation complexity:
 6. Split metadata collection so public non-traffic metadata can use
    `GITHUB_TOKEN` where possible, with visible fallback behavior.
 7. Add a large-corpus scenario, initially 200 repositories, to test renderer and
-   payload behavior.
+   data behavior.
 8. Change dashboard defaults so only 10 to 20 repositories are displayed in
    charts while all collected repositories remain searchable/selectable.
 9. Cap compare mode at a small number of repositories.
-10. Compress encrypted dashboard payloads before encryption.
-11. Introduce encrypted manifest plus per-repository chunk output behind a
-    compatibility flag.
+10. Compress encrypted dashboard chunks before encryption.
+11. Introduce manifest plus per-repository chunk output for both encrypted and
+    plaintext dashboard artifacts.
 12. Promote chunked encrypted data to the default after Pages, downloadable
     artifact, and local-viewing behavior are verified.
 

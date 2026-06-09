@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import gzip
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from html import unescape
@@ -21,6 +22,7 @@ import pytest
 import requests
 
 from dashboard_action import run
+from scripts import dashboard_scenarios
 
 
 OLD_KEY = "old-dashboard-secret-" + ("x" * 40)
@@ -84,6 +86,55 @@ def _script_json(html: str, script_id: str) -> dict[str, Any]:
     if not match:
         raise AssertionError(f"missing script payload for {script_id}")
     return json.loads(match.group(1))
+
+
+def _runtime_const_json(html: str, const_name: str) -> dict[str, Any]:
+    match = re.search(
+        rf"const {re.escape(const_name)} = (.*?);\nrenderDashboard\({re.escape(const_name)}\);",
+        html,
+        flags=re.S,
+    )
+    if not match:
+        raise AssertionError(f"missing runtime const payload for {const_name}")
+    return json.loads(match.group(1))
+
+
+def _b64url_decode(value: str) -> bytes:
+    padded = value + ("=" * ((4 - len(value) % 4) % 4))
+    return base64.urlsafe_b64decode(padded.encode("ascii"))
+
+
+def _decrypt_dashboard_blob(blob: str, key: bytes) -> dict[str, Any]:
+    iv_value, ciphertext_value = blob.split(".", 1)
+    plaintext = run.render_dashboard.AESGCM(key).decrypt(
+        _b64url_decode(iv_value),
+        _b64url_decode(ciphertext_value),
+        None,
+    )
+    return json.loads(gzip.decompress(plaintext))
+
+
+def _decrypt_encrypted_dashboard_data(
+    encrypted_dashboard_data: dict[str, Any], dashboard_key: str = OLD_KEY
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    salt = base64.b64decode(encrypted_dashboard_data["salt"])
+    key = run.render_dashboard._derive_key(dashboard_key, salt)
+    summary = _decrypt_dashboard_blob(encrypted_dashboard_data["summary"], key)
+    chunks = {
+        chunk_id: _decrypt_dashboard_blob(blob, key)
+        for chunk_id, blob in encrypted_dashboard_data["chunks"].items()
+    }
+    return summary, chunks
+
+
+def _decode_plain_dashboard_data(
+    plain_dashboard_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    chunks = {
+        chunk_id: json.loads(chunk)
+        for chunk_id, chunk in plain_dashboard_data["chunks"].items()
+    }
+    return plain_dashboard_data["summary"], chunks
 
 
 def _csp_content(document: str) -> str:
@@ -231,6 +282,36 @@ def _seed_log(data_dir: Path) -> None:
                 "schema_version": run.storage.SCHEMA_VERSION,
             }
         ],
+    )
+
+
+def _seed_scenario(data_dir: Path, dataset: dashboard_scenarios.ScenarioDataset) -> None:
+    _write_csv(data_dir / "traffic-log.csv", run.storage.LOG_FIELDS, dataset.daily_rows)
+    _write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, dataset.daily_rows)
+    _write_csv(
+        data_dir / "traffic-snapshots.csv",
+        run.storage.SNAPSHOT_FIELDS,
+        [],
+    )
+    _write_csv(
+        data_dir / "traffic-referrers.csv",
+        run.storage.REFERRER_FIELDS,
+        dataset.referrer_rows,
+    )
+    _write_csv(data_dir / "traffic-paths.csv", run.storage.PATH_FIELDS, dataset.path_rows)
+    _write_csv(
+        data_dir / "repo-metrics.csv",
+        run.storage.REPO_METRIC_FIELDS,
+        dataset.metric_rows,
+    )
+    _write_csv(
+        data_dir / "collection-status.csv",
+        run.storage.COLLECTION_STATUS_FIELDS,
+        dataset.status_rows,
+    )
+    (data_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": run.storage.SCHEMA_VERSION}),
+        encoding="utf-8",
     )
 
 
@@ -998,17 +1079,99 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert "Latest data capture: 2026-05-01 12:00 UTC" in readme
     assert "Last updated:" not in readme
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "encrypted-payload" in dashboard
+    assert "encrypted-dashboard-data" in dashboard
     assert "export-manifest" in dashboard
     assert 'id="export-button"' in dashboard
     assert 'id="export-hash-button"' in dashboard
     assert "How download verification works" in dashboard
-    assert "validateEncryptedPayload" in dashboard
+    assert "validateEncryptedDashboardData" in dashboard
     assert "EXPECTED_KDF_ITERATIONS = 600000" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
     assert len(list((config.pages_index_path.parent / "assets").glob("export-data-*.enc"))) == 1
+
+
+def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    assert encrypted_data["version"] == 2
+    assert encrypted_data["cipher"] == "AES-GCM"
+    assert encrypted_data["kdf"] == {
+        "name": "PBKDF2",
+        "hash": "SHA-256",
+        "iterations": run.render_dashboard.PBKDF2_ITERATIONS,
+    }
+    assert encrypted_data["encoding"] == "gzip+json"
+    assert "encrypted-payload" not in dashboard
+    assert "demo/reponomics" not in dashboard
+    assert "loadRepoChunk" in dashboard
+    assert "ensureCurrentRepoChunksLoaded" in dashboard
+    assert "MAX_COMPARE_REPOS = 8" in dashboard
+    assert "dashboard-notice-region" in dashboard
+    assert "normalizeChunkLoadError" in dashboard
+
+    summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
+    repo_names = [repo["name"] for repo in summary["repos"]]
+    assert encrypted_data["chunk_count"] == len(repo_names)
+    assert set(encrypted_data["chunks"]) == set(summary["repo_chunks"].values())
+    assert set(chunks) == set(summary["repo_chunks"].values())
+    assert "repo_series" not in summary
+    assert "repo_weekday" not in summary
+    assert "repo_referrers" not in summary
+    assert "repo_paths" not in summary
+    assert "per_repo" not in summary["growth"]
+    assert "series" not in summary["growth"]
+
+    for repo_name, chunk_id in summary["repo_chunks"].items():
+        chunk = chunks[chunk_id]
+        assert chunk["repo"] == repo_name
+        assert set(chunk) == {
+            "repo",
+            "repo_series",
+            "repo_weekday",
+            "repo_referrers",
+            "repo_paths",
+            "growth",
+        }
+        assert chunk["repo_series"]["dates"]
+        assert "per_repo" in chunk["growth"]
+        assert "series" in chunk["growth"]["per_repo"]
+
+
+def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    dataset = dashboard_scenarios.large_corpus_scenario()
+    _seed_scenario(config.data_dir, dataset)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
+
+    assert summary["totals"]["repo_count"] == 200
+    assert encrypted_data["chunk_count"] == 200
+    assert len(encrypted_data["chunks"]) == 200
+    assert len(summary["repo_chunks"]) == 200
+    assert len(chunks) == 200
+    assert "series" not in summary["growth"]
+    assert "reponomics-scale/repo-001" not in dashboard
 
 
 def test_publish_skips_readme_when_generate_readme_is_false(
@@ -1046,10 +1209,78 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     assert config.pages_index_path.exists()
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Reponomics Dashboard" in dashboard
-    assert "encrypted-payload" not in dashboard
+    assert "encrypted-dashboard-data" not in dashboard
+    assert "dashboardDataObject" in dashboard
+    assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
+
+    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    summary, chunks = _decode_plain_dashboard_data(plain_data)
+    repo_names = [repo["name"] for repo in summary["repos"]]
+    assert plain_data == {
+        "version": run.render_dashboard.DASHBOARD_DATA_VERSION,
+        "encoding": "json",
+        "summary": summary,
+        "chunks": plain_data["chunks"],
+        "chunk_count": len(repo_names),
+    }
+    assert set(plain_data["chunks"]) == set(summary["repo_chunks"].values())
+    assert set(chunks) == set(summary["repo_chunks"].values())
+    assert "repo_series" not in summary
+    assert "repo_weekday" not in summary
+    assert "repo_referrers" not in summary
+    assert "repo_paths" not in summary
+    assert "per_repo" not in summary["growth"]
+    assert "series" not in summary["growth"]
+
+    for repo_name, chunk_id in summary["repo_chunks"].items():
+        assert isinstance(plain_data["chunks"][chunk_id], str)
+        chunk = chunks[chunk_id]
+        assert chunk["repo"] == repo_name
+        assert set(chunk) == {
+            "repo",
+            "repo_series",
+            "repo_weekday",
+            "repo_referrers",
+            "repo_paths",
+            "growth",
+        }
+        assert chunk["repo_series"]["dates"]
+        assert "per_repo" in chunk["growth"]
+        assert "series" in chunk["growth"]["per_repo"]
+
+
+def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+    )
+    dataset = dashboard_scenarios.large_corpus_scenario()
+    _seed_scenario(config.data_dir, dataset)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    summary, chunks = _decode_plain_dashboard_data(plain_data)
+
+    assert summary["totals"]["repo_count"] == 200
+    assert plain_data["chunk_count"] == 200
+    assert len(plain_data["chunks"]) == 200
+    assert len(summary["repo_chunks"]) == 200
+    assert len(chunks) == 200
+    assert "series" not in summary["growth"]
+    assert '"repo_series":{' not in dashboard
 
 
 def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_payload(
@@ -1098,7 +1329,7 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     assert "interest **+0 stars** / **+0 watchers** (now 11 / 2)" in readme
     assert "adoption **3 clones** / **+0 forks** (now 1)" in readme
     assert "Repository Growth" in readme
-    assert "encrypted-payload" in dashboard
+    assert "encrypted-dashboard-data" in dashboard
     assert "Reponomics Dashboard" in dashboard
     assert 'h1 class="brand">reponomics<span class="accent">.</span></h1>' in dashboard
     assert "data:font/woff2;base64," in dashboard
@@ -1265,7 +1496,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
         "localStorage.removeItem(unlockAttemptStorageKey())",
         "resetUnlockAttemptState();",
         "Too many failed attempts. Try again in ",
-        "Wrong dashboard key or corrupted payload. Try again in ",
+        "Wrong dashboard key or corrupted data. Try again in ",
     ]
     for marker in expected_runtime_markers:
         assert marker in dashboard
@@ -3357,7 +3588,7 @@ def test_publish_from_v2_fixture_migrates_without_config_rewrite(
     assert "Growth (14d)" in readme
     assert "now 11 / 2" in readme
     assert "Reponomics Dashboard" in dashboard
-    assert "encrypted-payload" in dashboard
+    assert "encrypted-dashboard-data" in dashboard
 
 
 def test_rotate_key_from_v2_encrypted_fixture_migrates_without_config_rewrite(
@@ -3435,4 +3666,4 @@ def test_publish_degrades_when_repo_metrics_history_is_absent(
     assert config.pages_index_path.exists()
     assert "Growth (14d)" not in readme
     assert "Reponomics Dashboard" in dashboard
-    assert "encrypted-payload" in dashboard
+    assert "encrypted-dashboard-data" in dashboard

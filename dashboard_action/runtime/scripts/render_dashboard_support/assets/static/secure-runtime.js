@@ -1,5 +1,5 @@
 
-    const EXPECTED_PAYLOAD_VERSION = 1;
+    const EXPECTED_DASHBOARD_DATA_VERSION = 2;
     const EXPECTED_CIPHER = 'AES-GCM';
     const EXPECTED_KDF_NAME = 'PBKDF2';
     const EXPECTED_KDF_HASH = 'SHA-256';
@@ -7,8 +7,8 @@
     const EXPECTED_SALT_BYTES = 16;
     const EXPECTED_IV_BYTES = 12;
 
-    const encryptedPayload = JSON.parse(
-      document.getElementById('encrypted-payload').textContent
+    const encryptedDashboardData = JSON.parse(
+      document.getElementById('encrypted-dashboard-data').textContent
     );
     const exportManifestNode = document.getElementById('export-manifest');
     const exportManifestPayload = exportManifestNode
@@ -29,7 +29,7 @@
     const UNLOCK_DELAY_STARTS_AT = 3;
     const UNLOCK_DELAY_BASE_MS = 2000;
     const UNLOCK_DELAY_MAX_MS = 30000;
-    let unlockedDashboardKey = '';
+    let unlockedExportKey = null;
     let unlockDelayTimer = null;
 
     function setUnlockStatus(message, type) {
@@ -37,13 +37,24 @@
       unlockStatus.className = 'auth-status' + (type ? ' ' + type : '');
     }
 
+    function dashboardDataError(stage, message, details) {
+      const error = new Error(message);
+      error.dashboardDataStage = stage;
+      if (details) {
+        Object.keys(details).forEach((key) => {
+          error[key] = details[key];
+        });
+      }
+      return error;
+    }
+
     function unlockAttemptStorageKey() {
       const fingerprint = [
-        encryptedPayload.version,
-        encryptedPayload.cipher,
-        encryptedPayload.salt,
-        encryptedPayload.iv,
-        String(encryptedPayload.ciphertext || '').slice(0, 32)
+        encryptedDashboardData.version,
+        encryptedDashboardData.cipher,
+        encryptedDashboardData.salt,
+        String(encryptedDashboardData.summary || '').slice(0, 32),
+        String(encryptedDashboardData.chunk_count || 0)
       ].join(':');
       return UNLOCK_ATTEMPT_STORAGE_PREFIX + fingerprint;
     }
@@ -144,7 +155,7 @@
 
     function b64ToBytes(value) {
       if (typeof value !== 'string' || !value) {
-        throw new Error('Invalid encrypted dashboard payload.');
+        throw new Error('Invalid encrypted dashboard data.');
       }
       const binary = atob(value);
       const bytes = new Uint8Array(binary.length);
@@ -152,6 +163,15 @@
         bytes[i] = binary.charCodeAt(i);
       }
       return bytes;
+    }
+
+    function b64urlToBytes(value) {
+      if (typeof value !== 'string' || !value) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      const padded = value.replace(/-/g, '+').replace(/_/g, '/')
+        + '='.repeat((4 - (value.length % 4)) % 4);
+      return b64ToBytes(padded);
     }
 
     function bytesToHex(bytes) {
@@ -170,32 +190,59 @@
       return safePrefix + '-' + stamp + '.zip';
     }
 
-    function validateEncryptedPayload(payload) {
-      if (!payload || payload.version !== EXPECTED_PAYLOAD_VERSION) {
-        throw new Error('Invalid encrypted dashboard payload.');
+    function validateEncryptedBlob(token) {
+      if (typeof token !== 'string') {
+        throw new Error('Invalid encrypted dashboard data.');
       }
-      if (payload.cipher !== EXPECTED_CIPHER) {
-        throw new Error('Invalid encrypted dashboard payload.');
+      const parts = token.split('.');
+      if (parts.length !== 2) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      const iv = b64urlToBytes(parts[0]);
+      const ciphertext = b64urlToBytes(parts[1]);
+      if (iv.length !== EXPECTED_IV_BYTES || ciphertext.length === 0) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      return { iv, ciphertext };
+    }
+
+    function validateEncryptedDashboardData(data) {
+      if (!data || data.version !== EXPECTED_DASHBOARD_DATA_VERSION) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      if (data.cipher !== EXPECTED_CIPHER) {
+        throw new Error('Invalid encrypted dashboard data.');
       }
       if (
-        !payload.kdf ||
-        payload.kdf.name !== EXPECTED_KDF_NAME ||
-        payload.kdf.hash !== EXPECTED_KDF_HASH ||
-        payload.kdf.iterations !== EXPECTED_KDF_ITERATIONS
+        !data.kdf ||
+        data.kdf.name !== EXPECTED_KDF_NAME ||
+        data.kdf.hash !== EXPECTED_KDF_HASH ||
+        data.kdf.iterations !== EXPECTED_KDF_ITERATIONS
       ) {
-        throw new Error('Invalid encrypted dashboard payload.');
+        throw new Error('Invalid encrypted dashboard data.');
       }
-      const salt = b64ToBytes(payload.salt);
-      const iv = b64ToBytes(payload.iv);
-      const ciphertext = b64ToBytes(payload.ciphertext);
-      if (
-        salt.length !== EXPECTED_SALT_BYTES ||
-        iv.length !== EXPECTED_IV_BYTES ||
-        ciphertext.length === 0
-      ) {
-        throw new Error('Invalid encrypted dashboard payload.');
+      if (data.encoding !== 'gzip+json') {
+        throw new Error('Invalid encrypted dashboard data.');
       }
-      return { salt, iv, ciphertext };
+      const salt = b64ToBytes(data.salt);
+      if (salt.length !== EXPECTED_SALT_BYTES) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      validateEncryptedBlob(data.summary);
+      if (!data.chunks || typeof data.chunks !== 'object' || Array.isArray(data.chunks)) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      const chunkIds = Object.keys(data.chunks);
+      if (data.chunk_count !== chunkIds.length) {
+        throw new Error('Invalid encrypted dashboard data.');
+      }
+      chunkIds.forEach((chunkId) => {
+        if (!/^c[0-9]{4,}$/.test(chunkId)) {
+          throw new Error('Invalid encrypted dashboard data.');
+        }
+        validateEncryptedBlob(data.chunks[chunkId]);
+      });
+      return { salt };
     }
 
     function validateEncryptedExportManifest(manifest) {
@@ -268,8 +315,7 @@
       );
     }
 
-    async function decryptBytes(dashboardKey, salt, iv, ciphertext) {
-      const key = await deriveAesKey(dashboardKey, salt);
+    async function decryptBytes(key, iv, ciphertext) {
       return crypto.subtle.decrypt(
         { name: EXPECTED_CIPHER, iv },
         key,
@@ -277,15 +323,104 @@
       );
     }
 
-    async function decryptDashboardPayload(dashboardKey, payload) {
-      const validatedPayload = validateEncryptedPayload(payload);
-      const plaintext = await decryptBytes(
-        dashboardKey,
-        validatedPayload.salt,
-        validatedPayload.iv,
-        validatedPayload.ciphertext
-      );
-      return JSON.parse(new TextDecoder().decode(plaintext));
+    async function gunzipJson(bytes, context) {
+      if (!window.DecompressionStream) {
+        throw dashboardDataError('decompress', 'Browser does not support gzip decompression.', context);
+      }
+      let decompressed;
+      try {
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        decompressed = await new Response(stream).arrayBuffer();
+      } catch (error) {
+        throw dashboardDataError('decompress', error.message || 'Dashboard data could not be decompressed.', {
+          ...context,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      try {
+        return JSON.parse(new TextDecoder().decode(decompressed));
+      } catch (error) {
+        throw dashboardDataError('parse', error.message || 'Dashboard data was not valid JSON.', {
+          ...context,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+    }
+
+    async function decryptDashboardBlob(key, token, context) {
+      const details = context || {};
+      let blob;
+      try {
+        blob = validateEncryptedBlob(token);
+      } catch (error) {
+        throw dashboardDataError('schema', error.message || 'Encrypted dashboard blob was malformed.', {
+          ...details,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      let compressed;
+      try {
+        compressed = await decryptBytes(key, blob.iv, blob.ciphertext);
+      } catch (error) {
+        throw dashboardDataError('decrypt', error.message || 'Encrypted dashboard blob failed authentication.', {
+          ...details,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      return gunzipJson(new Uint8Array(compressed), details);
+    }
+
+    async function decryptDashboardData(dashboardKey, data) {
+      const validatedData = validateEncryptedDashboardData(data);
+      const displayKey = await deriveAesKey(dashboardKey, validatedData.salt);
+      const summary = await decryptDashboardBlob(displayKey, data.summary, {
+        mode: 'encrypted',
+        summaryDecrypted: false,
+        stageTarget: 'summary'
+      });
+      const repoChunks = summary.repo_chunks || {};
+      return {
+        summary,
+        loadRepoChunk: async function(repoName) {
+          const chunkId = repoChunks[repoName];
+          if (!chunkId || !data.chunks[chunkId]) {
+            throw dashboardDataError('missing', 'Encrypted dashboard chunk was missing.', {
+              repoName,
+              chunkId: chunkId || '',
+              mode: 'encrypted',
+              summaryDecrypted: true,
+              stageTarget: 'chunk'
+            });
+          }
+          const chunk = await decryptDashboardBlob(displayKey, data.chunks[chunkId], {
+            repoName,
+            chunkId,
+            mode: 'encrypted',
+            summaryDecrypted: true,
+            stageTarget: 'chunk'
+          });
+          if (!chunk.repo || chunk.repo !== repoName) {
+            throw dashboardDataError('schema', 'Encrypted dashboard chunk did not match the requested repository.', {
+              repoName,
+              chunkId,
+              mode: 'encrypted',
+              summaryDecrypted: true,
+              stageTarget: 'chunk'
+            });
+          }
+          return chunk;
+        }
+      };
+    }
+
+    async function deriveExportKey(dashboardKey) {
+      if (!exportManifestPayload) return null;
+      const manifest = validateEncryptedExportManifest(exportManifestPayload);
+      return deriveAesKey(dashboardKey, manifest.salt);
     }
 
     async function sha256Hex(bytes) {
@@ -342,7 +477,7 @@
       exportButton.classList.add('visible');
       exportButton.textContent = EXPORT_BUTTON_LABEL;
       exportButton.addEventListener('click', async function() {
-        if (!unlockedDashboardKey) {
+        if (!unlockedExportKey) {
           setExportStatus('📄 Unlock the dashboard before exporting.', 'error');
           return;
         }
@@ -367,8 +502,7 @@
             throw new Error('digest-mismatch');
           }
           const plaintext = await decryptBytes(
-            unlockedDashboardKey,
-            validatedManifest.salt,
+            unlockedExportKey,
             validatedManifest.iv,
             ciphertext
           );
@@ -456,11 +590,17 @@
       setUnlockStatus('Unlocking dashboard...', 'pending');
 
       try {
-        const payload = await decryptDashboardPayload(
-          dashboardKeyInput.value,
-          encryptedPayload
+        const dashboardKey = dashboardKeyInput.value;
+        const payload = await decryptDashboardData(
+          dashboardKey,
+          encryptedDashboardData
         );
-        unlockedDashboardKey = dashboardKeyInput.value;
+        try {
+          unlockedExportKey = await deriveExportKey(dashboardKey);
+        } catch (_error) {
+          unlockedExportKey = null;
+        }
+        dashboardKeyInput.value = '';
         authShell.style.display = 'none';
         document.body.classList.remove('auth-locked');
         document.body.removeAttribute('data-screen-label');
@@ -480,15 +620,15 @@
           nextAllowedAt: delayMs ? Date.now() + delayMs : 0
         });
         dashboardKeyInput.select();
-        unlockedDashboardKey = '';
+        unlockedExportKey = null;
         if (delayMs) {
           startUnlockDelay(
             delayMs,
-            'Wrong dashboard key or corrupted payload. Try again in '
+            'Wrong dashboard key or corrupted data. Try again in '
           );
         } else {
           unlockButton.disabled = false;
-          setUnlockStatus('Wrong dashboard key or corrupted payload.', 'error');
+          setUnlockStatus('Wrong dashboard key or corrupted data.', 'error');
         }
       }
     });

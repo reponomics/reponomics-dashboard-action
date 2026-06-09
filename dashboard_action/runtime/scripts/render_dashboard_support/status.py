@@ -6,6 +6,7 @@ import html
 import json
 import os
 from datetime import datetime, timezone
+from typing import TypedDict
 
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
@@ -20,8 +21,15 @@ DOCS_STATE_LABELS = {
     "stale": "version is out of sync with this repository's action version",
 }
 
+class VersionStatus(TypedDict):
+    current_version: str
+    current_url: str
+    latest_version: str
+    update_available: bool
+    url: str
 
-def load_version_status():
+
+def load_version_status() -> VersionStatus | None:
     raw = os.environ.get(VERSION_STATUS_ENV, "")
     if not raw:
         return None
@@ -47,14 +55,14 @@ def load_version_status():
     }
 
 
-def display_version(version):
+def display_version(version: object) -> str:
     value = str(version or "").strip()
     if not value:
         return ""
     return value if value.startswith("v") else f"v{value}"
 
 
-def format_docs_timestamp(value):
+def format_docs_timestamp(value: str) -> str:
     if not value:
         return ""
     try:
@@ -65,7 +73,7 @@ def format_docs_timestamp(value):
     return parsed.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
-def render_version_badges():
+def render_version_badges() -> str:
     status = load_version_status()
     if not status:
         return ""
@@ -80,7 +88,8 @@ def render_version_badges():
     current_href = html.escape(status["current_url"], quote=True)
     latest_href = html.escape(status["url"], quote=True)
     updates_href = html.escape(
-        os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"], quote=True
+        os.environ.get(MANAGED_DOCS_LINK_ENV, "").strip() or status["url"],
+        quote=True,
     )
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
@@ -101,7 +110,7 @@ def render_version_badges():
     )
 
 
-def render_docs_sync_status():
+def render_docs_sync_status() -> str:
     state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
     if not state or state in {"unchanged", "written"}:
         return ""
@@ -113,8 +122,8 @@ def render_docs_sync_status():
     )
 
 
-def render_docs_status_detail():
-    parts = []
+def render_docs_status_detail() -> str:
+    parts: list[str] = []
     docs_action_version = display_version(
         os.environ.get(DOCS_ACTION_VERSION_ENV, "").strip()
     )

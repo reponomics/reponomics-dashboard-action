@@ -7,10 +7,22 @@ import hashlib
 import html
 import json
 from pathlib import Path
+from typing import Any, TypedDict
 
 from render_dashboard_support.assets import load_asset
 from render_dashboard_support.status import render_version_badges as _render_version_badges
 
+
+DashboardData = dict[str, Any]
+ExportManifest = dict[str, Any] | None
+
+
+class StatValues(TypedDict):
+    repo_count: str
+    total_views: str
+    total_uniques: str
+    total_clones: str
+    total_clone_uniques: str
 
 ACTION_ROOT = Path(__file__).resolve().parents[4]
 VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
@@ -44,7 +56,11 @@ def build_font_face_styles() -> str:
     )
 
 
-def build_dashboard_shell(updated_text, stat_values, hidden=False):
+def build_dashboard_shell(
+    updated_text: str,
+    stat_values: StatValues,
+    hidden: bool = False,
+) -> str:
     """Build the shared dashboard markup used by plain and encrypted pages."""
     hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
@@ -81,6 +97,8 @@ def build_dashboard_shell(updated_text, stat_values, hidden=False):
         <p class="auth-status" id="export-status" aria-live="polite" aria-atomic="true"></p>
       </div>
     </div>
+
+    <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
     <div class="growth-model-grid" aria-label="Repository growth model">
       <div class="card growth-stage">
@@ -330,14 +348,14 @@ def theme_bootstrap_js() -> str:
 
 
 def wrap_html(
-    body,
-    chart_loader,
-    runtime_js,
-    extra_head="",
-    body_attributes="",
-    inline_chart_js="",
-    extra_csp_scripts=None,
-):
+    body: str,
+    chart_loader: str,
+    runtime_js: str,
+    extra_head: str = "",
+    body_attributes: str = "",
+    inline_chart_js: str = "",
+    extra_csp_scripts: list[str] | None = None,
+) -> str:
     """Wrap page markup in the shared HTML shell."""
     body_attribute_text = f" {body_attributes}" if body_attributes else ""
     style_content = f"{build_font_face_styles()}\n{BASE_STYLES}"
@@ -388,12 +406,17 @@ def wrap_html(
 """
 
 
-def build_public_html(payload, chart_loader, inline_chart_js=""):
+def build_public_html(
+    dashboard_data: DashboardData,
+    chart_loader: str,
+    inline_chart_js: str = "",
+) -> str:
     """Build the standard published dashboard HTML."""
-    totals = payload["totals"]
+    summary = dashboard_data["summary"]
+    totals = summary["totals"]
     shell = build_dashboard_shell(
         (
-            f"Last updated: {payload['generated_at']} | " +
+            f"Last updated: {summary['generated_at']} | " +
             f"Tracking {totals['repo_count']} repositories | " +
             f"{totals['days_tracked']} days of data"
         ),
@@ -407,14 +430,18 @@ def build_public_html(payload, chart_loader, inline_chart_js=""):
     )
     runtime_js = (
         APP_RUNTIME_JS
-        + "\nconst dashboardPayload = "
-        + json.dumps(payload, separators=(",", ":"))
-        + ";\nrenderDashboard(dashboardPayload);\n"
+        + "\nconst dashboardDataObject = "
+        + json.dumps(dashboard_data, separators=(",", ":"))
+        + ";\nrenderDashboard(dashboardDataObject);\n"
     )
     return wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
 
 
-def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
+def build_encrypted_html(
+    encrypted_dashboard_data: DashboardData,
+    chart_loader: str,
+    export_manifest: ExportManifest,
+) -> str:
     """Build the encrypted published dashboard HTML."""
     auth_card = f"""
   <div id="auth-shell">
@@ -441,7 +468,7 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
             </div>
             <p class="sub">
               Encrypted Pages mode for private growth analytics. The dashboard
-              payload is encrypted with your key and decrypted locally &mdash;
+              data is encrypted with your key and decrypted locally &mdash;
               nothing leaves your browser.
             </p>
           </div>
@@ -531,13 +558,15 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         "__PBKDF2_ITERATIONS__",
         str(PBKDF2_ITERATIONS),
     )
-    encrypted_payload_json = json.dumps(encrypted_payload, separators=(",", ":"))
+    encrypted_dashboard_data_json = json.dumps(
+        encrypted_dashboard_data, separators=(",", ":")
+    )
     export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
     body = (
         auth_card
         + shell
-        + "\n  <script id=\"encrypted-payload\" type=\"application/json\">"
-        + encrypted_payload_json
+        + "\n  <script id=\"encrypted-dashboard-data\" type=\"application/json\">"
+        + encrypted_dashboard_data_json
         + "</script>\n"
         + "  <script id=\"export-manifest\" type=\"application/json\">"
         + export_manifest_json
@@ -549,5 +578,5 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         runtime_js,
         extra_head='<meta name="robots" content="noindex, nofollow">',
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
-        extra_csp_scripts=[encrypted_payload_json, export_manifest_json],
+        extra_csp_scripts=[encrypted_dashboard_data_json, export_manifest_json],
     )

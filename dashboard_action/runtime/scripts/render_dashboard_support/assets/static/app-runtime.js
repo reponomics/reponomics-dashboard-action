@@ -33,7 +33,7 @@
       return DASH_PATTERNS[idx % DASH_PATTERNS.length];
     }
     function getRepoDash(repoName) {
-      const repos = state.payload?.repos || [];
+      const repos = dashboardData()?.getRepos() || [];
       const idx = repos.findIndex((repo) => repo.name === repoName);
       return dashForRepoIndex(idx >= 0 ? idx : 0);
     }
@@ -48,17 +48,319 @@
     };
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
     const DEFAULT_WINDOW = '14';
+    const MAX_DISPLAY_REPOS = 20;
+    const MAX_COMPARE_REPOS = 8;
+    const CHUNK_FAILURE_LABELS = {
+      missing: 'Missing chunk',
+      decrypt: 'Decrypt/integrity failure',
+      decompress: 'Decompression failure',
+      parse: 'JSON parse failure',
+      schema: 'Schema mismatch',
+      runtime: 'Runtime failure'
+    };
     const state = {
-      payload: null,
+      dashboardData: null,
       window: DEFAULT_WINDOW,
       minActivity: 1,
       selectedRepo: null,
       compareRepos: [],
+      chunkLoadErrors: {},
       metric: 'views',
       repoSortKey: null,
       repoSortDir: null,
       calendarMonth: null
     };
+    function dashboardChunkError(stage, message, details) {
+      const error = new Error(message);
+      error.dashboardDataStage = stage || 'runtime';
+      if (details) {
+        Object.keys(details).forEach((key) => {
+          error[key] = details[key];
+        });
+      }
+      return error;
+    }
+
+    function createDashboardDataProvider(input) {
+      const isLazy = !!(input && input.summary && (input.loadRepoChunk || input.chunks));
+      const isEncrypted = !!(input && input.loadRepoChunk);
+      const source = isLazy ? input.summary : (input || {});
+      const loadedChunks = {};
+      const pendingChunks = {};
+      function chunkFor(repoName) {
+        return loadedChunks[repoName] || null;
+      }
+      function chunkIdFor(repoName) {
+        return source.repo_chunks?.[repoName] || null;
+      }
+      function validateRepoChunk(repoName, chunk) {
+        if (!chunk || typeof chunk !== 'object') {
+          throw dashboardChunkError('schema', 'Dashboard chunk was not an object.', {
+            repoName,
+            chunkId: chunkIdFor(repoName) || '',
+            mode: isEncrypted ? 'encrypted' : 'plain',
+            summaryDecrypted: isEncrypted
+          });
+        }
+        if (chunk.repo !== repoName) {
+          throw dashboardChunkError('schema', 'Dashboard chunk did not match requested repo.', {
+            repoName,
+            chunkId: chunkIdFor(repoName) || '',
+            mode: isEncrypted ? 'encrypted' : 'plain',
+            summaryDecrypted: isEncrypted
+          });
+        }
+        ['repo_series', 'repo_weekday', 'repo_referrers', 'repo_paths', 'growth'].forEach((field) => {
+          if (!(field in chunk)) {
+            throw dashboardChunkError('schema', 'Dashboard chunk was missing required field: ' + field + '.', {
+              repoName,
+              chunkId: chunkIdFor(repoName) || '',
+              mode: isEncrypted ? 'encrypted' : 'plain',
+              summaryDecrypted: isEncrypted,
+              missingField: field
+            });
+          }
+        });
+        return chunk;
+      }
+      function parsePlainChunk(repoName) {
+        const chunkId = chunkIdFor(repoName);
+        if (!chunkId || !input.chunks?.[chunkId]) {
+          throw dashboardChunkError('missing', 'Dashboard chunk was missing.', {
+            repoName,
+            chunkId: chunkId || '',
+            mode: 'plain',
+            summaryDecrypted: false
+          });
+        }
+        const rawChunk = input.chunks[chunkId];
+        let chunk;
+        try {
+          chunk = typeof rawChunk === 'string' ? JSON.parse(rawChunk) : rawChunk;
+        } catch (error) {
+          throw dashboardChunkError('parse', error.message || 'Dashboard chunk was not valid JSON.', {
+            repoName,
+            chunkId,
+            mode: 'plain',
+            summaryDecrypted: false,
+            originalName: error.name || '',
+            originalMessage: error.message || String(error)
+          });
+        }
+        return validateRepoChunk(repoName, chunk);
+      }
+      function loadChunk(repoName) {
+        if (input.loadRepoChunk) {
+          return input.loadRepoChunk(repoName).then((chunk) => validateRepoChunk(repoName, chunk));
+        }
+        return Promise.resolve(parsePlainChunk(repoName));
+      }
+      return {
+        getPayload: function() { return source; },
+        isLazy: function() { return isLazy; },
+        isEncrypted: function() { return isEncrypted; },
+        getMeta: function() { return source.meta || {}; },
+        getRepos: function() { return source.repos || []; },
+        getRepoChunkId: function(repoName) { return chunkIdFor(repoName); },
+        getRepoSummary: function(repoName) {
+          return (source.repos || []).find((repo) => repo.name === repoName) || {};
+        },
+        getRepoSeries: function(repoName) {
+          return chunkFor(repoName)?.repo_series || source.repo_series?.[repoName] || {};
+        },
+        getRepoWeekday: function(repoName) {
+          return chunkFor(repoName)?.repo_weekday || source.repo_weekday?.[repoName] || {};
+        },
+        getRepoGrowth: function(repoName) {
+          const chunkGrowth = chunkFor(repoName)?.growth || {};
+          const row = chunkGrowth.per_repo || source.growth?.per_repo?.[repoName] || {};
+          if (!row.series && chunkGrowth.series) {
+            return Object.assign({}, row, { series: chunkGrowth.series });
+          }
+          return row;
+        },
+        getRepoReferrers: function(repoName) {
+          return chunkFor(repoName)?.repo_referrers || source.repo_referrers?.[repoName] || [];
+        },
+        getRepoPaths: function(repoName) {
+          return chunkFor(repoName)?.repo_paths || source.repo_paths?.[repoName] || [];
+        },
+        getReferrersByRepo: function() {
+          if (!isLazy) return source.repo_referrers || {};
+          return Object.fromEntries(
+            Object.keys(loadedChunks).map((repoName) => [
+              repoName,
+              loadedChunks[repoName].repo_referrers || []
+            ])
+          );
+        },
+        getPathsByRepo: function() {
+          if (!isLazy) return source.repo_paths || {};
+          return Object.fromEntries(
+            Object.keys(loadedChunks).map((repoName) => [
+              repoName,
+              loadedChunks[repoName].repo_paths || []
+            ])
+          );
+        },
+        isRepoLoaded: function(repoName) {
+          return !isLazy || !!loadedChunks[repoName];
+        },
+        loadRepo: function(repoName) {
+          if (!isLazy || !repoName || loadedChunks[repoName]) {
+            return Promise.resolve(loadedChunks[repoName] || null);
+          }
+          if (!pendingChunks[repoName]) {
+            pendingChunks[repoName] = loadChunk(repoName).then((chunk) => {
+              loadedChunks[repoName] = chunk;
+              delete pendingChunks[repoName];
+              return chunk;
+            }).catch((error) => {
+              delete pendingChunks[repoName];
+              throw error;
+            });
+          }
+          return pendingChunks[repoName];
+        }
+      };
+    }
+    function dashboardData() {
+      return state.dashboardData;
+    }
+    function currentPayload() {
+      return dashboardData()?.getPayload() || null;
+    }
+    function hasChunkLoadError(repoName) {
+      return !!(repoName && state.chunkLoadErrors && state.chunkLoadErrors[repoName]);
+    }
+    function currentChunkLoadErrors() {
+      return Object.keys(state.chunkLoadErrors || {})
+        .sort()
+        .map((repoName) => state.chunkLoadErrors[repoName]);
+    }
+    function normalizeChunkLoadError(repoName, error) {
+      const data = dashboardData();
+      const stage = error?.dashboardDataStage || error?.dashboardChunkStage || 'runtime';
+      const chunkId = error?.chunkId || data?.getRepoChunkId?.(repoName) || '';
+      return {
+        repoName,
+        chunkId,
+        mode: error?.mode || (data?.isEncrypted?.() ? 'encrypted' : 'plain'),
+        stage: CHUNK_FAILURE_LABELS[stage] ? stage : 'runtime',
+        label: CHUNK_FAILURE_LABELS[stage] || CHUNK_FAILURE_LABELS.runtime,
+        summaryDecrypted: !!error?.summaryDecrypted,
+        exceptionName: error?.originalName || error?.name || '',
+        exceptionMessage: error?.originalMessage || error?.message || String(error || ''),
+        missingField: error?.missingField || ''
+      };
+    }
+    function recordChunkLoadErrors(diagnostics) {
+      diagnostics.forEach((diagnostic) => {
+        state.chunkLoadErrors[diagnostic.repoName] = diagnostic;
+        console.error('Dashboard repository chunk load failed', diagnostic);
+      });
+    }
+    function clearChunkLoadErrors(repoNames) {
+      if (!repoNames) {
+        state.chunkLoadErrors = {};
+        return;
+      }
+      repoNames.forEach((repoName) => {
+        delete state.chunkLoadErrors[repoName];
+      });
+    }
+    function chunkDiagnosticsText(errors) {
+      return errors.map((error) => {
+        return [
+          'repo=' + error.repoName,
+          'chunk_id=' + (error.chunkId || '(none)'),
+          'mode=' + error.mode,
+          'stage=' + error.stage,
+          'summary_decrypted=' + (error.summaryDecrypted ? 'true' : 'false'),
+          error.missingField ? 'missing_field=' + error.missingField : '',
+          error.exceptionName ? 'exception_name=' + error.exceptionName : '',
+          error.exceptionMessage ? 'exception_message=' + error.exceptionMessage : ''
+        ].filter(Boolean).join('\n');
+      }).join('\n\n');
+    }
+    function summarizeChunkErrors(errors) {
+      const counts = {};
+      errors.forEach((error) => {
+        counts[error.stage] = (counts[error.stage] || 0) + 1;
+      });
+      return Object.keys(counts).sort().map((stage) => {
+        return counts[stage] + ' ' + (CHUNK_FAILURE_LABELS[stage] || stage).toLowerCase();
+      }).join(', ');
+    }
+    function renderDashboardNotice() {
+      const region = document.getElementById('dashboard-notice-region');
+      if (!region) return;
+      const errors = currentChunkLoadErrors();
+      region.textContent = '';
+      if (!errors.length) {
+        region.hidden = true;
+        region.removeAttribute('role');
+        return;
+      }
+
+      const notice = document.createElement('div');
+      notice.className = 'dashboard-notice error';
+      notice.setAttribute('role', 'alert');
+
+      const main = document.createElement('div');
+      main.className = 'dashboard-notice-main';
+      const copy = document.createElement('div');
+      copy.className = 'dashboard-notice-copy';
+      const title = document.createElement('div');
+      title.className = 'dashboard-notice-title';
+      title.textContent = errors.length === 1
+        ? 'Repository data could not be loaded'
+        : 'Some repository data could not be loaded';
+      const message = document.createElement('div');
+      message.className = 'dashboard-notice-message';
+      const names = errors.slice(0, 3).map((error) => error.repoName).join(', ');
+      const more = errors.length > 3 ? ' +' + (errors.length - 3) + ' more' : '';
+      message.textContent = errors.length === 1
+        ? errors[0].repoName + ' failed at ' + errors[0].label.toLowerCase() + '. Charts omit this repository until it loads successfully.'
+        : errors.length + ' repositories failed to load (' + summarizeChunkErrors(errors) + '): ' + names + more + '. Charts omit these repositories until they load successfully.';
+      copy.appendChild(title);
+      copy.appendChild(message);
+
+      const actions = document.createElement('div');
+      actions.className = 'dashboard-notice-actions';
+      const retryButton = document.createElement('button');
+      retryButton.type = 'button';
+      retryButton.className = 'toolbar-button visible';
+      retryButton.dataset.noticeAction = 'retry-chunks';
+      retryButton.textContent = 'Retry';
+      actions.appendChild(retryButton);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'toolbar-button visible';
+        copyButton.dataset.noticeAction = 'copy-diagnostics';
+        copyButton.textContent = 'Copy details';
+        actions.appendChild(copyButton);
+      }
+
+      main.appendChild(copy);
+      main.appendChild(actions);
+      notice.appendChild(main);
+
+      const details = document.createElement('details');
+      details.className = 'dashboard-notice-details';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Diagnostics';
+      const diagnostics = document.createElement('pre');
+      diagnostics.className = 'dashboard-notice-diagnostics';
+      diagnostics.textContent = chunkDiagnosticsText(errors);
+      details.appendChild(summary);
+      details.appendChild(diagnostics);
+      notice.appendChild(details);
+
+      region.appendChild(notice);
+      region.hidden = false;
+    }
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
       return Object.assign({}, info, { color: themeMetricColor(info.key) || info.color });
@@ -144,7 +446,7 @@
         }
         stackedChart.update('none');
       }
-      if (state.payload) updateDashboard();
+      if (currentPayload()) updateDashboard();
     }
     let dailyChart = null;
     let weekdayChart = null;
@@ -290,11 +592,15 @@
     }
 
     function getRepoByName(repoName) {
-      return getVisibleRepos().find((repo) => repo.name === repoName) || null;
+      if (!repoName || !dashboardData()?.getRepoSummary(repoName)?.name) {
+        return null;
+      }
+      const repo = buildRepoMetrics(repoName);
+      return repo.activity >= state.minActivity ? repo : null;
     }
 
     function getRepoColor(repoName) {
-      const repos = state.payload?.repos || [];
+      const repos = dashboardData()?.getRepos() || [];
       const idx = repos.findIndex((repo) => repo.name === repoName);
       return palette[(idx >= 0 ? idx : 0) % palette.length];
     }
@@ -312,8 +618,8 @@
 
     function getDefaultWindow() {
       return (
-        normalizeWindow(state.payload?.meta?.default_window) ||
-        normalizeWindow(state.payload?.meta?.default_range) ||
+        normalizeWindow(dashboardData()?.getMeta()?.default_window) ||
+        normalizeWindow(dashboardData()?.getMeta()?.default_range) ||
         DEFAULT_WINDOW
       );
     }
@@ -352,7 +658,7 @@
       if (days === null) {
         return null;
       }
-      const dates = state.payload?.daily?.dates || [];
+      const dates = currentPayload()?.daily?.dates || [];
       if (!dates.length) {
         return null;
       }
@@ -367,7 +673,7 @@
 
     function qualityDaysForSelectedWindow() {
       const allDays = applyVisibilityThresholdToQualityDays(
-        (state.payload?.data_quality?.days || []).slice()
+        (currentPayload()?.data_quality?.days || []).slice()
       );
       if (!allDays.length) return [];
       if (getSelectedWindow() === 'all') return allDays;
@@ -447,11 +753,11 @@
     }
 
     function latestMonthKeyFallback() {
-      const qualityDays = state.payload?.data_quality?.days || [];
+      const qualityDays = currentPayload()?.data_quality?.days || [];
       if (qualityDays.length) {
         return monthKeyFromIsoDate(qualityDays[qualityDays.length - 1].date);
       }
-      const dates = state.payload?.daily?.dates || [];
+      const dates = currentPayload()?.daily?.dates || [];
       if (dates.length) {
         return monthKeyFromIsoDate(dates[dates.length - 1]);
       }
@@ -712,12 +1018,14 @@
     }
 
     function buildRepoMetrics(repoName) {
-      const baseRepo = (state.payload?.repos || []).find((repo) => repo.name === repoName) || {};
-      const series = seriesForRange(state.payload?.repo_series?.[repoName]);
-      const growthRow = state.payload?.growth?.per_repo?.[repoName] || {};
+      const data = dashboardData();
+      const baseRepo = data?.getRepoSummary(repoName) || {};
+      const series = seriesForRange(data?.getRepoSeries(repoName));
+      const growthRow = data?.getRepoGrowth(repoName) || {};
       const deltas = growthRow.deltas || {};
       const growthSeries = seriesForRange(growthRow.series || {});
       const sum = (values) => (values || []).reduce((total, value) => total + Number(value || 0), 0);
+      const hasSeries = (series.dates || []).length > 0;
       const starsDelta = seriesDelta(growthSeries, 'stargazers', deltas.stars_delta || deltas.stargazers_delta);
       const subscribersDelta = seriesDelta(growthSeries, 'subscribers', deltas.subscribers_delta);
       const forksDelta = seriesDelta(growthSeries, 'forks', deltas.forks_delta);
@@ -725,18 +1033,19 @@
       const communityHealth = Number(community.health_percentage);
       return {
         name: repoName,
-        views: sum(series.views),
-        uniques: sum(series.uniques),
-        clones: sum(series.clones),
-        clone_uniques: sum(series.clone_uniques),
+        views: hasSeries ? sum(series.views) : Number(baseRepo.views || 0),
+        uniques: hasSeries ? sum(series.uniques) : Number(baseRepo.uniques || 0),
+        clones: hasSeries ? sum(series.clones) : Number(baseRepo.clones || 0),
+        clone_uniques: hasSeries ? sum(series.clone_uniques) : Number(baseRepo.clone_uniques || 0),
         stars_delta: starsDelta,
         subscribers_delta: subscribersDelta,
         forks_delta: forksDelta,
         stars: latestSeriesValue(growthSeries, 'stargazers', deltas.current_stars || deltas.current_stargazers),
         subscribers: latestSeriesValue(growthSeries, 'subscribers', deltas.current_subscribers),
         forks: latestSeriesValue(growthSeries, 'forks', deltas.current_forks),
-        days: (series.dates || []).length,
-        activity: sum(series.views) + sum(series.clones),
+        days: hasSeries ? (series.dates || []).length : Number(baseRepo.days || 0),
+        activity: (hasSeries ? sum(series.views) : Number(baseRepo.views || 0))
+          + (hasSeries ? sum(series.clones) : Number(baseRepo.clones || 0)),
         community: {
           available: !!community.available,
           health_percentage: Number.isFinite(communityHealth) ? communityHealth : null,
@@ -755,13 +1064,37 @@
     }
 
     function getAllRepoMetrics() {
-      return (state.payload?.repos || [])
+      return (dashboardData()?.getRepos() || [])
         .map((repo) => buildRepoMetrics(repo.name))
         .sort((a, b) => (b.views - a.views) || (b.clones - a.clones) || a.name.localeCompare(b.name));
     }
 
+    function getSelectableRepos() {
+      return getAllRepoMetrics()
+        .filter((repo) => repo.activity >= state.minActivity)
+        .filter((repo) => !hasChunkLoadError(repo.name));
+    }
+
     function getVisibleRepos() {
-      return getAllRepoMetrics().filter((repo) => repo.activity >= state.minActivity);
+      const selectable = getSelectableRepos();
+      const byName = new Map(selectable.map((repo) => [repo.name, repo]));
+      const prioritized = [];
+      const add = function(repoName) {
+        const repo = byName.get(repoName);
+        if (repo && !prioritized.some((item) => item.name === repo.name)) {
+          prioritized.push(repo);
+        }
+      };
+      if (state.selectedRepo) {
+        add(state.selectedRepo);
+      }
+      state.compareRepos.forEach(add);
+      selectable.forEach((repo) => {
+        if (prioritized.length < MAX_DISPLAY_REPOS) {
+          add(repo.name);
+        }
+      });
+      return prioritized.slice(0, MAX_DISPLAY_REPOS);
     }
 
     function buildAggregateSeries(repos) {
@@ -881,27 +1214,35 @@
     }
 
     function getCurrentReferrerRows() {
+      if (!isComparing() && !state.selectedRepo) {
+        return currentPayload()?.referrers || [];
+      }
       return aggregateSnapshotRows(
-        state.payload?.repo_referrers,
+        dashboardData()?.getReferrersByRepo(),
         getCurrentSnapshotRepoNames(),
         'referrer'
       );
     }
 
     function getCurrentPathRows() {
+      if (!isComparing() && !state.selectedRepo) {
+        return currentPayload()?.paths || [];
+      }
       return aggregateSnapshotRows(
-        state.payload?.repo_paths,
+        dashboardData()?.getPathsByRepo(),
         getCurrentSnapshotRepoNames(),
         'path'
       );
     }
 
     function sanitizeSelection() {
-      const visibleRepoNames = new Set(getVisibleRepos().map((repo) => repo.name));
-      if (state.selectedRepo && !visibleRepoNames.has(state.selectedRepo)) {
+      const selectableRepoNames = new Set(getSelectableRepos().map((repo) => repo.name));
+      if (state.selectedRepo && !selectableRepoNames.has(state.selectedRepo)) {
         state.selectedRepo = null;
       }
-      state.compareRepos = state.compareRepos.filter((repoName) => visibleRepoNames.has(repoName));
+      state.compareRepos = state.compareRepos
+        .filter((repoName) => selectableRepoNames.has(repoName))
+        .slice(0, MAX_COMPARE_REPOS);
     }
 
     function buildUpdatedText(payload) {
@@ -1201,6 +1542,7 @@
         state.compareRepos = inCompare
           ? state.compareRepos.filter((n) => n !== repoName)
           : state.compareRepos.concat(repoName);
+        state.compareRepos = state.compareRepos.slice(0, MAX_COMPARE_REPOS);
         // If we end up with only one repo in the compare set, treat it as a focus.
         if (state.compareRepos.length === 1) {
           state.selectedRepo = state.compareRepos[0];
@@ -1216,7 +1558,7 @@
 
     function toggleRepoCompare(repoName, checked) {
       if (checked) {
-        if (!state.compareRepos.includes(repoName)) {
+        if (!state.compareRepos.includes(repoName) && state.compareRepos.length < MAX_COMPARE_REPOS) {
           state.compareRepos.push(repoName);
         }
       } else {
@@ -1407,7 +1749,7 @@
       if (!stackedChart) {
         const opts = chartOptions(true);
         const repoFromDatasetLabel = function(label) {
-          return (state.payload?.repos || []).find((r) => getShortName(r.name) === label)?.name || label;
+          return (dashboardData()?.getRepos() || []).find((r) => getShortName(r.name) === label)?.name || label;
         };
         const modifierFromEvent = function(event) {
           const native = event && (event.native || event);
@@ -1822,8 +2164,9 @@
       const container = document.getElementById('insights-list');
       if (!container) return;
 
-      const structured = (state.payload && state.payload.insights_v2) || [];
-      const fallback = (state.payload && state.payload.insights) || [];
+      const payload = currentPayload();
+      const structured = (payload && payload.insights_v2) || [];
+      const fallback = (payload && payload.insights) || [];
 
       if (!structured.length && !fallback.length) {
         container.innerHTML = '<p class="empty-msg">Needs more data to surface a signal yet — check back after a few more collection runs.</p>';
@@ -2173,7 +2516,7 @@
         const params = new URLSearchParams();
         if (state.metric && state.metric !== 'views') params.set('metric', state.metric);
         if (getSelectedWindow() !== getDefaultWindow()) params.set('window', getSelectedWindow());
-        if (state.minActivity && state.minActivity !== (state.payload?.meta?.default_min_activity || 1)) params.set('min', String(state.minActivity));
+        if (state.minActivity && state.minActivity !== (dashboardData()?.getMeta()?.default_min_activity || 1)) params.set('min', String(state.minActivity));
         if (state.selectedRepo) params.set('focus', getShortName(state.selectedRepo));
         if (state.compareRepos.length >= 2) params.set('compare', state.compareRepos.map(getShortName).join(','));
         const hash = params.toString();
@@ -2185,7 +2528,7 @@
     }
 
     function applyUrlHash() {
-      if (!state.payload) return;
+      if (!currentPayload()) return;
       try {
         const raw = (window.location.hash || '').replace(/^#/, '');
         if (!raw) return;
@@ -2200,7 +2543,7 @@
         const min = Number(params.get('min'));
         if (Number.isFinite(min) && min >= 0) state.minActivity = Math.floor(min);
 
-        const repoNames = (state.payload.repos || []).map((r) => r.name);
+        const repoNames = (dashboardData()?.getRepos() || []).map((r) => r.name);
         const matchByShort = (short) => repoNames.find((n) => getShortName(n) === short) || null;
 
         const focus = params.get('focus');
@@ -2213,15 +2556,121 @@
           const tokens = compare.split(',').map((s) => s.trim()).filter(Boolean);
           const matched = tokens.map(matchByShort).filter(Boolean);
           if (matched.length >= 2) {
-            state.compareRepos = matched;
+            state.compareRepos = matched.slice(0, MAX_COMPARE_REPOS);
             state.selectedRepo = null;
           }
         }
       } catch (_e) { /* ignore */ }
     }
 
+    function repoNamesRequiredForCurrentView() {
+      let repoNames;
+      if (isComparing()) {
+        repoNames = state.compareRepos.slice();
+      } else if (state.selectedRepo) {
+        repoNames = [state.selectedRepo];
+      } else {
+        repoNames = getVisibleRepos().map((repo) => repo.name);
+      }
+      return repoNames.filter((repoName) => !hasChunkLoadError(repoName));
+    }
+
+    function loadRepoChunks(repoNames) {
+      const data = dashboardData();
+      if (!data || !data.isLazy()) {
+        return Promise.resolve([]);
+      }
+      const uniqueRepoNames = [...new Set(repoNames || [])]
+        .filter((repoName) => repoName && !data.isRepoLoaded(repoName));
+      if (!uniqueRepoNames.length) {
+        return Promise.resolve([]);
+      }
+      return Promise.all(uniqueRepoNames.map((repoName) => {
+        return data.loadRepo(repoName).then(() => {
+          return { repoName, ok: true };
+        }).catch((error) => {
+          return {
+            repoName,
+            ok: false,
+            diagnostic: normalizeChunkLoadError(repoName, error)
+          };
+        });
+      }));
+    }
+
+    function ensureCurrentRepoChunksLoaded() {
+      const data = dashboardData();
+      if (!data || !data.isLazy()) {
+        return null;
+      }
+      const missing = repoNamesRequiredForCurrentView();
+      if (!missing.some((repoName) => !data.isRepoLoaded(repoName))) {
+        return null;
+      }
+      return loadRepoChunks(missing);
+    }
+
+    function handleChunkLoadResults(results) {
+      const loaded = results.filter((result) => result.ok).map((result) => result.repoName);
+      const failed = results.filter((result) => !result.ok).map((result) => result.diagnostic);
+      if (loaded.length) {
+        clearChunkLoadErrors(loaded);
+      }
+      if (failed.length) {
+        recordChunkLoadErrors(failed);
+      }
+      return { loaded, failed };
+    }
+
+    function retryFailedChunks() {
+      const failedRepos = currentChunkLoadErrors().map((error) => error.repoName);
+      if (!failedRepos.length) {
+        return;
+      }
+      loadRepoChunks(failedRepos).then((results) => {
+        handleChunkLoadResults(results);
+        updateDashboard();
+      }).catch((error) => {
+        console.error('Unexpected dashboard chunk retry failure', error);
+      });
+    }
+
+    function copyChunkDiagnostics() {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        return;
+      }
+      navigator.clipboard.writeText(chunkDiagnosticsText(currentChunkLoadErrors())).catch((error) => {
+        console.error('Failed to copy dashboard chunk diagnostics', error);
+      });
+    }
+
+    function handleNoticeAction(event) {
+      const button = event.target.closest('[data-notice-action]');
+      if (!button) {
+        return;
+      }
+      if (button.dataset.noticeAction === 'retry-chunks') {
+        retryFailedChunks();
+      } else if (button.dataset.noticeAction === 'copy-diagnostics') {
+        copyChunkDiagnostics();
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = 'Copy details'; }, 1200);
+      }
+    }
+
     function updateDashboard() {
-      if (!state.payload) {
+      const payload = currentPayload();
+      if (!payload) {
+        return;
+      }
+      const pendingChunks = ensureCurrentRepoChunksLoaded();
+      if (pendingChunks) {
+        pendingChunks.then(function(results) {
+          handleChunkLoadResults(results);
+          updateDashboard();
+        }).catch(function(error) {
+          console.error('Unexpected dashboard chunk load failure', error);
+        });
         return;
       }
       sanitizeSelection();
@@ -2231,8 +2680,9 @@
       ensureCharts();
       updateControls();
       updateMetricTabs();
-      setText('updated-text', buildUpdatedText(state.payload));
+      setText('updated-text', buildUpdatedText(payload));
       updateToolbar();
+      renderDashboardNotice();
       renderCollectionCalendar();
       updateStats();
       updateDailyChart();
@@ -2247,11 +2697,13 @@
     }
 
     function renderDashboard(payload) {
-      state.payload = payload;
+      state.dashboardData = createDashboardDataProvider(payload);
+      const meta = dashboardData()?.getMeta() || {};
       state.window = getDefaultWindow();
-      state.minActivity = payload.meta?.default_min_activity || 1;
+      state.minActivity = meta.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
+      state.chunkLoadErrors = {};
       state.calendarMonth = null;
       const thresholdInput = document.getElementById('thresholdInput');
       if (thresholdInput) {
@@ -2274,6 +2726,8 @@
       if (calendarNextBtn) calendarNextBtn.addEventListener('click', function() { shiftCalendarMonth(1); });
       const clearButton = document.getElementById('clearSelectionBtn');
       if (clearButton) clearButton.addEventListener('click', clearSelection);
+      const noticeRegion = document.getElementById('dashboard-notice-region');
+      if (noticeRegion) noticeRegion.addEventListener('click', handleNoticeAction);
       const themeToggle = document.getElementById('themeToggle');
       if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
       // Sync the toggle button's icon/label with the bootstrap-applied theme.

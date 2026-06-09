@@ -382,6 +382,40 @@ def _long_label_rows() -> list[dict[str, str]]:
     return rows
 
 
+def _large_corpus_rows(repo_count: int = 200, day_count: int = 30) -> list[dict[str, str]]:
+    start = date(2026, 4, 26)
+    rows: list[dict[str, str]] = []
+    for offset in range(day_count):
+        day = start + timedelta(days=offset)
+        weekend_factor = 0.68 if day.weekday() >= 5 else 1.0
+        for repo_index in range(repo_count):
+            repo = f"reponomics-scale/repo-{repo_index + 1:03d}"
+            base = 4 + (repo_index % 37)
+            wave = ((offset + 5) * (repo_index + 11)) % 23
+            views = int((base + wave) * weekend_factor)
+            rows.append(
+                _row(
+                    repo,
+                    day,
+                    views=views,
+                    uniques=max(1, int(views * 0.56)),
+                    clones=max(0, int(views * 0.08)),
+                    cloners=max(0, int(views * 0.04)),
+                )
+            )
+    return rows
+
+
+def large_corpus_scenario() -> ScenarioDataset:
+    """Return the deterministic ADR 16 scale scenario without snapshot fan-out."""
+    return _scenario_from_daily(
+        key="large_corpus_200",
+        title="Large corpus",
+        description="Two hundred repositories for encrypted chunking and scale checks.",
+        daily_rows=_large_corpus_rows(),
+    )
+
+
 def build_scenarios(fixture_data_dir: Path = DEFAULT_FIXTURE_DATA_DIR) -> list[ScenarioDataset]:
     """Return deterministic full-data scenarios for visual iteration and edge checks."""
     return [

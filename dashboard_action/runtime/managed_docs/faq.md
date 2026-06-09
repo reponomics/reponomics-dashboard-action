@@ -15,9 +15,9 @@ This split keeps each generated user repository small and understandable while a
 
 Use `strong` unless you have a specific reason not to. It encrypts retained artifacts and hosted dashboard output with a high-entropy dashboard key. This is the right default for public repositories, sensitive dashboards, and any dashboard hosted with GitHub Pages.
 
-Use `casual` only when you want to deter accidental viewing or casual discovery but are not trying to resist targeted guessing. It encrypts the same surfaces as `strong`, but allows weak or memorable secrets. Weak secrets can be guessed offline from encrypted dashboard payloads.
+Use `casual` only when you want to deter accidental viewing or casual discovery but are not trying to resist targeted guessing. It encrypts the same surfaces as `strong`, but allows weak or memorable secrets. Weak secrets can be guessed offline from encrypted dashboard data objects.
 
-Use `plain` only in private repositories where GitHub repository and artifact access are the intended privacy boundary. `plain` stores retained CSV files directly in the `dashboard-data` artifact and does not publish a hosted Pages dashboard. The publish workflow can still generate a downloadable HTML dashboard artifact. For `strong` and `casual`, that downloadable artifact remains encrypted when hosted Pages publication is disabled.
+Use `plain` only in private repositories where GitHub repository and artifact access are the intended privacy boundary. `plain` stores retained CSV files directly in the `dashboard-data` artifact and does not publish a hosted Pages dashboard. The publish workflow can still generate a downloadable HTML dashboard artifact. That plaintext artifact uses the same summary plus per-repository chunk model as encrypted dashboards for runtime memory behavior, but it is not a confidentiality boundary. For `strong` and `casual`, that downloadable artifact remains encrypted when hosted Pages publication is disabled.
 
 For the full matrix, see [Privacy Configuration Matrix](privacy-configuration-matrix.md).
 
@@ -37,7 +37,7 @@ See [Secure Dashboard Key Generation](secure-dashboard-key.md).
 
 ## What does encryption protect?
 
-In `strong` and `casual`, retained artifacts and hosted dashboard payloads are encrypted before they are stored or published. The hosted dashboard decrypts data only in your browser after you enter the dashboard key.
+In `strong` and `casual`, retained artifacts and hosted dashboard data objects are encrypted before they are stored or published. The hosted dashboard decrypts the summary after unlock and decrypts per-repository chunks as repos are selected for display. Plaintext dashboard artifacts use the same lazy summary/chunk shape, but without encryption.
 
 Encryption does not hide everything. A hosted encrypted dashboard can still disclose that the dashboard exists, update timing, artifact size, and the fact that the repository uses Reponomics. It also does not protect against malicious browser extensions, compromised devices, compromised CI/CD, malicious workflow changes, or people with repository control-plane access.
 

@@ -319,6 +319,9 @@ def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
     assert "cdn.jsdelivr.net" not in rendered.dashboard
     assert "fonts.googleapis.com" not in rendered.dashboard
     assert "encrypted-payload" not in rendered.dashboard
+    assert "encrypted-dashboard-data" not in rendered.dashboard
+    assert "dashboardDataObject" in rendered.dashboard
+    assert "dashboardPayload" not in rendered.dashboard
     assert "Dashboard disabled" not in rendered.dashboard
 
 

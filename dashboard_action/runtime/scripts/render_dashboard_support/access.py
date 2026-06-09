@@ -11,7 +11,7 @@ ACCESS_MODE_ENCRYPTED = "encrypted"
 ACCESS_MODE_LEGACY_SHARED_SECRET = "shared-secret"
 
 
-def load_access_mode():
+def load_access_mode() -> str:
     """Return the configured dashboard access mode."""
     mode = os.environ.get(ACCESS_MODE_ENV, ACCESS_MODE_PUBLIC).strip().lower()
     if not mode:

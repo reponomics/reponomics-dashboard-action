@@ -9,7 +9,7 @@ Reponomics separates retained dashboard data from committed repository files. Co
 
 `casual` privacy mode also encrypts retained data and hosted dashboard export assets, but accepts any non-empty dashboard secret. It is meant for non-targeted access control, not resistance to offline brute-force attacks.
 
-`plain` privacy mode stores retained CSV artifacts without encryption and is allowed only for private repositories. It does not publish a public GitHub Pages dashboard. During `publish`, Reponomics uploads the rendered HTML dashboard as a private workflow artifact named `html-dashboard-plain`.
+`plain` privacy mode stores retained CSV artifacts without encryption and is allowed only for private repositories. It does not publish a public GitHub Pages dashboard. During `publish`, Reponomics uploads the rendered HTML dashboard as a private workflow artifact named `html-dashboard-plain`. That artifact uses the same summary plus per-repository chunk dashboard data model as encrypted dashboards so large dashboards do not need to parse every repository detail object on first render.
 
 Workflow artifacts are readable by anyone with repository read access. In public repositories, that means public artifact access according to GitHub's artifact visibility rules. In private repositories, collaborators who can read workflow runs can read artifacts.
 

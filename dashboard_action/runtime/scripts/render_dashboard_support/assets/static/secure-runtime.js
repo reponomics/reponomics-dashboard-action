@@ -555,11 +555,11 @@
         if (delayMs) {
           startUnlockDelay(
             delayMs,
-            'Wrong dashboard key or corrupted payload. Try again in '
+            'Wrong dashboard key or corrupted data. Try again in '
           );
         } else {
           unlockButton.disabled = false;
-          setUnlockStatus('Wrong dashboard key or corrupted payload.', 'error');
+          setUnlockStatus('Wrong dashboard key or corrupted data.', 'error');
         }
       }
     });

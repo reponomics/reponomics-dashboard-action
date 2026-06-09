@@ -88,6 +88,17 @@ def _script_json(html: str, script_id: str) -> dict[str, Any]:
     return json.loads(match.group(1))
 
 
+def _runtime_const_json(html: str, const_name: str) -> dict[str, Any]:
+    match = re.search(
+        rf"const {re.escape(const_name)} = (.*?);\nrenderDashboard\({re.escape(const_name)}\);",
+        html,
+        flags=re.S,
+    )
+    if not match:
+        raise AssertionError(f"missing runtime const payload for {const_name}")
+    return json.loads(match.group(1))
+
+
 def _b64url_decode(value: str) -> bytes:
     padded = value + ("=" * ((4 - len(value) % 4) % 4))
     return base64.urlsafe_b64decode(padded.encode("ascii"))
@@ -114,6 +125,16 @@ def _decrypt_encrypted_dashboard_data(
         for chunk_id, blob in encrypted_dashboard_data["chunks"].items()
     }
     return summary, chunks
+
+
+def _decode_plain_dashboard_data(
+    plain_dashboard_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    chunks = {
+        chunk_id: json.loads(chunk)
+        for chunk_id, chunk in plain_dashboard_data["chunks"].items()
+    }
+    return plain_dashboard_data["summary"], chunks
 
 
 def _csp_content(document: str) -> str:
@@ -1183,9 +1204,74 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-dashboard-data" not in dashboard
+    assert "dashboardDataObject" in dashboard
+    assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
+
+    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    summary, chunks = _decode_plain_dashboard_data(plain_data)
+    repo_names = [repo["name"] for repo in summary["repos"]]
+    assert plain_data == {
+        "version": run.render_dashboard.DASHBOARD_DATA_VERSION,
+        "encoding": "json",
+        "summary": summary,
+        "chunks": plain_data["chunks"],
+        "chunk_count": len(repo_names),
+    }
+    assert set(plain_data["chunks"]) == set(summary["repo_chunks"].values())
+    assert set(chunks) == set(summary["repo_chunks"].values())
+    assert "repo_series" not in summary
+    assert "repo_weekday" not in summary
+    assert "repo_referrers" not in summary
+    assert "repo_paths" not in summary
+    assert "per_repo" not in summary["growth"]
+
+    for repo_name, chunk_id in summary["repo_chunks"].items():
+        assert isinstance(plain_data["chunks"][chunk_id], str)
+        chunk = chunks[chunk_id]
+        assert chunk["repo"] == repo_name
+        assert set(chunk) == {
+            "repo",
+            "repo_series",
+            "repo_weekday",
+            "repo_referrers",
+            "repo_paths",
+            "growth",
+        }
+        assert chunk["repo_series"]["dates"]
+        assert "per_repo" in chunk["growth"]
+
+
+def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+    )
+    dataset = dashboard_scenarios.large_corpus_scenario()
+    _seed_scenario(config.data_dir, dataset)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    summary, chunks = _decode_plain_dashboard_data(plain_data)
+
+    assert summary["totals"]["repo_count"] == 200
+    assert plain_data["chunk_count"] == 200
+    assert len(plain_data["chunks"]) == 200
+    assert len(summary["repo_chunks"]) == 200
+    assert len(chunks) == 200
+    assert '"repo_series":{' not in dashboard
 
 
 def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_payload(
@@ -1401,7 +1487,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
         "localStorage.removeItem(unlockAttemptStorageKey())",
         "resetUnlockAttemptState();",
         "Too many failed attempts. Try again in ",
-        "Wrong dashboard key or corrupted payload. Try again in ",
+        "Wrong dashboard key or corrupted data. Try again in ",
     ]
     for marker in expected_runtime_markers:
         assert marker in dashboard

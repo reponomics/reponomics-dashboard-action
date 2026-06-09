@@ -33,7 +33,7 @@ Use `casual` only when the goal is preventing accidental viewing, crawling, or c
 
 ## Plain
 
-Use `plain` only in private repositories where GitHub repository and artifact access are the intended privacy boundary. It uploads retained CSV files directly inside the `dashboard-data` artifact, may upload a downloadable plaintext dashboard artifact, and does not publish a hosted Pages dashboard.
+Use `plain` only in private repositories where GitHub repository and artifact access are the intended privacy boundary. It uploads retained CSV files directly inside the `dashboard-data` artifact, may upload a downloadable plaintext dashboard artifact, and does not publish a hosted Pages dashboard. The plaintext HTML artifact uses the same summary plus per-repository chunk data model as encrypted dashboards for runtime memory behavior, but without encryption.
 
 The action rejects `plain` in public repositories.
 

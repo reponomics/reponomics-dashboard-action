@@ -388,12 +388,13 @@ def wrap_html(
 """
 
 
-def build_public_html(payload, chart_loader, inline_chart_js=""):
+def build_public_html(dashboard_data, chart_loader, inline_chart_js=""):
     """Build the standard published dashboard HTML."""
-    totals = payload["totals"]
+    summary = dashboard_data["summary"]
+    totals = summary["totals"]
     shell = build_dashboard_shell(
         (
-            f"Last updated: {payload['generated_at']} | " +
+            f"Last updated: {summary['generated_at']} | " +
             f"Tracking {totals['repo_count']} repositories | " +
             f"{totals['days_tracked']} days of data"
         ),
@@ -407,9 +408,9 @@ def build_public_html(payload, chart_loader, inline_chart_js=""):
     )
     runtime_js = (
         APP_RUNTIME_JS
-        + "\nconst dashboardPayload = "
-        + json.dumps(payload, separators=(",", ":"))
-        + ";\nrenderDashboard(dashboardPayload);\n"
+        + "\nconst dashboardDataObject = "
+        + json.dumps(dashboard_data, separators=(",", ":"))
+        + ";\nrenderDashboard(dashboardDataObject);\n"
     )
     return wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
 

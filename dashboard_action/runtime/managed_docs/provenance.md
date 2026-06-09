@@ -121,7 +121,7 @@ Dashboard HTML, Pages artifacts, README output, and private plain dashboard arti
 
 The Reponomics project can provide tests, release evidence, and documented expectations for generated artifacts. It cannot globally attest every artifact generated inside every user's repository.
 
-For encrypted dashboards, the generated HTML includes an encrypted dashboard data object with an encrypted summary and per-repository encrypted chunks, plus an encrypted CSV export manifest. CSV export downloads a separate encrypted asset on demand, verifies ciphertext size and SHA-256, decrypts locally in the browser, verifies the decrypted ZIP SHA-256, and only then triggers the download.
+Generated dashboard HTML uses a summary plus per-repository chunk model so the browser can load repository detail data only as repositories are selected. For encrypted dashboards, the generated HTML includes an encrypted dashboard data object with an encrypted summary and per-repository encrypted chunks, plus an encrypted CSV export manifest. For plaintext dashboard artifacts, the same summary/chunk boundary is used without encryption. CSV export downloads a separate encrypted asset on demand, verifies ciphertext size and SHA-256, decrypts locally in the browser, verifies the decrypted ZIP SHA-256, and only then triggers the download.
 
 ## Verification Limits
 

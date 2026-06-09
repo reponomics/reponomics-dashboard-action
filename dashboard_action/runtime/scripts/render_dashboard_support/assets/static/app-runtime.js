@@ -61,12 +61,33 @@
       calendarMonth: null
     };
     function createDashboardDataProvider(input) {
-      const isLazy = !!(input && input.summary && input.loadRepoChunk);
+      const isLazy = !!(input && input.summary && (input.loadRepoChunk || input.chunks));
       const source = isLazy ? input.summary : (input || {});
       const loadedChunks = {};
       const pendingChunks = {};
       function chunkFor(repoName) {
         return loadedChunks[repoName] || null;
+      }
+      function chunkIdFor(repoName) {
+        return source.repo_chunks?.[repoName] || null;
+      }
+      function parsePlainChunk(repoName) {
+        const chunkId = chunkIdFor(repoName);
+        const rawChunk = chunkId ? input.chunks?.[chunkId] : null;
+        if (!rawChunk) {
+          throw new Error('Missing dashboard chunk for ' + repoName);
+        }
+        const chunk = typeof rawChunk === 'string' ? JSON.parse(rawChunk) : rawChunk;
+        if (!chunk || chunk.repo !== repoName) {
+          throw new Error('Dashboard chunk did not match requested repo');
+        }
+        return chunk;
+      }
+      function loadChunk(repoName) {
+        if (input.loadRepoChunk) {
+          return input.loadRepoChunk(repoName);
+        }
+        return Promise.resolve(parsePlainChunk(repoName));
       }
       return {
         getPayload: function() { return source; },
@@ -117,7 +138,7 @@
             return Promise.resolve(loadedChunks[repoName] || null);
           }
           if (!pendingChunks[repoName]) {
-            pendingChunks[repoName] = input.loadRepoChunk(repoName).then((chunk) => {
+            pendingChunks[repoName] = loadChunk(repoName).then((chunk) => {
               loadedChunks[repoName] = chunk;
               delete pendingChunks[repoName];
               return chunk;
@@ -2369,7 +2390,7 @@
         pendingChunks.then(function() {
           updateDashboard();
         }).catch(function(error) {
-          console.error('Failed to load encrypted repository chunk', error);
+          console.error('Failed to load repository chunk', error);
         });
         return;
       }

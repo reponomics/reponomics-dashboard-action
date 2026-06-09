@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-nqW3vijhZbHI7k/H3gWS/xT0heH8LwDmNmBAR+rWlOk=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-6LlIo9ZyVQGbYLHFaFItutdSRt+5YNTizK/pxm1RLq4=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-ykQ2yZLCcEvtgII1h7RmiA/y8FAYTn8CU2z4uuGjCwg=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-6LlIo9ZyVQGbYLHFaFItutdSRt+5YNTizK/pxm1RLq4=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
 
   <script src="assets/chart.umd.min.js"></script>
   <style>
@@ -2123,12 +2123,33 @@
       calendarMonth: null
     };
     function createDashboardDataProvider(input) {
-      const isLazy = !!(input && input.summary && input.loadRepoChunk);
+      const isLazy = !!(input && input.summary && (input.loadRepoChunk || input.chunks));
       const source = isLazy ? input.summary : (input || {});
       const loadedChunks = {};
       const pendingChunks = {};
       function chunkFor(repoName) {
         return loadedChunks[repoName] || null;
+      }
+      function chunkIdFor(repoName) {
+        return source.repo_chunks?.[repoName] || null;
+      }
+      function parsePlainChunk(repoName) {
+        const chunkId = chunkIdFor(repoName);
+        const rawChunk = chunkId ? input.chunks?.[chunkId] : null;
+        if (!rawChunk) {
+          throw new Error('Missing dashboard chunk for ' + repoName);
+        }
+        const chunk = typeof rawChunk === 'string' ? JSON.parse(rawChunk) : rawChunk;
+        if (!chunk || chunk.repo !== repoName) {
+          throw new Error('Dashboard chunk did not match requested repo');
+        }
+        return chunk;
+      }
+      function loadChunk(repoName) {
+        if (input.loadRepoChunk) {
+          return input.loadRepoChunk(repoName);
+        }
+        return Promise.resolve(parsePlainChunk(repoName));
       }
       return {
         getPayload: function() { return source; },
@@ -2179,7 +2200,7 @@
             return Promise.resolve(loadedChunks[repoName] || null);
           }
           if (!pendingChunks[repoName]) {
-            pendingChunks[repoName] = input.loadRepoChunk(repoName).then((chunk) => {
+            pendingChunks[repoName] = loadChunk(repoName).then((chunk) => {
               loadedChunks[repoName] = chunk;
               delete pendingChunks[repoName];
               return chunk;
@@ -4431,7 +4452,7 @@
         pendingChunks.then(function() {
           updateDashboard();
         }).catch(function(error) {
-          console.error('Failed to load encrypted repository chunk', error);
+          console.error('Failed to load repository chunk', error);
         });
         return;
       }
@@ -4509,8 +4530,8 @@
       updateDashboard();
     }
 
-const dashboardPayload = {"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"repo_series":{},"repo_weekday":{},"referrers":[],"paths":[],"repo_referrers":{},"repo_paths":{},"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0},"series":{},"per_repo":{}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]}};
-renderDashboard(dashboardPayload);
+const dashboardDataObject = {"version":2,"encoding":"json","summary":{"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"referrers":[],"paths":[],"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0},"series":{}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]},"repo_chunks":{}},"chunks":{},"chunk_count":0};
+renderDashboard(dashboardDataObject);
 </script>
 </body>
 </html>

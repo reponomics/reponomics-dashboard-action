@@ -7,10 +7,22 @@ import hashlib
 import html
 import json
 from pathlib import Path
+from typing import Any, TypedDict
 
 from render_dashboard_support.assets import load_asset
 from render_dashboard_support.status import render_version_badges as _render_version_badges
 
+
+DashboardData = dict[str, Any]
+ExportManifest = dict[str, Any] | None
+
+
+class StatValues(TypedDict):
+    repo_count: str
+    total_views: str
+    total_uniques: str
+    total_clones: str
+    total_clone_uniques: str
 
 ACTION_ROOT = Path(__file__).resolve().parents[4]
 VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
@@ -44,7 +56,11 @@ def build_font_face_styles() -> str:
     )
 
 
-def build_dashboard_shell(updated_text, stat_values, hidden=False):
+def build_dashboard_shell(
+    updated_text: str,
+    stat_values: StatValues,
+    hidden: bool = False,
+) -> str:
     """Build the shared dashboard markup used by plain and encrypted pages."""
     hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
@@ -332,14 +348,14 @@ def theme_bootstrap_js() -> str:
 
 
 def wrap_html(
-    body,
-    chart_loader,
-    runtime_js,
-    extra_head="",
-    body_attributes="",
-    inline_chart_js="",
-    extra_csp_scripts=None,
-):
+    body: str,
+    chart_loader: str,
+    runtime_js: str,
+    extra_head: str = "",
+    body_attributes: str = "",
+    inline_chart_js: str = "",
+    extra_csp_scripts: list[str] | None = None,
+) -> str:
     """Wrap page markup in the shared HTML shell."""
     body_attribute_text = f" {body_attributes}" if body_attributes else ""
     style_content = f"{build_font_face_styles()}\n{BASE_STYLES}"
@@ -390,7 +406,11 @@ def wrap_html(
 """
 
 
-def build_public_html(dashboard_data, chart_loader, inline_chart_js=""):
+def build_public_html(
+    dashboard_data: DashboardData,
+    chart_loader: str,
+    inline_chart_js: str = "",
+) -> str:
     """Build the standard published dashboard HTML."""
     summary = dashboard_data["summary"]
     totals = summary["totals"]
@@ -417,7 +437,11 @@ def build_public_html(dashboard_data, chart_loader, inline_chart_js=""):
     return wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
 
 
-def build_encrypted_html(encrypted_dashboard_data, chart_loader, export_manifest):
+def build_encrypted_html(
+    encrypted_dashboard_data: DashboardData,
+    chart_loader: str,
+    export_manifest: ExportManifest,
+) -> str:
     """Build the encrypted published dashboard HTML."""
     auth_card = f"""
   <div id="auth-shell">

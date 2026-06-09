@@ -13,7 +13,7 @@ Repository visibility and Reponomics privacy mode are separate concepts. Reposit
 | --- | --- | --- | --- | --- | --- | --- |
 | `strong` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment | encrypted dashboard artifact when hosted publication is disabled | setup commits a static README; private repos may commit a markdown dashboard to the README when `generate-readme=true`; public repos do not commit README dashboards | generated high-entropy `DASHBOARD_SECRET_DO_NOT_REPLACE` required |
 | `casual` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment | encrypted dashboard artifact when hosted publication is disabled | same as `strong` | any non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE`; weak-secret risk is accepted |
-| `plain` | private only | plaintext retained CSV files | disabled | plaintext dashboard artifact | setup commits a static README; private repos may commit README dashboards when `generate-readme=true` | no dashboard secret |
+| `plain` | private only | plaintext retained CSV files | disabled | plaintext HTML artifact | setup commits a static README; private repos may commit README dashboards when `generate-readme=true` | no dashboard secret |
 
 ## Strong
 
@@ -21,7 +21,7 @@ Use `strong` as the default. It protects retained artifacts and hosted dashboard
 
 - the existence of the Pages site
 - publication timing
-- encrypted payload size
+- encrypted dashboard data size
 - workflow metadata
 - metrics included in a private repository's README dashboard
 
@@ -29,7 +29,7 @@ Use `strong` as the default. It protects retained artifacts and hosted dashboard
 
 ## Casual
 
-Use `casual` only when the goal is preventing accidental viewing, crawling, or casual discovery. It encrypts the same surfaces as `strong`, but allows weak or memorable secrets. A weak secret can be guessed offline from the encrypted artifact or dashboard payload.
+Use `casual` only when the goal is preventing accidental viewing, crawling, or casual discovery. It encrypts the same surfaces as `strong`, but allows weak or memorable secrets. A weak secret can be guessed offline from the encrypted artifact or dashboard data object.
 
 ## Plain
 

@@ -52,7 +52,7 @@ for this mode.
 
 `casual` accepts any non-empty secret and still encrypts artifacts and hosted
 dashboard output, but weak or shared secrets can be brute-forced offline from
-the encrypted payload. Use it only when the goal is preventing accidental
+the encrypted dashboard data object. Use it only when the goal is preventing accidental
 viewing, crawling, or casual discovery.
 
 `plain` does not use a dashboard secret. It stores retained CSV artifacts

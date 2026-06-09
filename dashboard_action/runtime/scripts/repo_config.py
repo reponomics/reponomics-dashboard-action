@@ -9,7 +9,7 @@ import yaml
 
 
 CONFIG_PATH = "config.yaml"
-DEFAULT_MAX_REPOS = 50
+DEFAULT_MAX_REPOS = 200
 
 
 def load_repo_config(config_path: str = CONFIG_PATH) -> dict[str, Any]:

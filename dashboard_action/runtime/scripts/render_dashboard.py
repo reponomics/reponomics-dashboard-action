@@ -17,6 +17,7 @@ GitHub Pages.
 """
 
 import base64
+import gzip
 import hashlib
 import io
 import json
@@ -98,6 +99,7 @@ WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
+ENCRYPTED_DASHBOARD_DATA_VERSION = 2
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 BASE_STYLES = load_asset("base.css")
@@ -338,12 +340,27 @@ def _derive_key(dashboard_key: str, salt: bytes) -> bytes:
     return kdf.derive(dashboard_key.encode("utf-8"))
 
 
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _gzip_json(value: object) -> bytes:
+    plaintext = json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return gzip.compress(plaintext, compresslevel=9, mtime=0)
+
+
 def _encrypt_bytes(plaintext: bytes, dashboard_key: str) -> tuple[bytes, bytes, bytes]:
     salt = os.urandom(PBKDF2_SALT_BYTES)
     iv = os.urandom(AES_GCM_IV_BYTES)
     key = _derive_key(dashboard_key, salt)
     ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
     return salt, iv, ciphertext
+
+
+def _encrypt_dashboard_blob(key: bytes, plaintext: bytes) -> str:
+    iv = os.urandom(AES_GCM_IV_BYTES)
+    ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
+    return f"{_b64url_encode(iv)}.{_b64url_encode(ciphertext)}"
 
 
 def _build_export_bundle(data_dir: str) -> bytes:
@@ -389,17 +406,62 @@ def _build_encrypted_export_manifest(
     }
 
 
-def _encrypt_payload(payload, dashboard_key):
-    """Encrypt the dashboard payload for encrypted Pages mode."""
-    plaintext = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    salt, iv, ciphertext = _encrypt_bytes(plaintext, dashboard_key)
+def _build_encrypted_dashboard_data(payload, dashboard_key):
+    """Build the v2 encrypted summary plus per-repository chunk object."""
+    salt = os.urandom(PBKDF2_SALT_BYTES)
+    key = _derive_key(dashboard_key, salt)
+    repo_chunk_ids = {}
+    encrypted_chunks = {}
+
+    for idx, repo in enumerate(payload.get("repos", []), start=1):
+        repo_name = repo["name"]
+        chunk_id = f"c{idx:04d}"
+        repo_chunk_ids[repo_name] = chunk_id
+        chunk_payload = {
+            "repo": repo_name,
+            "repo_series": payload.get("repo_series", {}).get(repo_name, {}),
+            "repo_weekday": payload.get("repo_weekday", {}).get(repo_name, {}),
+            "repo_referrers": payload.get("repo_referrers", {}).get(repo_name, []),
+            "repo_paths": payload.get("repo_paths", {}).get(repo_name, []),
+            "growth": {
+                "per_repo": payload.get("growth", {})
+                .get("per_repo", {})
+                .get(repo_name, {}),
+            },
+        }
+        encrypted_chunks[chunk_id] = _encrypt_dashboard_blob(
+            key, _gzip_json(chunk_payload)
+        )
+
+    summary = {
+        **{
+            key_name: value
+            for key_name, value in payload.items()
+            if key_name
+            not in {
+                "repo_series",
+                "repo_weekday",
+                "repo_referrers",
+                "repo_paths",
+            }
+        },
+        "growth": {
+            key_name: value
+            for key_name, value in payload.get("growth", {}).items()
+            if key_name != "per_repo"
+        },
+        "repo_chunks": repo_chunk_ids,
+    }
+
     return {
-        "version": 1,
+        "version": ENCRYPTED_DASHBOARD_DATA_VERSION,
         "cipher": "AES-GCM",
         "kdf": _kdf_descriptor(),
         "salt": base64.b64encode(salt).decode("ascii"),
-        "iv": base64.b64encode(iv).decode("ascii"),
-        "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
+        "encoding": "gzip+json",
+        "summary": _encrypt_dashboard_blob(key, _gzip_json(summary)),
+        "chunks": encrypted_chunks,
+        "chunk_count": len(encrypted_chunks),
     }
 
 
@@ -462,7 +524,7 @@ def render():
             PAGE_INDEX_OUTPUT_PATH, dashboard_key
         )
         published_html = _build_encrypted_html(
-            _encrypt_payload(payload, dashboard_key),
+            _build_encrypted_dashboard_data(payload, dashboard_key),
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             export_manifest,
         )

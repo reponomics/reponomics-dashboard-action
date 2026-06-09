@@ -414,7 +414,7 @@ def build_public_html(payload, chart_loader, inline_chart_js=""):
     return wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
 
 
-def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
+def build_encrypted_html(encrypted_dashboard_data, chart_loader, export_manifest):
     """Build the encrypted published dashboard HTML."""
     auth_card = f"""
   <div id="auth-shell">
@@ -441,7 +441,7 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
             </div>
             <p class="sub">
               Encrypted Pages mode for private growth analytics. The dashboard
-              payload is encrypted with your key and decrypted locally &mdash;
+              data is encrypted with your key and decrypted locally &mdash;
               nothing leaves your browser.
             </p>
           </div>
@@ -531,13 +531,15 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         "__PBKDF2_ITERATIONS__",
         str(PBKDF2_ITERATIONS),
     )
-    encrypted_payload_json = json.dumps(encrypted_payload, separators=(",", ":"))
+    encrypted_dashboard_data_json = json.dumps(
+        encrypted_dashboard_data, separators=(",", ":")
+    )
     export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
     body = (
         auth_card
         + shell
-        + "\n  <script id=\"encrypted-payload\" type=\"application/json\">"
-        + encrypted_payload_json
+        + "\n  <script id=\"encrypted-dashboard-data\" type=\"application/json\">"
+        + encrypted_dashboard_data_json
         + "</script>\n"
         + "  <script id=\"export-manifest\" type=\"application/json\">"
         + export_manifest_json
@@ -549,5 +551,5 @@ def build_encrypted_html(encrypted_payload, chart_loader, export_manifest):
         runtime_js,
         extra_head='<meta name="robots" content="noindex, nofollow">',
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
-        extra_csp_scripts=[encrypted_payload_json, export_manifest_json],
+        extra_csp_scripts=[encrypted_dashboard_data_json, export_manifest_json],
     )

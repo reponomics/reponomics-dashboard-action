@@ -33,7 +33,7 @@
       return DASH_PATTERNS[idx % DASH_PATTERNS.length];
     }
     function getRepoDash(repoName) {
-      const repos = state.payload?.repos || [];
+      const repos = dashboardData()?.getRepos() || [];
       const idx = repos.findIndex((repo) => repo.name === repoName);
       return dashForRepoIndex(idx >= 0 ? idx : 0);
     }
@@ -48,8 +48,9 @@
     };
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
     const DEFAULT_WINDOW = '14';
+    const MAX_DISPLAY_REPOS = 20;
     const state = {
-      payload: null,
+      dashboardData: null,
       window: DEFAULT_WINDOW,
       minActivity: 1,
       selectedRepo: null,
@@ -59,6 +60,82 @@
       repoSortDir: null,
       calendarMonth: null
     };
+    function createDashboardDataProvider(input) {
+      const isLazy = !!(input && input.summary && input.loadRepoChunk);
+      const source = isLazy ? input.summary : (input || {});
+      const loadedChunks = {};
+      const pendingChunks = {};
+      function chunkFor(repoName) {
+        return loadedChunks[repoName] || null;
+      }
+      return {
+        getPayload: function() { return source; },
+        isLazy: function() { return isLazy; },
+        getMeta: function() { return source.meta || {}; },
+        getRepos: function() { return source.repos || []; },
+        getRepoSummary: function(repoName) {
+          return (source.repos || []).find((repo) => repo.name === repoName) || {};
+        },
+        getRepoSeries: function(repoName) {
+          return chunkFor(repoName)?.repo_series || source.repo_series?.[repoName] || {};
+        },
+        getRepoWeekday: function(repoName) {
+          return chunkFor(repoName)?.repo_weekday || source.repo_weekday?.[repoName] || {};
+        },
+        getRepoGrowth: function(repoName) {
+          return chunkFor(repoName)?.growth?.per_repo || source.growth?.per_repo?.[repoName] || {};
+        },
+        getRepoReferrers: function(repoName) {
+          return chunkFor(repoName)?.repo_referrers || source.repo_referrers?.[repoName] || [];
+        },
+        getRepoPaths: function(repoName) {
+          return chunkFor(repoName)?.repo_paths || source.repo_paths?.[repoName] || [];
+        },
+        getReferrersByRepo: function() {
+          if (!isLazy) return source.repo_referrers || {};
+          return Object.fromEntries(
+            Object.keys(loadedChunks).map((repoName) => [
+              repoName,
+              loadedChunks[repoName].repo_referrers || []
+            ])
+          );
+        },
+        getPathsByRepo: function() {
+          if (!isLazy) return source.repo_paths || {};
+          return Object.fromEntries(
+            Object.keys(loadedChunks).map((repoName) => [
+              repoName,
+              loadedChunks[repoName].repo_paths || []
+            ])
+          );
+        },
+        isRepoLoaded: function(repoName) {
+          return !isLazy || !!loadedChunks[repoName];
+        },
+        loadRepo: function(repoName) {
+          if (!isLazy || !repoName || loadedChunks[repoName]) {
+            return Promise.resolve(loadedChunks[repoName] || null);
+          }
+          if (!pendingChunks[repoName]) {
+            pendingChunks[repoName] = input.loadRepoChunk(repoName).then((chunk) => {
+              loadedChunks[repoName] = chunk;
+              delete pendingChunks[repoName];
+              return chunk;
+            }).catch((error) => {
+              delete pendingChunks[repoName];
+              throw error;
+            });
+          }
+          return pendingChunks[repoName];
+        }
+      };
+    }
+    function dashboardData() {
+      return state.dashboardData;
+    }
+    function currentPayload() {
+      return dashboardData()?.getPayload() || null;
+    }
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
       return Object.assign({}, info, { color: themeMetricColor(info.key) || info.color });
@@ -144,7 +221,7 @@
         }
         stackedChart.update('none');
       }
-      if (state.payload) updateDashboard();
+      if (currentPayload()) updateDashboard();
     }
     let dailyChart = null;
     let weekdayChart = null;
@@ -290,11 +367,15 @@
     }
 
     function getRepoByName(repoName) {
-      return getVisibleRepos().find((repo) => repo.name === repoName) || null;
+      if (!repoName || !dashboardData()?.getRepoSummary(repoName)?.name) {
+        return null;
+      }
+      const repo = buildRepoMetrics(repoName);
+      return repo.activity >= state.minActivity ? repo : null;
     }
 
     function getRepoColor(repoName) {
-      const repos = state.payload?.repos || [];
+      const repos = dashboardData()?.getRepos() || [];
       const idx = repos.findIndex((repo) => repo.name === repoName);
       return palette[(idx >= 0 ? idx : 0) % palette.length];
     }
@@ -312,8 +393,8 @@
 
     function getDefaultWindow() {
       return (
-        normalizeWindow(state.payload?.meta?.default_window) ||
-        normalizeWindow(state.payload?.meta?.default_range) ||
+        normalizeWindow(dashboardData()?.getMeta()?.default_window) ||
+        normalizeWindow(dashboardData()?.getMeta()?.default_range) ||
         DEFAULT_WINDOW
       );
     }
@@ -352,7 +433,7 @@
       if (days === null) {
         return null;
       }
-      const dates = state.payload?.daily?.dates || [];
+      const dates = currentPayload()?.daily?.dates || [];
       if (!dates.length) {
         return null;
       }
@@ -367,7 +448,7 @@
 
     function qualityDaysForSelectedWindow() {
       const allDays = applyVisibilityThresholdToQualityDays(
-        (state.payload?.data_quality?.days || []).slice()
+        (currentPayload()?.data_quality?.days || []).slice()
       );
       if (!allDays.length) return [];
       if (getSelectedWindow() === 'all') return allDays;
@@ -447,11 +528,11 @@
     }
 
     function latestMonthKeyFallback() {
-      const qualityDays = state.payload?.data_quality?.days || [];
+      const qualityDays = currentPayload()?.data_quality?.days || [];
       if (qualityDays.length) {
         return monthKeyFromIsoDate(qualityDays[qualityDays.length - 1].date);
       }
-      const dates = state.payload?.daily?.dates || [];
+      const dates = currentPayload()?.daily?.dates || [];
       if (dates.length) {
         return monthKeyFromIsoDate(dates[dates.length - 1]);
       }
@@ -712,12 +793,14 @@
     }
 
     function buildRepoMetrics(repoName) {
-      const baseRepo = (state.payload?.repos || []).find((repo) => repo.name === repoName) || {};
-      const series = seriesForRange(state.payload?.repo_series?.[repoName]);
-      const growthRow = state.payload?.growth?.per_repo?.[repoName] || {};
+      const data = dashboardData();
+      const baseRepo = data?.getRepoSummary(repoName) || {};
+      const series = seriesForRange(data?.getRepoSeries(repoName));
+      const growthRow = data?.getRepoGrowth(repoName) || {};
       const deltas = growthRow.deltas || {};
       const growthSeries = seriesForRange(growthRow.series || {});
       const sum = (values) => (values || []).reduce((total, value) => total + Number(value || 0), 0);
+      const hasSeries = (series.dates || []).length > 0;
       const starsDelta = seriesDelta(growthSeries, 'stargazers', deltas.stars_delta || deltas.stargazers_delta);
       const subscribersDelta = seriesDelta(growthSeries, 'subscribers', deltas.subscribers_delta);
       const forksDelta = seriesDelta(growthSeries, 'forks', deltas.forks_delta);
@@ -725,18 +808,19 @@
       const communityHealth = Number(community.health_percentage);
       return {
         name: repoName,
-        views: sum(series.views),
-        uniques: sum(series.uniques),
-        clones: sum(series.clones),
-        clone_uniques: sum(series.clone_uniques),
+        views: hasSeries ? sum(series.views) : Number(baseRepo.views || 0),
+        uniques: hasSeries ? sum(series.uniques) : Number(baseRepo.uniques || 0),
+        clones: hasSeries ? sum(series.clones) : Number(baseRepo.clones || 0),
+        clone_uniques: hasSeries ? sum(series.clone_uniques) : Number(baseRepo.clone_uniques || 0),
         stars_delta: starsDelta,
         subscribers_delta: subscribersDelta,
         forks_delta: forksDelta,
         stars: latestSeriesValue(growthSeries, 'stargazers', deltas.current_stars || deltas.current_stargazers),
         subscribers: latestSeriesValue(growthSeries, 'subscribers', deltas.current_subscribers),
         forks: latestSeriesValue(growthSeries, 'forks', deltas.current_forks),
-        days: (series.dates || []).length,
-        activity: sum(series.views) + sum(series.clones),
+        days: hasSeries ? (series.dates || []).length : Number(baseRepo.days || 0),
+        activity: (hasSeries ? sum(series.views) : Number(baseRepo.views || 0))
+          + (hasSeries ? sum(series.clones) : Number(baseRepo.clones || 0)),
         community: {
           available: !!community.available,
           health_percentage: Number.isFinite(communityHealth) ? communityHealth : null,
@@ -755,13 +839,35 @@
     }
 
     function getAllRepoMetrics() {
-      return (state.payload?.repos || [])
+      return (dashboardData()?.getRepos() || [])
         .map((repo) => buildRepoMetrics(repo.name))
         .sort((a, b) => (b.views - a.views) || (b.clones - a.clones) || a.name.localeCompare(b.name));
     }
 
-    function getVisibleRepos() {
+    function getSelectableRepos() {
       return getAllRepoMetrics().filter((repo) => repo.activity >= state.minActivity);
+    }
+
+    function getVisibleRepos() {
+      const selectable = getSelectableRepos();
+      const byName = new Map(selectable.map((repo) => [repo.name, repo]));
+      const prioritized = [];
+      const add = function(repoName) {
+        const repo = byName.get(repoName);
+        if (repo && !prioritized.some((item) => item.name === repo.name)) {
+          prioritized.push(repo);
+        }
+      };
+      if (state.selectedRepo) {
+        add(state.selectedRepo);
+      }
+      state.compareRepos.forEach(add);
+      selectable.forEach((repo) => {
+        if (prioritized.length < MAX_DISPLAY_REPOS) {
+          add(repo.name);
+        }
+      });
+      return prioritized.slice(0, MAX_DISPLAY_REPOS);
     }
 
     function buildAggregateSeries(repos) {
@@ -881,27 +987,35 @@
     }
 
     function getCurrentReferrerRows() {
+      if (!isComparing() && !state.selectedRepo) {
+        return currentPayload()?.referrers || [];
+      }
       return aggregateSnapshotRows(
-        state.payload?.repo_referrers,
+        dashboardData()?.getReferrersByRepo(),
         getCurrentSnapshotRepoNames(),
         'referrer'
       );
     }
 
     function getCurrentPathRows() {
+      if (!isComparing() && !state.selectedRepo) {
+        return currentPayload()?.paths || [];
+      }
       return aggregateSnapshotRows(
-        state.payload?.repo_paths,
+        dashboardData()?.getPathsByRepo(),
         getCurrentSnapshotRepoNames(),
         'path'
       );
     }
 
     function sanitizeSelection() {
-      const visibleRepoNames = new Set(getVisibleRepos().map((repo) => repo.name));
-      if (state.selectedRepo && !visibleRepoNames.has(state.selectedRepo)) {
+      const selectableRepoNames = new Set(getSelectableRepos().map((repo) => repo.name));
+      if (state.selectedRepo && !selectableRepoNames.has(state.selectedRepo)) {
         state.selectedRepo = null;
       }
-      state.compareRepos = state.compareRepos.filter((repoName) => visibleRepoNames.has(repoName));
+      state.compareRepos = state.compareRepos
+        .filter((repoName) => selectableRepoNames.has(repoName))
+        .slice(0, MAX_DISPLAY_REPOS);
     }
 
     function buildUpdatedText(payload) {
@@ -1201,6 +1315,7 @@
         state.compareRepos = inCompare
           ? state.compareRepos.filter((n) => n !== repoName)
           : state.compareRepos.concat(repoName);
+        state.compareRepos = state.compareRepos.slice(0, MAX_DISPLAY_REPOS);
         // If we end up with only one repo in the compare set, treat it as a focus.
         if (state.compareRepos.length === 1) {
           state.selectedRepo = state.compareRepos[0];
@@ -1216,7 +1331,7 @@
 
     function toggleRepoCompare(repoName, checked) {
       if (checked) {
-        if (!state.compareRepos.includes(repoName)) {
+        if (!state.compareRepos.includes(repoName) && state.compareRepos.length < MAX_DISPLAY_REPOS) {
           state.compareRepos.push(repoName);
         }
       } else {
@@ -1407,7 +1522,7 @@
       if (!stackedChart) {
         const opts = chartOptions(true);
         const repoFromDatasetLabel = function(label) {
-          return (state.payload?.repos || []).find((r) => getShortName(r.name) === label)?.name || label;
+          return (dashboardData()?.getRepos() || []).find((r) => getShortName(r.name) === label)?.name || label;
         };
         const modifierFromEvent = function(event) {
           const native = event && (event.native || event);
@@ -1822,8 +1937,9 @@
       const container = document.getElementById('insights-list');
       if (!container) return;
 
-      const structured = (state.payload && state.payload.insights_v2) || [];
-      const fallback = (state.payload && state.payload.insights) || [];
+      const payload = currentPayload();
+      const structured = (payload && payload.insights_v2) || [];
+      const fallback = (payload && payload.insights) || [];
 
       if (!structured.length && !fallback.length) {
         container.innerHTML = '<p class="empty-msg">Needs more data to surface a signal yet — check back after a few more collection runs.</p>';
@@ -2173,7 +2289,7 @@
         const params = new URLSearchParams();
         if (state.metric && state.metric !== 'views') params.set('metric', state.metric);
         if (getSelectedWindow() !== getDefaultWindow()) params.set('window', getSelectedWindow());
-        if (state.minActivity && state.minActivity !== (state.payload?.meta?.default_min_activity || 1)) params.set('min', String(state.minActivity));
+        if (state.minActivity && state.minActivity !== (dashboardData()?.getMeta()?.default_min_activity || 1)) params.set('min', String(state.minActivity));
         if (state.selectedRepo) params.set('focus', getShortName(state.selectedRepo));
         if (state.compareRepos.length >= 2) params.set('compare', state.compareRepos.map(getShortName).join(','));
         const hash = params.toString();
@@ -2185,7 +2301,7 @@
     }
 
     function applyUrlHash() {
-      if (!state.payload) return;
+      if (!currentPayload()) return;
       try {
         const raw = (window.location.hash || '').replace(/^#/, '');
         if (!raw) return;
@@ -2200,7 +2316,7 @@
         const min = Number(params.get('min'));
         if (Number.isFinite(min) && min >= 0) state.minActivity = Math.floor(min);
 
-        const repoNames = (state.payload.repos || []).map((r) => r.name);
+        const repoNames = (dashboardData()?.getRepos() || []).map((r) => r.name);
         const matchByShort = (short) => repoNames.find((n) => getShortName(n) === short) || null;
 
         const focus = params.get('focus');
@@ -2220,8 +2336,41 @@
       } catch (_e) { /* ignore */ }
     }
 
+    function repoNamesRequiredForCurrentView() {
+      if (isComparing()) {
+        return state.compareRepos.slice();
+      }
+      if (state.selectedRepo) {
+        return [state.selectedRepo];
+      }
+      return [];
+    }
+
+    function ensureCurrentRepoChunksLoaded() {
+      const data = dashboardData();
+      if (!data || !data.isLazy()) {
+        return null;
+      }
+      const missing = repoNamesRequiredForCurrentView()
+        .filter((repoName) => !data.isRepoLoaded(repoName));
+      if (!missing.length) {
+        return null;
+      }
+      return Promise.all(missing.map((repoName) => data.loadRepo(repoName)));
+    }
+
     function updateDashboard() {
-      if (!state.payload) {
+      const payload = currentPayload();
+      if (!payload) {
+        return;
+      }
+      const pendingChunks = ensureCurrentRepoChunksLoaded();
+      if (pendingChunks) {
+        pendingChunks.then(function() {
+          updateDashboard();
+        }).catch(function(error) {
+          console.error('Failed to load encrypted repository chunk', error);
+        });
         return;
       }
       sanitizeSelection();
@@ -2231,7 +2380,7 @@
       ensureCharts();
       updateControls();
       updateMetricTabs();
-      setText('updated-text', buildUpdatedText(state.payload));
+      setText('updated-text', buildUpdatedText(payload));
       updateToolbar();
       renderCollectionCalendar();
       updateStats();
@@ -2247,9 +2396,10 @@
     }
 
     function renderDashboard(payload) {
-      state.payload = payload;
+      state.dashboardData = createDashboardDataProvider(payload);
+      const meta = dashboardData()?.getMeta() || {};
       state.window = getDefaultWindow();
-      state.minActivity = payload.meta?.default_min_activity || 1;
+      state.minActivity = meta.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
       state.calendarMonth = null;

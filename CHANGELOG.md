@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.6...v0.21.0) (2026-06-09)
+
+
+### Features
+
+* break up dashboard data payload into chunks ([#100](https://github.com/reponomics/reponomics-dashboard-action/issues/100)) ([2a31477](https://github.com/reponomics/reponomics-dashboard-action/commit/2a31477328d6a833cf6e78fd3dcada713ea1d5af))
+
 ## [0.20.6](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.5...v0.20.6) (2026-06-09)
 
 

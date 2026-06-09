@@ -1572,6 +1572,26 @@ def test_publish_links_version_status_to_local_managed_docs_when_present(
     assert 'class="action-version-link" href="reponomics/README.md"' in dashboard
 
 
+def test_publish_footer_docs_link_uses_existing_local_managed_docs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    managed_docs_dir = tmp_path / "docs" / "reponomics"
+    managed_docs_dir.mkdir(parents=True)
+    (managed_docs_dir / "README.md").write_text("local docs\n", encoding="utf-8")
+    config = _config(tmp_path, mode="publish", generate_readme=True)
+    _seed_log(config.data_dir)
+
+    run.run_publish(config, restore_artifact=False)
+
+    readme = config.readme_path.read_text(encoding="utf-8")
+    assert (tmp_path / "docs" / "reponomics" / "README.md").is_file()
+    assert not (tmp_path / "docs" / "README.md").exists()
+    assert "[Setup & Docs](docs/reponomics/README.md)" in readme
+    assert "[Setup & Docs](docs/README.md)" not in readme
+
+
 def test_publish_surfaces_blocked_managed_docs_status(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

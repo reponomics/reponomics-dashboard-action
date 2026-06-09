@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.6](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.5...v0.20.6) (2026-06-09)
+
+
+### Bug Fixes
+
+* broken links in managed docs ([#98](https://github.com/reponomics/reponomics-dashboard-action/issues/98)) ([fc349a0](https://github.com/reponomics/reponomics-dashboard-action/commit/fc349a057d5f1d3899239af7ab492ab6e089e859))
+
 ## [0.20.5](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.4...v0.20.5) (2026-06-08)
 
 

@@ -229,6 +229,18 @@ def _assert_local_links_resolve(
     root: Path,
     documents: dict[Path, tuple[str, bool]],
 ) -> None:
+    """Assert generated README/dashboard links do not point at missing repo files.
+
+    This checker deliberately enforces only the generated repository's local
+    filesystem contract. It prohibits relative links that point outside the
+    rendered repository or to files/directories that were not generated, because
+    those are broken for every user who receives the template or rendered
+    dashboard output. It allows external links, root-absolute links, and
+    fragment-only links because those are not resolvable from the local output
+    tree. For `target.md#heading`, it verifies `target.md` exists but does not
+    validate the fragment; heading-anchor semantics differ across renderers and
+    belong in a separate check if we choose to enforce them.
+    """
     failures = []
     root = root.resolve()
     for source_path, (document, markdown) in documents.items():
@@ -316,6 +328,102 @@ def _assert_generated_local_links_resolve(rendered: RenderedScenario) -> None:
         {
             Path("README.md"): (rendered.readme, True),
             Path("docs/index.html"): (rendered.dashboard, False),
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_path", "document", "markdown", "expected_failure"),
+    [
+        (
+            Path("README.md"),
+            "[Setup & Docs](docs/README.md)",
+            True,
+            "README.md: docs/README.md -> docs/README.md",
+        ),
+        (
+            Path("README.md"),
+            "![Missing chart](docs/assets/missing.svg)",
+            True,
+            "README.md: docs/assets/missing.svg -> docs/assets/missing.svg",
+        ),
+        (
+            Path("README.md"),
+            '<a href="docs/missing.html">Missing</a>',
+            True,
+            "README.md: docs/missing.html -> docs/missing.html",
+        ),
+        (
+            Path("docs/index.html"),
+            '<script src="assets/missing.js"></script>',
+            False,
+            "docs/index.html: assets/missing.js -> docs/assets/missing.js",
+        ),
+        (
+            Path("docs/index.html"),
+            '<img srcset="assets/missing-small.png 1x, assets/missing-large.png 2x">',
+            False,
+            "docs/index.html: assets/missing-small.png -> docs/assets/missing-small.png",
+        ),
+        (
+            Path("README.md"),
+            "[Outside](../outside.md)",
+            True,
+            "README.md: ../outside.md escapes rendered repo",
+        ),
+    ],
+)
+def test_generated_link_checker_rejects_broken_local_links(
+    tmp_path: Path,
+    source_path: Path,
+    document: str,
+    markdown: bool,
+    expected_failure: str,
+) -> None:
+    with pytest.raises(AssertionError) as excinfo:
+        _assert_local_links_resolve(
+            tmp_path,
+            {source_path: (document, markdown)},
+        )
+
+    assert expected_failure in str(excinfo.value)
+
+
+def test_generated_link_checker_allows_supported_link_classes(tmp_path: Path) -> None:
+    docs_readme = tmp_path / "docs" / "reponomics" / "README.md"
+    docs_readme.parent.mkdir(parents=True)
+    docs_readme.write_text("local docs\n", encoding="utf-8")
+    assets_dir = tmp_path / "docs" / "assets"
+    assets_dir.mkdir(parents=True)
+    (assets_dir / "chart.umd.min.js").write_text("window.Chart = {}\n", encoding="utf-8")
+    (assets_dir / "hero-stats.svg").write_text("<svg></svg>\n", encoding="utf-8")
+    (assets_dir / "hero-stats-light.svg").write_text("<svg></svg>\n", encoding="utf-8")
+
+    readme = "\n".join(
+        [
+            "[Setup & Docs](docs/reponomics/README.md)",
+            "[External docs](https://github.com/reponomics/reponomics-dashboard)",
+            "[Root absolute](/docs/reponomics/README.md)",
+            "[Fragment only](#summary)",
+            "[Fragment target](docs/reponomics/README.md#start-here)",
+            "![Hero](docs/assets/hero-stats.svg)",
+            "<!-- [Commented local link](docs/missing.md) -->",
+        ]
+    )
+    dashboard = "\n".join(
+        [
+            '<script src="assets/chart.umd.min.js"></script>',
+            '<img srcset="assets/hero-stats.svg 1x, assets/hero-stats-light.svg 2x">',
+            '<a href="https://github.com/reponomics">External</a>',
+            '<a href="#top">Fragment</a>',
+        ]
+    )
+
+    _assert_local_links_resolve(
+        tmp_path,
+        {
+            Path("README.md"): (readme, True),
+            Path("docs/index.html"): (dashboard, False),
         },
     )
 

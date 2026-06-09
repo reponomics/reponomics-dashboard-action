@@ -82,6 +82,8 @@ def build_dashboard_shell(updated_text, stat_values, hidden=False):
       </div>
     </div>
 
+    <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
+
     <div class="growth-model-grid" aria-label="Repository growth model">
       <div class="card growth-stage">
         <div class="growth-stage-title">Attention</div>

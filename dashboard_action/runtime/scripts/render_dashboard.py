@@ -373,6 +373,11 @@ DashboardData = dict[str, Any]
 
 
 def _build_repo_chunk_payload(payload: DashboardData, repo_name: str) -> DashboardData:
+    growth = payload.get("growth", {})
+    repo_growth = {
+        **growth.get("per_repo", {}).get(repo_name, {}),
+        "series": growth.get("series", {}).get(repo_name, {}),
+    }
     return {
         "repo": repo_name,
         "repo_series": payload.get("repo_series", {}).get(repo_name, {}),
@@ -380,9 +385,7 @@ def _build_repo_chunk_payload(payload: DashboardData, repo_name: str) -> Dashboa
         "repo_referrers": payload.get("repo_referrers", {}).get(repo_name, []),
         "repo_paths": payload.get("repo_paths", {}).get(repo_name, []),
         "growth": {
-            "per_repo": payload.get("growth", {})
-            .get("per_repo", {})
-            .get(repo_name, {}),
+            "per_repo": repo_growth,
         },
     }
 
@@ -414,7 +417,7 @@ def _split_dashboard_payload(
         "growth": {
             key_name: value
             for key_name, value in payload.get("growth", {}).items()
-            if key_name != "per_repo"
+            if key_name not in {"per_repo", "series"}
         },
         "repo_chunks": repo_chunk_ids,
     }

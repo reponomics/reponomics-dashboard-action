@@ -527,6 +527,85 @@
       color: var(--accent);
       background: rgba(124, 106, 255, 0.12);
     }
+    .dashboard-notice-region[hidden] {
+      display: none;
+    }
+    .dashboard-notice {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--c-negative);
+      border-radius: 8px;
+      background: var(--bg-card);
+      box-shadow: 0 1px 0 var(--inset-highlight) inset, var(--card-shadow);
+      color: var(--text);
+      display: grid;
+      gap: 0.75rem;
+      margin: -0.25rem 0 1.2rem;
+      padding: 0.95rem 1rem;
+    }
+    .dashboard-notice.warning {
+      border-left-color: var(--accent-2);
+    }
+    .dashboard-notice-main {
+      align-items: flex-start;
+      display: flex;
+      gap: 0.85rem;
+      justify-content: space-between;
+      min-width: 0;
+    }
+    .dashboard-notice-copy {
+      display: grid;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+    .dashboard-notice-title {
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .dashboard-notice-message {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .dashboard-notice-actions {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+    .dashboard-notice-actions .toolbar-button {
+      padding: 0.45rem 0.72rem;
+    }
+    .dashboard-notice-details {
+      border-top: 1px solid var(--border-soft);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      min-width: 0;
+      padding-top: 0.65rem;
+    }
+    .dashboard-notice-details > summary {
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      list-style-position: inside;
+    }
+    .dashboard-notice-diagnostics {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+      font-size: 0.74rem;
+      line-height: 1.45;
+      margin-top: 0.65rem;
+      max-height: 18rem;
+      overflow: auto;
+      padding: 0.75rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     .export-verify-popover {
       position: absolute;
       top: calc(100% + 0.45rem);
@@ -1695,6 +1774,12 @@
       .stat-card { min-height: 132px; }
       .stat-value { font-size: 1.5rem; }
       .growth-model-grid { grid-template-columns: 1fr; }
+      .dashboard-notice-main {
+        flex-direction: column;
+      }
+      .dashboard-notice-actions {
+        justify-content: flex-start;
+      }
       .insight-item { grid-template-columns: auto 1fr; }
       .insight-pct { grid-column: 2 / 3; justify-self: end; }
       .repo-spark { width: 64px; }

@@ -1117,6 +1117,9 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
     assert "demo/reponomics" not in dashboard
     assert "loadRepoChunk" in dashboard
     assert "ensureCurrentRepoChunksLoaded" in dashboard
+    assert "MAX_COMPARE_REPOS = 8" in dashboard
+    assert "dashboard-notice-region" in dashboard
+    assert "normalizeChunkLoadError" in dashboard
 
     summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
     repo_names = [repo["name"] for repo in summary["repos"]]
@@ -1128,6 +1131,7 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
     assert "repo_referrers" not in summary
     assert "repo_paths" not in summary
     assert "per_repo" not in summary["growth"]
+    assert "series" not in summary["growth"]
 
     for repo_name, chunk_id in summary["repo_chunks"].items():
         chunk = chunks[chunk_id]
@@ -1142,6 +1146,7 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
         }
         assert chunk["repo_series"]["dates"]
         assert "per_repo" in chunk["growth"]
+        assert "series" in chunk["growth"]["per_repo"]
 
 
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
@@ -1165,6 +1170,7 @@ def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
     assert len(encrypted_data["chunks"]) == 200
     assert len(summary["repo_chunks"]) == 200
     assert len(chunks) == 200
+    assert "series" not in summary["growth"]
     assert "reponomics-scale/repo-001" not in dashboard
 
 
@@ -1227,6 +1233,7 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     assert "repo_referrers" not in summary
     assert "repo_paths" not in summary
     assert "per_repo" not in summary["growth"]
+    assert "series" not in summary["growth"]
 
     for repo_name, chunk_id in summary["repo_chunks"].items():
         assert isinstance(plain_data["chunks"][chunk_id], str)
@@ -1242,6 +1249,7 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
         }
         assert chunk["repo_series"]["dates"]
         assert "per_repo" in chunk["growth"]
+        assert "series" in chunk["growth"]["per_repo"]
 
 
 def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
@@ -1271,6 +1279,7 @@ def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
     assert len(plain_data["chunks"]) == 200
     assert len(summary["repo_chunks"]) == 200
     assert len(chunks) == 200
+    assert "series" not in summary["growth"]
     assert '"repo_series":{' not in dashboard
 
 

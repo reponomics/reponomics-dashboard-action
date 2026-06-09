@@ -37,6 +37,17 @@
       unlockStatus.className = 'auth-status' + (type ? ' ' + type : '');
     }
 
+    function dashboardDataError(stage, message, details) {
+      const error = new Error(message);
+      error.dashboardDataStage = stage;
+      if (details) {
+        Object.keys(details).forEach((key) => {
+          error[key] = details[key];
+        });
+      }
+      return error;
+    }
+
     function unlockAttemptStorageKey() {
       const fingerprint = [
         encryptedDashboardData.version,
@@ -312,36 +323,94 @@
       );
     }
 
-    async function gunzipJson(bytes) {
+    async function gunzipJson(bytes, context) {
       if (!window.DecompressionStream) {
-        throw new Error('gzip-unavailable');
+        throw dashboardDataError('decompress', 'Browser does not support gzip decompression.', context);
       }
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-      const decompressed = await new Response(stream).arrayBuffer();
-      return JSON.parse(new TextDecoder().decode(decompressed));
+      let decompressed;
+      try {
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        decompressed = await new Response(stream).arrayBuffer();
+      } catch (error) {
+        throw dashboardDataError('decompress', error.message || 'Dashboard data could not be decompressed.', {
+          ...context,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      try {
+        return JSON.parse(new TextDecoder().decode(decompressed));
+      } catch (error) {
+        throw dashboardDataError('parse', error.message || 'Dashboard data was not valid JSON.', {
+          ...context,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
     }
 
-    async function decryptDashboardBlob(key, token) {
-      const blob = validateEncryptedBlob(token);
-      const compressed = await decryptBytes(key, blob.iv, blob.ciphertext);
-      return gunzipJson(new Uint8Array(compressed));
+    async function decryptDashboardBlob(key, token, context) {
+      const details = context || {};
+      let blob;
+      try {
+        blob = validateEncryptedBlob(token);
+      } catch (error) {
+        throw dashboardDataError('schema', error.message || 'Encrypted dashboard blob was malformed.', {
+          ...details,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      let compressed;
+      try {
+        compressed = await decryptBytes(key, blob.iv, blob.ciphertext);
+      } catch (error) {
+        throw dashboardDataError('decrypt', error.message || 'Encrypted dashboard blob failed authentication.', {
+          ...details,
+          originalName: error.name || '',
+          originalMessage: error.message || String(error)
+        });
+      }
+      return gunzipJson(new Uint8Array(compressed), details);
     }
 
     async function decryptDashboardData(dashboardKey, data) {
       const validatedData = validateEncryptedDashboardData(data);
       const displayKey = await deriveAesKey(dashboardKey, validatedData.salt);
-      const summary = await decryptDashboardBlob(displayKey, data.summary);
+      const summary = await decryptDashboardBlob(displayKey, data.summary, {
+        mode: 'encrypted',
+        summaryDecrypted: false,
+        stageTarget: 'summary'
+      });
       const repoChunks = summary.repo_chunks || {};
       return {
         summary,
         loadRepoChunk: async function(repoName) {
           const chunkId = repoChunks[repoName];
           if (!chunkId || !data.chunks[chunkId]) {
-            throw new Error('Invalid encrypted dashboard data.');
+            throw dashboardDataError('missing', 'Encrypted dashboard chunk was missing.', {
+              repoName,
+              chunkId: chunkId || '',
+              mode: 'encrypted',
+              summaryDecrypted: true,
+              stageTarget: 'chunk'
+            });
           }
-          const chunk = await decryptDashboardBlob(displayKey, data.chunks[chunkId]);
+          const chunk = await decryptDashboardBlob(displayKey, data.chunks[chunkId], {
+            repoName,
+            chunkId,
+            mode: 'encrypted',
+            summaryDecrypted: true,
+            stageTarget: 'chunk'
+          });
           if (!chunk.repo || chunk.repo !== repoName) {
-            throw new Error('Invalid encrypted dashboard data.');
+            throw dashboardDataError('schema', 'Encrypted dashboard chunk did not match the requested repository.', {
+              repoName,
+              chunkId,
+              mode: 'encrypted',
+              summaryDecrypted: true,
+              stageTarget: 'chunk'
+            });
           }
           return chunk;
         }

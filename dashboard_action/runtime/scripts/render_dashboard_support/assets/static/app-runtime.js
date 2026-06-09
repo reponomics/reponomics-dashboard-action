@@ -49,19 +49,41 @@
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
     const DEFAULT_WINDOW = '14';
     const MAX_DISPLAY_REPOS = 20;
+    const MAX_COMPARE_REPOS = 8;
+    const CHUNK_FAILURE_LABELS = {
+      missing: 'Missing chunk',
+      decrypt: 'Decrypt/integrity failure',
+      decompress: 'Decompression failure',
+      parse: 'JSON parse failure',
+      schema: 'Schema mismatch',
+      runtime: 'Runtime failure'
+    };
     const state = {
       dashboardData: null,
       window: DEFAULT_WINDOW,
       minActivity: 1,
       selectedRepo: null,
       compareRepos: [],
+      chunkLoadErrors: {},
       metric: 'views',
       repoSortKey: null,
       repoSortDir: null,
       calendarMonth: null
     };
+    function dashboardChunkError(stage, message, details) {
+      const error = new Error(message);
+      error.dashboardDataStage = stage || 'runtime';
+      if (details) {
+        Object.keys(details).forEach((key) => {
+          error[key] = details[key];
+        });
+      }
+      return error;
+    }
+
     function createDashboardDataProvider(input) {
       const isLazy = !!(input && input.summary && (input.loadRepoChunk || input.chunks));
+      const isEncrypted = !!(input && input.loadRepoChunk);
       const source = isLazy ? input.summary : (input || {});
       const loadedChunks = {};
       const pendingChunks = {};
@@ -71,29 +93,75 @@
       function chunkIdFor(repoName) {
         return source.repo_chunks?.[repoName] || null;
       }
+      function validateRepoChunk(repoName, chunk) {
+        if (!chunk || typeof chunk !== 'object') {
+          throw dashboardChunkError('schema', 'Dashboard chunk was not an object.', {
+            repoName,
+            chunkId: chunkIdFor(repoName) || '',
+            mode: isEncrypted ? 'encrypted' : 'plain',
+            summaryDecrypted: isEncrypted
+          });
+        }
+        if (chunk.repo !== repoName) {
+          throw dashboardChunkError('schema', 'Dashboard chunk did not match requested repo.', {
+            repoName,
+            chunkId: chunkIdFor(repoName) || '',
+            mode: isEncrypted ? 'encrypted' : 'plain',
+            summaryDecrypted: isEncrypted
+          });
+        }
+        ['repo_series', 'repo_weekday', 'repo_referrers', 'repo_paths', 'growth'].forEach((field) => {
+          if (!(field in chunk)) {
+            throw dashboardChunkError('schema', 'Dashboard chunk was missing required field: ' + field + '.', {
+              repoName,
+              chunkId: chunkIdFor(repoName) || '',
+              mode: isEncrypted ? 'encrypted' : 'plain',
+              summaryDecrypted: isEncrypted,
+              missingField: field
+            });
+          }
+        });
+        return chunk;
+      }
       function parsePlainChunk(repoName) {
         const chunkId = chunkIdFor(repoName);
-        const rawChunk = chunkId ? input.chunks?.[chunkId] : null;
-        if (!rawChunk) {
-          throw new Error('Missing dashboard chunk for ' + repoName);
+        if (!chunkId || !input.chunks?.[chunkId]) {
+          throw dashboardChunkError('missing', 'Dashboard chunk was missing.', {
+            repoName,
+            chunkId: chunkId || '',
+            mode: 'plain',
+            summaryDecrypted: false
+          });
         }
-        const chunk = typeof rawChunk === 'string' ? JSON.parse(rawChunk) : rawChunk;
-        if (!chunk || chunk.repo !== repoName) {
-          throw new Error('Dashboard chunk did not match requested repo');
+        const rawChunk = input.chunks[chunkId];
+        let chunk;
+        try {
+          chunk = typeof rawChunk === 'string' ? JSON.parse(rawChunk) : rawChunk;
+        } catch (error) {
+          throw dashboardChunkError('parse', error.message || 'Dashboard chunk was not valid JSON.', {
+            repoName,
+            chunkId,
+            mode: 'plain',
+            summaryDecrypted: false,
+            originalName: error.name || '',
+            originalMessage: error.message || String(error)
+          });
         }
-        return chunk;
+        return validateRepoChunk(repoName, chunk);
       }
       function loadChunk(repoName) {
         if (input.loadRepoChunk) {
-          return input.loadRepoChunk(repoName);
+          return input.loadRepoChunk(repoName).then((chunk) => validateRepoChunk(repoName, chunk));
         }
         return Promise.resolve(parsePlainChunk(repoName));
       }
       return {
         getPayload: function() { return source; },
         isLazy: function() { return isLazy; },
+        isEncrypted: function() { return isEncrypted; },
         getMeta: function() { return source.meta || {}; },
         getRepos: function() { return source.repos || []; },
+        getRepoChunkId: function(repoName) { return chunkIdFor(repoName); },
         getRepoSummary: function(repoName) {
           return (source.repos || []).find((repo) => repo.name === repoName) || {};
         },
@@ -104,7 +172,12 @@
           return chunkFor(repoName)?.repo_weekday || source.repo_weekday?.[repoName] || {};
         },
         getRepoGrowth: function(repoName) {
-          return chunkFor(repoName)?.growth?.per_repo || source.growth?.per_repo?.[repoName] || {};
+          const chunkGrowth = chunkFor(repoName)?.growth || {};
+          const row = chunkGrowth.per_repo || source.growth?.per_repo?.[repoName] || {};
+          if (!row.series && chunkGrowth.series) {
+            return Object.assign({}, row, { series: chunkGrowth.series });
+          }
+          return row;
         },
         getRepoReferrers: function(repoName) {
           return chunkFor(repoName)?.repo_referrers || source.repo_referrers?.[repoName] || [];
@@ -156,6 +229,137 @@
     }
     function currentPayload() {
       return dashboardData()?.getPayload() || null;
+    }
+    function hasChunkLoadError(repoName) {
+      return !!(repoName && state.chunkLoadErrors && state.chunkLoadErrors[repoName]);
+    }
+    function currentChunkLoadErrors() {
+      return Object.keys(state.chunkLoadErrors || {})
+        .sort()
+        .map((repoName) => state.chunkLoadErrors[repoName]);
+    }
+    function normalizeChunkLoadError(repoName, error) {
+      const data = dashboardData();
+      const stage = error?.dashboardDataStage || error?.dashboardChunkStage || 'runtime';
+      const chunkId = error?.chunkId || data?.getRepoChunkId?.(repoName) || '';
+      return {
+        repoName,
+        chunkId,
+        mode: error?.mode || (data?.isEncrypted?.() ? 'encrypted' : 'plain'),
+        stage: CHUNK_FAILURE_LABELS[stage] ? stage : 'runtime',
+        label: CHUNK_FAILURE_LABELS[stage] || CHUNK_FAILURE_LABELS.runtime,
+        summaryDecrypted: !!error?.summaryDecrypted,
+        exceptionName: error?.originalName || error?.name || '',
+        exceptionMessage: error?.originalMessage || error?.message || String(error || ''),
+        missingField: error?.missingField || ''
+      };
+    }
+    function recordChunkLoadErrors(diagnostics) {
+      diagnostics.forEach((diagnostic) => {
+        state.chunkLoadErrors[diagnostic.repoName] = diagnostic;
+        console.error('Dashboard repository chunk load failed', diagnostic);
+      });
+    }
+    function clearChunkLoadErrors(repoNames) {
+      if (!repoNames) {
+        state.chunkLoadErrors = {};
+        return;
+      }
+      repoNames.forEach((repoName) => {
+        delete state.chunkLoadErrors[repoName];
+      });
+    }
+    function chunkDiagnosticsText(errors) {
+      return errors.map((error) => {
+        return [
+          'repo=' + error.repoName,
+          'chunk_id=' + (error.chunkId || '(none)'),
+          'mode=' + error.mode,
+          'stage=' + error.stage,
+          'summary_decrypted=' + (error.summaryDecrypted ? 'true' : 'false'),
+          error.missingField ? 'missing_field=' + error.missingField : '',
+          error.exceptionName ? 'exception_name=' + error.exceptionName : '',
+          error.exceptionMessage ? 'exception_message=' + error.exceptionMessage : ''
+        ].filter(Boolean).join('\n');
+      }).join('\n\n');
+    }
+    function summarizeChunkErrors(errors) {
+      const counts = {};
+      errors.forEach((error) => {
+        counts[error.stage] = (counts[error.stage] || 0) + 1;
+      });
+      return Object.keys(counts).sort().map((stage) => {
+        return counts[stage] + ' ' + (CHUNK_FAILURE_LABELS[stage] || stage).toLowerCase();
+      }).join(', ');
+    }
+    function renderDashboardNotice() {
+      const region = document.getElementById('dashboard-notice-region');
+      if (!region) return;
+      const errors = currentChunkLoadErrors();
+      region.textContent = '';
+      if (!errors.length) {
+        region.hidden = true;
+        region.removeAttribute('role');
+        return;
+      }
+
+      const notice = document.createElement('div');
+      notice.className = 'dashboard-notice error';
+      notice.setAttribute('role', 'alert');
+
+      const main = document.createElement('div');
+      main.className = 'dashboard-notice-main';
+      const copy = document.createElement('div');
+      copy.className = 'dashboard-notice-copy';
+      const title = document.createElement('div');
+      title.className = 'dashboard-notice-title';
+      title.textContent = errors.length === 1
+        ? 'Repository data could not be loaded'
+        : 'Some repository data could not be loaded';
+      const message = document.createElement('div');
+      message.className = 'dashboard-notice-message';
+      const names = errors.slice(0, 3).map((error) => error.repoName).join(', ');
+      const more = errors.length > 3 ? ' +' + (errors.length - 3) + ' more' : '';
+      message.textContent = errors.length === 1
+        ? errors[0].repoName + ' failed at ' + errors[0].label.toLowerCase() + '. Charts omit this repository until it loads successfully.'
+        : errors.length + ' repositories failed to load (' + summarizeChunkErrors(errors) + '): ' + names + more + '. Charts omit these repositories until they load successfully.';
+      copy.appendChild(title);
+      copy.appendChild(message);
+
+      const actions = document.createElement('div');
+      actions.className = 'dashboard-notice-actions';
+      const retryButton = document.createElement('button');
+      retryButton.type = 'button';
+      retryButton.className = 'toolbar-button visible';
+      retryButton.dataset.noticeAction = 'retry-chunks';
+      retryButton.textContent = 'Retry';
+      actions.appendChild(retryButton);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'toolbar-button visible';
+        copyButton.dataset.noticeAction = 'copy-diagnostics';
+        copyButton.textContent = 'Copy details';
+        actions.appendChild(copyButton);
+      }
+
+      main.appendChild(copy);
+      main.appendChild(actions);
+      notice.appendChild(main);
+
+      const details = document.createElement('details');
+      details.className = 'dashboard-notice-details';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Diagnostics';
+      const diagnostics = document.createElement('pre');
+      diagnostics.className = 'dashboard-notice-diagnostics';
+      diagnostics.textContent = chunkDiagnosticsText(errors);
+      details.appendChild(summary);
+      details.appendChild(diagnostics);
+      notice.appendChild(details);
+
+      region.appendChild(notice);
+      region.hidden = false;
     }
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
@@ -866,7 +1070,9 @@
     }
 
     function getSelectableRepos() {
-      return getAllRepoMetrics().filter((repo) => repo.activity >= state.minActivity);
+      return getAllRepoMetrics()
+        .filter((repo) => repo.activity >= state.minActivity)
+        .filter((repo) => !hasChunkLoadError(repo.name));
     }
 
     function getVisibleRepos() {
@@ -1036,7 +1242,7 @@
       }
       state.compareRepos = state.compareRepos
         .filter((repoName) => selectableRepoNames.has(repoName))
-        .slice(0, MAX_DISPLAY_REPOS);
+        .slice(0, MAX_COMPARE_REPOS);
     }
 
     function buildUpdatedText(payload) {
@@ -1336,7 +1542,7 @@
         state.compareRepos = inCompare
           ? state.compareRepos.filter((n) => n !== repoName)
           : state.compareRepos.concat(repoName);
-        state.compareRepos = state.compareRepos.slice(0, MAX_DISPLAY_REPOS);
+        state.compareRepos = state.compareRepos.slice(0, MAX_COMPARE_REPOS);
         // If we end up with only one repo in the compare set, treat it as a focus.
         if (state.compareRepos.length === 1) {
           state.selectedRepo = state.compareRepos[0];
@@ -1352,7 +1558,7 @@
 
     function toggleRepoCompare(repoName, checked) {
       if (checked) {
-        if (!state.compareRepos.includes(repoName) && state.compareRepos.length < MAX_DISPLAY_REPOS) {
+        if (!state.compareRepos.includes(repoName) && state.compareRepos.length < MAX_COMPARE_REPOS) {
           state.compareRepos.push(repoName);
         }
       } else {
@@ -2350,7 +2556,7 @@
           const tokens = compare.split(',').map((s) => s.trim()).filter(Boolean);
           const matched = tokens.map(matchByShort).filter(Boolean);
           if (matched.length >= 2) {
-            state.compareRepos = matched;
+            state.compareRepos = matched.slice(0, MAX_COMPARE_REPOS);
             state.selectedRepo = null;
           }
         }
@@ -2358,13 +2564,38 @@
     }
 
     function repoNamesRequiredForCurrentView() {
+      let repoNames;
       if (isComparing()) {
-        return state.compareRepos.slice();
+        repoNames = state.compareRepos.slice();
+      } else if (state.selectedRepo) {
+        repoNames = [state.selectedRepo];
+      } else {
+        repoNames = getVisibleRepos().map((repo) => repo.name);
       }
-      if (state.selectedRepo) {
-        return [state.selectedRepo];
+      return repoNames.filter((repoName) => !hasChunkLoadError(repoName));
+    }
+
+    function loadRepoChunks(repoNames) {
+      const data = dashboardData();
+      if (!data || !data.isLazy()) {
+        return Promise.resolve([]);
       }
-      return [];
+      const uniqueRepoNames = [...new Set(repoNames || [])]
+        .filter((repoName) => repoName && !data.isRepoLoaded(repoName));
+      if (!uniqueRepoNames.length) {
+        return Promise.resolve([]);
+      }
+      return Promise.all(uniqueRepoNames.map((repoName) => {
+        return data.loadRepo(repoName).then(() => {
+          return { repoName, ok: true };
+        }).catch((error) => {
+          return {
+            repoName,
+            ok: false,
+            diagnostic: normalizeChunkLoadError(repoName, error)
+          };
+        });
+      }));
     }
 
     function ensureCurrentRepoChunksLoaded() {
@@ -2372,12 +2603,59 @@
       if (!data || !data.isLazy()) {
         return null;
       }
-      const missing = repoNamesRequiredForCurrentView()
-        .filter((repoName) => !data.isRepoLoaded(repoName));
-      if (!missing.length) {
+      const missing = repoNamesRequiredForCurrentView();
+      if (!missing.some((repoName) => !data.isRepoLoaded(repoName))) {
         return null;
       }
-      return Promise.all(missing.map((repoName) => data.loadRepo(repoName)));
+      return loadRepoChunks(missing);
+    }
+
+    function handleChunkLoadResults(results) {
+      const loaded = results.filter((result) => result.ok).map((result) => result.repoName);
+      const failed = results.filter((result) => !result.ok).map((result) => result.diagnostic);
+      if (loaded.length) {
+        clearChunkLoadErrors(loaded);
+      }
+      if (failed.length) {
+        recordChunkLoadErrors(failed);
+      }
+      return { loaded, failed };
+    }
+
+    function retryFailedChunks() {
+      const failedRepos = currentChunkLoadErrors().map((error) => error.repoName);
+      if (!failedRepos.length) {
+        return;
+      }
+      loadRepoChunks(failedRepos).then((results) => {
+        handleChunkLoadResults(results);
+        updateDashboard();
+      }).catch((error) => {
+        console.error('Unexpected dashboard chunk retry failure', error);
+      });
+    }
+
+    function copyChunkDiagnostics() {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        return;
+      }
+      navigator.clipboard.writeText(chunkDiagnosticsText(currentChunkLoadErrors())).catch((error) => {
+        console.error('Failed to copy dashboard chunk diagnostics', error);
+      });
+    }
+
+    function handleNoticeAction(event) {
+      const button = event.target.closest('[data-notice-action]');
+      if (!button) {
+        return;
+      }
+      if (button.dataset.noticeAction === 'retry-chunks') {
+        retryFailedChunks();
+      } else if (button.dataset.noticeAction === 'copy-diagnostics') {
+        copyChunkDiagnostics();
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = 'Copy details'; }, 1200);
+      }
     }
 
     function updateDashboard() {
@@ -2387,10 +2665,11 @@
       }
       const pendingChunks = ensureCurrentRepoChunksLoaded();
       if (pendingChunks) {
-        pendingChunks.then(function() {
+        pendingChunks.then(function(results) {
+          handleChunkLoadResults(results);
           updateDashboard();
         }).catch(function(error) {
-          console.error('Failed to load repository chunk', error);
+          console.error('Unexpected dashboard chunk load failure', error);
         });
         return;
       }
@@ -2403,6 +2682,7 @@
       updateMetricTabs();
       setText('updated-text', buildUpdatedText(payload));
       updateToolbar();
+      renderDashboardNotice();
       renderCollectionCalendar();
       updateStats();
       updateDailyChart();
@@ -2423,6 +2703,7 @@
       state.minActivity = meta.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
+      state.chunkLoadErrors = {};
       state.calendarMonth = null;
       const thresholdInput = document.getElementById('thresholdInput');
       if (thresholdInput) {
@@ -2445,6 +2726,8 @@
       if (calendarNextBtn) calendarNextBtn.addEventListener('click', function() { shiftCalendarMonth(1); });
       const clearButton = document.getElementById('clearSelectionBtn');
       if (clearButton) clearButton.addEventListener('click', clearSelection);
+      const noticeRegion = document.getElementById('dashboard-notice-region');
+      if (noticeRegion) noticeRegion.addEventListener('click', handleNoticeAction);
       const themeToggle = document.getElementById('themeToggle');
       if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
       // Sync the toggle button's icon/label with the bootstrap-applied theme.

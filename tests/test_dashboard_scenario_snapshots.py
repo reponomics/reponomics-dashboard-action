@@ -248,7 +248,7 @@ def _assert_local_links_resolve(
         for ref in _document_links(document, markdown=markdown):
             if not _is_relative_repo_link(ref):
                 continue
-            path = unquote(urlsplit(ref).path)
+            path = unquote(urlsplit(url=ref).path)
             if not path:
                 continue
             target = (source.parent / path).resolve()

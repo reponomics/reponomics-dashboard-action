@@ -86,6 +86,14 @@ Expected documentation behavior:
 - Runtime `docs-sync` may update `docs/reponomics/` when enabled and permitted.
 - Top-level community-health docs are not managed by runtime docs sync.
 
+## Managed Docs Tree Invariant
+
+The managed-docs bundle tree at `dashboard_action/runtime/managed_docs/` is expected to be copied isomorphically into dashboard-dev at `template/docs/reponomics/` and into generated or user-created dashboard repositories at `docs/reponomics/`. File names and relative paths inside that namespace should not be remapped during action-release sync, template publication, or runtime docs sync.
+
+Action-repo tests may validate managed-doc structure and local managed-doc links against `dashboard_action/runtime/managed_docs/` because of this invariant: a relative link that resolves inside the source bundle should resolve the same way after the bundle is rooted at `docs/reponomics/`. This assumption is deliberately narrower than the general `template-manifest.yml` source-to-template mapping, where source paths may be transformed before users see them.
+
+If dashboard-dev reintroduces per-file path remapping inside `template/docs/reponomics/`, or if runtime docs sync starts projecting managed docs through any non-isomorphic transform, source-bundle link checks in this action repo are no longer sufficient. In that case, link integrity must be checked against the post-transform generated tree instead.
+
 ## Documentation Types
 
 | Type | Owner | Source location | Shipped to template? | Updated after user creates repo? |

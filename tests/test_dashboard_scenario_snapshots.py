@@ -7,7 +7,9 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone, tzinfo
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
@@ -21,6 +23,8 @@ FIXED_GENERATED_AT = datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc)
 SNAPSHOT_ACTION_VERSION = "0.13.1"
 README_SVG_REF_RE = re.compile(r'(?:src|srcset)="([^"]+\.svg)"')
 README_MARKDOWN_IMAGE_REF_RE = re.compile(r"!\[[^\]]*]\(([^)\s]+\.svg)(?:\s+[^)]*)?\)")
+MARKDOWN_LINK_REF_RE = re.compile(r"(?<!!)\[[^\]\n]+]\(([^)\s]+)(?:\s+[^)]*)?\)")
+MARKDOWN_IMAGE_REF_RE = re.compile(r"!\[[^\]]*]\(([^)\s]+)(?:\s+[^)]*)?\)")
 README_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
@@ -39,6 +43,22 @@ class FixedDashboardDatetime:
         return FIXED_GENERATED_AT.astimezone(tz)
 
     strptime = staticmethod(datetime.strptime)
+
+
+class HtmlLinkParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del tag
+        for name, value in attrs:
+            if value is None:
+                continue
+            if name in {"href", "src"}:
+                self.links.append(value)
+            elif name == "srcset":
+                self.links.extend(_split_srcset(value))
 
 
 SCENARIOS = {scenario.key: scenario for scenario in dashboard_scenarios.build_scenarios()}
@@ -178,6 +198,73 @@ def _readme_image_refs(readme: str) -> set[str]:
     return _readme_svg_refs(readme) | set(README_MARKDOWN_IMAGE_REF_RE.findall(visible_readme))
 
 
+def _split_srcset(value: str) -> list[str]:
+    refs = []
+    for candidate in value.split(","):
+        parts = candidate.strip().split()
+        if parts:
+            refs.append(parts[0])
+    return refs
+
+
+def _document_links(document: str, *, markdown: bool) -> list[str]:
+    visible_document = README_HTML_COMMENT_RE.sub("", document)
+    parser = HtmlLinkParser()
+    parser.feed(visible_document)
+    links = list(parser.links)
+    if markdown:
+        links.extend(MARKDOWN_LINK_REF_RE.findall(visible_document))
+        links.extend(MARKDOWN_IMAGE_REF_RE.findall(visible_document))
+    return links
+
+
+def _is_relative_repo_link(ref: str) -> bool:
+    if not ref or ref.startswith("#") or ref.startswith("/"):
+        return False
+    parsed = urlsplit(ref)
+    return not parsed.scheme and not parsed.netloc
+
+
+def _assert_local_links_resolve(
+    root: Path,
+    documents: dict[Path, tuple[str, bool]],
+) -> None:
+    """Assert generated README/dashboard links do not point at missing repo files.
+
+    This checker deliberately enforces only the generated repository's local
+    filesystem contract. It prohibits relative links that point outside the
+    rendered repository or to files/directories that were not generated, because
+    those are broken for every user who receives the template or rendered
+    dashboard output. It allows external links, root-absolute links, and
+    fragment-only links because those are not resolvable from the local output
+    tree. For `target.md#heading`, it verifies `target.md` exists but does not
+    validate the fragment; heading-anchor semantics differ across renderers and
+    belong in a separate check if we choose to enforce them.
+    """
+    failures = []
+    root = root.resolve()
+    for source_path, (document, markdown) in documents.items():
+        source = (root / source_path).resolve()
+        for ref in _document_links(document, markdown=markdown):
+            if not _is_relative_repo_link(ref):
+                continue
+            path = unquote(urlsplit(url=ref).path)
+            if not path:
+                continue
+            target = (source.parent / path).resolve()
+            if root not in {target, *target.parents}:
+                failures.append(f"{source_path}: {ref} escapes rendered repo")
+                continue
+            if path.endswith("/"):
+                exists = target.is_dir()
+            else:
+                exists = target.is_file() or target.is_dir()
+            if not exists:
+                failures.append(f"{source_path}: {ref} -> {target.relative_to(root)}")
+
+    assert not failures, "Broken local links in generated output:\n" + "\n".join(failures)
+
+
 def _assert_readme_contract(rendered: RenderedScenario) -> None:
     lower_readme = rendered.readme.lower()
     assert "<script" not in lower_readme
@@ -235,6 +322,112 @@ def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
     assert "Dashboard disabled" not in rendered.dashboard
 
 
+def _assert_generated_local_links_resolve(rendered: RenderedScenario) -> None:
+    _assert_local_links_resolve(
+        rendered.workdir,
+        {
+            Path("README.md"): (rendered.readme, True),
+            Path("docs/index.html"): (rendered.dashboard, False),
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("source_path", "document", "markdown", "expected_failure"),
+    [
+        (
+            Path("README.md"),
+            "[Setup & Docs](docs/README.md)",
+            True,
+            "README.md: docs/README.md -> docs/README.md",
+        ),
+        (
+            Path("README.md"),
+            "![Missing chart](docs/assets/missing.svg)",
+            True,
+            "README.md: docs/assets/missing.svg -> docs/assets/missing.svg",
+        ),
+        (
+            Path("README.md"),
+            '<a href="docs/missing.html">Missing</a>',
+            True,
+            "README.md: docs/missing.html -> docs/missing.html",
+        ),
+        (
+            Path("docs/index.html"),
+            '<script src="assets/missing.js"></script>',
+            False,
+            "docs/index.html: assets/missing.js -> docs/assets/missing.js",
+        ),
+        (
+            Path("docs/index.html"),
+            '<img srcset="assets/missing-small.png 1x, assets/missing-large.png 2x">',
+            False,
+            "docs/index.html: assets/missing-small.png -> docs/assets/missing-small.png",
+        ),
+        (
+            Path("README.md"),
+            "[Outside](../outside.md)",
+            True,
+            "README.md: ../outside.md escapes rendered repo",
+        ),
+    ],
+)
+def test_generated_link_checker_rejects_broken_local_links(
+    tmp_path: Path,
+    source_path: Path,
+    document: str,
+    markdown: bool,
+    expected_failure: str,
+) -> None:
+    with pytest.raises(AssertionError) as excinfo:
+        _assert_local_links_resolve(
+            tmp_path,
+            {source_path: (document, markdown)},
+        )
+
+    assert expected_failure in str(excinfo.value)
+
+
+def test_generated_link_checker_allows_supported_link_classes(tmp_path: Path) -> None:
+    docs_readme = tmp_path / "docs" / "reponomics" / "README.md"
+    docs_readme.parent.mkdir(parents=True)
+    docs_readme.write_text("local docs\n", encoding="utf-8")
+    assets_dir = tmp_path / "docs" / "assets"
+    assets_dir.mkdir(parents=True)
+    (assets_dir / "chart.umd.min.js").write_text("window.Chart = {}\n", encoding="utf-8")
+    (assets_dir / "hero-stats.svg").write_text("<svg></svg>\n", encoding="utf-8")
+    (assets_dir / "hero-stats-light.svg").write_text("<svg></svg>\n", encoding="utf-8")
+
+    readme = "\n".join(
+        [
+            "[Setup & Docs](docs/reponomics/README.md)",
+            "[External docs](https://github.com/reponomics/reponomics-dashboard)",
+            "[Root absolute](/docs/reponomics/README.md)",
+            "[Fragment only](#summary)",
+            "[Fragment target](docs/reponomics/README.md#start-here)",
+            "![Hero](docs/assets/hero-stats.svg)",
+            "<!-- [Commented local link](docs/missing.md) -->",
+        ]
+    )
+    dashboard = "\n".join(
+        [
+            '<script src="assets/chart.umd.min.js"></script>',
+            '<img srcset="assets/hero-stats.svg 1x, assets/hero-stats-light.svg 2x">',
+            '<a href="https://github.com/reponomics">External</a>',
+            '<a href="#top">Fragment</a>',
+        ]
+    )
+
+    _assert_local_links_resolve(
+        tmp_path,
+        {
+            Path("README.md"): (readme, True),
+            Path("docs/index.html"): (dashboard, False),
+        },
+    )
+
+
 @pytest.mark.parametrize("scenario_key", sorted(SCENARIOS))
 def test_production_dashboard_outputs_match_scenario_snapshots(
     monkeypatch: pytest.MonkeyPatch,
@@ -248,6 +441,7 @@ def test_production_dashboard_outputs_match_scenario_snapshots(
     )
     _assert_readme_contract(rendered)
     _assert_dashboard_contract(rendered)
+    _assert_generated_local_links_resolve(rendered)
 
     snapshot_dir = SNAPSHOT_ROOT / scenario_key
     _assert_snapshot(rendered.readme, snapshot_dir / "README.snapshot.md")

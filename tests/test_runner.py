@@ -410,6 +410,13 @@ def _report_stage(report: dict[str, Any], name: str) -> dict[str, str]:
     raise AssertionError(f"missing doctor report stage: {name}")
 
 
+def _result_stage(result: Any, name: str) -> Any:
+    for stage in result.stages:
+        if stage.name == name:
+            return stage
+    raise AssertionError(f"missing doctor result stage: {name}")
+
+
 def test_validate_token_401_points_to_fine_grained_token(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1427,6 +1434,103 @@ def test_doctor_mode_supports_single_stored_key(
     assert report["secret_results"][1]["label"] == "COMPARISON_SECRET"
     assert report["secret_results"][1]["provided"] is False
     assert report["export_artifact_valid"] == "passed"
+
+
+def test_doctor_browser_contract_constants_match_renderer_and_secure_runtime() -> None:
+    secure_runtime = run.render_dashboard.SECURE_RUNTIME_JS
+
+    assert run.doctor_mod.EXPECTED_DASHBOARD_DATA_VERSION == run.render_dashboard.DASHBOARD_DATA_VERSION
+    assert run.doctor_mod.EXPECTED_KDF_NAME == "PBKDF2"
+    assert run.doctor_mod.EXPECTED_KDF_HASH == "SHA-256"
+    assert run.doctor_mod.EXPECTED_KDF_ITERATIONS == run.render_dashboard.PBKDF2_ITERATIONS
+    assert run.doctor_mod.EXPECTED_SALT_BYTES == run.render_dashboard.PBKDF2_SALT_BYTES
+    assert run.doctor_mod.EXPECTED_IV_BYTES == run.render_dashboard.AES_GCM_IV_BYTES
+
+    expected_version_const = (
+        "const EXPECTED_DASHBOARD_DATA_VERSION = "
+        + f"{run.doctor_mod.EXPECTED_DASHBOARD_DATA_VERSION};"
+    )
+    assert expected_version_const in secure_runtime
+    assert "const EXPECTED_CIPHER = 'AES-GCM';" in secure_runtime
+    assert f"const EXPECTED_KDF_NAME = '{run.doctor_mod.EXPECTED_KDF_NAME}';" in secure_runtime
+    assert f"const EXPECTED_KDF_HASH = '{run.doctor_mod.EXPECTED_KDF_HASH}';" in secure_runtime
+    assert "const EXPECTED_KDF_ITERATIONS = __PBKDF2_ITERATIONS__;" in secure_runtime
+    assert f"const EXPECTED_SALT_BYTES = {run.doctor_mod.EXPECTED_SALT_BYTES};" in secure_runtime
+    assert f"const EXPECTED_IV_BYTES = {run.doctor_mod.EXPECTED_IV_BYTES};" in secure_runtime
+    assert r"/^c[0-9]{4,}$/.test(chunkId)" in secure_runtime
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_stage"),
+    [
+        ("version", "browser_envelope_version_valid"),
+        ("cipher", "browser_envelope_cipher_valid"),
+        ("kdf", "browser_envelope_kdf_valid"),
+        ("encoding", "browser_envelope_encoding_valid"),
+        ("salt", "browser_envelope_salt_valid"),
+        ("summary_token", "browser_envelope_summary_token_valid"),
+        ("chunks_object", "browser_envelope_chunks_object_valid"),
+        ("chunk_count", "browser_envelope_chunk_count_valid"),
+        ("chunk_id", "browser_envelope_chunk_ids_valid"),
+        ("chunk_token", "browser_envelope_chunk_ids_valid"),
+    ],
+)
+def test_doctor_encrypted_browser_contract_rejects_runtime_invalid_envelopes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    mutation: str,
+    expected_stage: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    _mutate_encrypted_dashboard_contract(encrypted_data, mutation)
+    config.pages_index_path.write_text(
+        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
+        encoding="utf-8",
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.browser_payload_contract_valid == "failed"
+    assert _result_stage(result, expected_stage).status == "failed"
+    assert result.ui_handoff_reached is False
+
+
+def _mutate_encrypted_dashboard_contract(data: dict[str, Any], mutation: str) -> None:
+    if mutation == "version":
+        data["version"] = run.doctor_mod.EXPECTED_DASHBOARD_DATA_VERSION + 1
+    elif mutation == "cipher":
+        data["cipher"] = "AES-CBC"
+    elif mutation == "kdf":
+        data["kdf"] = {**data["kdf"], "iterations": run.doctor_mod.EXPECTED_KDF_ITERATIONS + 1}
+    elif mutation == "encoding":
+        data["encoding"] = "json"
+    elif mutation == "salt":
+        data["salt"] = base64.b64encode(b"too-short").decode("ascii")
+    elif mutation == "summary_token":
+        data["summary"] = "not-a-valid-token"
+    elif mutation == "chunks_object":
+        data["chunks"] = []
+    elif mutation == "chunk_count":
+        data["chunk_count"] = int(data["chunk_count"]) + 1
+    elif mutation == "chunk_id":
+        first_chunk_id = next(iter(data["chunks"]))
+        data["chunks"]["bad-id"] = data["chunks"].pop(first_chunk_id)
+    elif mutation == "chunk_token":
+        first_chunk_id = next(iter(data["chunks"]))
+        data["chunks"][first_chunk_id] = "not-a-valid-token"
+    else:
+        raise AssertionError(f"unhandled mutation: {mutation}")
 
 
 def test_doctor_pages_preflight_reports_workflow_pages(

@@ -533,6 +533,10 @@ Initial implemented scope:
   enabled, reports disabled/missing token/context as skipped, reports API
   permission denial as a platform warning, and keeps all Pages outcomes separate
   from dashboard-secret acceptance;
+- browser-contract parity tests that compare doctor constants with renderer
+  constants and `secure-runtime.js`, and malformed encrypted-envelope fixtures
+  for version, cipher, KDF, encoding, salt, summary token, chunks object,
+  chunk count, chunk id, and chunk token failures;
 - preservation of the existing `check_dashboard_key` helper as a compatibility
   wrapper over the staged diagnostics.
 

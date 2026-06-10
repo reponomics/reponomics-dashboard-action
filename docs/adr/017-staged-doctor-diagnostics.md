@@ -539,6 +539,11 @@ Initial implemented scope:
   chunk count, chunk id, and chunk token failures;
 - preservation of the existing `check_dashboard_key` helper as a compatibility
   wrapper over the staged diagnostics.
+- template workflow artifact restore steps that use `actions/download-artifact`
+  before `doctor` runs and write a restore-failure summary when artifact
+  download or HTML normalization fails. The workflow summary explicitly states
+  that artifact restore failures are not evidence that
+  `DASHBOARD_SECRET_DO_NOT_REPLACE` or `COMPARISON_SECRET` is wrong.
 
 Deliberate deferrals:
 
@@ -552,6 +557,13 @@ Deliberate deferrals:
   explicit `actions/download-artifact` restore steps. The current implementation
   inspects already-restored retained contents when present and marks retained
   continuity stages as `skipped` when no restored artifact path is available.
+- `workflow_artifact_restore_authorized` is reserved for a future in-action or
+  structured restore-metadata integration. In the first workflow implementation,
+  authorization, run-id, artifact-name, retention-expiry, and GitHub artifact
+  service failures are isolated to named `actions/download-artifact` workflow
+  steps before the action runtime starts. The diagnostic record therefore cannot
+  include that stage when restore fails, because no dashboard payload was handed
+  to `doctor`.
 - Pages deployability preflight cannot currently prove `actions/deploy-pages`
   write permission without attempting a deployment. The implemented preflight
   therefore reports `pages_deployment_permission_valid=skipped` when the Pages
@@ -559,6 +571,20 @@ Deliberate deferrals:
 - Browser runtime smoke testing remains outside the first doctor slice. The
   implemented `ui_handoff_boundary_reached` stage marks the line where
   encryption, storage, and data-contract checks have been ruled out.
+
+Decision points and deviations:
+
+- Doctor remains workflow-first. The Python runtime validates already-restored
+  files and emits the structured report; the template workflow owns artifact
+  restore and makes download failures visible as ordinary GitHub Actions step
+  failures.
+- Strictness is not exposed as a template workflow input in the first slice. The
+  detailed stage report is always emitted, and the initial failure policy stays
+  intentionally simple: fail when no encrypted key authenticates the rendered
+  dashboard, or when no diagnostic target can be inspected.
+- GitHub API and Pages failures are reported as platform/workflow subjects.
+  They can explain absent or stale hosted output, but they are not evidence that
+  a named dashboard secret is incorrect.
 
 ## Consequences
 

@@ -1315,7 +1315,7 @@ def test_doctor_mode_escapes_warning_workflow_data(
     monkeypatch.setattr(
         run.doctor_mod,
         "diagnose_dashboard_artifact",
-        lambda _path, *, configured_artifact_mode, secrets: staged_result,
+        lambda _path, *, configured_artifact_mode, secrets, retained_data_dir: staged_result,
     )
 
     run.run_doctor(config)
@@ -1374,6 +1374,7 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     assert report["configured_artifact_mode"] == "plain"
     assert report["detected_dashboard_mode"] == "plain"
     assert report["key_cryptographically_accepted"] == "skipped"
+    assert report["retained_data_artifact_decryptable"] == "passed"
 
 
 def test_doctor_mode_supports_single_stored_key(
@@ -1474,6 +1475,78 @@ def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
     assert result.export_artifact_valid == "failed"
     assert any(
         stage.name == "export_plaintext_hash_valid"
+        and stage.status == "failed"
+        and stage.subject == "DASHBOARD_SECRET_DO_NOT_REPLACE"
+        for stage in result.stages
+    )
+
+
+def test_doctor_retained_artifact_decrypts_with_stored_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)
+    run.crypto_artifact.encrypt(
+        config.data_dir,
+        config.data_dir / "dashboard-data.enc",
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+        retained_data_dir=config.data_dir,
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.retained_data_artifact_decryptable == "passed"
+    assert any(
+        stage.name == "retained_artifact_decrypts"
+        and stage.status == "passed"
+        and stage.subject == "DASHBOARD_SECRET_DO_NOT_REPLACE"
+        for stage in result.stages
+    )
+    assert any(
+        stage.name == "retained_artifact_schema_valid" and stage.status == "passed"
+        for stage in result.stages
+    )
+
+
+def test_doctor_retained_artifact_reports_wrong_retained_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", NEXT_KEY)
+    run.crypto_artifact.encrypt(
+        config.data_dir,
+        config.data_dir / "dashboard-data.enc",
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+        retained_data_dir=config.data_dir,
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.retained_data_artifact_decryptable == "failed"
+    assert any(
+        stage.name == "retained_artifact_decrypts"
         and stage.status == "failed"
         and stage.subject == "DASHBOARD_SECRET_DO_NOT_REPLACE"
         for stage in result.stages

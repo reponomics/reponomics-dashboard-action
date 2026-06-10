@@ -449,6 +449,7 @@ def run_doctor(config: RuntimeConfig) -> None:
         config.pages_index_path,
         configured_artifact_mode=config.resolved_artifact_mode,
         secrets=key_checks,
+        retained_data_dir=config.data_dir,
     )
     report_path = Path(".reponomics") / "doctor" / "doctor-report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)

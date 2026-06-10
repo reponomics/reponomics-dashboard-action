@@ -486,6 +486,10 @@ Initial implemented scope:
 - plain dashboard rendering and diagnosis through the `plain-dashboard-data` JSON
   script contract, with the current runtime parsing that script into
   `dashboardDataObject`;
+- retained `dashboard-data` continuity checks for already-restored workflow
+  artifact contents: encrypted retained artifact readability, per-label
+  decryptability, schema validation, lineage validation when lineage metadata is
+  present, and plain retained directory schema validation;
 - workflow summary headlines, per-secret rows, stage counts, and a JSON report
   path uploaded by the composite action;
 - preservation of the existing `check_dashboard_key` helper as a compatibility
@@ -498,8 +502,10 @@ Deliberate deferrals:
   template workflows. The current behavior preserves the encrypted-mode failure
   policy: encrypted doctor fails when no supplied secret authenticates the
   rendered dashboard summary.
-- Retained `dashboard-data` workflow artifact restore is not yet implemented.
-  The initial JSON report marks retained continuity stages as `skipped`.
+- Automatic GitHub API restore for retained `dashboard-data` workflow artifacts
+  is not yet implemented. The current implementation inspects already-restored
+  retained contents when present and marks retained continuity stages as
+  `skipped` when no restored artifact path is available.
 - Browser runtime smoke testing remains outside the first doctor slice. The
   implemented `ui_handoff_boundary_reached` stage marks the line where
   encryption, storage, and data-contract checks have been ruled out.

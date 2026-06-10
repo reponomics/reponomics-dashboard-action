@@ -32,10 +32,11 @@ import storage  # noqa: E402
 import version_status  # noqa: E402
 
 
-def _mask_secret(value: str) -> None:
-    def escape_workflow_data(raw: str) -> str:
-        return raw.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+def escape_workflow_data(raw: str) -> str:
+    return raw.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
+
+def _mask_secret(value: str) -> None:
     for line in value.splitlines():
         if len(line) >= MIN_MASK_LENGTH:
             # Emit the workflow command through fd-level stdout writes to avoid
@@ -48,6 +49,7 @@ def _mask_config_secrets(config: RuntimeConfig) -> None:
     _mask_secret(config.github_token)
     _mask_secret(config.dashboard_secret)
     _mask_secret(config.dashboard_next_secret)
+    _mask_secret(config.comparison_secret)
 
 
 def _patch_runtime_paths(config: RuntimeConfig) -> None:

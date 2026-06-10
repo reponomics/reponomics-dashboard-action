@@ -156,6 +156,7 @@ def load_config_from_env() -> RuntimeConfig:
             "REPONOMICS_DASHBOARD_NEXT_SECRET",
             "DASHBOARD_NEXT_SECRET",
         ),
+        comparison_secret=_first_env("REPONOMICS_COMPARISON_SECRET", "COMPARISON_SECRET"),
         privacy_mode=privacy_mode,
         repo_is_public=repo_is_public,
         config_path=config_path,
@@ -179,4 +180,3 @@ def load_config_from_env() -> RuntimeConfig:
         action_ref=_env("REPONOMICS_ACTION_REF"),
         action_repository=_env("REPONOMICS_ACTION_REPOSITORY"),
     )
-

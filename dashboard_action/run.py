@@ -83,6 +83,7 @@ from .run_modules.env import (
     _relative_link_if_present,
     _set_empty_managed_docs_status_env,
     _set_managed_docs_link_env,
+    escape_workflow_data,
 )
 from .run_modules.github import _current_workflow_id, _github_api_headers, _github_delete
 from .run_modules.github import _github_repository, _github_run_id
@@ -111,6 +112,7 @@ from .run_modules.summaries import (
 import bootstrap  # noqa: E402
 import collect as collect_mod  # noqa: E402
 import crypto_artifact  # noqa: E402
+import doctor as doctor_mod  # noqa: E402
 import lineage  # noqa: E402
 import load_data  # noqa: E402
 import managed_docs  # noqa: E402
@@ -409,6 +411,62 @@ def run_docs_sync(config: RuntimeConfig) -> None:
     _write_outputs(config, before, docs_result=result)
 
 
+def _summary_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ").strip()
+
+
+def run_doctor(config: RuntimeConfig) -> None:
+    """Run read-only dashboard artifact diagnostics."""
+    key_checks = [
+        ("DASHBOARD_SECRET_DO_NOT_REPLACE", config.dashboard_secret),
+        ("COMPARISON_SECRET", config.comparison_secret),
+    ]
+    rows: list[tuple[str, str, str, str]] = []
+    provided = 0
+    successes = 0
+
+    for label, secret in key_checks:
+        if not secret:
+            rows.append((label, "not provided", "skipped", "secret was not configured"))
+            continue
+        provided += 1
+        result = doctor_mod.check_dashboard_key(config.pages_index_path, secret)
+        if result.ok:
+            successes += 1
+            rows.append((label, "success", result.stage, result.detail))
+        else:
+            rows.append((label, "failed", result.stage, result.detail))
+            warning = f"{label} failed at stage {result.stage}: {result.detail}"
+            print(
+                "::warning title=Reponomics doctor key check::"
+                + escape_workflow_data(warning)
+            )
+
+    lines = [
+        "## Reponomics dashboard doctor",
+        "",
+        f"- Dashboard HTML: `{config.pages_index_path.as_posix()}`",
+        f"- Provided keys checked: `{provided}`",
+        f"- Successful keys: `{successes}`",
+        "",
+        "| Secret | Result | Stage | Detail |",
+        "| --- | --- | --- | --- |",
+    ]
+    lines.extend(
+        f"| `{label}` | {_summary_cell(status)} | `{_summary_cell(stage)}` | {_summary_cell(detail)} |"
+        for label, status, stage, detail in rows
+    )
+    summaries_mod._write_summary(lines)
+
+    if provided == 0:
+        raise ActionError(
+            "doctor mode requires dashboard-secret or comparison-secret to check dashboard decryption."
+        )
+    if successes == 0:
+        print("::error title=Reponomics doctor key check::No provided key decrypted the dashboard")
+        raise ActionError("No provided dashboard key could decrypt the dashboard artifact.")
+
+
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
     try:
         config = loader()
@@ -436,6 +494,8 @@ def _dispatch(config: RuntimeConfig) -> None:
         run_rotate_key(config)
     elif config.mode == "docs-sync":
         run_docs_sync(config)
+    elif config.mode == "doctor":
+        run_doctor(config)
     elif _parse_bool(
         _env("REPONOMICS_INCIDENT_RESET_PURGE_ONLY", "false"),
         name="incident-reset-purge-only",

@@ -16,6 +16,7 @@ from dashboard_action import run
 def _restore_run_environment() -> Any:
     keys = {
         "ARTIFACT_SECURITY_MODE",
+        "COMPARISON_SECRET",
         "DASHBOARD_ACCESS_MODE",
         "DASHBOARD_KEY",
         "DASHBOARD_NEXT_SECRET",
@@ -31,6 +32,7 @@ def _restore_run_environment() -> Any:
         "REPONOMICS_ACTION_REF",
         "REPONOMICS_ACTION_REPOSITORY",
         "REPONOMICS_ACTION_SHA",
+        "REPONOMICS_COMPARISON_SECRET",
         "REPONOMICS_USE_GITHUB_APP",
         "RETENTION_DAYS",
         run.DOCS_ACTION_VERSION_ENV,
@@ -166,6 +168,18 @@ def test_load_config_supports_auto_and_legacy_privacy_modes(
 
     monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "encrypted")
     assert run.load_config_from_env().privacy_mode == "strong"
+
+
+def test_load_config_reads_comparison_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_MODE", "doctor")
+    monkeypatch.setenv("COMPARISON_SECRET", "fallback-comparison")
+    assert run.load_config_from_env().comparison_secret == "fallback-comparison"
+
+    monkeypatch.setenv("REPONOMICS_COMPARISON_SECRET", "input-comparison")
+    assert run.load_config_from_env().comparison_secret == "input-comparison"
 
 
 def test_allow_docs_sync_config_file_errors_and_values(tmp_path: Path) -> None:
@@ -814,6 +828,7 @@ def test_mask_config_secrets_masks_each_secret_line(
         github_token="ghp_github",
         dashboard_secret="dashboard%secret",
         dashboard_next_secret="next-secret",
+        comparison_secret="comparison-secret",
     )
 
     run._mask_config_secrets(config)
@@ -824,6 +839,7 @@ def test_mask_config_secrets_masks_each_secret_line(
         "::add-mask::ghp_github",
         "::add-mask::dashboard%25secret",
         "::add-mask::next-secret",
+        "::add-mask::comparison-secret",
     ]
     assert captured.err == ""
 
@@ -913,6 +929,22 @@ def test_main_dispatches_docs_sync_mode(
     run.main(lambda: config)
 
     assert called == ["docs-sync", "docs:docs-sync"]
+
+
+def test_main_dispatches_doctor_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    called: list[str] = []
+    config = _config_for_run_tests(tmp_path, mode="doctor")
+
+    monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
+    monkeypatch.setattr(run, "run_doctor", lambda received: called.append(f"doctor:{received.mode}"))
+
+    run.main(lambda: config)
+
+    assert called == ["doctor", "doctor:doctor"]
 
 
 def test_main_dispatches_collect_cleanup_only(
@@ -1090,6 +1122,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "github_token": "",
         "dashboard_secret": "dashboard-secret-" + ("x" * 40),
         "dashboard_next_secret": "",
+        "comparison_secret": "",
         "privacy_mode": "plain",
         "repo_is_public": False,
         "config_path": tmp_path / "config.yaml",

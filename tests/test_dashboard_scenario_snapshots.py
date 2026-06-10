@@ -126,6 +126,7 @@ def _render_production_outputs(
         github_token="ghp_test",
         dashboard_secret="",
         dashboard_next_secret="",
+        comparison_secret="",
         privacy_mode="plain",
         repo_is_public=False,
         config_path=workdir / "config.yaml",

@@ -13,6 +13,8 @@ from .core import (
 
 
 def validate_config(config: RuntimeConfig) -> None:
+    if config.mode == "doctor":
+        return
     _validate_collect_credentials(config)
     _validate_public_repo_settings(config)
     _validate_encrypted_mode(config)

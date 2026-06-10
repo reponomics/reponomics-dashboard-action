@@ -30,7 +30,7 @@ DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
 DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_STALE = "stale"
 
-VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "docs-sync"}
+VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "docs-sync", "doctor"}
 VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
 
 if str(SCRIPTS_DIR) not in sys.path:
@@ -49,6 +49,7 @@ class RuntimeConfig:
     github_token: str
     dashboard_secret: str
     dashboard_next_secret: str
+    comparison_secret: str
     privacy_mode: str
     repo_is_public: bool
     config_path: Path

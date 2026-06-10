@@ -155,6 +155,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "github_token": "ghp_test",
         "dashboard_secret": OLD_KEY,
         "dashboard_next_secret": "",
+        "comparison_secret": "",
         "privacy_mode": "strong",
         "repo_is_public": False,
         "config_path": tmp_path / "config.yaml",
@@ -1147,6 +1148,64 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
         assert chunk["repo_series"]["dates"]
         assert "per_repo" in chunk["growth"]
         assert "series" in chunk["growth"]["per_repo"]
+
+
+def test_doctor_dashboard_key_check_distinguishes_ui_failure_from_wrong_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    matching_key = run.doctor_mod.check_dashboard_key(config.pages_index_path, OLD_KEY)
+    assert matching_key == run.doctor_mod.DashboardKeyCheckResult(
+        ok=True,
+        stage="success",
+        detail="supplied key decrypts this dashboard",
+        chunks_checked=1,
+        chunk_count=1,
+        repo_count=1,
+    )
+
+    wrong_key = run.doctor_mod.check_dashboard_key(config.pages_index_path, NEXT_KEY)
+    assert wrong_key.ok is False
+    assert wrong_key.stage == "decrypt"
+    assert wrong_key.detail == "AES-GCM authentication failed"
+
+
+def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    summary_path = tmp_path / "summary.md"
+    config = _config(
+        tmp_path,
+        mode="publish",
+        generate_readme=False,
+    )
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    doctor_config = _config(
+        tmp_path,
+        mode="doctor",
+        dashboard_secret=OLD_KEY,
+        comparison_secret=NEXT_KEY,
+    )
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+
+    run.run_doctor(doctor_config)
+
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "| `DASHBOARD_SECRET_DO_NOT_REPLACE` | success | `success` | supplied key decrypts this dashboard |" in summary
+    assert "| `COMPARISON_SECRET` | failed | `decrypt` | AES-GCM authentication failed |" in summary
+    assert "- Successful keys: `1`" in summary
 
 
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(

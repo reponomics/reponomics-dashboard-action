@@ -7,7 +7,7 @@ branding:
 
 inputs:
   mode:
-    description: "Runtime mode: collect, publish, rotate-key, incident-reset, or docs-sync."
+    description: "Runtime mode: collect, publish, rotate-key, incident-reset, docs-sync, or doctor."
     required: true
     default: collect
   collection-token:
@@ -28,6 +28,10 @@ inputs:
     default: ""
   dashboard-next-secret:
     description: Next dashboard/artifact encryption secret for strong or casual rotate-key or incident-reset mode.
+    required: false
+    default: ""
+  comparison-secret:
+    description: Optional second dashboard secret for doctor mode. Used to check whether a user-held key can decrypt the current dashboard artifact without entering it as a workflow input.
     required: false
     default: ""
   incident-confirm-mode:
@@ -142,6 +146,7 @@ runs:
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
+        REPONOMICS_COMPARISON_SECRET: ${{ inputs.comparison-secret }}
         REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}

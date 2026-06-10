@@ -173,6 +173,17 @@ def test_allow_docs_sync_metadata_contract() -> None:
     assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"
 
 
+def test_doctor_mode_metadata_contract() -> None:
+    action = _action()
+    inputs = action["inputs"]
+    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+
+    assert "doctor" in inputs["mode"]["description"]
+    assert inputs["comparison-secret"]["default"] == ""
+    assert "workflow input" in inputs["comparison-secret"]["description"]
+    assert runtime_env["REPONOMICS_COMPARISON_SECRET"] == "${{ inputs.comparison-secret }}"
+
+
 def test_incident_reset_purge_runs_after_data_upload() -> None:
     action = _action()
     inputs = action["inputs"]

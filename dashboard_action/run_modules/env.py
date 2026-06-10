@@ -48,6 +48,7 @@ def _mask_config_secrets(config: RuntimeConfig) -> None:
     _mask_secret(config.github_token)
     _mask_secret(config.dashboard_secret)
     _mask_secret(config.dashboard_next_secret)
+    _mask_secret(config.comparison_secret)
 
 
 def _patch_runtime_paths(config: RuntimeConfig) -> None:

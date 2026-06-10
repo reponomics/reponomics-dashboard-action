@@ -439,6 +439,162 @@ def _write_doctor_report_output(report_path: str) -> None:
         handle.write(f"doctor-report-path={report_path}\n")
 
 
+def _doctor_platform_stage(
+    name: str,
+    status: doctor_mod.DoctorStageStatus,
+    detail: str,
+) -> doctor_mod.DoctorStage:
+    return doctor_mod.DoctorStage(
+        name=name,
+        status=status,
+        subject="GitHub Pages",
+        detail=detail,
+    )
+
+
+def _doctor_skipped_pages_stages(detail: str) -> list[doctor_mod.DoctorStage]:
+    return [
+        _doctor_platform_stage("pages_configuration_found", "skipped", detail),
+        _doctor_platform_stage("pages_source_valid", "skipped", detail),
+        _doctor_platform_stage("pages_deployment_permission_valid", "skipped", detail),
+        _doctor_platform_stage("pages_latest_deployment_valid", "skipped", detail),
+    ]
+
+
+def _doctor_pages_status(stages: list[doctor_mod.DoctorStage]) -> str:
+    page_stages = [stage for stage in stages if stage.name.startswith("pages_")]
+    if not page_stages:
+        return "skipped"
+    if any(stage.status == "failed" for stage in page_stages):
+        return "failed"
+    if any(stage.status == "warning" for stage in page_stages):
+        return "warning"
+    if any(stage.status == "passed" for stage in page_stages):
+        return "passed"
+    return "skipped"
+
+
+def _doctor_pages_preflight_stages(config: RuntimeConfig) -> list[doctor_mod.DoctorStage]:
+    if not config.publish_pages:
+        return _doctor_skipped_pages_stages("publish-pages is disabled for this artifact mode")
+    if not config.github_token:
+        return _doctor_skipped_pages_stages("github-token was not provided; Pages API preflight was not run")
+
+    try:
+        owner, repo = _github_repository()
+    except ActionError as exc:
+        return _doctor_skipped_pages_stages(f"GITHUB_REPOSITORY was unavailable: {exc}")
+
+    url = f"https://api.github.com/repos/{owner}/{repo}/pages"
+    try:
+        response = requests.get(
+            url,
+            headers=_github_api_headers(config.github_token),
+            timeout=INCIDENT_API_TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as exc:
+        return [
+            _doctor_platform_stage(
+                "pages_configuration_found",
+                "warning",
+                f"Pages API request failed: {exc.__class__.__name__}: {exc}",
+            ),
+            *_doctor_skipped_pages_stages("Pages API preflight did not complete")[1:],
+        ]
+
+    if response.status_code == 404:
+        return [
+            _doctor_platform_stage(
+                "pages_configuration_found",
+                "failed",
+                "GitHub Pages is not enabled or was not visible to this token",
+            ),
+            *_doctor_skipped_pages_stages("Pages configuration was unavailable")[1:],
+        ]
+    if response.status_code in {401, 403}:
+        detail = f"Pages API denied access with status {response.status_code}"
+        return [
+            _doctor_platform_stage("pages_configuration_found", "warning", detail),
+            _doctor_platform_stage("pages_source_valid", "skipped", detail),
+            _doctor_platform_stage("pages_deployment_permission_valid", "warning", detail),
+            _doctor_platform_stage("pages_latest_deployment_valid", "skipped", detail),
+        ]
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        return [
+            _doctor_platform_stage(
+                "pages_configuration_found",
+                "warning",
+                f"Pages API request failed with status {response.status_code}: {exc}",
+            ),
+            *_doctor_skipped_pages_stages("Pages API preflight did not complete")[1:],
+        ]
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        return [
+            _doctor_platform_stage(
+                "pages_configuration_found",
+                "warning",
+                f"Pages API returned invalid JSON: {exc}",
+            ),
+            *_doctor_skipped_pages_stages("Pages API payload was invalid")[1:],
+        ]
+    if not isinstance(payload, dict):
+        return [
+            _doctor_platform_stage("pages_configuration_found", "warning", "Pages API payload was not an object"),
+            *_doctor_skipped_pages_stages("Pages API payload was invalid")[1:],
+        ]
+
+    source_detail = _doctor_pages_source_detail(payload)
+    deployment_detail = _doctor_pages_deployment_detail(payload)
+    return [
+        _doctor_platform_stage("pages_configuration_found", "passed", "GitHub Pages configuration is available"),
+        _doctor_platform_stage(*source_detail),
+        _doctor_platform_stage(
+            "pages_deployment_permission_valid",
+            "skipped",
+            "deploy-pages permission cannot be proven without attempting a deployment",
+        ),
+        _doctor_platform_stage(*deployment_detail),
+    ]
+
+
+def _doctor_pages_source_detail(payload: dict[str, object]) -> tuple[str, doctor_mod.DoctorStageStatus, str]:
+    build_type = payload.get("build_type")
+    if build_type == "workflow":
+        return ("pages_source_valid", "passed", "GitHub Pages is configured for workflow deployments")
+    if isinstance(build_type, str) and build_type:
+        return (
+            "pages_source_valid",
+            "warning",
+            f"GitHub Pages build_type is {build_type!r}, not workflow",
+        )
+    source = payload.get("source")
+    if isinstance(source, dict):
+        return (
+            "pages_source_valid",
+            "warning",
+            "GitHub Pages source exists, but workflow deployment mode was not reported",
+        )
+    return ("pages_source_valid", "warning", "GitHub Pages source configuration was not reported")
+
+
+def _doctor_pages_deployment_detail(payload: dict[str, object]) -> tuple[str, doctor_mod.DoctorStageStatus, str]:
+    status = payload.get("status")
+    if status == "built":
+        return ("pages_latest_deployment_valid", "passed", "latest Pages status is built")
+    if status in {"building", "queued", "pending"}:
+        return ("pages_latest_deployment_valid", "warning", f"latest Pages status is {status!r}")
+    if status in {"errored", "error", "failed"}:
+        return ("pages_latest_deployment_valid", "failed", f"latest Pages status is {status!r}")
+    if isinstance(status, str) and status:
+        return ("pages_latest_deployment_valid", "warning", f"latest Pages status is {status!r}")
+    return ("pages_latest_deployment_valid", "skipped", "latest Pages status was not reported")
+
+
 def run_doctor(config: RuntimeConfig) -> None:
     """Run read-only dashboard artifact diagnostics."""
     key_checks = [
@@ -451,6 +607,7 @@ def run_doctor(config: RuntimeConfig) -> None:
         secrets=key_checks,
         retained_data_dir=config.data_dir,
     )
+    result.stages.extend(_doctor_pages_preflight_stages(config))
     report_path = Path(".reponomics") / "doctor" / "doctor-report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -516,6 +673,7 @@ def run_doctor(config: RuntimeConfig) -> None:
         f"| Repo chunks valid | `{result.repo_chunks_valid}` |",
         f"| Retained workflow artifact decryptable | `{result.retained_data_artifact_decryptable}` |",
         f"| Export artifact valid | `{result.export_artifact_valid}` |",
+        f"| Pages deployability preflight | `{_doctor_pages_status(result.stages)}` |",
         "",
         "| Stage status | Count |",
         "| --- | ---: |",

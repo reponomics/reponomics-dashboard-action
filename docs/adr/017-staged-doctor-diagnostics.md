@@ -528,6 +528,11 @@ Initial implemented scope:
   present, and plain retained directory schema validation;
 - workflow summary headlines, per-secret rows, stage counts, and a JSON report
   path uploaded by the composite action;
+- read-only Pages platform preflight stages in workflow doctor mode. The
+  preflight checks the repository Pages API when hosted Pages publishing is
+  enabled, reports disabled/missing token/context as skipped, reports API
+  permission denial as a platform warning, and keeps all Pages outcomes separate
+  from dashboard-secret acceptance;
 - preservation of the existing `check_dashboard_key` helper as a compatibility
   wrapper over the staged diagnostics.
 
@@ -543,9 +548,10 @@ Deliberate deferrals:
   explicit `actions/download-artifact` restore steps. The current implementation
   inspects already-restored retained contents when present and marks retained
   continuity stages as `skipped` when no restored artifact path is available.
-- Pages deployability preflight is not yet implemented. When added, it should be
-  a platform/workflow diagnostic subject and should not affect dashboard-secret
-  acceptance.
+- Pages deployability preflight cannot currently prove `actions/deploy-pages`
+  write permission without attempting a deployment. The implemented preflight
+  therefore reports `pages_deployment_permission_valid=skipped` when the Pages
+  API is readable, or `warning` when the Pages API itself denies access.
 - Browser runtime smoke testing remains outside the first doctor slice. The
   implemented `ui_handoff_boundary_reached` stage marks the line where
   encryption, storage, and data-contract checks have been ruled out.

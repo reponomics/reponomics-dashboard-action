@@ -403,6 +403,13 @@ def _response(
     return response
 
 
+def _report_stage(report: dict[str, Any], name: str) -> dict[str, str]:
+    for stage in report["stages"]:
+        if stage["name"] == name:
+            return stage
+    raise AssertionError(f"missing doctor report stage: {name}")
+
+
 def test_validate_token_401_points_to_fine_grained_token(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1355,6 +1362,11 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
         comparison_secret="",
     )
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(
+        run.requests,
+        "get",
+        lambda *_args, **_kwargs: pytest.fail("plain doctor should not query Pages API"),
+    )
 
     run.run_doctor(doctor_config)
 
@@ -1375,6 +1387,7 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     assert report["detected_dashboard_mode"] == "plain"
     assert report["key_cryptographically_accepted"] == "skipped"
     assert report["retained_data_artifact_decryptable"] == "passed"
+    assert _report_stage(report, "pages_configuration_found")["status"] == "skipped"
 
 
 def test_doctor_mode_supports_single_stored_key(
@@ -1414,6 +1427,100 @@ def test_doctor_mode_supports_single_stored_key(
     assert report["secret_results"][1]["label"] == "COMPARISON_SECRET"
     assert report["secret_results"][1]["provided"] is False
     assert report["export_artifact_valid"] == "passed"
+
+
+def test_doctor_pages_preflight_reports_workflow_pages(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    calls: list[tuple[str, dict[str, str], int]] = []
+
+    def fake_get(
+        url: str,
+        *,
+        headers: dict[str, str],
+        timeout: int,
+    ) -> requests.Response:
+        calls.append((url, headers, timeout))
+        return _response(200, payload={"build_type": "workflow", "status": "built"})
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.requests, "get", fake_get)
+    doctor_config = _config(
+        tmp_path,
+        mode="doctor",
+        dashboard_secret=OLD_KEY,
+        github_token="ghp_pages",
+    )
+
+    run.run_doctor(doctor_config)
+
+    assert calls == [
+        (
+            "https://api.github.com/repos/demo/repo/pages",
+            run._github_api_headers("ghp_pages"),
+            run.INCIDENT_API_TIMEOUT_SECONDS,
+        )
+    ]
+    report = json.loads(
+        (tmp_path / ".reponomics" / "doctor" / "doctor-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert _report_stage(report, "pages_configuration_found") == {
+        "name": "pages_configuration_found",
+        "status": "passed",
+        "subject": "GitHub Pages",
+        "detail": "GitHub Pages configuration is available",
+    }
+    assert _report_stage(report, "pages_source_valid")["status"] == "passed"
+    assert _report_stage(report, "pages_deployment_permission_valid")["status"] == "skipped"
+    assert _report_stage(report, "pages_latest_deployment_valid")["status"] == "passed"
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "| Pages deployability preflight | `passed` |" in summary
+
+
+def test_doctor_pages_preflight_reports_permission_denial_without_key_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
+    monkeypatch.setattr(
+        run.requests,
+        "get",
+        lambda *_args, **_kwargs: _response(403, text="forbidden"),
+    )
+    doctor_config = _config(
+        tmp_path,
+        mode="doctor",
+        dashboard_secret=OLD_KEY,
+        github_token="ghp_pages",
+    )
+
+    run.run_doctor(doctor_config)
+
+    report = json.loads(
+        (tmp_path / ".reponomics" / "doctor" / "doctor-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["key_cryptographically_accepted"] == "passed"
+    assert _report_stage(report, "pages_configuration_found")["status"] == "warning"
+    assert _report_stage(report, "pages_deployment_permission_valid")["status"] == "warning"
 
 
 def test_doctor_export_diagnostics_detect_ciphertext_tampering(

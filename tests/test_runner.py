@@ -1441,10 +1441,13 @@ def test_doctor_export_diagnostics_detect_ciphertext_tampering(
 
     assert result.key_cryptographically_accepted == "passed"
     assert result.export_artifact_valid == "failed"
+    assert result.ui_handoff_reached is True
     assert any(
         stage.name == "export_ciphertext_hash_valid" and stage.status == "failed"
         for stage in result.stages
     )
+    compatibility_result = run.doctor_mod.check_dashboard_key(config.pages_index_path, OLD_KEY)
+    assert compatibility_result.ok is True
 
 
 def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
@@ -1473,6 +1476,7 @@ def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
 
     assert result.key_cryptographically_accepted == "passed"
     assert result.export_artifact_valid == "failed"
+    assert result.ui_handoff_reached is True
     assert any(
         stage.name == "export_plaintext_hash_valid"
         and stage.status == "failed"
@@ -1545,6 +1549,7 @@ def test_doctor_retained_artifact_reports_wrong_retained_key(
 
     assert result.key_cryptographically_accepted == "passed"
     assert result.retained_data_artifact_decryptable == "failed"
+    assert result.ui_handoff_reached is True
     assert any(
         stage.name == "retained_artifact_decrypts"
         and stage.status == "failed"

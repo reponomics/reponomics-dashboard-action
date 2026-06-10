@@ -1530,8 +1530,6 @@ def _ui_handoff_stage(
     detected_mode: DetectedDashboardMode,
     stages: list[DoctorStage],
     secret_results: list[DoctorSecretResult],
-    retained_status: DoctorStageStatus,
-    export_status: DoctorStageStatus,
 ) -> DoctorStage:
     prerequisites = {
         "dashboard_html_found",
@@ -1580,16 +1578,10 @@ def _ui_handoff_stage(
             "failed",
             "one or more encryption, storage, or data-contract stages failed",
         )
-    if retained_status == "failed" or export_status == "failed":
-        return _stage(
-            "ui_handoff_boundary_reached",
-            "failed",
-            "retained workflow artifact or export checks failed",
-        )
     return _stage(
         "ui_handoff_boundary_reached",
         "passed",
-        "encryption, storage, and data-contract checks reached the browser/UI boundary",
+        "rendered dashboard payload checks reached the browser/UI boundary",
     )
 
 
@@ -1719,8 +1711,6 @@ def diagnose_dashboard_artifact(
             detected_mode=detected_mode,
             stages=stages,
             secret_results=secret_results,
-            retained_status=retained_status,
-            export_status=export_status,
         )
     )
 

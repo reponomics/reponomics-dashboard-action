@@ -483,8 +483,9 @@ Initial implemented scope:
 - encrypted export manifest, asset, ciphertext hash, decryptability, and
   plaintext hash checks using any supplied label that authenticated the dashboard
   summary;
-- plain dashboard diagnosis through the current `dashboardDataObject`
-  transitional extractor;
+- plain dashboard rendering and diagnosis through the `plain-dashboard-data` JSON
+  script contract, with the current runtime parsing that script into
+  `dashboardDataObject`;
 - workflow summary headlines, per-secret rows, stage counts, and a JSON report
   path uploaded by the composite action;
 - preservation of the existing `check_dashboard_key` helper as a compatibility
@@ -499,11 +500,6 @@ Deliberate deferrals:
   rendered dashboard summary.
 - Retained `dashboard-data` workflow artifact restore is not yet implemented.
   The initial JSON report marks retained continuity stages as `skipped`.
-- Plain dashboards are not yet rendered through `plain-dashboard-data`. Adding
-  that script tag by duplicating the existing `dashboardDataObject` would double
-  the embedded payload. The correct follow-up is a renderer/runtime migration
-  that moves plain mode to the JSON script contract without emitting a duplicate
-  payload.
 - Browser runtime smoke testing remains outside the first doctor slice. The
   implemented `ui_handoff_boundary_reached` stage marks the line where
   encryption, storage, and data-contract checks have been ruled out.

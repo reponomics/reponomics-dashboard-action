@@ -1541,13 +1541,14 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-dashboard-data" not in dashboard
+    assert "plain-dashboard-data" in dashboard
     assert "dashboardDataObject" in dashboard
     assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
-    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    plain_data = _script_json(dashboard, "plain-dashboard-data")
     summary, chunks = _decode_plain_dashboard_data(plain_data)
     repo_names = [repo["name"] for repo in summary["repos"]]
     assert plain_data == {
@@ -1602,7 +1603,7 @@ def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    plain_data = _runtime_const_json(dashboard, "dashboardDataObject")
+    plain_data = _script_json(dashboard, "plain-dashboard-data")
     summary, chunks = _decode_plain_dashboard_data(plain_data)
 
     assert summary["totals"]["repo_count"] == 200

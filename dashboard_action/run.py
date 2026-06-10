@@ -83,6 +83,7 @@ from .run_modules.env import (
     _relative_link_if_present,
     _set_empty_managed_docs_status_env,
     _set_managed_docs_link_env,
+    escape_workflow_data,
 )
 from .run_modules.github import _current_workflow_id, _github_api_headers, _github_delete
 from .run_modules.github import _github_repository, _github_run_id
@@ -435,9 +436,10 @@ def run_doctor(config: RuntimeConfig) -> None:
             rows.append((label, "success", result.stage, result.detail))
         else:
             rows.append((label, "failed", result.stage, result.detail))
+            warning = f"{label} failed at stage {result.stage}: {result.detail}"
             print(
-                f"::warning title=Reponomics doctor key check::{label} failed "
-                + f"at stage {result.stage}: {result.detail}"
+                "::warning title=Reponomics doctor key check::"
+                + escape_workflow_data(warning)
             )
 
     lines = [

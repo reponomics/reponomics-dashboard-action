@@ -1208,6 +1208,51 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
     assert "- Successful keys: `1`" in summary
 
 
+def test_doctor_mode_escapes_warning_workflow_data(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", (tmp_path / "summary.md").as_posix())
+    config = _config(
+        tmp_path,
+        mode="doctor",
+        dashboard_secret=OLD_KEY,
+        comparison_secret=NEXT_KEY,
+    )
+    results = iter(
+        [
+            run.doctor_mod.DashboardKeyCheckResult(
+                ok=True,
+                stage="success",
+                detail="supplied key decrypts this dashboard",
+            ),
+            run.doctor_mod.DashboardKeyCheckResult(
+                ok=False,
+                stage="parse",
+                detail="bad % data\nnext\rline",
+            ),
+        ]
+    )
+    monkeypatch.setattr(
+        run.doctor_mod,
+        "check_dashboard_key",
+        lambda _path, _secret: next(results),
+    )
+
+    run.run_doctor(config)
+
+    output = capsys.readouterr().out
+    expected = "".join(
+        [
+            "::warning title=Reponomics doctor key check::COMPARISON_SECRET failed ",
+            "at stage parse: bad %25 data%0Anext%0Dline\n",
+        ]
+    )
+    assert output == expected
+
+
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

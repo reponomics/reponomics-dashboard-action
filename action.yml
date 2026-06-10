@@ -11,7 +11,7 @@ inputs:
     required: true
     default: collect
   collection-token:
-    description: Token used for GitHub repository data collection APIs.
+    description: Value of the API token used for repository data collection. Template workflows pass the repository secret named COLLECTION_TOKEN.
     required: false
     default: ""
   use-github-app:

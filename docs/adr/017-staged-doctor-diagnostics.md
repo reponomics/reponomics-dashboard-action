@@ -468,6 +468,43 @@ while adding richer stage output.
    distinguishes key acceptance, browser compatibility, artifact continuity, and
    plain-mode structural integrity.
 
+## Implementation Notes
+
+The initial implementation should be workflow-first. The CLI key check remains a
+compatibility helper, but the supported consumption path is the GitHub Actions
+summary plus a machine-readable `reponomics-doctor-report` workflow artifact.
+
+Initial implemented scope:
+
+- staged result objects for dashboard, stage, and per-secret diagnostics;
+- encrypted dashboard payload detection and browser-envelope validation;
+- per-secret key derivation, summary authentication, summary decoding, chunk
+  authentication, chunk decoding, and minimum semantic checks;
+- plain dashboard diagnosis through the current `dashboardDataObject`
+  transitional extractor;
+- workflow summary headlines, per-secret rows, stage counts, and a JSON report
+  path uploaded by the composite action;
+- preservation of the existing `check_dashboard_key` helper as a compatibility
+  wrapper over the staged diagnostics.
+
+Deliberate deferrals:
+
+- `doctor-strictness` remains a follow-up action-contract change. The initial
+  behavior preserves the current encrypted-mode failure policy: encrypted doctor
+  fails when no supplied secret authenticates the rendered dashboard summary.
+- Retained `dashboard-data` workflow artifact restore is not yet implemented.
+  The initial JSON report marks retained continuity stages as `skipped`.
+- Export artifact validation is not yet implemented. The initial JSON report
+  marks export checks as `skipped`.
+- Plain dashboards are not yet rendered through `plain-dashboard-data`. Adding
+  that script tag by duplicating the existing `dashboardDataObject` would double
+  the embedded payload. The correct follow-up is a renderer/runtime migration
+  that moves plain mode to the JSON script contract without emitting a duplicate
+  payload.
+- Browser runtime smoke testing remains outside the first doctor slice. The
+  implemented `ui_handoff_boundary_reached` stage marks the line where
+  encryption, storage, and data-contract checks have been ruled out.
+
 ## Consequences
 
 - Users get actionable diagnostics without exposing private data to maintainers.

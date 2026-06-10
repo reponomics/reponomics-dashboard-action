@@ -176,12 +176,18 @@ def test_allow_docs_sync_metadata_contract() -> None:
 def test_doctor_mode_metadata_contract() -> None:
     action = _action()
     inputs = action["inputs"]
+    outputs = action["outputs"]
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
+    upload_report = _step_by_name("Upload doctor diagnostic report")
 
     assert "doctor" in inputs["mode"]["description"]
     assert inputs["comparison-secret"]["default"] == ""
     assert "workflow input" in inputs["comparison-secret"]["description"]
     assert runtime_env["REPONOMICS_COMPARISON_SECRET"] == "${{ inputs.comparison-secret }}"
+    assert outputs["doctor-report-path"]["value"] == "${{ steps.runtime.outputs.doctor-report-path }}"
+    assert upload_report["if"] == "${{ always() && inputs.mode == 'doctor' && steps.runtime.outputs.doctor-report-path != '' }}"
+    assert upload_report["with"]["name"] == "reponomics-doctor-report"
+    assert upload_report["with"]["path"] == "${{ steps.runtime.outputs.doctor-report-path }}"
 
 
 def test_incident_reset_purge_runs_after_data_upload() -> None:

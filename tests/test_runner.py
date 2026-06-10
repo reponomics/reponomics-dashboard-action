@@ -1183,6 +1183,7 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     summary_path = tmp_path / "summary.md"
+    output_path = tmp_path / "outputs.txt"
     config = _config(
         tmp_path,
         mode="publish",
@@ -1199,13 +1200,43 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
         comparison_secret=NEXT_KEY,
     )
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setenv("GITHUB_OUTPUT", output_path.as_posix())
 
     run.run_doctor(doctor_config)
 
     summary = summary_path.read_text(encoding="utf-8")
-    assert "| `DASHBOARD_SECRET_DO_NOT_REPLACE` | success | `success` | supplied key decrypts this dashboard |" in summary
-    assert "| `COMPARISON_SECRET` | failed | `decrypt` | AES-GCM authentication failed |" in summary
-    assert "- Successful keys: `1`" in summary
+    assert "- Configured artifact mode: `encrypted`" in summary
+    assert "- Detected dashboard mode: `encrypted`" in summary
+    assert "- Keys cryptographically accepted: `1`" in summary
+    assert "| Key cryptographically accepted | `passed` |" in summary
+    accepted_row = "".join(
+        [
+            "| `DASHBOARD_SECRET_DO_NOT_REPLACE` | provided | `passed` | ",
+            "`semantic_counts_valid` | repo, mapping, and chunk counts agree |",
+        ]
+    )
+    failed_row = "".join(
+        [
+            "| `COMPARISON_SECRET` | provided | `failed` | ",
+            "`summary_authenticates` | AES-GCM authentication failed |",
+        ]
+    )
+    assert accepted_row in summary
+    assert failed_row in summary
+    assert "| `ui_handoff_boundary_reached` | `passed` |" in summary
+
+    report_path = tmp_path / ".reponomics" / "doctor" / "doctor-report.json"
+    assert output_path.read_text(encoding="utf-8") == (
+        f"doctor-report-path={report_path.relative_to(tmp_path).as_posix()}\n"
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["configured_artifact_mode"] == "encrypted"
+    assert report["detected_dashboard_mode"] == "encrypted"
+    assert report["key_cryptographically_accepted"] == "passed"
+    assert report["secret_results"][0]["label"] == "DASHBOARD_SECRET_DO_NOT_REPLACE"
+    assert report["secret_results"][0]["accepted"] is True
+    assert report["secret_results"][1]["label"] == "COMPARISON_SECRET"
+    assert report["secret_results"][1]["accepted"] is False
 
 
 def test_doctor_mode_escapes_warning_workflow_data(
@@ -1221,24 +1252,57 @@ def test_doctor_mode_escapes_warning_workflow_data(
         dashboard_secret=OLD_KEY,
         comparison_secret=NEXT_KEY,
     )
-    results = iter(
-        [
-            run.doctor_mod.DashboardKeyCheckResult(
-                ok=True,
-                stage="success",
-                detail="supplied key decrypts this dashboard",
+    staged_result = run.doctor_mod.DashboardDoctorResult(
+        configured_artifact_mode="encrypted",
+        detected_dashboard_mode="encrypted",
+        dashboard_html_found="passed",
+        browser_payload_contract_valid="passed",
+        key_cryptographically_accepted="passed",
+        dashboard_data_well_formed="passed",
+        dashboard_data_semantically_consistent="passed",
+        repo_chunks_valid="passed",
+        retained_data_artifact_decryptable="skipped",
+        export_artifact_valid="skipped",
+        secret_results=[
+            run.doctor_mod.DoctorSecretResult(
+                label="DASHBOARD_SECRET_DO_NOT_REPLACE",
+                provided=True,
+                stages=[
+                    run.doctor_mod.DoctorStage(
+                        "summary_authenticates",
+                        "passed",
+                        "DASHBOARD_SECRET_DO_NOT_REPLACE",
+                        "AES-GCM authentication passed",
+                    )
+                ],
             ),
-            run.doctor_mod.DashboardKeyCheckResult(
-                ok=False,
-                stage="parse",
-                detail="bad % data\nnext\rline",
+            run.doctor_mod.DoctorSecretResult(
+                label="COMPARISON_SECRET",
+                provided=True,
+                stages=[
+                    run.doctor_mod.DoctorStage(
+                        "summary_authenticates",
+                        "failed",
+                        "COMPARISON_SECRET",
+                        "bad % data\nnext\rline",
+                    )
+                ],
             ),
-        ]
+        ],
+        stages=[
+            run.doctor_mod.DoctorStage(
+                "ui_handoff_boundary_reached",
+                "passed",
+                "",
+                "encryption, storage, and data-contract checks reached the browser/UI boundary",
+            )
+        ],
+        dashboard_html_path=config.pages_index_path.as_posix(),
     )
     monkeypatch.setattr(
         run.doctor_mod,
-        "check_dashboard_key",
-        lambda _path, _secret: next(results),
+        "diagnose_dashboard_artifact",
+        lambda _path, *, configured_artifact_mode, secrets: staged_result,
     )
 
     run.run_doctor(config)
@@ -1247,10 +1311,56 @@ def test_doctor_mode_escapes_warning_workflow_data(
     expected = "".join(
         [
             "::warning title=Reponomics doctor key check::COMPARISON_SECRET failed ",
-            "at stage parse: bad %25 data%0Anext%0Dline\n",
+            "at stage summary_authenticates: bad %25 data%0Anext%0Dline\n",
         ]
     )
     assert output == expected
+
+
+def test_doctor_mode_validates_plain_dashboard_without_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    summary_path = tmp_path / "summary.md"
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+    )
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    doctor_config = _config(
+        tmp_path,
+        mode="doctor",
+        privacy_mode="plain",
+        dashboard_secret="",
+        comparison_secret="",
+    )
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+
+    run.run_doctor(doctor_config)
+
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "- Configured artifact mode: `plain`" in summary
+    assert "- Detected dashboard mode: `plain`" in summary
+    assert "| Key cryptographically accepted | `skipped` |" in summary
+    assert "| Dashboard data semantically consistent | `passed` |" in summary
+    assert "| `DASHBOARD_SECRET_DO_NOT_REPLACE` | not provided | `skipped` | `skipped` | secret was not configured |" in summary
+    assert "| `ui_handoff_boundary_reached` | `passed` |" in summary
+
+    report = json.loads(
+        (tmp_path / ".reponomics" / "doctor" / "doctor-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["configured_artifact_mode"] == "plain"
+    assert report["detected_dashboard_mode"] == "plain"
+    assert report["key_cryptographically_accepted"] == "skipped"
 
 
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(

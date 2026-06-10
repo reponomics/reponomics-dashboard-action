@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Callable
 
 import requests
@@ -415,56 +417,147 @@ def _summary_cell(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ").strip()
 
 
+def _doctor_stage_status(stages: list[doctor_mod.DoctorStage], name: str) -> str:
+    for stage in stages:
+        if stage.name == name:
+            return stage.status
+    return "skipped"
+
+
+def _doctor_stage_detail(stages: list[doctor_mod.DoctorStage], name: str) -> str:
+    for stage in stages:
+        if stage.name == name:
+            return stage.detail
+    return ""
+
+
+def _write_doctor_report_output(report_path: str) -> None:
+    output_path = os.environ.get("GITHUB_OUTPUT", "")
+    if not output_path:
+        return
+    with open(output_path, "a", encoding="utf-8") as handle:
+        handle.write(f"doctor-report-path={report_path}\n")
+
+
 def run_doctor(config: RuntimeConfig) -> None:
     """Run read-only dashboard artifact diagnostics."""
     key_checks = [
         ("DASHBOARD_SECRET_DO_NOT_REPLACE", config.dashboard_secret),
         ("COMPARISON_SECRET", config.comparison_secret),
     ]
-    rows: list[tuple[str, str, str, str]] = []
-    provided = 0
-    successes = 0
+    result = doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode=config.resolved_artifact_mode,
+        secrets=key_checks,
+    )
+    report_path = Path(".reponomics") / "doctor" / "doctor-report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(result.to_jsonable(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    _write_doctor_report_output(report_path.as_posix())
 
-    for label, secret in key_checks:
-        if not secret:
-            rows.append((label, "not provided", "skipped", "secret was not configured"))
+    rows: list[tuple[str, str, str, str, str]] = []
+    for secret_result in result.secret_results:
+        if not secret_result.provided:
+            rows.append(
+                (
+                    secret_result.label,
+                    "not provided",
+                    "skipped",
+                    "skipped",
+                    "secret was not configured",
+                )
+            )
             continue
-        provided += 1
-        result = doctor_mod.check_dashboard_key(config.pages_index_path, secret)
-        if result.ok:
-            successes += 1
-            rows.append((label, "success", result.stage, result.detail))
-        else:
-            rows.append((label, "failed", result.stage, result.detail))
-            warning = f"{label} failed at stage {result.stage}: {result.detail}"
+        auth_status = _doctor_stage_status(secret_result.stages, "summary_authenticates")
+        terminal = secret_result.terminal_stage
+        rows.append(
+            (
+                secret_result.label,
+                "provided",
+                auth_status,
+                terminal.name,
+                terminal.detail,
+            )
+        )
+        if not secret_result.accepted and result.detected_dashboard_mode == "encrypted":
+            warning = (
+                f"{secret_result.label} failed at stage {terminal.name}: {terminal.detail}"
+            )
             print(
                 "::warning title=Reponomics doctor key check::"
                 + escape_workflow_data(warning)
             )
 
+    counts = result.stage_counts
+    handoff_detail = _doctor_stage_detail(result.stages, "ui_handoff_boundary_reached")
     lines = [
         "## Reponomics dashboard doctor",
         "",
         f"- Dashboard HTML: `{config.pages_index_path.as_posix()}`",
-        f"- Provided keys checked: `{provided}`",
-        f"- Successful keys: `{successes}`",
+        f"- JSON report: `{report_path.as_posix()}`",
+        f"- Configured artifact mode: `{result.configured_artifact_mode}`",
+        f"- Detected dashboard mode: `{result.detected_dashboard_mode}`",
+        f"- Provided keys checked: `{result.provided_secret_count}`",
+        f"- Keys cryptographically accepted: `{result.accepted_secret_count}`",
+        f"- Browser/UI handoff boundary: `{_doctor_stage_status(result.stages, 'ui_handoff_boundary_reached')}`",
+        f"- Interpretation: {_summary_cell(handoff_detail)}",
         "",
-        "| Secret | Result | Stage | Detail |",
-        "| --- | --- | --- | --- |",
+        "| Outcome | Status |",
+        "| --- | --- |",
+        f"| Dashboard HTML found | `{result.dashboard_html_found}` |",
+        f"| Browser payload contract valid | `{result.browser_payload_contract_valid}` |",
+        f"| Key cryptographically accepted | `{result.key_cryptographically_accepted}` |",
+        f"| Dashboard data well formed | `{result.dashboard_data_well_formed}` |",
+        f"| Dashboard data semantically consistent | `{result.dashboard_data_semantically_consistent}` |",
+        f"| Repo chunks valid | `{result.repo_chunks_valid}` |",
+        f"| Retained workflow artifact decryptable | `{result.retained_data_artifact_decryptable}` |",
+        f"| Export artifact valid | `{result.export_artifact_valid}` |",
+        "",
+        "| Stage status | Count |",
+        "| --- | ---: |",
+        f"| passed | {counts.get('passed', 0)} |",
+        f"| failed | {counts.get('failed', 0)} |",
+        f"| warning | {counts.get('warning', 0)} |",
+        f"| skipped | {counts.get('skipped', 0)} |",
+        "",
+        "| Secret | Provided | Summary authentication | Terminal stage | Detail |",
+        "| --- | --- | --- | --- | --- |",
     ]
     lines.extend(
-        f"| `{label}` | {_summary_cell(status)} | `{_summary_cell(stage)}` | {_summary_cell(detail)} |"
-        for label, status, stage, detail in rows
+        f"| `{label}` | {_summary_cell(provided)} | `{_summary_cell(auth_status)}` | `{_summary_cell(stage)}` | {_summary_cell(detail)} |"
+        for label, provided, auth_status, stage, detail in rows
     )
+    lines.extend(
+        [
+            "",
+            "### Diagnostic stages",
+            "",
+            "| Stage | Status | Subject | Detail |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    for stage in result.stages:
+        lines.append(
+            f"| `{_summary_cell(stage.name)}` | `{stage.status}` | {_summary_cell(stage.subject)} | {_summary_cell(stage.detail)} |"
+        )
     summaries_mod._write_summary(lines)
 
-    if provided == 0:
+    encrypted_diagnostics = (
+        result.configured_artifact_mode == "encrypted"
+        or result.detected_dashboard_mode == "encrypted"
+    )
+    if encrypted_diagnostics and result.provided_secret_count == 0:
         raise ActionError(
             "doctor mode requires dashboard-secret or comparison-secret to check dashboard decryption."
         )
-    if successes == 0:
+    if encrypted_diagnostics and result.accepted_secret_count == 0:
         print("::error title=Reponomics doctor key check::No provided key decrypted the dashboard")
         raise ActionError("No provided dashboard key could decrypt the dashboard artifact.")
+    if result.dashboard_html_found == "failed":
+        raise ActionError("Doctor could not inspect the dashboard HTML artifact.")
 
 
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:

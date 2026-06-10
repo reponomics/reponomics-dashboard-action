@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import tarfile
 from pathlib import Path
 from typing import Any
 import zipfile
@@ -102,6 +103,17 @@ def _runtime_const_json(html: str, const_name: str) -> dict[str, Any]:
 def _b64url_decode(value: str) -> bytes:
     padded = value + ("=" * ((4 - len(value) % 4) % 4))
     return base64.urlsafe_b64decode(padded.encode("ascii"))
+
+
+def _b64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _tamper_encrypted_token(token: str) -> str:
+    iv_value, ciphertext_value = token.split(".", 1)
+    ciphertext = bytearray(_b64url_decode(ciphertext_value))
+    ciphertext[0] ^= 1
+    return f"{iv_value}.{_b64url_encode(bytes(ciphertext))}"
 
 
 def _decrypt_dashboard_blob(blob: str, key: bytes) -> dict[str, Any]:
@@ -415,6 +427,16 @@ def _result_stage(result: Any, name: str) -> Any:
         if stage.name == name:
             return stage
     raise AssertionError(f"missing doctor result stage: {name}")
+
+
+def _secret_result_stage(result: Any, label: str, name: str) -> Any:
+    for secret_result in result.secret_results:
+        if secret_result.label != label:
+            continue
+        for stage in secret_result.stages:
+            if stage.name == name:
+                return stage
+    raise AssertionError(f"missing doctor secret stage: {label}:{name}")
 
 
 def test_validate_token_401_points_to_fine_grained_token(
@@ -1197,6 +1219,119 @@ def test_doctor_dashboard_key_check_distinguishes_ui_failure_from_wrong_key(
     assert wrong_key.detail == "AES-GCM authentication failed"
 
 
+def test_doctor_dashboard_key_check_rejects_corrupt_chunk_ciphertext(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    first_chunk_id = next(iter(encrypted_data["chunks"]))
+    encrypted_data["chunks"][first_chunk_id] = _tamper_encrypted_token(
+        encrypted_data["chunks"][first_chunk_id]
+    )
+    config.pages_index_path.write_text(
+        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
+        encoding="utf-8",
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.repo_chunks_valid == "failed"
+    assert (
+        _secret_result_stage(
+            result,
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
+            "chunk_authenticates",
+        ).status
+        == "failed"
+    )
+    assert result.ui_handoff_reached is False
+
+    compatibility_result = run.doctor_mod.check_dashboard_key(config.pages_index_path, OLD_KEY)
+    assert compatibility_result.ok is False
+    assert compatibility_result.stage == "decrypt"
+    assert compatibility_result.detail == "AES-GCM authentication failed"
+
+
+def test_doctor_treats_empty_encrypted_dashboard_as_semantically_valid(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.dashboard_data_semantically_consistent == "passed"
+    assert (
+        _secret_result_stage(
+            result,
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
+            "semantic_counts_valid",
+        ).status
+        == "passed"
+    )
+    assert result.ui_handoff_reached is True
+
+    compatibility_result = run.doctor_mod.check_dashboard_key(config.pages_index_path, OLD_KEY)
+    assert compatibility_result == run.doctor_mod.DashboardKeyCheckResult(
+        ok=True,
+        stage="success",
+        detail="supplied key decrypts this dashboard",
+        chunks_checked=0,
+        chunk_count=0,
+        repo_count=0,
+    )
+
+
+def test_doctor_treats_empty_plain_dashboard_as_semantically_valid(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(
+        tmp_path,
+        mode="publish",
+        privacy_mode="plain",
+        dashboard_secret="",
+        generate_readme=False,
+    )
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="plain",
+        secrets=[],
+    )
+
+    assert result.key_cryptographically_accepted == "skipped"
+    assert result.dashboard_data_semantically_consistent == "passed"
+    assert _result_stage(result, "semantic_counts_valid").status == "passed"
+    assert result.ui_handoff_reached is True
+
+
 def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1767,6 +1902,28 @@ def test_doctor_retained_artifact_reports_wrong_retained_key(
         and stage.subject == "DASHBOARD_SECRET_DO_NOT_REPLACE"
         for stage in result.stages
     )
+
+
+def test_doctor_retained_artifact_rejects_tar_links(tmp_path: Path) -> None:
+    archive_bytes = io.BytesIO()
+    with tarfile.open(fileobj=archive_bytes, mode="w:gz") as archive:
+        symlink = tarfile.TarInfo("link")
+        symlink.type = tarfile.SYMTYPE
+        symlink.linkname = "../outside"
+        archive.addfile(symlink)
+
+        payload = b"outside write"
+        linked_file = tarfile.TarInfo("link/payload.txt")
+        linked_file.size = len(payload)
+        archive.addfile(linked_file, io.BytesIO(payload))
+
+    with pytest.raises(ValueError, match="Refusing unsafe artifact member"):
+        run.doctor_mod._safe_extract_retained_tar(
+            archive_bytes.getvalue(),
+            tmp_path / "extract",
+        )
+
+    assert not (tmp_path / "outside" / "payload.txt").exists()
 
 
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(

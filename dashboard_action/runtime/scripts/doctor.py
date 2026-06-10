@@ -228,8 +228,8 @@ def _stage_failed(stages: list[DoctorStage], name: str) -> bool:
     return any(stage.name == name and stage.status == "failed" for stage in stages)
 
 
-def _all_named_passed(stages: list[DoctorStage], names: set[str]) -> bool:
-    return all(_stage_passed(stages, name) for name in names)
+def _all_required_stage_statuses_passed(stages: list[DoctorStage], names: set[str]) -> bool:
+    return all(_status_from_stages(stages, {name}) == "passed" for name in names)
 
 
 def _any_failed(stages: list[DoctorStage]) -> bool:
@@ -1142,12 +1142,29 @@ def _retained_encrypted_candidates(retained_data_dir: Path | None) -> list[Path]
 
 def _safe_extract_retained_tar(archive_bytes: bytes, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
+    root = target_dir.resolve()
     with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
-        for member in archive.getmembers():
+        members = archive.getmembers()
+        for member in members:
+            if not member.isdir() and not member.isfile():
+                raise ValueError(f"Refusing unsafe artifact member: {member.name}")
+            if member.isfile() and not member.name:
+                raise ValueError("Refusing unsafe artifact member with empty name")
             target = target_dir / member.name
-            if not target.resolve().is_relative_to(target_dir.resolve()):
+            if not target.resolve().is_relative_to(root):
                 raise ValueError(f"Refusing unsafe artifact path: {member.name}")
-        archive.extractall(target_dir)
+
+        for member in members:
+            target = target_dir / member.name
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            source = archive.extractfile(member)
+            if source is None:
+                raise ValueError(f"Retained artifact file was unreadable: {member.name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with source, target.open("wb") as handle:
+                handle.write(source.read())
 
 
 def _validate_retained_data_dir(data_dir: Path) -> tuple[DoctorStage, DoctorStage]:
@@ -1481,7 +1498,7 @@ def _diagnose_encrypted_secret(
         stages.extend(_validate_chunk_staged(repo_name, chunk_id, chunk))
         chunks_checked += 1
 
-    if repo_chunks:
+    if _stage_passed(summary_schema_stages, "summary_repo_chunk_mapping_valid"):
         stages.append(_semantic_counts_stage(repo_count, repo_chunks, chunks))
     else:
         stages.append(
@@ -1515,7 +1532,7 @@ def _diagnose_plain_data(data: dict[str, Any]) -> tuple[list[DoctorStage], int, 
         stages.append(_stage("chunk_json_valid", "passed", "plain chunk parsed as JSON", subject))
         stages.extend(_validate_chunk_staged(repo_name, chunk_id, chunk))
         chunks_checked += 1
-    if repo_chunks:
+    if _stage_passed(summary_stages, "summary_repo_chunk_mapping_valid"):
         stages.append(_semantic_counts_stage(repo_count, repo_chunks, chunks))
     else:
         stages.append(
@@ -1530,6 +1547,7 @@ def _ui_handoff_stage(
     detected_mode: DetectedDashboardMode,
     stages: list[DoctorStage],
     secret_results: list[DoctorSecretResult],
+    repo_count: int,
 ) -> DoctorStage:
     prerequisites = {
         "dashboard_html_found",
@@ -1546,6 +1564,16 @@ def _ui_handoff_stage(
         "summary_repo_chunk_mapping_valid",
         "semantic_counts_valid",
     }
+    if repo_count > 0:
+        prerequisites.update(
+            {
+                "chunk_payload_present",
+                "chunk_json_valid",
+                "chunk_min_schema_valid",
+                "chunk_repo_matches_summary",
+                "chunk_growth_contract_valid",
+            }
+        )
     if configured_mode == "encrypted":
         prerequisites.update(
             {
@@ -1555,6 +1583,8 @@ def _ui_handoff_stage(
                 "browser_envelope_summary_token_valid",
             }
         )
+        if repo_count > 0:
+            prerequisites.update({"chunk_authenticates", "chunk_decompresses"})
     data_stages = list(stages)
     accepted_secret = next((result for result in secret_results if result.accepted), None)
     if configured_mode == "encrypted":
@@ -1572,7 +1602,7 @@ def _ui_handoff_stage(
             "failed",
             "configured and detected dashboard modes were not compatible",
         )
-    if not _all_named_passed(data_stages, prerequisites):
+    if not _all_required_stage_statuses_passed(data_stages, prerequisites):
         return _stage(
             "ui_handoff_boundary_reached",
             "failed",
@@ -1711,6 +1741,7 @@ def diagnose_dashboard_artifact(
             detected_mode=detected_mode,
             stages=stages,
             secret_results=secret_results,
+            repo_count=repo_count,
         )
     )
 

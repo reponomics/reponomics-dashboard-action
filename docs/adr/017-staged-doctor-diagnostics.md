@@ -480,6 +480,9 @@ Initial implemented scope:
 - encrypted dashboard payload detection and browser-envelope validation;
 - per-secret key derivation, summary authentication, summary decoding, chunk
   authentication, chunk decoding, and minimum semantic checks;
+- encrypted export manifest, asset, ciphertext hash, decryptability, and
+  plaintext hash checks using any supplied label that authenticated the dashboard
+  summary;
 - plain dashboard diagnosis through the current `dashboardDataObject`
   transitional extractor;
 - workflow summary headlines, per-secret rows, stage counts, and a JSON report
@@ -489,13 +492,13 @@ Initial implemented scope:
 
 Deliberate deferrals:
 
-- `doctor-strictness` remains a follow-up action-contract change. The initial
-  behavior preserves the current encrypted-mode failure policy: encrypted doctor
-  fails when no supplied secret authenticates the rendered dashboard summary.
+- `doctor-strictness` remains a follow-up action-contract change. It can remain
+  an action-level policy control without necessarily being exposed by generated
+  template workflows. The current behavior preserves the encrypted-mode failure
+  policy: encrypted doctor fails when no supplied secret authenticates the
+  rendered dashboard summary.
 - Retained `dashboard-data` workflow artifact restore is not yet implemented.
   The initial JSON report marks retained continuity stages as `skipped`.
-- Export artifact validation is not yet implemented. The initial JSON report
-  marks export checks as `skipped`.
 - Plain dashboards are not yet rendered through `plain-dashboard-data`. Adding
   that script tag by duplicating the existing `dashboardDataObject` would double
   the embedded payload. The correct follow-up is a renderer/runtime migration

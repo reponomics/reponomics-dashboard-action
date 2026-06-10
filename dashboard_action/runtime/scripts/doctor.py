@@ -6,6 +6,7 @@ import argparse
 import base64
 from collections import Counter
 import gzip
+import hashlib
 from dataclasses import dataclass
 from html.parser import HTMLParser
 import json
@@ -23,13 +24,17 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 ENCRYPTED_DASHBOARD_SCRIPT_ID = "encrypted-dashboard-data"
 PLAIN_DASHBOARD_SCRIPT_ID = "plain-dashboard-data"
 PLAIN_DASHBOARD_CONST_NAME = "dashboardDataObject"
+EXPORT_MANIFEST_SCRIPT_ID = "export-manifest"
 EXPECTED_DASHBOARD_DATA_VERSION = 2
+EXPECTED_EXPORT_MANIFEST_VERSION = 1
 EXPECTED_KDF_NAME = "PBKDF2"
 EXPECTED_KDF_HASH = "SHA-256"
 EXPECTED_KDF_ITERATIONS = 600_000
 EXPECTED_SALT_BYTES = 16
 EXPECTED_IV_BYTES = 12
 CHUNK_ID_RE = re.compile(r"^c[0-9]{4,}$")
+EXPORT_ASSET_RE = re.compile(r"^assets/export-data-[a-f0-9]{16}\.enc$")
+SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 
 DoctorStageStatus = Literal["passed", "failed", "skipped", "warning"]
 DoctorArtifactMode = Literal["encrypted", "plain"]
@@ -887,6 +892,229 @@ def _semantic_counts_stage(
     return _stage("semantic_counts_valid", "passed", "repo, mapping, and chunk counts agree")
 
 
+def _validate_export_manifest_contract(manifest: dict[str, Any]) -> tuple[list[DoctorStage], bytes | None, bytes | None]:
+    stages: list[DoctorStage] = []
+    errors: list[str] = []
+    salt: bytes | None = None
+    iv: bytes | None = None
+
+    if manifest.get("version") != EXPECTED_EXPORT_MANIFEST_VERSION:
+        errors.append("unsupported version")
+    if manifest.get("cipher") != "AES-GCM":
+        errors.append("unsupported cipher")
+    kdf = manifest.get("kdf")
+    if not (
+        isinstance(kdf, dict)
+        and kdf.get("name") == EXPECTED_KDF_NAME
+        and kdf.get("hash") == EXPECTED_KDF_HASH
+        and kdf.get("iterations") == EXPECTED_KDF_ITERATIONS
+    ):
+        errors.append("unsupported KDF")
+    asset = manifest.get("asset")
+    if not isinstance(asset, str) or not EXPORT_ASSET_RE.fullmatch(asset):
+        errors.append("invalid asset path")
+    filename = manifest.get("filename")
+    if not isinstance(filename, str) or not filename:
+        errors.append("missing filename")
+    ciphertext_size = manifest.get("ciphertext_size")
+    if not isinstance(ciphertext_size, int) or ciphertext_size <= 0:
+        errors.append("invalid ciphertext size")
+    ciphertext_sha256 = manifest.get("ciphertext_sha256")
+    if not isinstance(ciphertext_sha256, str) or not SHA256_HEX_RE.fullmatch(ciphertext_sha256):
+        errors.append("invalid ciphertext sha256")
+    plaintext_sha256 = manifest.get("plaintext_sha256")
+    if not isinstance(plaintext_sha256, str) or not SHA256_HEX_RE.fullmatch(plaintext_sha256):
+        errors.append("invalid plaintext sha256")
+
+    try:
+        salt = _b64_decode(manifest.get("salt"))
+        if len(salt) != EXPECTED_SALT_BYTES:
+            errors.append(f"salt was {len(salt)} bytes")
+            salt = None
+    except Exception as exc:
+        errors.append(f"salt was malformed: {exc}")
+    try:
+        iv = _b64_decode(manifest.get("iv"))
+        if len(iv) != EXPECTED_IV_BYTES:
+            errors.append(f"iv was {len(iv)} bytes")
+            iv = None
+    except Exception as exc:
+        errors.append(f"iv was malformed: {exc}")
+
+    stages.append(
+        _stage(
+            "export_manifest_valid",
+            "failed" if errors else "passed",
+            "; ".join(errors) if errors else "encrypted export manifest contract is valid",
+        )
+    )
+    return stages, salt, iv
+
+
+def _accepted_secret_values(
+    secret_inputs: list[tuple[str, str]],
+    secret_results: list[DoctorSecretResult],
+) -> list[tuple[str, str]]:
+    values = dict(secret_inputs)
+    return [
+        (result.label, values[result.label])
+        for result in secret_results
+        if result.accepted and values.get(result.label)
+    ]
+
+
+def _diagnose_export_artifact(
+    html: str,
+    dashboard_html_path: Path,
+    *,
+    detected_mode: DetectedDashboardMode,
+    secret_inputs: list[tuple[str, str]],
+    secret_results: list[DoctorSecretResult],
+) -> tuple[list[DoctorStage], DoctorStageStatus]:
+    if detected_mode != "encrypted":
+        return [
+            _stage(
+                "export_manifest_found",
+                "skipped",
+                "plain mode has no encrypted export artifact",
+            )
+        ], "skipped"
+
+    stages: list[DoctorStage] = []
+    content = _optional_script_content(html, EXPORT_MANIFEST_SCRIPT_ID)
+    if not content:
+        stages.extend(
+            [
+                _stage("export_manifest_found", "failed", "export manifest script was not found"),
+                _stage("export_manifest_valid", "skipped", "export manifest was unavailable"),
+                _stage("export_asset_found", "skipped", "export manifest was unavailable"),
+                _stage("export_ciphertext_hash_valid", "skipped", "export manifest was unavailable"),
+                _stage("export_decrypts", "skipped", "export manifest was unavailable"),
+                _stage("export_plaintext_hash_valid", "skipped", "export manifest was unavailable"),
+            ]
+        )
+        return stages, "failed"
+
+    stages.append(_stage("export_manifest_found", "passed", "export manifest script was found"))
+    try:
+        manifest = _json_object(content, EXPORT_MANIFEST_SCRIPT_ID)
+    except _DashboardDoctorError as exc:
+        stages.extend(
+            [
+                _stage("export_manifest_valid", "failed", exc.detail),
+                _stage("export_asset_found", "skipped", "export manifest was invalid"),
+                _stage("export_ciphertext_hash_valid", "skipped", "export manifest was invalid"),
+                _stage("export_decrypts", "skipped", "export manifest was invalid"),
+                _stage("export_plaintext_hash_valid", "skipped", "export manifest was invalid"),
+            ]
+        )
+        return stages, "failed"
+
+    manifest_stages, salt, iv = _validate_export_manifest_contract(manifest)
+    stages.extend(manifest_stages)
+    if _any_failed(manifest_stages) or salt is None or iv is None:
+        stages.extend(
+            [
+                _stage("export_asset_found", "skipped", "export manifest was invalid"),
+                _stage("export_ciphertext_hash_valid", "skipped", "export manifest was invalid"),
+                _stage("export_decrypts", "skipped", "export manifest was invalid"),
+                _stage("export_plaintext_hash_valid", "skipped", "export manifest was invalid"),
+            ]
+        )
+        return stages, "failed"
+
+    asset = cast(str, manifest["asset"])
+    asset_path = dashboard_html_path.parent / asset
+    try:
+        ciphertext = asset_path.read_bytes()
+    except OSError as exc:
+        stages.extend(
+            [
+                _stage("export_asset_found", "failed", f"export asset was not readable: {exc}"),
+                _stage("export_ciphertext_hash_valid", "skipped", "export asset was unavailable"),
+                _stage("export_decrypts", "skipped", "export asset was unavailable"),
+                _stage("export_plaintext_hash_valid", "skipped", "export asset was unavailable"),
+            ]
+        )
+        return stages, "failed"
+
+    stages.append(_stage("export_asset_found", "passed", f"export asset {asset} was readable"))
+    actual_ciphertext_sha256 = hashlib.sha256(ciphertext).hexdigest()
+    expected_ciphertext_sha256 = cast(str, manifest["ciphertext_sha256"])
+    expected_ciphertext_size = cast(int, manifest["ciphertext_size"])
+    ciphertext_ok = (
+        len(ciphertext) == expected_ciphertext_size
+        and actual_ciphertext_sha256 == expected_ciphertext_sha256
+    )
+    stages.append(
+        _stage(
+            "export_ciphertext_hash_valid",
+            "passed" if ciphertext_ok else "failed",
+            (
+                "export ciphertext size and SHA-256 match manifest"
+                if ciphertext_ok
+                else "export ciphertext size or SHA-256 did not match manifest"
+            ),
+        )
+    )
+    if not ciphertext_ok:
+        stages.extend(
+            [
+                _stage("export_decrypts", "skipped", "ciphertext integrity check failed"),
+                _stage("export_plaintext_hash_valid", "skipped", "ciphertext integrity check failed"),
+            ]
+        )
+        return stages, "failed"
+
+    accepted_secrets = _accepted_secret_values(secret_inputs, secret_results)
+    if not accepted_secrets:
+        stages.extend(
+            [
+                _stage("export_decrypts", "skipped", "no accepted dashboard secret was available"),
+                _stage("export_plaintext_hash_valid", "skipped", "no accepted dashboard secret was available"),
+            ]
+        )
+        return stages, "skipped"
+
+    expected_plaintext_sha256 = cast(str, manifest["plaintext_sha256"])
+    decrypt_failures: list[str] = []
+    plaintext_hash_failures: list[str] = []
+    for label, secret in accepted_secrets:
+        export_key = _derive_key(secret, salt)
+        try:
+            plaintext = AESGCM(export_key).decrypt(iv, ciphertext, None)
+        except InvalidTag:
+            decrypt_failures.append(label)
+            stages.append(_stage("export_decrypts", "failed", "AES-GCM authentication failed", label))
+            continue
+        stages.append(_stage("export_decrypts", "passed", "export asset decrypted", label))
+        actual_plaintext_sha256 = hashlib.sha256(plaintext).hexdigest()
+        if actual_plaintext_sha256 != expected_plaintext_sha256:
+            plaintext_hash_failures.append(label)
+            stages.append(
+                _stage(
+                    "export_plaintext_hash_valid",
+                    "failed",
+                    "decrypted export plaintext SHA-256 did not match manifest",
+                    label,
+                )
+            )
+            continue
+        stages.append(
+            _stage(
+                "export_plaintext_hash_valid",
+                "passed",
+                "decrypted export plaintext SHA-256 matches manifest",
+                label,
+            )
+        )
+        return stages, "passed"
+
+    if decrypt_failures or plaintext_hash_failures:
+        return stages, "failed"
+    return stages, "skipped"
+
+
 def _skip_secret_result(label: str, provided: bool, detail: str) -> DoctorSecretResult:
     return DoctorSecretResult(
         label=label,
@@ -1207,13 +1435,16 @@ def diagnose_dashboard_artifact(
                 "skipped",
                 "retained workflow artifact restore is deferred; current diagnostics inspect rendered dashboard HTML",
             ),
-            _stage(
-                "export_manifest_found",
-                "skipped",
-                "export diagnostics are deferred; current diagnostics inspect dashboard payloads",
-            ),
         ]
     )
+    export_stages, export_status = _diagnose_export_artifact(
+        html,
+        dashboard_html_path,
+        detected_mode=detected_mode,
+        secret_inputs=secret_inputs,
+        secret_results=secret_results,
+    )
+    stages.extend(export_stages)
     stages.append(
         _ui_handoff_stage(
             configured_mode=configured_mode,

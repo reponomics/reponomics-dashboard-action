@@ -137,6 +137,12 @@ def _decode_plain_dashboard_data(
     return plain_dashboard_data["summary"], chunks
 
 
+def _replace_script_json(html: str, script_id: str, value: dict[str, Any]) -> str:
+    replacement = json.dumps(value, separators=(",", ":"))
+    pattern = rf'(<script id="{re.escape(script_id)}" type="application/json">).*?(</script>)'
+    return re.sub(pattern, lambda match: match.group(1) + replacement + match.group(2), html, flags=re.S)
+
+
 def _csp_content(document: str) -> str:
     match = re.search(
         r'<meta http-equiv="Content-Security-Policy" content="([^"]+)">',
@@ -1233,10 +1239,17 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
     assert report["configured_artifact_mode"] == "encrypted"
     assert report["detected_dashboard_mode"] == "encrypted"
     assert report["key_cryptographically_accepted"] == "passed"
+    assert report["export_artifact_valid"] == "passed"
     assert report["secret_results"][0]["label"] == "DASHBOARD_SECRET_DO_NOT_REPLACE"
     assert report["secret_results"][0]["accepted"] is True
     assert report["secret_results"][1]["label"] == "COMPARISON_SECRET"
     assert report["secret_results"][1]["accepted"] is False
+    assert {
+        "name": "export_decrypts",
+        "status": "passed",
+        "subject": "DASHBOARD_SECRET_DO_NOT_REPLACE",
+        "detail": "export asset decrypted",
+    } in report["stages"]
 
 
 def test_doctor_mode_escapes_warning_workflow_data(
@@ -1361,6 +1374,110 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     assert report["configured_artifact_mode"] == "plain"
     assert report["detected_dashboard_mode"] == "plain"
     assert report["key_cryptographically_accepted"] == "skipped"
+
+
+def test_doctor_mode_supports_single_stored_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    doctor_config = _config(
+        tmp_path,
+        mode="doctor",
+        dashboard_secret=OLD_KEY,
+        comparison_secret="",
+    )
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+
+    run.run_doctor(doctor_config)
+
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "- Provided keys checked: `1`" in summary
+    assert "- Keys cryptographically accepted: `1`" in summary
+    assert (
+        "| `COMPARISON_SECRET` | not provided | `skipped` | `skipped` | secret was not configured |"
+    ) in summary
+    report = json.loads(
+        (tmp_path / ".reponomics" / "doctor" / "doctor-report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["secret_results"][0]["label"] == "DASHBOARD_SECRET_DO_NOT_REPLACE"
+    assert report["secret_results"][0]["accepted"] is True
+    assert report["secret_results"][1]["label"] == "COMPARISON_SECRET"
+    assert report["secret_results"][1]["provided"] is False
+    assert report["export_artifact_valid"] == "passed"
+
+
+def test_doctor_export_diagnostics_detect_ciphertext_tampering(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    export_manifest = _script_json(dashboard, "export-manifest")
+    asset_path = config.pages_index_path.parent / export_manifest["asset"]
+    ciphertext = bytearray(asset_path.read_bytes())
+    ciphertext[0] ^= 1
+    asset_path.write_bytes(bytes(ciphertext))
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.export_artifact_valid == "failed"
+    assert any(
+        stage.name == "export_ciphertext_hash_valid" and stage.status == "failed"
+        for stage in result.stages
+    )
+
+
+def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    export_manifest = _script_json(dashboard, "export-manifest")
+    export_manifest["plaintext_sha256"] = "0" * 64
+    config.pages_index_path.write_text(
+        _replace_script_json(dashboard, "export-manifest", export_manifest),
+        encoding="utf-8",
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_artifact_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.export_artifact_valid == "failed"
+    assert any(
+        stage.name == "export_plaintext_hash_valid"
+        and stage.status == "failed"
+        and stage.subject == "DASHBOARD_SECRET_DO_NOT_REPLACE"
+        for stage in result.stages
+    )
 
 
 def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(

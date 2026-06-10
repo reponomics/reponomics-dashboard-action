@@ -215,18 +215,22 @@ For a rendered dashboard, doctor reaches the UI handoff boundary when:
   summary;
 - authenticated encrypted plaintext decompresses and parses, or plain payload
   JSON parses;
-- summary and chunk data pass minimum semantic consistency checks;
-- retained `dashboard-data` workflow artifact continuity has passed or was
-  explicitly skipped by strictness/source configuration;
-- export checks have passed, warned, or been explicitly skipped according to
-  strictness.
+- summary and chunk data pass minimum semantic consistency checks.
 
 When those conditions hold, doctor should report that encryption and storage
-diagnostics reached the browser/UI handoff boundary. A user-visible failure after
-that point is more likely in the browser runtime, chart/table rendering,
-interaction state, CSS/layout, or browser environment. Doctor may still include
-an optional browser smoke check in a future strictness level, but browser UI
-behavior is not the core responsibility of doctor.
+diagnostics for the rendered dashboard payload reached the browser/UI handoff
+boundary. A user-visible failure after that point is more likely in the browser
+runtime, chart/table rendering, interaction state, CSS/layout, or browser
+environment than in the named dashboard secret or embedded dashboard data object.
+Doctor should report retained workflow artifact continuity, export artifact
+validity, GitHub artifact restore, and Pages deployability as separate subjects.
+Failures in those subjects are serious, but they do not prove that a user's
+dashboard key is wrong or that the current in-browser dashboard payload is
+undecryptable.
+
+Doctor may still include an optional browser smoke check in a future workflow
+diagnostic preset, but browser UI behavior is not the core responsibility of
+doctor.
 
 If a future browser smoke check exists, its failure should not be reported as a
 key or retained-data failure unless an earlier encryption, storage, or semantic
@@ -234,19 +238,22 @@ stage also failed.
 
 ### Workflow Artifact Restore Semantics
 
-Doctor should support more than one artifact source, and the source should be
-reported explicitly so `retained_artifact_found=failed` is not ambiguous.
+Doctor should support explicit artifact source reporting so
+`retained_artifact_found=failed` is not ambiguous.
 
-Initial supported sources:
+Initial supported sources are:
 
 - `restored-path`: inspect workflow artifact contents already restored into the
   runner workspace at an explicit path.
-- `restore-latest`: use the GitHub API to restore the latest `dashboard-data`
-  workflow artifact for the repository.
-- `restore-run-id`: use the GitHub API to restore `dashboard-data` from an
-  explicit workflow run id.
 - `skip`: do not inspect the retained workflow artifact, and mark retained
   continuity stages `skipped`.
+
+The first workflow implementation should prefer an explicit
+`actions/download-artifact` restore step over hidden in-process GitHub API
+downloads. Download failure is then isolated to a single workflow step and can
+be diagnosed before doctor runs. If direct API restore is added later, it should
+be a platform/workflow diagnostic layer, not part of repository-secret
+validation.
 
 The diagnostic output should distinguish:
 
@@ -256,38 +263,62 @@ The diagnostic output should distinguish:
 - matching workflow artifact found but unreadable after restore;
 - restored workflow artifact readable but invalid or undecryptable.
 
+GitHub artifact restore failures include artifact name or run-id mismatch,
+expired artifacts, artifacts not yet available because the producing workflow is
+still running, missing `actions: read` permission, repository or fork
+trust-boundary restrictions, REST API rate limiting or service failures, and
+corrupt or incomplete restored ZIP contents. None of those conditions involves
+the repository dashboard secret. They should never be reported as evidence that
+`DASHBOARD_SECRET_DO_NOT_REPLACE` or `COMPARISON_SECRET` is incorrect.
+
 Dashboard HTML and export assets may use the same source model. They can be
 inspected from already-restored workflow artifact contents or from explicit
 paths. If a future workflow downloads the HTML artifact automatically, the
 summary must make that restore action visible.
 
+### Pages Deployability
+
+Doctor may include a platform preflight that checks whether GitHub Pages is
+configured and deployable by the workflow token. This check should be reported as
+a Pages/platform subject, not as a dashboard-secret or payload-validation
+subject.
+
+A useful Pages preflight should distinguish:
+
+- Pages not enabled for the repository;
+- Pages configured for a different build source than the template workflow
+  expects;
+- workflow token lacks the permission needed by the deploy step;
+- latest Pages deployment failed or is pending;
+- Pages API could not be queried because of permission, rate-limit, or service
+  failure.
+
+When this check is unavailable, doctor should mark Pages stages as `skipped` or
+`warning` with the API/permission reason. A Pages failure can explain why a
+hosted dashboard is absent or stale, but it does not imply that retained data or
+dashboard ciphertext is unrecoverable.
+
 ### Strictness
 
-Doctor should expose strictness as an explicit input rather than relying on
-implicit failure policy.
+Strictness should simplify workflow consumption rather than create a second
+diagnostic model. Doctor should always emit the same detailed stage report. Any
+strictness or preset setting should only decide which reported failures fail the
+workflow.
 
-Recommended input:
+The initial implementation should keep the user-facing workflow policy simple:
 
-```text
-doctor-strictness: key-only | dashboard | dashboard-and-retained | full
-```
+- encrypted mode fails when no supplied secret authenticates the rendered
+  dashboard summary;
+- plain mode skips key stages by design;
+- a missing or unreadable dashboard target fails because no diagnosis can be
+  made;
+- retained artifact, export, GitHub API, and Pages checks report explicit
+  statuses without being conflated with key acceptance.
 
-Semantics:
-
-- `key-only`: preserve the initial compatibility behavior. Encrypted mode fails
-  only when no provided secret authenticates the encrypted dashboard summary.
-  Plain mode records key stages as skipped and does not fail because there is no
-  key boundary.
-- `dashboard`: fail when the rendered dashboard cannot be inspected, its
-  detected mode conflicts with the configured artifact mode, its browser payload
-  contract is invalid, or its summary/chunks are not well formed.
-- `dashboard-and-retained`: include `dashboard` checks and fail when retained
-  `dashboard-data` workflow artifact continuity cannot be validated.
-- `full`: include dashboard, retained workflow artifact, and export checks.
-
-The default should preserve the current user-facing behavior while still
-emitting richer diagnostics. Template workflows can opt into stricter settings
-after the staged implementation and fixtures are stable.
+If stricter policies are added later, they should be workflow-maintainer presets
+rather than manual user prompts in template workflows. A future preset may say
+"fail unless the full diagnostic path passes", but it should not require users
+to understand each stage before running doctor.
 
 ## Scope By Mode
 
@@ -382,13 +413,17 @@ should be table-driven where possible.
 | `semantic_counts_valid` | encrypted, plain | Repo count, chunk count, or map count disagree | Dashboard is internally inconsistent | Add orphan chunk, duplicate map, or mismatched counts |
 | `ui_handoff_boundary_reached` | encrypted, plain | Earlier storage, encryption, or semantic stages failed | Doctor cannot rule out data-layer causes for UI failure | Run successful encrypted and plain fixtures and assert this stage passes only after prerequisite stages pass |
 | `browser_runtime_smoke_valid` | encrypted, plain | Optional browser smoke check fails after handoff | Data layer appears valid; failure is likely browser/runtime/UI | Future Playwright smoke test with intentionally broken runtime hook |
-| `workflow_artifact_restore_requested` | encrypted, plain | Retained workflow artifact restore skipped | Continuity was not checked by request | Run with restore source `skip` |
-| `workflow_artifact_restore_authorized` | encrypted, plain | Token lacks artifact read permission | Doctor could not inspect retained continuity | Run restore with insufficient token in a mocked GitHub API |
+| `workflow_artifact_restore_requested` | encrypted, plain | Retained workflow artifact restore skipped | Continuity was not checked by request | Run without a restored artifact path |
+| `workflow_artifact_restore_authorized` | encrypted, plain | Artifact restore step reported token or permission failure | Doctor could not inspect retained continuity, but the failure is platform/workflow scoped | Feed doctor restore-step metadata for insufficient `actions: read` permission |
 | `retained_artifact_found` | encrypted, plain | `dashboard-data` workflow artifact unavailable | Future collect/publish continuity cannot be checked | Run doctor without restored contents and no matching workflow artifact |
 | `retained_artifact_readable` | encrypted, plain | Restored workflow artifact contents are unreadable | Workflow artifact exists but restored contents cannot be inspected | Restore unreadable or malformed artifact contents |
 | `retained_artifact_decrypts` | encrypted | Retained workflow artifact cannot decrypt with current secret | Dashboard may work now, but retained history may be unrecoverable | Encrypt retained artifact with wrong key |
 | `retained_artifact_schema_valid` | encrypted, plain | Retained bundle missing manifest or CSV family | Future merge/render may fail | Remove manifest or required CSV file |
 | `retained_artifact_lineage_valid` | encrypted, plain | Lineage metadata unreadable or inconsistent | Active retention and incident reset continuity at risk | Corrupt lineage metadata |
+| `pages_configuration_found` | encrypted, plain | GitHub Pages is disabled or unavailable | Hosted dashboard may be absent even when dashboard data is valid | Mock Pages API disabled response or skip when no token is available |
+| `pages_source_valid` | encrypted, plain | Pages source does not match expected Actions deployment model | Deploy workflow may publish nowhere or publish stale content | Mock Pages source mismatch |
+| `pages_deployment_permission_valid` | encrypted, plain | Workflow token cannot deploy Pages | Hosted dashboard deployment can fail independently of dashboard data | Mock deploy permission/API denial |
+| `pages_latest_deployment_valid` | encrypted, plain | Latest Pages deployment failed or is pending | Hosted dashboard may be absent or stale | Mock failed or pending Pages deployment |
 | `export_manifest_found` | encrypted | Export manifest absent when export is expected | Export diagnostics cannot continue | Remove manifest from HTML |
 | `export_manifest_valid` | encrypted | Export manifest schema invalid | Browser export verification cannot run | Remove asset/hash fields |
 | `export_asset_found` | encrypted | Referenced ciphertext asset missing | User cannot export canonical CSV bundle | Delete export asset |
@@ -437,9 +472,10 @@ and errors should report stage names and bounded diagnostics only.
 
 The mode should fail the workflow when:
 
-- `doctor-strictness=key-only` and encrypted mode is configured or detected, but
-  no supplied secret authenticates the encrypted dashboard summary;
-- a requested strict check fails;
+- encrypted mode is configured or detected, but no supplied secret authenticates
+  the encrypted dashboard summary;
+- a future workflow-maintainer preset requests a stricter failure policy and one
+  of the preset's required diagnostic subjects fails;
 - no diagnostic target can be inspected.
 
 The mode may complete with warnings when:
@@ -497,15 +533,19 @@ Initial implemented scope:
 
 Deliberate deferrals:
 
-- `doctor-strictness` remains a follow-up action-contract change. It can remain
-  an action-level policy control without necessarily being exposed by generated
-  template workflows. The current behavior preserves the encrypted-mode failure
-  policy: encrypted doctor fails when no supplied secret authenticates the
-  rendered dashboard summary.
+- Strict failure presets remain a follow-up workflow-policy decision. The
+  diagnostic model now emits the information needed for stricter policies, but
+  the initial workflow behavior stays simple: encrypted doctor fails when no
+  supplied secret authenticates the rendered dashboard summary, and other
+  subjects report explicit statuses.
 - Automatic GitHub API restore for retained `dashboard-data` workflow artifacts
-  is not yet implemented. The current implementation inspects already-restored
-  retained contents when present and marks retained continuity stages as
-  `skipped` when no restored artifact path is available.
+  is not yet implemented, and may not be needed if template workflows use
+  explicit `actions/download-artifact` restore steps. The current implementation
+  inspects already-restored retained contents when present and marks retained
+  continuity stages as `skipped` when no restored artifact path is available.
+- Pages deployability preflight is not yet implemented. When added, it should be
+  a platform/workflow diagnostic subject and should not affect dashboard-secret
+  acceptance.
 - Browser runtime smoke testing remains outside the first doctor slice. The
   implemented `ui_handoff_boundary_reached` stage marks the line where
   encryption, storage, and data-contract checks have been ruled out.

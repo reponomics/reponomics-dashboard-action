@@ -4,6 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets
+.PHONY: build-template verify-template verify-workflow-classification template-smoke template-consumer-e2e publish-template-dry-run publish-template
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -19,6 +20,10 @@ RUNTIME_LOCK := requirements-runtime.txt
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --upgrade --no-header --quiet
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
+TEMPLATE_REMOTE ?= reponomics-dashboard
+TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
+ACTION_REPO ?= .
+ACTION_PYTHON ?= $(PYTHON)
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -90,6 +95,27 @@ validate-vendored-assets: install ## Validate vendored third-party assets
 
 update-vendored-assets: install ## Update vendored third-party assets from upstream package registries
 	$(PYTHON) scripts/update_vendored_assets.py
+
+build-template: install ## Build the clean generated template tree in dist/template/
+	$(PYTHON) scripts/build_template.py
+
+verify-template: install ## Verify dist/template/ against the template manifest
+	$(PYTHON) scripts/build_template.py --verify-only
+
+verify-workflow-classification: install ## Verify maintainer vs template workflow boundaries
+	$(PYTHON) scripts/verify_workflow_classification.py
+
+template-smoke: build-template ## Smoke-test ephemeral template publish and generated workflows
+	$(PYTHON) scripts/smoke_template_release.py --output dist/template
+
+template-consumer-e2e: build-template ## Run generated template consumers against the local action runtime
+	$(PYTHON) scripts/template_consumer_e2e.py --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
+
+publish-template-dry-run: build-template ## Show the generated template publish target without pushing
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)"
+
+publish-template: build-template ## Publish dist/template/ to the template repository main branch
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
 
 ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-runtime-lock validate-vendored-assets ## Run CI checks
 

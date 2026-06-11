@@ -1,0 +1,323 @@
+name: Set up Reponomics dashboard
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      privacy_mode:
+        description: "Privacy mode"
+        type: choice
+        required: true
+        default: strong
+        options:
+          # Encrypted artifacts and hosted dashboard; requires a generated high-entropy key.
+          - strong
+          # Encrypted artifacts and hosted dashboard; accepts any non-empty key.
+          - casual
+          # Plain retained CSV artifacts; private repositories only, no hosted Pages dashboard.
+          - plain
+      generate_html_dashboard:
+        description: "Publish hosted HTML dashboard after collection"
+        type: boolean
+        required: true
+        default: false
+      generate_readme:
+        description: "Generate README after collection (private repositories only)"
+        type: boolean
+        required: true
+        default: false
+      use_github_app:
+        description: "Advanced collection auth: use a user-owned GitHub App installation token"
+        type: boolean
+        required: true
+        default: false
+
+env:
+  RETENTION_DAYS: "90"
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Resolve setup modes
+        env:
+          PRIVACY_MODE: ${{ inputs.privacy_mode }}
+          GENERATE_HTML_DASHBOARD: ${{ inputs.generate_html_dashboard }}
+          GENERATE_README: ${{ inputs.generate_readme }}
+          USE_GITHUB_APP: ${{ inputs.use_github_app }}
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          set -euo pipefail
+
+          case "$PRIVACY_MODE" in
+            strong|casual|plain)
+              resolved_privacy_mode="$PRIVACY_MODE"
+              ;;
+            *)
+              echo "Unsupported privacy_mode input: $PRIVACY_MODE" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$resolved_privacy_mode" = "plain" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
+            {
+              echo "## Setup stopped"
+              echo
+              echo "\`privacy_mode=plain\` is only supported for private repositories."
+              echo "Use \`strong\` or \`casual\` for public repositories."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          if [ "$GENERATE_README" = "true" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
+            {
+              echo "## Setup stopped"
+              echo
+              echo "README dashboard generation is only supported for private repositories."
+              echo "Disable \`generate_readme\` for public repositories."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          collection_auth_mode="pat"
+          if [ "$USE_GITHUB_APP" = "true" ]; then
+            collection_auth_mode="github_app"
+          fi
+
+          {
+            echo "PRIVACY_MODE=$resolved_privacy_mode"
+            echo "GENERATE_HTML_DASHBOARD=$GENERATE_HTML_DASHBOARD"
+            echo "GENERATE_README=$GENERATE_README"
+            echo "USE_GITHUB_APP=$USE_GITHUB_APP"
+            echo "COLLECTION_AUTH_MODE=$collection_auth_mode"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate required secrets
+        env:
+          USE_GITHUB_APP: ${{ env.USE_GITHUB_APP }}
+          COLLECTION_TOKEN: ${{ secrets.COLLECTION_TOKEN }}
+          COLLECTION_APP_ID_VAR: ${{ vars.COLLECTION_APP_ID }}
+          COLLECTION_APP_ID_SECRET: ${{ secrets.COLLECTION_APP_ID }}
+          COLLECTION_APP_PRIVATE_KEY: ${{ secrets.COLLECTION_APP_PRIVATE_KEY }}
+          DASHBOARD_SECRET_DO_NOT_REPLACE: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+        run: |
+          set -euo pipefail
+
+          token_url="https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&target_name=$GITHUB_REPOSITORY_OWNER&expires_in=366&administration=read"
+          app_url="https://github.com/settings/apps/new"
+          key_doc_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/secure-dashboard-key.md"
+          privacy_matrix_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/privacy-configuration-matrix.md"
+
+          collection_app_id="${COLLECTION_APP_ID_VAR:-}"
+          if [ -z "$collection_app_id" ] && [ -n "${COLLECTION_APP_ID_SECRET:-}" ]; then
+            collection_app_id="${COLLECTION_APP_ID_SECRET:-}"
+          fi
+
+          if [ "$USE_GITHUB_APP" = "true" ]; then
+            if [ -z "$collection_app_id" ]; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "Advanced GitHub App mode is enabled but no app ID is configured."
+                echo "Set repository variable \`COLLECTION_APP_ID\` (or repository secret \`COLLECTION_APP_ID\`)"
+                echo "for your own GitHub App, then run setup again."
+                echo
+                echo "Create an app at [$app_url]($app_url), install it for the repositories"
+                echo "you want to collect, and grant repository \`Administration: read\`."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            if [ -z "${COLLECTION_APP_PRIVATE_KEY:-}" ]; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "Advanced GitHub App mode is enabled but \`COLLECTION_APP_PRIVATE_KEY\` is missing."
+                echo "Store your own app private key as repository secret \`COLLECTION_APP_PRIVATE_KEY\`,"
+                echo "then run setup again."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          else
+            if [ -z "${COLLECTION_TOKEN:-}" ]; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "[Create a fine-grained personal access token]($token_url)"
+                echo "with repository \`Administration: read\` for \`$GITHUB_REPOSITORY_OWNER\`."
+                echo "Choose **All repositories** for broad automatic discovery, or"
+                echo "**Only selected repositories** if you want to limit collection."
+                echo "If you choose selected repositories, keep \`config.yaml\` within"
+                echo "that token's repository access."
+                echo "Then save the token as repository secret \`COLLECTION_TOKEN\` and run setup again."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+
+            if ! GH_TOKEN="$COLLECTION_TOKEN" gh api rate_limit >/dev/null 2>&1; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "\`COLLECTION_TOKEN\` did not authenticate with the GitHub API."
+                echo "Check the token value and repository permissions, then run setup again."
+                echo
+                echo "If the token expired or has the wrong permissions,"
+                echo "[create a replacement fine-grained personal access token]($token_url)"
+                echo "with repository \`Administration: read\` for the repositories"
+                echo "this dashboard collects."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
+
+          if [ "$PRIVACY_MODE" = "strong" ] || [ "$PRIVACY_MODE" = "casual" ]; then
+            if [ -z "${DASHBOARD_SECRET_DO_NOT_REPLACE:-}" ]; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "\`privacy_mode=$PRIVACY_MODE\` needs a repository secret named \`DASHBOARD_SECRET_DO_NOT_REPLACE\`."
+                echo
+                echo "See [Secure Dashboard Key]($key_doc_url) for key generation options."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+
+            if [ "${#DASHBOARD_SECRET_DO_NOT_REPLACE}" -lt 40 ] && [ "$PRIVACY_MODE" = "strong" ]; then
+              {
+                echo "## Setup stopped"
+                echo
+                echo "\`DASHBOARD_SECRET_DO_NOT_REPLACE\` is not strong enough for \`privacy_mode=strong\`."
+                echo "Please generate a strong password following one of the methods described [here]($key_doc_url)."
+                echo
+                echo "Use \`privacy_mode=casual\` only if you explicitly accept"
+                echo "the risk of a targeted brute-force attack. See [here]($privacy_matrix_url) for more detail."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
+
+      - name: Write dashboard configuration
+        run: |
+          set -euo pipefail
+
+          mkdir -p .reponomics
+          : > .reponomics/setup-complete
+
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          config_path = Path("config.yaml")
+          text = config_path.read_text(encoding="utf-8")
+          values = {
+              "privacy_mode": os.environ["PRIVACY_MODE"],
+              "retention_days": os.environ["RETENTION_DAYS"],
+              "generate_html_dashboard": os.environ["GENERATE_HTML_DASHBOARD"].lower(),
+              "generate_readme": os.environ["GENERATE_README"].lower(),
+              "use_github_app": os.environ["USE_GITHUB_APP"].lower(),
+          }
+
+          for key, value in values.items():
+              replacement = f"{key}: {value}"
+              pattern = rf"^{re.escape(key)}\s*:.*$"
+              if re.search(pattern, text, flags=re.MULTILINE):
+                  text = re.sub(pattern, replacement, text, count=1, flags=re.MULTILINE)
+              else:
+                  if not text.endswith("\n"):
+                      text += "\n"
+                  text += f"{replacement}\n"
+
+          config_path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Write setup README
+        run: |
+          set -euo pipefail
+
+          if [ ! -f README.backup.md ] && [ -f README.md ]; then
+            cp README.md README.backup.md
+          fi
+
+          cat > README.md <<'MD'
+          # Reponomics Dashboard
+
+          This repository was generated from the [Reponomics Dashboard template repo](https://github.com/reponomics/reponomics-dashboard).
+
+          The Reponomics Dashboard provides users with a convenient, private, and cost-free way to store and aggregate key metrics about their GitHub repos. Because this data is private, we do not publish any metrics to the README for public repositories.
+
+          Reponomics may update managed local documentation under `docs/reponomics/` before future collect runs. To opt out before editing that directory yourself, set `allow_docs_sync: false` in `config.yaml`.
+
+          If you'd like to learn more about the Reponomics Dashboard and create one for yourself, check out our doc-site at [reponomics/reponomics](https://github.com/reponomics/reponomics), or view a demo dashboard [here](https://github.com/reponomics/reponomics-demo).
+
+          Thanks!
+          MD
+
+      - name: Summarize setup
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Reponomics setup configured"
+            echo
+            echo "- Setup marker: written to \`.reponomics/setup-complete\`"
+            echo "- Collection workflow: active after setup"
+            echo "- Incident reset workflow: active after setup"
+            echo "- Scheduled workflow keepalive: active after setup"
+            echo "- Hosted HTML dashboard generation: \`$GENERATE_HTML_DASHBOARD\`"
+            echo "- Privacy mode: \`$PRIVACY_MODE\`"
+            echo "- Collection auth mode: \`$COLLECTION_AUTH_MODE\`"
+            echo "- README generation: \`$GENERATE_README\`"
+            echo "- Artifact retention: \`$RETENTION_DAYS\` day(s)"
+            echo "- Managed docs sync: enabled by default; set \`allow_docs_sync: false\` in \`config.yaml\` to opt out"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo
+            echo "## Scheduled workflow keepalive"
+            echo
+            echo "GitHub documents automatic scheduled-workflow disablement"
+            echo "after 60 days without repository activity for inactive public repositories,"
+            echo "but inactive scheduled workflows"
+            echo "are an operational risk for any dashboard repository. Reponomics"
+            echo "enables a monthly keepalive workflow that updates"
+            echo "\`.reponomics/keepalive.md\` and tries to create a persistent"
+            echo "data safety reminder issue. This is a best-effort safeguard;"
+            echo "if scheduled workflows stop unexpectedly, download the latest"
+            echo "\`dashboard-data\` artifact before it expires, then re-enable"
+            echo "the workflows from the Actions tab."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$PRIVACY_MODE" != "plain" ]; then
+            {
+              echo
+              echo "## Manual GitHub Pages step"
+              echo
+              echo "To host the encrypted dashboard, open this repository's"
+              echo "**Settings -> Pages** page and set **Build and deployment -> Source**"
+              echo "to **GitHub Actions**. Do not grant Pages or Administration write"
+              echo "permissions to \`COLLECTION_TOKEN\` for this setup step."
+              echo
+              echo "If GitHub suggests Pages workflow templates, skip them."
+              echo "The Reponomics publish workflow already uploads and deploys"
+              echo "the Pages artifact, and verifies this existing Pages setting"
+              echo "during deployment."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit setup changes
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md README.backup.md config.yaml .reponomics/setup-complete
+          git diff --cached --quiet || git commit -m "chore: set up Reponomics dashboard [skip ci]"
+          git push

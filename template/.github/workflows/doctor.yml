@@ -1,0 +1,145 @@
+name: Diagnose Reponomics dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: "Workflow run ID containing the dashboard and dashboard-data artifacts to inspect"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  RETENTION_DAYS: "90"
+
+jobs:
+  doctor:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Record diagnostic target
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        run: |
+          {
+            echo "## Reponomics dashboard doctor"
+            echo
+            echo "Restoring dashboard artifacts from workflow run \`${{ inputs.artifact_run_id }}\`."
+            echo
+            echo "If an artifact download step fails, that is a workflow artifact restore problem,"
+            echo "not evidence that \`DASHBOARD_SECRET_DO_NOT_REPLACE\` or \`COMPARISON_SECRET\` is wrong."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore encrypted dashboard HTML artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE != 'plain'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: html-dashboard-encrypted
+          path: docs
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+
+      - name: Restore plain dashboard HTML artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE == 'plain'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: html-dashboard-plain
+          path: docs
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+
+      - name: Normalize restored dashboard HTML
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        run: |
+          set -euo pipefail
+
+          if [ -f docs/index.html ]; then
+            exit 0
+          fi
+
+          archive="$(find docs -maxdepth 2 -type f \( -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' \) | head -n 1)"
+          if [ -n "$archive" ]; then
+            mkdir -p .reponomics/doctor-pages
+            case "$archive" in
+              *.tar.gz|*.tgz) tar -xzf "$archive" -C .reponomics/doctor-pages ;;
+              *.tar) tar -xf "$archive" -C .reponomics/doctor-pages ;;
+            esac
+            cp -R .reponomics/doctor-pages/. docs/
+          fi
+
+          if [ ! -f docs/index.html ]; then
+            {
+              echo "Restored dashboard artifact did not contain \`index.html\`."
+              echo
+              echo "Restored files:"
+              echo
+              echo '```text'
+              find docs -maxdepth 3 -type f | sort
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Restore encrypted retained dashboard-data artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE != 'plain'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dashboard-data
+          path: .dashboard-data-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+
+      - name: Restore plain retained dashboard-data artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE == 'plain'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dashboard-data
+          path: data
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+
+      - name: Explain artifact restore failure
+        if: failure() && env.REPONOMICS_SETUP_COMPLETE == 'true'
+        run: |
+          {
+            echo "## Reponomics dashboard doctor could not restore artifacts"
+            echo
+            echo "Doctor did not run because an earlier artifact download or HTML normalization step failed."
+            echo
+            echo "This is not evidence that \`DASHBOARD_SECRET_DO_NOT_REPLACE\` or \`COMPARISON_SECRET\` is wrong."
+            echo
+            echo "Inspect the failed restore step above and check:"
+            echo
+            echo "- the workflow run ID is \`${{ inputs.artifact_run_id }}\` and belongs to this repository;"
+            echo "- the producing run completed and uploaded the expected dashboard artifacts;"
+            echo "- the artifact has not expired under the configured retention period;"
+            echo "- this workflow has \`actions: read\` permission;"
+            echo "- GitHub Actions artifact download service was available for the run."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Run dashboard doctor
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: doctor
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          comparison-secret: ${{ secrets.COMPARISON_SECRET }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
+          generate-readme: ${{ env.GENERATE_README }}

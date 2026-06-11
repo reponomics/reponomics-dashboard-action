@@ -1,0 +1,57 @@
+# Reponomics configuration reference
+#
+# Copy only the settings you want to change into config.yaml. This file is a
+# product-owned example; config.yaml is user-owned.
+#
+# Compatible action releases may add new optional keys here. If your config.yaml
+# does not mention an optional key, the runtime uses its documented default.
+
+# Setup and output behavior ---------------------------------------------------
+#
+# These keys are written by the setup workflow and may be edited afterward.
+# Public repositories may not use plain privacy mode or README dashboard output.
+
+privacy_mode: strong
+retention_days: 90
+generate_html_dashboard: false
+generate_readme: false
+use_github_app: false
+
+# Repository selection -------------------------------------------------------
+
+# Maximum number of repositories to track.
+max_repos: 200
+
+# If non-empty, track exactly these repositories and ignore all other selection
+# settings.
+include_only:
+  # - owner/repo-name
+
+# Repositories that must always be tracked when accessible.
+include:
+  # - owner/important-repo
+
+# Repositories that must never be tracked automatically.
+exclude:
+  # - owner/noisy-repo
+
+# Fill remaining slots with other eligible repositories.
+include_others: true
+
+# Allow repositories created after the initial automatic-selection baseline to
+# enter the automatic pool.
+include_new: false
+
+# Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
+# them.
+include_private: true
+
+# Managed documentation sync -----------------------------------------------
+
+# Reponomics may update docs/reponomics/ before collection after action upgrades.
+# Set this to false before editing that directory yourself.
+allow_docs_sync: true
+
+# No data-family switches are currently supported. The runtime always collects
+# the v1 traffic, referrer, path, and repository growth datasets for the
+# repositories selected above.

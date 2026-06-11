@@ -1,0 +1,210 @@
+name: Collect And Publish Reponomics Dashboard
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      skip_collect:
+        description: "Republish existing retained data without collecting"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reponomics-collect-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRIVACY_MODE: "strong"
+  RETENTION_DAYS: "90"
+  GENERATE_HTML_DASHBOARD: "false"
+  GENERATE_README: "false"
+  USE_GITHUB_APP: "false"
+
+jobs:
+  docs-sync:
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: reponomics-docs-sync-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Sync managed Reponomics docs
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: docs-sync
+          github-token: ${{ github.token }}
+
+  collect:
+    needs: docs-sync
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Refuse incomplete key rotation
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        env:
+          DASHBOARD_NEXT_SECRET: ${{ secrets.DASHBOARD_NEXT_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${DASHBOARD_NEXT_SECRET:-}" ]; then
+            {
+              echo "## Collection stopped"
+              echo
+              echo "\`DASHBOARD_NEXT_SECRET\` is still set."
+              echo "Finish key rotation by replacing \`DASHBOARD_SECRET_DO_NOT_REPLACE\`"
+              echo "with the new key, then delete \`DASHBOARD_NEXT_SECRET\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Mint GitHub App installation token (advanced)
+        id: collection_app_token
+        if: ${{ env.REPONOMICS_SETUP_COMPLETE == 'true' && env.USE_GITHUB_APP == 'true' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.COLLECTION_APP_ID || secrets.COLLECTION_APP_ID }}
+          private-key: ${{ secrets.COLLECTION_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Resolve collection token
+        id: resolve_collection_token
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        env:
+          USE_GITHUB_APP: ${{ env.USE_GITHUB_APP }}
+          COLLECTION_TOKEN: ${{ secrets.COLLECTION_TOKEN }}
+          APP_COLLECTION_TOKEN: ${{ steps.collection_app_token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          if [ "$USE_GITHUB_APP" = "true" ]; then
+            if [ -z "${APP_COLLECTION_TOKEN:-}" ]; then
+              {
+                echo "## Collection stopped"
+                echo
+                echo "Advanced GitHub App collection mode is enabled, but no installation token was minted."
+                echo "Set \`vars.COLLECTION_APP_ID\` and \`secrets.COLLECTION_APP_PRIVATE_KEY\`,"
+                echo "then run collection again."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "collection_token=$APP_COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "${COLLECTION_TOKEN:-}" ]; then
+            {
+              echo "## Collection stopped"
+              echo
+              echo "Missing \`COLLECTION_TOKEN\` secret for PAT-based collection mode."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "collection_token=$COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Collect retained dashboard data
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: collect
+          collection-token: ${{ steps.resolve_collection_token.outputs.collection_token }}
+          use-github-app: ${{ env.USE_GITHUB_APP }}
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
+          generate-readme: ${{ env.GENERATE_README }}
+
+  publish:
+    needs: collect
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Publish dashboard outputs
+        if: >-
+          env.REPONOMICS_SETUP_COMPLETE == 'true' &&
+          (env.GENERATE_HTML_DASHBOARD == 'true' || env.GENERATE_README == 'true')
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: publish
+          artifact-run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
+          generate-readme: ${{ env.GENERATE_README }}
+
+  republish:
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.skip_collect }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Republish dashboard outputs
+        if: >-
+          env.REPONOMICS_SETUP_COMPLETE == 'true' &&
+          (env.GENERATE_HTML_DASHBOARD == 'true' || env.GENERATE_README == 'true')
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: publish
+          require-collect-provenance: "true"
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
+          generate-readme: ${{ env.GENERATE_README }}

@@ -103,3 +103,66 @@ reponomics-dashboard-action/
 reponomics-dashboard-action@v0.22.1
 reponomics-dashboard@v0.9.1
 ```
+
+---
+
+## Migration Log
+
+### 2026-06-11 Initial Transfer
+
+- Copied the dashboard template source into this repository at `template/`.
+- Copied the template generator and release harness scripts into `scripts/`:
+  - `build_template.py`
+  - `publish_generated_repo.py`
+  - `smoke_template_release.py`
+  - `template_consumer_e2e.py`
+  - `verify_workflow_classification.py`
+  - `sync_action_release.py` temporarily, as a compatibility/helper module for transferred tests.
+- Copied the template manifest files:
+  - `template-manifest.yml`
+  - `template-action-release.yml`
+- Copied the generated-template tests:
+  - `tests/test_generated_repos.py`
+  - `tests/test_template_setup_acceptance.py`
+- Added action-repo Make targets for the old dashboard-dev gates:
+  - `build-template`
+  - `verify-template`
+  - `verify-workflow-classification`
+  - `template-smoke`
+  - `template-consumer-e2e`
+  - `publish-template-dry-run`
+  - `publish-template`
+- Changed `scripts/template_consumer_e2e.py` so the default action runtime is the current repository, not a sibling checkout.
+- Added `.github/workflows/publish-template.yml` so the action repo can publish the generated template to `reponomics-dashboard`.
+- Removed the `reponomics-dashboard-dev` repository-dispatch handoff from `.github/workflows/release-please.yml`.
+
+### Design Choices
+
+- This pass prefers copy-over-cleanup. `reponomics-dashboard-dev` was not modified.
+- The copied files are intentionally left in their old, boring paths for now. That keeps the proof-of-concept focused on co-location instead of layout design.
+- `sync_action_release.py` remains as a temporary compatibility layer. It is no longer wired as a cross-repo release flow, but some moved tests still exercise its useful validation helpers.
+- `template/docs/reponomics/` is still a copied snapshot. The next cleanup should render this snapshot from `dashboard_action/runtime/managed_docs/` during template build.
+- File-level `ruff: noqa: ISC002` was added to transferred files that use dashboard-dev's implicit multiline string style. This is a rough-migration concession, not the desired final style.
+
+### Verified Gates
+
+- `make build-template`
+- `make verify-template`
+- `make verify-workflow-classification`
+- `make template-smoke`
+- `make template-consumer-e2e`
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 venv/bin/python -m pytest tests/test_generated_repos.py tests/test_template_setup_acceptance.py -v`
+- `make test`
+- `make lint`
+- `make type-check`
+- `make validate-workflows`
+- `make validate-action-pins`
+
+### Remaining Rough Edges
+
+- Replace `template-action-release.yml` with first-class local template/action compatibility metadata.
+- Replace `sync_action_release.py` with a local template contract checker that validates against the current source tree instead of released GitHub state.
+- Generate `template/docs/reponomics/` from the local managed-docs bundle during `build-template`.
+- Decide how the two product release versions are represented in Release Please and GitHub Releases.
+- Tighten CI so template gates run in the action repo at the right cost level.
+- Decide whether local `publish-template-dry-run` should require a preconfigured `reponomics-dashboard` remote or accept a full remote URL.

@@ -1,0 +1,21 @@
+{
+  "action_repository": "reponomics/reponomics-dashboard-action",
+  "action_version": "0.22.1",
+  "files": {
+    "README.md": "aa7532476dee4855998402a6afd4e6f17671ebb299507aa657bcbe49b4031178",
+    "configuration.md": "0700ce86a8fcf73dcbdff221b9a1601de287f3d816bebd34c02d0428f48b0803",
+    "faq.md": "baabaf3219b10a7c4e121d9d549551521212d2c1e46e58fe85a85fbbdbb5bd60",
+    "privacy-and-artifacts.md": "b3cb94622ccde942cdb73d8f7602cc9f192db66c4b8193c62cbe9d409d4c470b",
+    "privacy-configuration-matrix.md": "3ec8d8005c44e09a917c5f5d796d939359304b30a0a382ee3ecc5f2e8939ce6f",
+    "provenance.md": "e4f40d83f63fef05a42259185bf742e9f2bb6169380fa0a037a00787345b7514",
+    "repository-guide.md": "6ae032fff0c9574f90c2cc40a6e62e37c3c1b8aa8ee41837cf62413d1e60edd1",
+    "secure-dashboard-key.md": "7b031f010518814aca28ccc0373c5ed6e3bbdad937a425bb695048ffc4408b7a",
+    "security.md": "bb33b2152d93f2967a08da35b01f1b0dc34b3903bcff6e4b485352c188605462",
+    "support.md": "b4be664591c9fdf5473fc9f176f7de4334106ca686c3a6cd2ac013fe1bf396cf",
+    "trust-boundary.md": "075aa272e1aacc70d6952d8931bd91b628730a6a0af56cb571c17359cfa81b9a",
+    "upgrade.md": "f443f7602c9703ce091fd73d1e4ddf17837b31bb618c8e0510ab389e19a3d1c4"
+  },
+  "managed_namespace": "docs/reponomics",
+  "schema_version": 1,
+  "updated_at": "2026-06-11T13:51:05Z"
+}

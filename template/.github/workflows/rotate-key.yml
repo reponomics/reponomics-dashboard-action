@@ -1,0 +1,54 @@
+name: Rotate Reponomics dashboard key
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_rotation:
+        description: "I created DASHBOARD_NEXT_SECRET, saved the new key, and did not replace DASHBOARD_SECRET_DO_NOT_REPLACE"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+  pages: write
+  id-token: write
+
+env:
+  RETENTION_DAYS: "90"
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Validate rotation request
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        env:
+          CONFIRM_ROTATION: ${{ inputs.confirm_rotation }}
+        run: |
+          set -euo pipefail
+
+          if [ "$CONFIRM_ROTATION" != "true" ]; then
+            echo "Rotation was not confirmed."
+            exit 1
+          fi
+
+      - name: Rotate dashboard key
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: rotate-key
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          dashboard-next-secret: ${{ secrets.DASHBOARD_NEXT_SECRET }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          generate-readme: ${{ env.GENERATE_README }}

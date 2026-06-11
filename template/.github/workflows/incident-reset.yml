@@ -1,0 +1,71 @@
+name: Reset Reponomics dashboard incident history
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_mode:
+        description: "Type INCIDENT_RESET_CONFIRMED"
+        type: string
+        required: true
+      confirm_purge:
+        description: "Type PURGE_OLD_HISTORY_CONFIRMED"
+        type: string
+        required: true
+      confirm_irreversible:
+        description: "Type IRREVERSIBLE_ACTION_CONFIRMED"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PRIVACY_MODE: "strong"
+  RETENTION_DAYS: "90"
+
+jobs:
+  reset:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Write incident reset warning
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        run: |
+          {
+            echo "## Incident reset"
+            echo
+            echo "Before relying on this purge for a serious dashboard-key exposure,"
+            echo "make this repository private and disable any published Pages dashboard."
+            echo
+            echo "This workflow re-encrypts retained dashboard data with"
+            echo "\`DASHBOARD_NEXT_SECRET\`, uploads a fresh \`dashboard-data\` artifact,"
+            echo "then deletes old workflow runs associated with prior"
+            echo "\`dashboard-data\` artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reset dashboard incident history
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: incident-reset
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
+          dashboard-next-secret: ${{ secrets.DASHBOARD_NEXT_SECRET }}
+          privacy-mode: ${{ env.PRIVACY_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          incident-confirm-mode: ${{ inputs.confirm_mode }}
+          incident-confirm-purge: ${{ inputs.confirm_purge }}
+          incident-confirm-irreversible: ${{ inputs.confirm_irreversible }}

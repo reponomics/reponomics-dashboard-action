@@ -138,7 +138,7 @@ def _github_token() -> str:
 
 def _request_headers(*, accept: str | None = None) -> dict[str, str]:
     headers = {
-        "User-Agent": "reponomics-dashboard-dev-action-release-sync",
+        "User-Agent": "reponomics-dashboard-action-template-contract",
     }
     if accept:
         headers["Accept"] = accept

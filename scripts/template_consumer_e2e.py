@@ -81,7 +81,7 @@ def build_config(mode):
         "incident_confirm_irreversible": "",
         "action_ref": "template-consumer-e2e",
         "action_repository": "reponomics/reponomics-dashboard-action",
-        # Compatibility across action revisions used by dashboard-dev CI.
+        # Compatibility across action revisions used by the template contract tests.
         "use_github_app": False,
         "allow_docs_sync": True,
         "update_notices": False,

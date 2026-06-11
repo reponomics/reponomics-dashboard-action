@@ -10,7 +10,9 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`osv-scanner.yml`](osv-scanner.yml) runs OSV-Scanner recursively and uploads SARIF to GitHub code scanning. The workflow inlines the scanner, reporter, artifact upload, and SARIF upload steps so this repository's full-SHA action-pinning policy applies to every imported action.
 
-- [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It uses the release app token so release-created events can trigger downstream automation, moves the floating major/minor action tags after a release is created, and dispatches `reponomics-dashboard-dev` to open the reviewed template action-version sync PR.
+- [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It uses the release app token and moves the floating major/minor action tags after a release is created.
+
+- [`publish-template.yml`](publish-template.yml) builds the generated dashboard template from this repository and publishes it to `reponomics-dashboard`. It keeps the generated template as a release artifact while leaving template source, tests, and release tooling in this repository.
 
 - [`sbom-provenance.yml`](sbom-provenance.yml) generates a repository SPDX SBOM and creates release source/SBOM attestations for release and manual runs. Release asset upload is explicitly disabled because immutable releases cannot be mutated after publication, and dependency snapshot upload is disabled so the third-party SBOM action runs with a read-only job token.
 

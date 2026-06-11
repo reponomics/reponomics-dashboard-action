@@ -1,4 +1,4 @@
-"""Verify workflow classification boundaries for dashboard-dev vs template."""
+"""Verify maintainer and generated-template workflow classification boundaries."""
 # ruff: noqa: ISC002
 
 from __future__ import annotations

@@ -112,6 +112,13 @@ def test_runtime_steps_execute_dashboard_action_as_module() -> None:
         assert "dashboard_action/run.py" not in command
 
 
+def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
+    workflow = Path(".github/workflows/release-please.yml").read_text(encoding="utf-8")
+
+    assert "reponomics-dashboard-dev" not in workflow
+    assert "repository_dispatch" not in workflow
+
+
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:
     step = _step_by_uses("actions/configure-pages@")
 

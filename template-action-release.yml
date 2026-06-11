@@ -1,6 +1,0 @@
-schema_version: 1
-repository: reponomics/reponomics-dashboard-action
-tag: v0.22.1
-target_commitish: 0d52fdc270c69e7df8d37bff6ec16abc03ebd1bd
-release_url: https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.22.1
-published_at: "2026-06-11T13:51:05Z"

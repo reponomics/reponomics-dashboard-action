@@ -9,10 +9,13 @@ from typing import Any
 
 import yaml
 
-from scripts import build_template
-
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import build_template  # noqa: E402
+
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 TEMPLATE_WORKFLOW_DIR = ROOT / "template" / ".github" / "workflows"
 MANIFEST_PATH = ROOT / "template-manifest.yml"

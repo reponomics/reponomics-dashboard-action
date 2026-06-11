@@ -7,6 +7,7 @@ import argparse
 import fnmatch
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,11 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import template_contract  # noqa: E402
+
 DEFAULT_MANIFEST = ROOT / "template-manifest.yml"
 DEFAULT_OUTPUT = ROOT / "dist" / "template"
 TEMPLATE_SOURCE_PREFIX = Path("template")
@@ -164,6 +170,12 @@ def build_template(
     for source, target in iter_include_file_entries(manifest):
         _copy_path(ROOT / source, output_dir / target)
 
+    contract = template_contract.validate_local_contract(ROOT)
+    template_contract.write_managed_docs_snapshot(
+        output_dir / contract.managed_docs_namespace,
+        contract=contract,
+    )
+
     verify_template(output_dir, manifest_path)
     return output_dir
 
@@ -204,6 +216,13 @@ def verify_template(
     if leaks:
         formatted = "\n".join(f"  - {path}" for path in sorted(set(leaks)))
         raise TemplateBuildError(f"Forbidden paths found in template output:\n{formatted}")
+
+    contract = template_contract.validate_local_contract(ROOT)
+    template_contract.verify_managed_docs_snapshot(
+        output_dir / contract.managed_docs_namespace,
+        contract=contract,
+    )
+    template_contract.verify_template_refs(output_dir, contract=contract)
 
     commit = _git_value("rev-parse", "--short", "HEAD")
     print(

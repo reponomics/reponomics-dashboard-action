@@ -166,3 +166,70 @@ reponomics-dashboard@v0.9.1
 - Decide how the two product release versions are represented in Release Please and GitHub Releases.
 - Tighten CI so template gates run in the action repo at the right cost level.
 - Decide whether local `publish-template-dry-run` should require a preconfigured `reponomics-dashboard` remote or accept a full remote URL.
+
+### 2026-06-11 Local Template Contract
+
+- Replaced the temporary `template-action-release.yml` acceptance file with
+  `template-contract.yml`.
+- Removed `scripts/sync_action_release.py`; its useful local checks now live in
+  `scripts/template_contract.py`.
+- Stopped maintaining `template/docs/reponomics/` as a checked-in source
+  snapshot. `scripts/build_template.py` now writes the generated
+  `docs/reponomics/` tree from `dashboard_action/runtime/managed_docs/`.
+- Kept the product boundary explicit: the template contract owns
+  `template_version`, default compatible action ref, and minimum action version;
+  the action version remains owned by the action package/runtime metadata.
+
+### Updated Rough Edges
+
+- Decide how the two product release versions are represented in Release Please
+  and GitHub Releases.
+- Add compatibility fixtures for older template contracts once there are
+  published template releases to support.
+- Tighten CI so template gates run in the action repo at the right cost level.
+- Decide whether local `publish-template-dry-run` should require a preconfigured
+  `reponomics-dashboard` remote or accept a full remote URL.
+
+### Current State After Contract Cleanup
+
+The action repository now contains the development source for two related but
+separately versioned products:
+
+- Action product: `action.yml`, `dashboard_action/`, runtime managed-docs
+  bundle, action CI, and action release metadata. Its version remains the action
+  runtime/package version.
+- Template product: `template/`, `template-manifest.yml`,
+  `template-contract.yml`, template build/publish scripts, and template tests.
+  Its version is `template-contract.yml`'s `template_version`.
+
+`scripts/build_template.py` copies the template source tree into `dist/template`
+and then overlays `docs/reponomics/` from
+`dashboard_action/runtime/managed_docs/`. The checked-in template source no
+longer contains a second managed-docs snapshot. Generated template repositories
+still receive `docs/reponomics/` and its manifest.
+
+The old cross-repo acceptance mechanism is gone from this source tree:
+
+- `template-action-release.yml` was removed.
+- `scripts/sync_action_release.py` was removed.
+- `scripts/template_contract.py` now validates the local template/action
+  contract, action metadata required by template workflows, generated
+  managed-docs snapshots, and stale executable action references in the
+  generated template surface.
+
+The intended compatibility model is asymmetric:
+
+- Once users copy the generated template, assume that template is durable and
+  may not be regenerated in place.
+- The action is the ongoing distribution channel for runtime fixes,
+  enhancements, and managed-doc updates.
+- Therefore, future action releases must remain compatible with previously
+  published template contracts within their declared compatible action major.
+- Future template releases may depend on newer action capabilities, but old
+  templates must not depend on future template regeneration.
+
+The current implementation preserves that separation, but it is still the first
+co-located shape. The next release-design work should add fixtures for old
+template contracts before there are public users, so action compatibility can be
+tested against concrete historical template surfaces rather than only the
+current generated template.

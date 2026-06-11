@@ -8,8 +8,10 @@ description: >
   project without that marker so generated root metadata is visibly
   non-authoritative in this development repository. String entries outside
   template/ are copied to the same relative path. Use source/target mappings only
-  for true outliers. Anything not listed here is maintainer, demo, cache, or
-  internal source material.
+  for true outliers. The docs/reponomics/ managed-docs snapshot is generated
+  during the template build from the local action bundle, not maintained as a
+  second source tree under template/. Anything not listed here is maintainer,
+  demo, cache, or internal source material.
 
 include:
   - template
@@ -49,6 +51,7 @@ forbidden:
   - scripts
   - template
   - template-action-release.yml
+  - template-contract.yml
   - template-manifest.yml
   - tests
   - vendor

@@ -1,12 +1,9 @@
 """Tests for generated Reponomics dashboard repository outputs."""
 # ruff: noqa: ISC002
 
-import io
 import hashlib
 import json
 import re
-import urllib.error
-from email.message import Message
 from pathlib import Path
 
 import pytest
@@ -14,7 +11,7 @@ import yaml
 
 from scripts import build_template
 from scripts import publish_generated_repo
-from scripts import sync_action_release
+from scripts import template_contract
 from scripts import template_consumer_e2e
 from scripts import verify_workflow_classification
 
@@ -115,18 +112,18 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     output = tmp_path / "template"
 
     build_template.build_template(output)
-    release = sync_action_release.load_manifest()
+    contract = template_contract.load_contract()
 
     docs_root = output / "docs" / "reponomics"
     readme = (docs_root / "README.md").read_text(encoding="utf-8")
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
 
     assert "{{ACTION_VERSION}}" not in readme
-    assert f"Generated for Reponomics Dashboard Action {release.version}." in readme
+    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
-    assert manifest["action_repository"] == release.repository
-    assert manifest["action_version"] == release.version
-    assert manifest["updated_at"] == release.published_at
+    assert manifest["action_repository"] == contract.action_repository
+    assert manifest["action_version"] == contract.action_version
+    assert manifest["updated_at"]
     expected_files = {
         path.relative_to(docs_root).as_posix(): hashlib.sha256(
             path.read_text(encoding="utf-8").encode("utf-8")
@@ -175,6 +172,7 @@ def test_template_manifest_excludes_action_owned_runtime(tmp_path):
         "vendor",
         "template",
         "template-action-release.yml",
+        "template-contract.yml",
         "docs/GENERATED_REPOSITORY_MODEL.md",
         "docs/FAQ.md",
         "docs/PROVENANCE.md",
@@ -194,7 +192,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     output = tmp_path / "template"
 
     build_template.build_template(output)
-    release = sync_action_release.load_manifest()
+    contract = template_contract.load_contract()
 
     workflows = output / ".github" / "workflows"
     collect_publish = (workflows / "collect-and-publish.yml").read_text(encoding="utf-8")
@@ -210,7 +208,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     incident_reset_workflow = yaml.safe_load(incident_reset)
     doctor_workflow = yaml.safe_load(doctor)
 
-    action_ref = f"uses: {release.repository}@{release.major_tag}"
+    action_ref = f"uses: {contract.action_repository}@{contract.default_action_ref}"
     html_env = 'GENERATE_HTML_DASHBOARD: "false"'
     assert "skip_collect:" in collect_publish
     assert "docs-sync:" in collect_publish
@@ -436,20 +434,22 @@ def test_config_documents_managed_docs_opt_out():
         assert "docs/reponomics/" in text
 
 
-def test_action_release_manifest_and_metadata_contract():
-    release = sync_action_release.load_manifest()
+def test_template_contract_and_action_metadata_contract():
+    contract = template_contract.validate_local_contract()
 
-    assert release.repository == sync_action_release.ACTION_REPOSITORY
-    assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", release.tag)
-    assert re.fullmatch(r"[0-9a-f]{40}", release.target_commitish)
-    sync_action_release.validate_action_metadata(ACTION_YML_FIXTURE)
+    assert contract.action_repository == template_contract.ACTION_REPOSITORY
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.action_version)
+    assert contract.template_version != contract.action_version
+    assert contract.default_action_ref == f"v{contract.compatible_action_major}"
+    assert contract.min_action_version <= contract.action_version
+    template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
 
 
-def test_action_release_sync_does_not_manage_decision_records():
+def test_template_contract_does_not_scan_decision_records_as_managed_docs():
     adr_path = "docs/adr/008-template-and-generated-output-assurance.md"
     adr_text = Path(adr_path).read_text(encoding="utf-8")
 
-    assert adr_path not in sync_action_release.MANAGED_TEXT_PATHS
     assert "reponomics/reponomics-dashboard-action@v" not in adr_text
 
 
@@ -468,149 +468,45 @@ def test_template_consumer_e2e_defaults_to_local_action_repo():
     assert template_consumer_e2e.DEFAULT_ACTION_REPO == Path.cwd()
 
 
+def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
+    contract = template_contract.load_contract()
+    docs_root = tmp_path / "docs" / "reponomics"
 
-def test_action_release_requests_use_github_token(monkeypatch):
-    monkeypatch.setenv("GITHUB_TOKEN", "ghs_primary")
-    monkeypatch.setenv("GH_TOKEN", "ghs_fallback")
-
-    headers = sync_action_release._request_headers(accept="application/vnd.github+json")
-
-    assert headers["Authorization"] == "Bearer ghs_primary"
-    assert headers["Accept"] == "application/vnd.github+json"
-    assert headers["X-GitHub-Api-Version"] == "2022-11-28"
-
-
-def test_action_release_requests_fall_back_to_gh_token(monkeypatch):
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-    monkeypatch.setenv("GH_TOKEN", "ghs_fallback")
-
-    headers = sync_action_release._request_headers()
-
-    assert headers["Authorization"] == "Bearer ghs_fallback"
-
-
-def test_action_release_http_errors_include_rate_limit_headers():
-    headers = Message()
-    headers["x-ratelimit-resource"] = "core"
-    headers["x-ratelimit-limit"] = "60"
-    headers["x-ratelimit-remaining"] = "0"
-    headers["x-ratelimit-reset"] = "1781029999"
-    headers["x-github-request-id"] = "ABC1:DEF2:12345"
-    error = urllib.error.HTTPError(
-        "https://api.github.com/repos/example/repo/git/trees/deadbeef?recursive=1",
-        403,
-        "rate limit exceeded",
-        headers,
-        io.BytesIO(b'{"message":"API rate limit exceeded"}'),
+    template_contract.write_managed_docs_snapshot(
+        docs_root,
+        contract=contract,
+        updated_at="2026-05-31T05:19:33Z",
     )
 
-    message = sync_action_release._format_http_error(error.url, error)
-
-    assert "HTTP 403 rate limit exceeded" in message
-    assert "resource=core" in message
-    assert "remaining=0" in message
-    assert "request_id=ABC1:DEF2:12345" in message
-    assert "API rate limit exceeded" in message
-
-
-def test_action_release_sync_rewrites_refs_and_status(tmp_path):
-    release = sync_action_release.ActionRelease(
-        repository=sync_action_release.ACTION_REPOSITORY,
-        tag="v0.16.0",
-        target_commitish="a" * 40,
-        release_url="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.16.0",
-        published_at="2026-05-31T05:19:33Z",
-    )
-    old_tag = "v0." + "15.0"
-    readme = tmp_path / "README.md"
-    readme.write_text(
-        f"Status: current for action `{old_tag}`.\n"
-        f"uses: reponomics/reponomics-dashboard-action@{old_tag}\n"
-        f'  REPONOMICS_ACTION_REF: "{old_tag}"\n'
-        f'  REPONOMICS_ACTION_SHA: "{"b" * 40}"\n',
-        encoding="utf-8",
-    )
-
-    sync_action_release.sync_release(tmp_path, release, ACTION_YML_FIXTURE)
-
-    assert old_tag not in readme.read_text(encoding="utf-8")
-    assert "reponomics-dashboard-action@v0" in readme.read_text(encoding="utf-8")
-    assert "reponomics-dashboard-action@v0.16.0" not in readme.read_text(encoding="utf-8")
-    assert 'REPONOMICS_ACTION_REF: "v0.16.0"' in readme.read_text(encoding="utf-8")
-    assert f'REPONOMICS_ACTION_SHA: "{release.target_commitish}"' in readme.read_text(
-        encoding="utf-8"
-    )
-    assert sync_action_release.load_manifest(tmp_path).tag == "v0.16.0"
-
-
-def test_action_release_sync_writes_managed_docs_snapshot(tmp_path):
-    release = sync_action_release.ActionRelease(
-        repository=sync_action_release.ACTION_REPOSITORY,
-        tag="v0.16.0",
-        target_commitish="a" * 40,
-        release_url="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.16.0",
-        published_at="2026-05-31T05:19:33Z",
-    )
-    bundle = {
-        "README.md": "Generated for {{ACTION_VERSION}}.\n",
-        "nested/topic.md": "Action {{ACTION_VERSION}}\n",
-    }
-
-    sync_action_release.sync_release(
-        tmp_path,
-        release,
-        ACTION_YML_FIXTURE,
-        managed_docs_bundle=bundle,
-    )
-
-    docs_root = tmp_path / "template" / "docs" / "reponomics"
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
-    assert (docs_root / "README.md").read_text(encoding="utf-8") == (
-        "Generated for 0.16.0.\n"
-    )
-    assert (docs_root / "nested" / "topic.md").read_text(encoding="utf-8") == (
-        "Action 0.16.0\n"
-    )
+    readme = (docs_root / "README.md").read_text(encoding="utf-8")
+    assert "{{ACTION_VERSION}}" not in readme
+    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
-    assert manifest["action_version"] == "0.16.0"
-    assert manifest["updated_at"] == release.published_at
-    assert sorted(manifest["files"]) == ["README.md", "nested/topic.md"]
+    assert manifest["action_repository"] == contract.action_repository
+    assert manifest["action_version"] == contract.action_version
+    assert manifest["updated_at"] == "2026-05-31T05:19:33Z"
+    assert "README.md" in manifest["files"]
 
-    sync_action_release.verify_release(
-        tmp_path,
-        release,
-        ACTION_YML_FIXTURE,
-        managed_docs_bundle=bundle,
-    )
+    template_contract.verify_managed_docs_snapshot(docs_root, contract=contract)
     (docs_root / "README.md").write_text("stale\n", encoding="utf-8")
-    with pytest.raises(sync_action_release.ActionReleaseError, match="Managed docs snapshot"):
-        sync_action_release.verify_release(
-            tmp_path,
-            release,
-            ACTION_YML_FIXTURE,
-            managed_docs_bundle=bundle,
-        )
+    with pytest.raises(template_contract.TemplateContractError, match="Managed docs snapshot"):
+        template_contract.verify_managed_docs_snapshot(docs_root, contract=contract)
 
 
-def test_action_release_verify_rejects_stale_refs(tmp_path):
-    release = sync_action_release.ActionRelease(
-        repository=sync_action_release.ACTION_REPOSITORY,
-        tag="v0.16.0",
-        target_commitish="a" * 40,
-        release_url="https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.16.0",
-        published_at="2026-05-31T05:19:33Z",
+def test_template_contract_verify_rejects_stale_action_refs(tmp_path):
+    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
+    (tmp_path / "template-contract.yml").write_text(
+        Path("template-contract.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
     )
-    sync_action_release.write_manifest(release, tmp_path)
-    old_tag = "v0." + "15.0"
     (tmp_path / "README.md").write_text(
-        f"uses: reponomics/reponomics-dashboard-action@{old_tag}\n"
-        f'  REPONOMICS_ACTION_REF: "{old_tag}"\n'
-        f'  REPONOMICS_ACTION_SHA: "{"b" * 40}"\n',
+        "uses: reponomics/reponomics-dashboard-action@v0.15.0\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(sync_action_release.ActionReleaseError):
-        sync_action_release.verify_release(tmp_path, release, ACTION_YML_FIXTURE)
+    with pytest.raises(template_contract.TemplateContractError, match="Stale template action"):
+        template_contract.verify_template_refs(tmp_path)
 
 
 def test_workflow_classification_contract():

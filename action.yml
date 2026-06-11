@@ -123,6 +123,9 @@ outputs:
   docs-updated-at:
     description: Timestamp recorded when the local managed documentation was last written.
     value: ${{ steps.runtime.outputs.docs-updated-at }}
+  doctor-report-path:
+    description: Path to the machine-readable doctor diagnostic report when mode is doctor.
+    value: ${{ steps.runtime.outputs.doctor-report-path }}
 
 runs:
   using: composite
@@ -199,6 +202,15 @@ runs:
       with:
         name: html-dashboard-encrypted
         path: ${{ steps.runtime.outputs.pages-path }}
+        retention-days: ${{ inputs.retention-days }}
+        overwrite: true
+
+    - name: Upload doctor diagnostic report
+      if: ${{ always() && inputs.mode == 'doctor' && steps.runtime.outputs.doctor-report-path != '' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: reponomics-doctor-report
+        path: ${{ steps.runtime.outputs.doctor-report-path }}
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
 

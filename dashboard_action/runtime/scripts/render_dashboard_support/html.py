@@ -428,13 +428,26 @@ def build_public_html(
             "total_clone_uniques": f"{totals['total_clone_uniques']:,}",
         },
     )
+    dashboard_data_json = json.dumps(dashboard_data, separators=(",", ":"))
+    body = (
+        shell
+        + "\n  <script id=\"plain-dashboard-data\" type=\"application/json\">"
+        + dashboard_data_json
+        + "</script>\n"
+    )
     runtime_js = (
         APP_RUNTIME_JS
-        + "\nconst dashboardDataObject = "
-        + json.dumps(dashboard_data, separators=(",", ":"))
-        + ";\nrenderDashboard(dashboardDataObject);\n"
+        + "\nconst dashboardDataObject = JSON.parse("
+        + "document.getElementById('plain-dashboard-data').textContent"
+        + ");\nrenderDashboard(dashboardDataObject);\n"
     )
-    return wrap_html(shell, chart_loader, runtime_js, inline_chart_js=inline_chart_js)
+    return wrap_html(
+        body,
+        chart_loader,
+        runtime_js,
+        inline_chart_js=inline_chart_js,
+        extra_csp_scripts=[dashboard_data_json],
+    )
 
 
 def build_encrypted_html(

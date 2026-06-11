@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-JBOjQsCzRmuN3sv5Uihig0kc62DtGUnbC4qE5GnRUFk=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-tRGwxba5GHIrlkG7fYRGE9h4RYJ/HwxMHcbvNuqbNJg=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-fapdpwQVlwT0kOnIfpoENJAIcTLTnBzJiV1JejHjJMg=&#x27; &#x27;sha256-lunjBvHexOFn/kGrNTqoROfw2Hci9MgQVZ3EhSshsc8=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-tRGwxba5GHIrlkG7fYRGE9h4RYJ/HwxMHcbvNuqbNJg=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
 
   <script src="assets/chart.umd.min.js"></script>
   <style>
@@ -2127,6 +2127,8 @@
       <div id="repo-table"></div>
     </div>
   </div>
+
+  <script id="plain-dashboard-data" type="application/json">{"version":2,"encoding":"json","summary":{"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"referrers":[],"paths":[],"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]},"repo_chunks":{}},"chunks":{},"chunk_count":0}</script>
 
 
   <footer>
@@ -4900,7 +4902,7 @@
       updateDashboard();
     }
 
-const dashboardDataObject = {"version":2,"encoding":"json","summary":{"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"referrers":[],"paths":[],"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]},"repo_chunks":{}},"chunks":{},"chunk_count":0};
+const dashboardDataObject = JSON.parse(document.getElementById('plain-dashboard-data').textContent);
 renderDashboard(dashboardDataObject);
 </script>
 </body>

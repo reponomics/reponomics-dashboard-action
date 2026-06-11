@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.21.0...v0.22.0) (2026-06-11)
+
+
+### Features
+
+* doctor mode and workflow ([#102](https://github.com/reponomics/reponomics-dashboard-action/issues/102)) ([c82e395](https://github.com/reponomics/reponomics-dashboard-action/commit/c82e395d5d6c93645db5308aa75a7f68f61f6dec))
+* **doctor:** expand doctor mode with staged diagnostics ([#104](https://github.com/reponomics/reponomics-dashboard-action/issues/104)) ([85a3ba8](https://github.com/reponomics/reponomics-dashboard-action/commit/85a3ba88a18c99e2fef56723c7ab34ebe4dd62e0))
+
 ## [0.21.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.20.6...v0.21.0) (2026-06-09)
 
 

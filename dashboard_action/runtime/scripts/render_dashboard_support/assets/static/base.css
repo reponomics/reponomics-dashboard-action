@@ -443,6 +443,17 @@
       background: rgba(230, 159, 0, 0.12);
       border-color: rgba(230, 159, 0, 0.62);
     }
+    .calendar-day.lag {
+      color: var(--text);
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(86, 180, 233, 0.20) 0 3px,
+          rgba(86, 180, 233, 0.06) 3px 6px
+        ),
+        rgba(86, 180, 233, 0.08);
+      border-color: rgba(86, 180, 233, 0.72);
+    }
     .calendar-day.gap {
       color: var(--text);
       background:
@@ -471,6 +482,16 @@
     .calendar-day.gap::after {
       content: '▲';
       color: #d55e00;
+    }
+    .calendar-day.lag::before {
+      content: '•';
+      position: absolute;
+      top: 0;
+      left: 3px;
+      color: #56b4e9;
+      font-size: 0.78rem;
+      line-height: 1;
+      opacity: 0.95;
     }
     .calendar-hint {
       margin: 0;

@@ -836,21 +836,94 @@
 
     function calendarStatusLabel(day) {
       if (!day) return 'no-run';
-      if (day.has_collection_gaps) return 'gap';
+      if (String(day.status || '') === 'no_run') return 'no-run';
+      if (day.has_collection_gaps) return 'collection-gap';
       if (String(day.status || '') === 'all_zero') return 'all-zero';
       return 'healthy';
     }
 
-    function formatCalendarDayTooltip(day) {
-      const statusLabel = calendarStatusLabel(day);
+    function visibleTrafficReportingRanges() {
+      const ranges = currentPayload()?.traffic_reporting?.unreported_ranges || [];
+      const visibleRepos = new Set(getVisibleRepos().map((repo) => repo.name));
+      if (!visibleRepos.size) return [];
+      return ranges.filter((range) => visibleRepos.has(String(range?.repo || '')));
+    }
+
+    function trafficReportingByDate() {
+      const byDate = new Map();
+      visibleTrafficReportingRanges().forEach((range) => {
+        const repo = String(range?.repo || '');
+        const start = parseIsoDate(range?.start);
+        const end = parseIsoDate(range?.end);
+        if (!repo || !start || !end) return;
+        const cursor = new Date(start.getTime());
+        while (cursor.getTime() <= end.getTime()) {
+          const iso = formatIsoDate(cursor);
+          if (!byDate.has(iso)) byDate.set(iso, []);
+          byDate.get(iso).push(repo);
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+      });
+      byDate.forEach((repos, date) => {
+        byDate.set(date, Array.from(new Set(repos)).sort());
+      });
+      return byDate;
+    }
+
+    function calendarStateForDay(day, unreportedRepos) {
+      if (!day || String(day.status || '') === 'no_run') {
+        return {
+          label: 'no-run',
+          className: 'calendar-day no-run',
+          summary: 'no workflow run',
+        };
+      }
+      const skipped = Number(day.skipped_repos || 0);
+      const errors = Number(day.error_repos || 0);
+      const hasTrafficLag = (unreportedRepos || []).length > 0;
+      if (errors > 0 || skipped > 0 || day.has_collection_gaps) {
+        return {
+          label: hasTrafficLag ? 'collection-gap + traffic-lag' : 'collection-gap',
+          className: `calendar-day gap${hasTrafficLag ? ' lag' : ''}`,
+          summary: 'collection ran with skipped or failed repo checks',
+        };
+      }
+      if (hasTrafficLag) {
+        return {
+          label: 'traffic-lag',
+          className: 'calendar-day lag',
+          summary: 'collection ran; GitHub did not report traffic for this trailing date',
+        };
+      }
+      if (String(day.status || '') === 'all_zero') {
+        return {
+          label: 'all-zero',
+          className: 'calendar-day zero',
+          summary: 'collection ran; GitHub reported zero traffic',
+        };
+      }
+      return {
+        label: 'healthy',
+        className: 'calendar-day ok',
+        summary: 'collection ran; traffic was reported',
+      };
+    }
+
+    function formatCalendarDayTooltip(day, unreportedRepos) {
+      const stateForDay = calendarStateForDay(day, unreportedRepos);
       const parts = [
-        `${day.date} · status: ${statusLabel}`,
+        `${day.date} · ${stateForDay.summary}`,
+        `status ${stateForDay.label}`,
         `tracked ${formatNumber(day.tracked_repos || 0)}`,
         `with data ${formatNumber(day.with_data_repos || 0)}`,
         `zero ${formatNumber(day.zero_traffic_repos || 0)}`,
         `skipped ${formatNumber(day.skipped_repos || 0)}`,
         `errors ${formatNumber(day.error_repos || 0)}`
       ];
+      if ((unreportedRepos || []).length) {
+        parts.push(`GitHub traffic unreported for ${formatNumber(unreportedRepos.length)} repo(s)`);
+        parts.push(`repos: ${unreportedRepos.slice(0, 4).join(', ')}${unreportedRepos.length > 4 ? ', …' : ''}`);
+      }
       if (Number(day.run_count || 0) > 1) {
         parts.push(`${formatNumber(day.run_count)} runs`);
       }
@@ -892,6 +965,7 @@
       }
 
       const byDate = new Map((days || []).map((day) => [String(day.date || ''), day]));
+      const reportingByDate = trafficReportingByDate();
       const firstDay = new Date(Date.UTC(parsed.year, parsed.month - 1, 1));
       const leading = (firstDay.getUTCDay() + 6) % 7;
       const count = daysInMonth(parsed.year, parsed.month);
@@ -903,14 +977,18 @@
       for (let dayNum = 1; dayNum <= count; dayNum += 1) {
         const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
         const day = byDate.get(iso);
+        const unreportedRepos = reportingByDate.get(iso) || [];
         let cls = 'calendar-day no-run';
-        let detail = `${iso} · status: no-run · no collection run`;
+        let detail = `${iso} · no workflow run · traffic availability unknown`;
         let title = detail;
         if (day) {
-          if (day.has_collection_gaps) cls = 'calendar-day gap';
-          else if (day.status === 'all_zero') cls = 'calendar-day zero';
-          else cls = 'calendar-day ok';
-          detail = formatCalendarDayTooltip(day);
+          const stateForDay = calendarStateForDay(day, unreportedRepos);
+          cls = stateForDay.className;
+          detail = formatCalendarDayTooltip(day, unreportedRepos);
+          title = detail;
+        } else if (unreportedRepos.length) {
+          cls = 'calendar-day lag';
+          detail = `${iso} · GitHub traffic unreported for ${formatNumber(unreportedRepos.length)} repo(s) · no collection-day row`;
           title = detail;
         }
         cells.push(
@@ -940,6 +1018,10 @@
       });
 
       const gapDays = days.filter((day) => day.has_collection_gaps).length;
+      const windowCutoff = getSelectedWindow() === 'all' ? '' : (getWindowCutoffDate() || '');
+      const lagDays = Array.from(reportingByDate.keys())
+        .filter((date) => !windowCutoff || date >= windowCutoff)
+        .length;
       const zeroDays = days.filter((day) => day.status === 'all_zero').length;
       const noRunStats = computeNoRunStats(days);
       const streakText = noRunStats.longestNoRunStreak > 0
@@ -948,7 +1030,8 @@
       hint.textContent = (
         `${formatNumber(noRunStats.collectedDays)} collected day(s), `
         + `${formatNumber(noRunStats.noRunDays)} no-run day(s)${streakText}, `
-        + `${formatNumber(gapDays)} gap day(s), `
+        + `${formatNumber(gapDays)} collection gap day(s), `
+        + `${formatNumber(lagDays)} traffic lag day(s), `
         + `${formatNumber(zeroDays)} all-zero day(s).`
       );
     }
@@ -965,10 +1048,13 @@
     }
 
     function computeNoRunStats(days) {
-      const collectedDates = Array.from(
-        new Set((days || []).map((day) => String(day.date || '')).filter(Boolean))
-      ).sort();
-      if (!collectedDates.length) {
+      const dayByDate = new Map(
+        (days || [])
+          .filter((day) => String(day?.date || ''))
+          .map((day) => [String(day.date), day])
+      );
+      const allDates = Array.from(dayByDate.keys()).sort();
+      if (!allDates.length) {
         return {
           collectedDays: 0,
           noRunDays: 0,
@@ -976,25 +1062,27 @@
         };
       }
 
-      const start = parseIsoDate(collectedDates[0]);
-      const end = parseIsoDate(collectedDates[collectedDates.length - 1]);
+      const start = parseIsoDate(allDates[0]);
+      const end = parseIsoDate(allDates[allDates.length - 1]);
       if (!start || !end) {
         return {
-          collectedDays: collectedDates.length,
+          collectedDays: allDates.filter((date) => String(dayByDate.get(date)?.status || '') !== 'no_run').length,
           noRunDays: 0,
           longestNoRunStreak: 0
         };
       }
 
-      const collectedSet = new Set(collectedDates);
       const cursor = new Date(start.getTime());
+      let collectedDays = 0;
       let noRunDays = 0;
       let streak = 0;
       let longestNoRunStreak = 0;
 
       while (cursor.getTime() <= end.getTime()) {
         const iso = formatIsoDate(cursor);
-        if (collectedSet.has(iso)) {
+        const day = dayByDate.get(iso);
+        if (day && String(day.status || '') !== 'no_run') {
+          collectedDays += 1;
           streak = 0;
         } else {
           noRunDays += 1;
@@ -1005,7 +1093,7 @@
       }
 
       return {
-        collectedDays: collectedDates.length,
+        collectedDays,
         noRunDays,
         longestNoRunStreak
       };

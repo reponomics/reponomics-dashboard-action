@@ -123,7 +123,7 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
-    assert manifest["updated_at"]
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", manifest["updated_at"])
     expected_files = {
         path.relative_to(docs_root).as_posix(): hashlib.sha256(
             path.read_text(encoding="utf-8").encode("utf-8")
@@ -454,6 +454,18 @@ def test_template_contract_and_action_metadata_contract():
     assert contract.default_action_ref == f"v{contract.compatible_action_major}"
     assert contract.min_action_version <= contract.action_version
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
+
+
+def test_template_contract_normalizes_source_timestamp_to_utc():
+    assert (
+        template_contract._normalize_timestamp_utc("2026-06-11T14:28:07-04:00")
+        == "2026-06-11T18:28:07Z"
+    )
+    assert (
+        template_contract._normalize_timestamp_utc("2026-06-11T13:51:05Z")
+        == "2026-06-11T13:51:05Z"
+    )
+    assert template_contract._normalize_timestamp_utc("source") == "source"
 
 
 def test_template_contract_does_not_scan_decision_records_as_managed_docs():

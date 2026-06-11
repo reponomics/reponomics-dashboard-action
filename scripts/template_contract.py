@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -307,14 +308,25 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
 
 def _source_timestamp() -> str:
     try:
-        return subprocess.check_output(
+        timestamp = subprocess.check_output(
             ["git", "log", "-1", "--format=%cI"],
             cwd=ROOT,
             text=True,
             stderr=subprocess.DEVNULL,
-        ).strip().replace("+00:00", "Z")
+        ).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "source"
+    return _normalize_timestamp_utc(timestamp)
+
+
+def _normalize_timestamp_utc(timestamp: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return timestamp
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _version_tuple(version: str) -> tuple[int, int, int]:

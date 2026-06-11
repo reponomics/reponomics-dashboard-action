@@ -717,6 +717,17 @@ def run_doctor(config: RuntimeConfig) -> None:
         raise ActionError("No provided dashboard key could decrypt the dashboard artifact.")
     if result.dashboard_html_found == "failed":
         raise ActionError("Doctor could not inspect the dashboard HTML artifact.")
+    if not result.ui_handoff_reached:
+        print(
+            "::error title=Reponomics doctor diagnostics::"
+            + escape_workflow_data(
+                "Dashboard payload did not reach browser/UI handoff boundary: "
+                + handoff_detail
+            )
+        )
+        raise ActionError(
+            "Doctor staged diagnostics did not reach the browser/UI handoff boundary."
+        )
 
 
 def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:

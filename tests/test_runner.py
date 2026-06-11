@@ -1265,6 +1265,61 @@ def test_doctor_dashboard_key_check_rejects_corrupt_chunk_ciphertext(
     assert compatibility_result.detail == "AES-GCM authentication failed"
 
 
+def test_doctor_mode_fails_when_ui_handoff_boundary_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    summary_path = tmp_path / "summary.md"
+    output_path = tmp_path / "outputs.txt"
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    first_chunk_id = next(iter(encrypted_data["chunks"]))
+    encrypted_data["chunks"][first_chunk_id] = _tamper_encrypted_token(
+        encrypted_data["chunks"][first_chunk_id]
+    )
+    config.pages_index_path.write_text(
+        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
+        encoding="utf-8",
+    )
+
+    doctor_config = _config(tmp_path, mode="doctor", dashboard_secret=OLD_KEY)
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setenv("GITHUB_OUTPUT", output_path.as_posix())
+
+    with pytest.raises(
+        run.ActionError,
+        match="Doctor staged diagnostics did not reach the browser/UI handoff boundary.",
+    ):
+        run.run_doctor(doctor_config)
+
+    report_path = tmp_path / ".reponomics" / "doctor" / "doctor-report.json"
+    assert output_path.read_text(encoding="utf-8") == (
+        f"doctor-report-path={report_path.relative_to(tmp_path).as_posix()}\n"
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["key_cryptographically_accepted"] == "passed"
+    assert report["repo_chunks_valid"] == "failed"
+    assert _report_stage(report, "ui_handoff_boundary_reached")["status"] == "failed"
+
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "- Browser/UI handoff boundary: `failed`" in summary
+    output = capsys.readouterr().out
+    expected_error = (
+        "::error title=Reponomics doctor diagnostics::Dashboard payload did not "
+        + "reach browser/UI handoff boundary: one or more encryption, storage, or "
+        + "data-contract stages failed\n"
+    )
+    assert expected_error in output
+
+
 def test_doctor_treats_empty_encrypted_dashboard_as_semantically_valid(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

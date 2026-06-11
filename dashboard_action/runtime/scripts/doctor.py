@@ -15,7 +15,6 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from doctor_retained import (
     _diagnose_retained_artifact,
-    _safe_extract_retained_tar as _safe_extract_retained_tar,
 )
 from doctor_support import (
     CHUNK_ID_RE,

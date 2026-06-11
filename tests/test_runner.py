@@ -23,6 +23,7 @@ import pytest
 import requests
 
 from dashboard_action import run
+import doctor_retained
 from scripts import dashboard_scenarios
 
 
@@ -1973,7 +1974,7 @@ def test_doctor_retained_artifact_rejects_tar_links(tmp_path: Path) -> None:
         archive.addfile(linked_file, io.BytesIO(payload))
 
     with pytest.raises(ValueError, match="Refusing unsafe artifact member"):
-        run.doctor_mod._safe_extract_retained_tar(
+        doctor_retained._safe_extract_retained_tar(
             archive_bytes.getvalue(),
             tmp_path / "extract",
         )

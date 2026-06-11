@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.22.0...v0.22.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* better reporting data collection failure modes ([#105](https://github.com/reponomics/reponomics-dashboard-action/issues/105)) ([2ffae83](https://github.com/reponomics/reponomics-dashboard-action/commit/2ffae8337935be60760a43015a5e2205fe77fa8a))
+
 ## [0.22.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.21.0...v0.22.0) (2026-06-11)
 
 

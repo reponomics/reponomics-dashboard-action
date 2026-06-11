@@ -137,7 +137,7 @@ The Makefile should remain the primary local interface. That keeps local develop
 Recommended command groups:
 
 - `make lint`, `make type-check`, `make test`: normal action/runtime quality gates.
-- `make validate`: action metadata, workflow syntax, action pins, runtime lock, and vendored asset checks.
+- `make validate`: action metadata, workflow syntax, runtime lock, vendored asset checks, and any source-repo security posture checks that remain local.
 - `make build-template`: generate `dist/template`.
 - `make verify-template`: verify an existing generated output tree.
 - `make template-smoke`: check generated workflow and publication shape.
@@ -146,7 +146,7 @@ Recommended command groups:
 - `make publish-template`: operator-only push to the generated template repo.
 - Future demo commands should mirror the same pattern: build the demo from generated template output, run mocked setup/collect/publish, verify no output drift, dry-run publication, and then publish to `reponomics-dashboard-demo`.
 
-Python development should continue to use `venv/` and Python 3.11 as the release workflow baseline, while CI also checks newer supported Python versions for runtime compatibility. GitHub Actions should remain full-SHA pinned, with top-level workflow permissions read-only or empty and write permissions scoped to the specific job that needs them.
+Python development should continue to use `venv/` and Python 3.11 as the release workflow baseline, while CI also checks newer supported Python versions for runtime compatibility. Source-repository GitHub Actions should remain full-SHA pinned or covered by repository policy checks, with top-level workflow permissions read-only or empty and write permissions scoped to the specific job that needs them. Generated user repositories intentionally default to the compatible Reponomics action channel rather than full-SHA pinning.
 
 The template generator should keep refusing unsafe output paths inside the source tree outside `dist/`. That is more important after consolidation, because the template source and generated output now live in the same checkout.
 
@@ -190,7 +190,7 @@ Normal CI should remain split into jobs with different purposes:
 - Dedicated template job for workflow classification, template smoke, template consumer e2e, and template publication dry-run.
 - Future demo job for mocked demo setup/collect/publish and demo publication dry-run.
 - Scenario snapshot job for dashboard rendering stability.
-- Security and supply-chain jobs for pinned actions, runtime lock, vendored assets, OSV, Scorecard, and SBOM/provenance generation.
+- Security and supply-chain jobs for source-repository action pinning or policy verification, runtime lock, vendored assets, OSV, Scorecard, and SBOM/provenance generation.
 
 This is the right direction. The template job is the key addition made possible by consolidation: it validates action changes with the generated template before either product ships.
 
@@ -198,7 +198,7 @@ This is the right direction. The template job is the key addition made possible 
 
 `.github/workflows/pre-release-validation.yml` should be treated as the lightweight staging substitute. It should validate a candidate ref without publishing:
 
-- action metadata and workflow pins
+- action metadata and source-repository workflow policy
 - generated template build
 - generated template smoke checks
 - template consumer e2e against the same candidate action source
@@ -254,16 +254,60 @@ Current controls:
 - generated template output is produced from `template-manifest.yml`
 - managed docs output includes a manifest with action repository, action version, UTC timestamp, namespace, and file hashes
 - pre-release validation uploads the generated `dist/template` artifact for inspection
-- GitHub Actions are SHA-pinned
+- source-repository third-party GitHub Actions are SHA-pinned or covered by repository policy checks; generated template repositories intentionally use the compatible Reponomics action channel by default
 - runtime dependency lock and vendored assets are validated
 - SBOM/provenance workflow exists for the source repository
 
 Recommended additions:
 
-- attach the generated `dist/template` artifact to template GitHub releases if that would make release inspection easier
-- record the source commit and template version in a machine-readable generated file in `reponomics-dashboard`, separate from managed docs if needed
+- add a canonical generated-template tree digest so maintainers and users can verify that `dist/template` and `reponomics-dashboard@main` contain the same payload
+- attach an attested generated-template release artifact to template GitHub releases for a stronger release-artifact-backed proof
+- record the source commit, template version, and canonical tree digest in a machine-readable generated file in `reponomics-dashboard`, separate from managed docs if needed
 - keep template release tags immutable once public
 - require the template publish workflow to validate both the release tag and the generated output contract before push
+
+### Generated Template Tree Digest
+
+The first proof should be intentionally simple: compute a deterministic digest over the generated template file tree and use it to prove that the local build output is the same payload published to `reponomics-dashboard`.
+
+The digest should be based on a canonical manifest rather than raw archive bytes. A reasonable manifest format is sorted JSON Lines containing each file path, file mode or executable bit, size, and SHA-256 of the raw file contents. Path separators should be normalized, `.git` should be excluded, and symlinks should either be rejected or represented explicitly.
+
+The template release workflow should compute this digest for `dist/template`, publish the generated repository, fetch `reponomics-dashboard@main`, recompute the same digest, and fail if the values differ. The digest should also be written to the workflow summary, the generated commit message trailer, and a machine-readable provenance file such as `.reponomics/template-provenance.json`.
+
+There is a self-reference problem if the provenance file contains the digest of a tree that includes itself. The simplest rule is to define the digest over the generated payload excluding `.reponomics/template-provenance.json`, then include that provenance file in both `dist/template` and the published repository. That keeps the published repository identical to the local generated tree while making the digest rule easy to explain.
+
+The public claim becomes:
+
+```text
+payload_digest(dist/template) == payload_digest(reponomics-dashboard@main)
+```
+
+This proof is not a cryptographic build attestation by itself, but it is easy for users to understand and directly answers whether the generated template that was built is the same tree that was published.
+
+### Release Artifact Attestation
+
+The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, attach it to the `reponomics-dashboard-vX.Y.Z` GitHub release, publish checksum files, and generate a GitHub artifact attestation for the release artifact.
+
+The release artifact set should probably include:
+
+- `reponomics-dashboard-template-vX.Y.Z.tar.gz`
+- `reponomics-dashboard-template-vX.Y.Z.tree.jsonl`
+- `SHA256SUMS`
+
+The GitHub workflow should use an attestation step with job-scoped `id-token: write` and `attestations: write` permissions. The attestation subject should include the template archive and the manifest/checksum files. Users can then verify the artifact provenance independently with GitHub CLI, while less specialized users can still compare checksums and tree digests.
+
+The stronger public claim becomes:
+
+```text
+source commit
+  -> GitHub Actions template release workflow
+  -> generated template release artifact
+  -> signed GitHub provenance attestation
+  -> canonical tree digest
+  -> reponomics-dashboard@main with matching digest
+```
+
+This avoids overloading the generated repository branch with a claim GitHub attestations are not naturally designed to make. GitHub attests the release artifact; the canonical tree digest proves that the published template repository matches that attested artifact's payload.
 
 ### Runtime Provenance
 
@@ -351,6 +395,77 @@ The demo should not drive SemVer, but it should follow product releases:
 
 The demo should disclose which action version, template version, source commit, mock data revision, and public demo key it uses. That makes it useful both to prospective users and to skeptical reviewers trying to trace what they are seeing.
 
+## Product And Test Boundary Constraints
+
+The consolidated repository should be understood as one source repository with
+two product projections, not as two independently rebased product trees:
+
+- Action product projection: `action.yml`, `dashboard_action/`, runtime
+  dependency locks/assets, runtime managed-docs bundle, and action release
+  metadata.
+- Template product projection: `template/`, `template-contract.yml`,
+  `template-manifest.yml`, template build/publish scripts, and generated-template
+  tests.
+- Shared contract/support layer: managed docs, action metadata consumed by
+  generated workflows, Make targets, release workflows, and bridge tests.
+- Maintainer-only material: non-shipping docs, repository hygiene workflows, and
+  local tooling.
+
+The mainline invariant is:
+
+> Every merge to `main` must leave the repository in a state where both products
+> can be built and validated from that same commit.
+
+That does not require every deep test from both product pyramids to run on every
+PR forever. It does require the mainline merge gate to be an AND over the
+defined releasability contract for the current release phase:
+
+- shared source gates such as linting, typing, unit tests, and workflow parsing;
+- action core gates for action/runtime behavior;
+- template core gates such as build, verify, workflow classification, and
+  generated workflow syntax;
+- action/template bridge gates proving the generated template from the candidate
+  commit can invoke the action from the same candidate commit through the public
+  contract.
+
+Deeper product-specific checks may be path-aware or release-only once they become
+expensive, but bridge tests should block action-side PRs. A runtime change that
+breaks copied generated templates is an action regression even when no template
+files changed.
+
+Compatibility fixtures should be phased by release maturity:
+
+- Before beta, compatibility fixtures are regression canaries only. They should
+  not prevent intentional last-minute breaking changes while there are no public
+  users.
+- At beta, keep fixtures for beta surfaces and treat backwards compatibility
+  within the `v0` line as a real commitment once live beta users exist. A
+  breaking beta reset should be explicitly announced and coordinated.
+- At public release, preserve the first public generated template surface as a
+  hard compatibility target for the declared compatible action major.
+- After public release, every template release should retain a minimal fixture
+  capturing generated workflows, `config.yaml` shape, managed-docs manifest
+  schema, relevant action refs/inputs, and representative setup state.
+
+Colocated tests are acceptable, but they need explicit ownership and isolation
+to avoid environment pollution:
+
+- Prefer clear test groupings such as `action`, `template`, `bridge`, and
+  `release` through directories, markers, or CI jobs.
+- Consumer-repository simulations should run under `tmp_path` or temporary git
+  repositories, not by mutating the source repo root.
+- Tests that patch cwd, environment variables, runtime paths, module globals, or
+  `sys.path` should restore them through fixtures such as `monkeypatch`.
+- Tests should not depend on order or shared generated state. Root-level writes
+  should be limited to explicit Make targets like `build-template`.
+- CI jobs may separate action, template, and bridge checks for process isolation
+  and clearer ownership even when the tests live in one `tests/` tree.
+
+This framing keeps concerns separated without pretending the products are
+physically independent. The repository remains one source of truth, while the
+action and template remain separate products with explicit projection and bridge
+boundaries.
+
 ## Current Gaps To Close
 
 Before public release, the most valuable hardening work is:
@@ -361,7 +476,7 @@ Before public release, the most valuable hardening work is:
 - Define and implement the demo profile for `reponomics-dashboard-demo`, including mocked collection fixtures, public demo key handling, demo-only README generation, and publication verification.
 - Review maintainer docs listed in `docs/OBSOLETE_DOCS_INVENTORY.md` and either archive or supersede them.
 - Tighten pre-release validation so it is clearly required by policy for product releases, even if GitHub cannot technically force it for every manual tag.
-- Decide whether action major `v0` remains acceptable for public launch or whether the first public release should establish a `v1` compatibility line.
+- Keep public beta on the `v0` compatibility line and document the beta compatibility commitment, including the process for any explicitly coordinated breaking beta reset.
 
 ## Design Bias
 

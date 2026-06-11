@@ -3,359 +3,58 @@
 from __future__ import annotations
 
 import argparse
-import base64
-from collections import Counter
-import csv
 import gzip
 import hashlib
-import io
-from dataclasses import dataclass
-from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
-import re
-import tarfile
-import tempfile
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-import lineage
-import storage
-
-
-ENCRYPTED_DASHBOARD_SCRIPT_ID = "encrypted-dashboard-data"
-PLAIN_DASHBOARD_SCRIPT_ID = "plain-dashboard-data"
-PLAIN_DASHBOARD_CONST_NAME = "dashboardDataObject"
-EXPORT_MANIFEST_SCRIPT_ID = "export-manifest"
-EXPECTED_DASHBOARD_DATA_VERSION = 2
-EXPECTED_EXPORT_MANIFEST_VERSION = 1
-EXPECTED_KDF_NAME = "PBKDF2"
-EXPECTED_KDF_HASH = "SHA-256"
-EXPECTED_KDF_ITERATIONS = 600_000
-EXPECTED_SALT_BYTES = 16
-EXPECTED_IV_BYTES = 12
-CHUNK_ID_RE = re.compile(r"^c[0-9]{4,}$")
-EXPORT_ASSET_RE = re.compile(r"^assets/export-data-[a-f0-9]{16}\.enc$")
-SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
-RETAINED_ENCRYPTED_ARTIFACT_NAME = "dashboard-data.enc"
-
-DoctorStageStatus = Literal["passed", "failed", "skipped", "warning"]
-DoctorArtifactMode = Literal["encrypted", "plain"]
-DetectedDashboardMode = Literal["encrypted", "plain", "unknown"]
-
-
-@dataclass(frozen=True)
-class DoctorStage:
-    """One bounded diagnostic observation."""
-
-    name: str
-    status: DoctorStageStatus
-    subject: str = ""
-    detail: str = ""
-
-    def to_jsonable(self) -> dict[str, str]:
-        return {
-            "name": self.name,
-            "status": self.status,
-            "subject": self.subject,
-            "detail": self.detail,
-        }
-
-
-@dataclass(frozen=True)
-class DoctorSecretResult:
-    """Per-label encrypted dashboard diagnostics."""
-
-    label: str
-    provided: bool
-    stages: list[DoctorStage]
-
-    @property
-    def accepted(self) -> bool:
-        return _stage_passed(self.stages, "summary_authenticates")
-
-    @property
-    def terminal_stage(self) -> DoctorStage:
-        failed = _first_status(self.stages, "failed")
-        if failed is not None:
-            return failed
-        warning = _first_status(self.stages, "warning")
-        if warning is not None:
-            return warning
-        passed = [stage for stage in self.stages if stage.status == "passed"]
-        if passed:
-            return passed[-1]
-        skipped = [stage for stage in self.stages if stage.status == "skipped"]
-        if skipped:
-            return skipped[-1]
-        return DoctorStage("unknown", "failed", self.label, "no diagnostic stages were recorded")
-
-    def to_jsonable(self) -> dict[str, Any]:
-        return {
-            "label": self.label,
-            "provided": self.provided,
-            "accepted": self.accepted,
-            "stages": [stage.to_jsonable() for stage in self.stages],
-        }
-
-
-@dataclass(frozen=True)
-class DashboardDoctorResult:
-    """Staged dashboard artifact diagnostic result."""
-
-    configured_artifact_mode: DoctorArtifactMode
-    detected_dashboard_mode: DetectedDashboardMode
-    dashboard_html_found: DoctorStageStatus
-    browser_payload_contract_valid: DoctorStageStatus
-    key_cryptographically_accepted: DoctorStageStatus
-    dashboard_data_well_formed: DoctorStageStatus
-    dashboard_data_semantically_consistent: DoctorStageStatus
-    repo_chunks_valid: DoctorStageStatus
-    retained_data_artifact_decryptable: DoctorStageStatus
-    export_artifact_valid: DoctorStageStatus
-    secret_results: list[DoctorSecretResult]
-    stages: list[DoctorStage]
-    dashboard_html_path: str
-    chunks_checked: int = 0
-    chunk_count: int = 0
-    repo_count: int = 0
-
-    @property
-    def accepted_secret_count(self) -> int:
-        return sum(1 for result in self.secret_results if result.accepted)
-
-    @property
-    def provided_secret_count(self) -> int:
-        return sum(1 for result in self.secret_results if result.provided)
-
-    @property
-    def stage_counts(self) -> Counter[str]:
-        counter: Counter[str] = Counter(stage.status for stage in self.stages)
-        for secret_result in self.secret_results:
-            counter.update(stage.status for stage in secret_result.stages)
-        return counter
-
-    @property
-    def ui_handoff_reached(self) -> bool:
-        return _stage_passed(self.stages, "ui_handoff_boundary_reached")
-
-    def to_jsonable(self) -> dict[str, Any]:
-        return {
-            "configured_artifact_mode": self.configured_artifact_mode,
-            "detected_dashboard_mode": self.detected_dashboard_mode,
-            "dashboard_html_found": self.dashboard_html_found,
-            "browser_payload_contract_valid": self.browser_payload_contract_valid,
-            "key_cryptographically_accepted": self.key_cryptographically_accepted,
-            "dashboard_data_well_formed": self.dashboard_data_well_formed,
-            "dashboard_data_semantically_consistent": self.dashboard_data_semantically_consistent,
-            "repo_chunks_valid": self.repo_chunks_valid,
-            "retained_data_artifact_decryptable": self.retained_data_artifact_decryptable,
-            "export_artifact_valid": self.export_artifact_valid,
-            "dashboard_html_path": self.dashboard_html_path,
-            "chunks_checked": self.chunks_checked,
-            "chunk_count": self.chunk_count,
-            "repo_count": self.repo_count,
-            "stage_counts": dict(self.stage_counts),
-            "secret_results": [result.to_jsonable() for result in self.secret_results],
-            "stages": [stage.to_jsonable() for stage in self.stages],
-        }
-
-
-@dataclass(frozen=True)
-class DashboardKeyCheckResult:
-    """Compatibility result for checking one key against encrypted dashboard HTML."""
-
-    ok: bool
-    stage: str
-    detail: str
-    chunks_checked: int = 0
-    chunk_count: int = 0
-    repo_count: int = 0
-
-
-class _DashboardDoctorError(Exception):
-    def __init__(self, stage: str, detail: str) -> None:
-        super().__init__(detail)
-        self.stage = stage
-        self.detail = detail
-
-
-class _ScriptJsonParser(HTMLParser):
-    def __init__(self, script_id: str) -> None:
-        super().__init__()
-        self._script_id = script_id
-        self._capture = False
-        self.content = ""
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attributes = dict(attrs)
-        if tag == "script" and attributes.get("id") == self._script_id:
-            self._capture = True
-            self.content = ""
-
-    def handle_data(self, data: str) -> None:
-        if self._capture:
-            self.content += data
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag == "script" and self._capture:
-            self._capture = False
-
-
-def _stage(
-    name: str,
-    status: DoctorStageStatus,
-    detail: str,
-    subject: str = "",
-) -> DoctorStage:
-    return DoctorStage(name=name, status=status, subject=subject, detail=detail)
-
-
-def _first_status(stages: list[DoctorStage], status: DoctorStageStatus) -> DoctorStage | None:
-    return next((stage for stage in stages if stage.status == status), None)
-
-
-def _stage_passed(stages: list[DoctorStage], name: str) -> bool:
-    return any(stage.name == name and stage.status == "passed" for stage in stages)
-
-
-def _stage_failed(stages: list[DoctorStage], name: str) -> bool:
-    return any(stage.name == name and stage.status == "failed" for stage in stages)
-
-
-def _all_required_stage_statuses_passed(stages: list[DoctorStage], names: set[str]) -> bool:
-    return all(_status_from_stages(stages, {name}) == "passed" for name in names)
-
-
-def _any_failed(stages: list[DoctorStage]) -> bool:
-    return any(stage.status == "failed" for stage in stages)
-
-
-def _object_dict(value: Any) -> dict[str, Any]:
-    if isinstance(value, dict):
-        return cast(dict[str, Any], value)
-    return {}
-
-
-def _status_from_stages(stages: list[DoctorStage], names: set[str]) -> DoctorStageStatus:
-    relevant = [stage for stage in stages if stage.name in names]
-    if not relevant:
-        return "skipped"
-    if any(stage.status == "failed" for stage in relevant):
-        return "failed"
-    if any(stage.status == "warning" for stage in relevant):
-        return "warning"
-    if all(stage.status == "skipped" for stage in relevant):
-        return "skipped"
-    return "passed"
-
-
-def _optional_script_content(html: str, script_id: str) -> str:
-    parser = _ScriptJsonParser(script_id)
-    parser.feed(html)
-    return parser.content.strip()
-
-
-def _script_json(html: str, script_id: str) -> dict[str, Any]:
-    content = _optional_script_content(html, script_id)
-    if not content:
-        raise _DashboardDoctorError(
-            "missing_encrypted_payload",
-            f"script payload {script_id!r} was not found",
-        )
-    return _json_object(content, script_id)
-
-
-def _runtime_const_json(html: str, const_name: str) -> dict[str, Any]:
-    match = re.search(
-        rf"const {re.escape(const_name)} = (.*?);\nrenderDashboard\({re.escape(const_name)}\);",
-        html,
-        flags=re.S,
-    )
-    if not match:
-        raise _DashboardDoctorError(
-            "missing_plain_payload",
-            f"runtime const payload {const_name!r} was not found",
-        )
-    return _json_object(match.group(1), const_name)
-
-
-def _json_object(raw: str, subject: str) -> dict[str, Any]:
-    try:
-        value = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise _DashboardDoctorError(
-            "payload_parse",
-            f"payload {subject!r} was not valid JSON: {exc}",
-        ) from exc
-    if not isinstance(value, dict):
-        raise _DashboardDoctorError("payload_schema", f"payload {subject!r} was not a JSON object")
-    return value
-
-
-def _b64_decode(value: Any) -> bytes:
-    if not isinstance(value, str) or not value:
-        raise ValueError("value was not a non-empty base64 string")
-    return base64.b64decode(value.encode("ascii"), validate=True)
-
-
-def _b64url_decode(value: str) -> bytes:
-    padded = value + ("=" * ((4 - len(value) % 4) % 4))
-    return base64.urlsafe_b64decode(padded.encode("ascii"))
-
-
-def _validate_encrypted_blob_token(token: Any) -> tuple[bytes, bytes]:
-    if not isinstance(token, str):
-        raise ValueError("encrypted token was not a string")
-    parts = token.split(".")
-    if len(parts) != 2:
-        raise ValueError("encrypted token did not contain iv.ciphertext parts")
-    iv = _b64url_decode(parts[0])
-    ciphertext = _b64url_decode(parts[1])
-    if len(iv) != EXPECTED_IV_BYTES:
-        raise ValueError(f"iv was {len(iv)} bytes, expected {EXPECTED_IV_BYTES}")
-    if not ciphertext:
-        raise ValueError("ciphertext was empty")
-    return iv, ciphertext
-
-
-def _derive_key(dashboard_key: str, salt: bytes) -> bytes:
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=EXPECTED_KDF_ITERATIONS,
-    )
-    return kdf.derive(dashboard_key.encode("utf-8"))
-
-
-def _decrypt_blob(token: str, key: bytes) -> dict[str, Any]:
-    """Compatibility helper returning a decrypted JSON object or a terminal error."""
-    try:
-        iv, ciphertext = _validate_encrypted_blob_token(token)
-        plaintext = AESGCM(key).decrypt(iv, ciphertext, None)
-    except InvalidTag as exc:
-        raise _DashboardDoctorError("decrypt", "AES-GCM authentication failed") from exc
-    except Exception as exc:
-        raise _DashboardDoctorError("payload_schema", f"encrypted blob was malformed: {exc}") from exc
-
-    try:
-        decompressed = gzip.decompress(plaintext)
-    except OSError as exc:
-        raise _DashboardDoctorError("decompress", f"decrypted blob was not valid gzip: {exc}") from exc
-
-    try:
-        value = json.loads(decompressed)
-    except json.JSONDecodeError as exc:
-        raise _DashboardDoctorError("parse", f"decrypted blob was not valid JSON: {exc}") from exc
-    if not isinstance(value, dict):
-        raise _DashboardDoctorError("schema", "decrypted blob was not a JSON object")
-    return value
+from doctor_retained import (
+    _diagnose_retained_artifact,
+    _safe_extract_retained_tar as _safe_extract_retained_tar,
+)
+from doctor_support import (
+    CHUNK_ID_RE,
+    ENCRYPTED_DASHBOARD_SCRIPT_ID,
+    EXPECTED_DASHBOARD_DATA_VERSION,
+    EXPECTED_EXPORT_MANIFEST_VERSION,
+    EXPECTED_IV_BYTES,
+    EXPECTED_KDF_HASH,
+    EXPECTED_KDF_ITERATIONS,
+    EXPECTED_KDF_NAME,
+    EXPECTED_SALT_BYTES,
+    EXPORT_ASSET_RE,
+    EXPORT_MANIFEST_SCRIPT_ID,
+    PLAIN_DASHBOARD_CONST_NAME,
+    PLAIN_DASHBOARD_SCRIPT_ID,
+    SHA256_HEX_RE,
+    DashboardDoctorError as _DashboardDoctorError,
+    DashboardDoctorResult,
+    DashboardKeyCheckResult,
+    DetectedDashboardMode,
+    DoctorArtifactMode,
+    DoctorSecretResult,
+    DoctorStage,
+    DoctorStageStatus,
+    _accepted_secret_values,
+    _all_required_stage_statuses_passed,
+    _any_failed,
+    _b64_decode,
+    _derive_key,
+    _first_status,
+    _json_object,
+    _object_dict,
+    _optional_script_content,
+    _runtime_const_json,
+    _stage,
+    _stage_passed,
+    _status_from_stages,
+    _validate_encrypted_blob_token,
+)
 
 
 def _parse_dashboard_payload(
@@ -959,18 +658,6 @@ def _validate_export_manifest_contract(manifest: dict[str, Any]) -> tuple[list[D
     return stages, salt, iv
 
 
-def _accepted_secret_values(
-    secret_inputs: list[tuple[str, str]],
-    secret_results: list[DoctorSecretResult],
-) -> list[tuple[str, str]]:
-    values = dict(secret_inputs)
-    return [
-        (result.label, values[result.label])
-        for result in secret_results
-        if result.accepted and values.get(result.label)
-    ]
-
-
 def _diagnose_export_artifact(
     html: str,
     dashboard_html_path: Path,
@@ -1121,284 +808,6 @@ def _diagnose_export_artifact(
     if decrypt_failures or plaintext_hash_failures:
         return stages, "failed"
     return stages, "skipped"
-
-
-def _retained_encrypted_candidates(retained_data_dir: Path | None) -> list[Path]:
-    if retained_data_dir is None:
-        return []
-    candidates = [
-        retained_data_dir / RETAINED_ENCRYPTED_ARTIFACT_NAME,
-        Path(".dashboard-data-artifact") / RETAINED_ENCRYPTED_ARTIFACT_NAME,
-    ]
-    seen: set[Path] = set()
-    unique: list[Path] = []
-    for candidate in candidates:
-        if candidate in seen:
-            continue
-        seen.add(candidate)
-        unique.append(candidate)
-    return unique
-
-
-def _safe_extract_retained_tar(archive_bytes: bytes, target_dir: Path) -> None:
-    target_dir.mkdir(parents=True, exist_ok=True)
-    root = target_dir.resolve()
-    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
-        members = archive.getmembers()
-        for member in members:
-            if not member.isdir() and not member.isfile():
-                raise ValueError(f"Refusing unsafe artifact member: {member.name}")
-            if member.isfile() and not member.name:
-                raise ValueError("Refusing unsafe artifact member with empty name")
-            target = target_dir / member.name
-            if not target.resolve().is_relative_to(root):
-                raise ValueError(f"Refusing unsafe artifact path: {member.name}")
-
-        for member in members:
-            target = target_dir / member.name
-            if member.isdir():
-                target.mkdir(parents=True, exist_ok=True)
-                continue
-            source = archive.extractfile(member)
-            if source is None:
-                raise ValueError(f"Retained artifact file was unreadable: {member.name}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with source, target.open("wb") as handle:
-                handle.write(source.read())
-
-
-def _validate_retained_data_dir(data_dir: Path) -> tuple[DoctorStage, DoctorStage]:
-    missing = [filename for filename in storage.ARTIFACT_FILES if not (data_dir / filename).is_file()]
-    schema_errors: list[str] = []
-    if missing:
-        schema_errors.append("missing files: " + ", ".join(missing[:5]))
-
-    manifest: dict[str, Any] = {}
-    manifest_path = data_dir / "manifest.json"
-    if manifest_path.is_file():
-        try:
-            manifest = _object_dict(json.loads(manifest_path.read_text(encoding="utf-8")))
-        except Exception as exc:
-            schema_errors.append(f"manifest.json was invalid: {exc}")
-        else:
-            if str(manifest.get("schema_version") or "") != storage.SCHEMA_VERSION:
-                schema_errors.append("manifest schema_version did not match runtime schema")
-            if manifest.get("files") != list(storage.CSV_REGISTRY.keys()):
-                schema_errors.append("manifest files did not match runtime CSV registry")
-
-    for filename, (fieldnames, _date_field) in storage.CSV_REGISTRY.items():
-        path = data_dir / filename
-        if not path.is_file():
-            continue
-        try:
-            with path.open(newline="", encoding="utf-8") as handle:
-                reader = csv.reader(handle)
-                header = next(reader, [])
-        except Exception as exc:
-            schema_errors.append(f"{filename} was unreadable: {exc}")
-            continue
-        if header != fieldnames:
-            schema_errors.append(f"{filename} header did not match schema")
-
-    schema_stage = _stage(
-        "retained_artifact_schema_valid",
-        "failed" if schema_errors else "passed",
-        "; ".join(schema_errors) if schema_errors else "retained artifact schema is valid",
-    )
-    if schema_errors:
-        return schema_stage, _stage(
-            "retained_artifact_lineage_valid",
-            "skipped",
-            "retained artifact schema was invalid",
-        )
-
-    try:
-        snapshot = lineage.snapshot_payload(data_dir)
-        lineage.validate_snapshot_lineage(snapshot)
-    except Exception as exc:
-        return schema_stage, _stage(
-            "retained_artifact_lineage_valid",
-            "failed",
-            f"retained artifact lineage was invalid: {exc}",
-        )
-    if not snapshot.lineage:
-        return schema_stage, _stage(
-            "retained_artifact_lineage_valid",
-            "skipped",
-            "retained artifact has no lineage metadata",
-        )
-    return schema_stage, _stage(
-        "retained_artifact_lineage_valid",
-        "passed",
-        "retained artifact lineage is valid",
-    )
-
-
-def _load_retained_encrypted_payload(path: Path) -> tuple[list[DoctorStage], dict[str, Any] | None]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return [_stage("retained_artifact_readable", "failed", f"encrypted artifact was not readable JSON: {exc}")], None
-    if not isinstance(payload, dict):
-        return [_stage("retained_artifact_readable", "failed", "encrypted artifact payload was not a JSON object")], None
-
-    errors: list[str] = []
-    if payload.get("version") != 1:
-        errors.append("unsupported encrypted artifact version")
-    if payload.get("kdf") != "PBKDF2-SHA256":
-        errors.append("unsupported KDF")
-    if payload.get("iterations") != EXPECTED_KDF_ITERATIONS:
-        errors.append("unsupported KDF iterations")
-    if payload.get("algorithm") != "AES-256-GCM":
-        errors.append("unsupported algorithm")
-    for field in ("salt", "iv", "ciphertext"):
-        if not isinstance(payload.get(field), str) or not payload.get(field):
-            errors.append(f"missing {field}")
-    if errors:
-        return [_stage("retained_artifact_readable", "failed", "; ".join(errors))], None
-    return [_stage("retained_artifact_readable", "passed", "encrypted artifact payload is readable")], payload
-
-
-def _diagnose_encrypted_retained_artifact(
-    path: Path,
-    *,
-    secret_inputs: list[tuple[str, str]],
-    secret_results: list[DoctorSecretResult],
-) -> tuple[list[DoctorStage], DoctorStageStatus]:
-    stages: list[DoctorStage] = [
-        _stage("workflow_artifact_restore_requested", "passed", "inspecting restored retained artifact path"),
-        _stage("retained_artifact_found", "passed", f"found retained artifact at {path.as_posix()}"),
-    ]
-    readable_stages, payload = _load_retained_encrypted_payload(path)
-    stages.extend(readable_stages)
-    if payload is None:
-        stages.extend(
-            [
-                _stage("retained_artifact_decrypts", "skipped", "encrypted artifact payload was unreadable"),
-                _stage("retained_artifact_schema_valid", "skipped", "encrypted artifact payload was unreadable"),
-                _stage("retained_artifact_lineage_valid", "skipped", "encrypted artifact payload was unreadable"),
-            ]
-        )
-        return stages, "failed"
-
-    try:
-        salt = _b64url_decode(cast(str, payload["salt"]))
-        iv = _b64url_decode(cast(str, payload["iv"]))
-        ciphertext = _b64url_decode(cast(str, payload["ciphertext"]))
-    except Exception as exc:
-        stages.extend(
-            [
-                _stage("retained_artifact_decrypts", "failed", f"encrypted artifact payload was malformed: {exc}"),
-                _stage("retained_artifact_schema_valid", "skipped", "encrypted artifact payload was malformed"),
-                _stage("retained_artifact_lineage_valid", "skipped", "encrypted artifact payload was malformed"),
-            ]
-        )
-        return stages, "failed"
-
-    accepted_secrets = _accepted_secret_values(secret_inputs, secret_results)
-    if not accepted_secrets:
-        stages.extend(
-            [
-                _stage("retained_artifact_decrypts", "skipped", "no accepted dashboard secret was available"),
-                _stage("retained_artifact_schema_valid", "skipped", "no accepted dashboard secret was available"),
-                _stage("retained_artifact_lineage_valid", "skipped", "no accepted dashboard secret was available"),
-            ]
-        )
-        return stages, "skipped"
-
-    for label, secret in accepted_secrets:
-        key = _derive_key(secret, salt)
-        try:
-            plaintext = AESGCM(key).decrypt(iv, ciphertext, None)
-        except InvalidTag:
-            stages.append(_stage("retained_artifact_decrypts", "failed", "AES-GCM authentication failed", label))
-            continue
-        stages.append(_stage("retained_artifact_decrypts", "passed", "retained artifact decrypted", label))
-        with tempfile.TemporaryDirectory() as temp_dir:
-            extracted_dir = Path(temp_dir) / "data"
-            try:
-                _safe_extract_retained_tar(plaintext, extracted_dir)
-            except Exception as exc:
-                stages.extend(
-                    [
-                        _stage("retained_artifact_schema_valid", "failed", f"retained artifact tarball was invalid: {exc}"),
-                        _stage("retained_artifact_lineage_valid", "skipped", "retained artifact schema was invalid"),
-                    ]
-                )
-                return stages, "failed"
-            schema_stage, lineage_stage = _validate_retained_data_dir(extracted_dir)
-            stages.extend([schema_stage, lineage_stage])
-            return stages, "failed" if schema_stage.status == "failed" or lineage_stage.status == "failed" else "passed"
-
-    stages.extend(
-        [
-            _stage("retained_artifact_schema_valid", "skipped", "retained artifact did not decrypt"),
-            _stage("retained_artifact_lineage_valid", "skipped", "retained artifact did not decrypt"),
-        ]
-    )
-    return stages, "failed"
-
-
-def _diagnose_plain_retained_artifact(data_dir: Path) -> tuple[list[DoctorStage], DoctorStageStatus]:
-    present_files = [filename for filename in storage.ARTIFACT_FILES if (data_dir / filename).is_file()]
-    if not present_files:
-        return [
-            _stage("workflow_artifact_restore_requested", "skipped", "no restored retained artifact contents were found"),
-            _stage("retained_artifact_found", "skipped", "no restored retained artifact contents were found"),
-            _stage("retained_artifact_readable", "skipped", "no restored retained artifact contents were found"),
-            _stage("retained_artifact_decrypts", "skipped", "plain mode has no retained artifact decryption key"),
-            _stage("retained_artifact_schema_valid", "skipped", "no restored retained artifact contents were found"),
-            _stage("retained_artifact_lineage_valid", "skipped", "no restored retained artifact contents were found"),
-        ], "skipped"
-
-    schema_stage, lineage_stage = _validate_retained_data_dir(data_dir)
-    stages = [
-        _stage("workflow_artifact_restore_requested", "passed", "inspecting restored retained artifact path"),
-        _stage("retained_artifact_found", "passed", f"found retained artifact contents at {data_dir.as_posix()}"),
-        _stage("retained_artifact_readable", "passed", "retained artifact contents are readable"),
-        _stage("retained_artifact_decrypts", "skipped", "plain mode has no retained artifact decryption key"),
-        schema_stage,
-        lineage_stage,
-    ]
-    status: DoctorStageStatus = "failed" if schema_stage.status == "failed" or lineage_stage.status == "failed" else "passed"
-    return stages, status
-
-
-def _diagnose_retained_artifact(
-    retained_data_dir: Path | None,
-    *,
-    configured_mode: DoctorArtifactMode,
-    secret_inputs: list[tuple[str, str]],
-    secret_results: list[DoctorSecretResult],
-) -> tuple[list[DoctorStage], DoctorStageStatus]:
-    if retained_data_dir is None:
-        return [
-            _stage("workflow_artifact_restore_requested", "skipped", "no retained artifact path was configured"),
-            _stage("retained_artifact_found", "skipped", "no retained artifact path was configured"),
-            _stage("retained_artifact_readable", "skipped", "no retained artifact path was configured"),
-            _stage("retained_artifact_decrypts", "skipped", "no retained artifact path was configured"),
-            _stage("retained_artifact_schema_valid", "skipped", "no retained artifact path was configured"),
-            _stage("retained_artifact_lineage_valid", "skipped", "no retained artifact path was configured"),
-        ], "skipped"
-
-    if configured_mode == "plain":
-        return _diagnose_plain_retained_artifact(retained_data_dir)
-
-    for candidate in _retained_encrypted_candidates(retained_data_dir):
-        if candidate.is_file():
-            return _diagnose_encrypted_retained_artifact(
-                candidate,
-                secret_inputs=secret_inputs,
-                secret_results=secret_results,
-            )
-    return [
-        _stage("workflow_artifact_restore_requested", "skipped", "no restored encrypted retained artifact was found"),
-        _stage("retained_artifact_found", "skipped", "no restored encrypted retained artifact was found"),
-        _stage("retained_artifact_readable", "skipped", "no restored encrypted retained artifact was found"),
-        _stage("retained_artifact_decrypts", "skipped", "no restored encrypted retained artifact was found"),
-        _stage("retained_artifact_schema_valid", "skipped", "no restored encrypted retained artifact was found"),
-        _stage("retained_artifact_lineage_valid", "skipped", "no restored encrypted retained artifact was found"),
-    ], "skipped"
 
 
 def _skip_secret_result(label: str, provided: bool, detail: str) -> DoctorSecretResult:

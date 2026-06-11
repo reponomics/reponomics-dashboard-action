@@ -378,7 +378,8 @@
       const reporting = currentPayload()?.traffic_reporting || {};
       const lagDays = Number(reporting.lag_days || 0);
       const affected = reporting.affected_repos || [];
-      const latestReported = reporting.latest_reported_traffic_date || 'unknown';
+      const unreportedStart = reporting.unreported_start_date || '';
+      const unreportedEnd = reporting.unreported_end_date || '';
       const latestCollection = reporting.latest_collection_date || 'unknown';
       const notice = document.createElement('div');
       notice.className = 'dashboard-notice warning';
@@ -396,9 +397,12 @@
       const repoText = affected.length
         ? ' across ' + formatNumber(affected.length) + ' repositories'
         : '';
+      const rangeText = unreportedStart && unreportedEnd
+        ? ' for ' + (unreportedStart === unreportedEnd ? unreportedStart : unreportedStart + ' through ' + unreportedEnd)
+        : '';
       message.textContent = (
         'Latest collection is ' + latestCollection
-        + ', but GitHub traffic is only reported through ' + latestReported
+        + ', but GitHub traffic is unreported' + rangeText
         + (lagDays > 0 ? ' (' + formatNumber(lagDays) + ' day gap)' : '')
         + repoText
         + '. Charts show the missing trailing dates as unreported, not zero traffic.'

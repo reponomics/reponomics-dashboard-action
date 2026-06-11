@@ -354,9 +354,63 @@ def test_traffic_reporting_summary_ranges_upstream_lag() -> None:
     assert summary["latest_collection_date"] == "2026-06-10"
     assert summary["latest_reported_traffic_date"] == "2026-06-08"
     assert summary["lag_days"] == 2
+    assert summary["unreported_start_date"] == "2026-06-09"
+    assert summary["unreported_end_date"] == "2026-06-10"
+    assert summary["unreported_days"] == 2
     assert summary["affected_repos"] == ["demo/app"]
     assert summary["unreported_ranges"] == [
         {"repo": "demo/app", "start": "2026-06-09", "end": "2026-06-10", "days": 2}
+    ]
+
+
+def test_traffic_reporting_summary_lag_uses_affected_dates_not_global_latest() -> None:
+    summary = load_data.traffic_reporting_summary(
+        [
+            {
+                "repo": "demo/current",
+                "ts": "2026-06-11",
+                "coverage_state": "reported",
+            },
+            {
+                "repo": "demo/lagging",
+                "ts": "2026-06-08",
+                "coverage_state": "reported",
+            },
+            {
+                "repo": "demo/lagging",
+                "ts": "2026-06-09",
+                "coverage_state": "not_reported_by_api",
+            },
+            {
+                "repo": "demo/lagging",
+                "ts": "2026-06-10",
+                "coverage_state": "not_reported_by_api",
+            },
+            {
+                "repo": "demo/lagging",
+                "ts": "2026-06-11",
+                "coverage_state": "not_reported_by_api",
+            },
+        ],
+        [
+            {"ts": "2026-06-11", "status": "healthy"},
+        ],
+    )
+
+    assert summary["latest_collection_date"] == "2026-06-11"
+    assert summary["latest_reported_traffic_date"] == "2026-06-11"
+    assert summary["has_lag"] is True
+    assert summary["lag_days"] == 3
+    assert summary["unreported_start_date"] == "2026-06-09"
+    assert summary["unreported_end_date"] == "2026-06-11"
+    assert summary["affected_repos"] == ["demo/lagging"]
+    assert summary["unreported_ranges"] == [
+        {
+            "repo": "demo/lagging",
+            "start": "2026-06-09",
+            "end": "2026-06-11",
+            "days": 3,
+        }
     ]
 
 

@@ -9,7 +9,7 @@
 
 <sub>Latest data capture: 2026-06-08 12:00 UTC</sub>
 
-> **GitHub traffic data is behind:** latest collection is 2026-06-11, but traffic is reported through 2026-06-08 (3 day gap) across 3 repositories. Missing trailing dates are unreported, not zero traffic.
+> **GitHub traffic data is behind:** latest collection is 2026-06-11, but traffic is unreported for 2026-06-09 through 2026-06-11 (3 day gap) across 3 repositories. Missing trailing dates are unreported, not zero traffic.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/hero-stats-light.svg">

@@ -180,15 +180,17 @@ def _pad_metric_series(dates, series, end_date: str):
     """Extend chart series through a reporting date with null unreported values."""
     if not dates or not end_date or end_date <= dates[-1]:
         return dates, series
-    padded_dates = _date_range(dates[0], end_date)
+    extra_dates = _date_range(_next_day(dates[-1]), end_date)
+    padded_dates = [*dates, *extra_dates]
     padded_series = {}
     for key, values in series.items():
-        by_date = dict(zip(dates, values, strict=False))
-        padded_series[key] = [
-            by_date[date] if date in by_date else None
-            for date in padded_dates
-        ]
+        padded_series[key] = [*values, *([None] * len(extra_dates))]
     return padded_dates, padded_series
+
+
+def _next_day(ts: str) -> str:
+    parsed = datetime.strptime(ts, "%Y-%m-%d").date()
+    return (parsed + timedelta(days=1)).isoformat()
 
 
 def _pad_repo_series(repo_series, end_date: str):

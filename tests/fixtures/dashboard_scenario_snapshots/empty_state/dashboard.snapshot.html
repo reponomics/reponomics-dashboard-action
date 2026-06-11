@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reponomics Dashboard</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-MZwb7w91pcZ6iuqWwi+oD2zq5kL3KjQqz44IVlR91gY=&#x27; &#x27;sha256-CGj2haF4o442/C4mcWWq068kdzGk43xgkBqfKii893Q=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-nCUcPZbSldCHcWYuzfagEFNN9ZZ+WQjFWhDgiaU7aD4=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;sha256-n1K6FwuMsKgAsGHSgOWwJ5jyQNv9iQeUPlBg9T5GeAA=&#x27; &#x27;sha256-/x4CZTSZQtRbnCB8xKq2SYaYEi8VWEwAri8tT1895PY=&#x27; &#x27;sha256-C2hojSOyzk4/3PLCDVD3a4fCLrbNnlRZi53NOuxqHGE=&#x27;; style-src &#x27;self&#x27; &#x27;sha256-nCUcPZbSldCHcWYuzfagEFNN9ZZ+WQjFWhDgiaU7aD4=&#x27;; font-src &#x27;self&#x27; data:; img-src &#x27;self&#x27; data:; connect-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;self&#x27;">
 
   <script src="assets/chart.umd.min.js"></script>
   <style>
@@ -2149,7 +2149,7 @@
     </div>
   </div>
 
-  <script id="plain-dashboard-data" type="application/json">{"version":2,"encoding":"json","summary":{"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"referrers":[],"paths":[],"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]},"traffic_reporting":{"available":false,"latest_collection_date":"","latest_reported_traffic_date":"","lag_days":0,"has_lag":false,"affected_repos":[],"unreported_ranges":[],"coverage_counts":{"reported":0,"not_reported_by_api":0,"collection_failed":0,"repo_skipped":0}},"repo_chunks":{}},"chunks":{},"chunk_count":0}</script>
+  <script id="plain-dashboard-data" type="application/json">{"version":2,"encoding":"json","summary":{"meta":{"recent_window_days":14,"window_presets":[7,14,30,90,"all"],"default_window":"14","default_range":"recent","default_min_activity":1},"generated_at":"2026-05-28 12:00 UTC","totals":{"repo_count":0,"days_tracked":0,"total_views":0,"total_uniques":0,"total_clones":0,"total_clone_uniques":0},"daily":{"dates":[],"views":[],"uniques":[],"clones":[],"clone_uniques":[]},"weekday":{"labels":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"views":[0,0,0,0,0,0,0],"clones":[0,0,0,0,0,0,0]},"repos":[],"referrers":[],"paths":[],"growth":{"window_days":14,"cutoff":null,"latest_date":"","totals":{"total_stargazers":0,"total_stars":0,"total_subscribers":0,"total_forks":0,"total_stargazers_delta":0,"total_stars_delta":0,"total_subscribers_delta":0,"total_forks_delta":0}},"insights":[],"insights_v2":[],"data_quality":{"available":false,"status":"unknown","message":"","latest_captured_at":"","tracked_repos":0,"with_data_repos":0,"zero_traffic_repos":0,"skipped_repos":0,"error_repos":0,"coverage_ratio":1.0,"has_collection_gaps":false,"repos":[],"days":[]},"traffic_reporting":{"available":false,"latest_collection_date":"","latest_reported_traffic_date":"","lag_days":0,"has_lag":false,"affected_repos":[],"unreported_ranges":[],"unreported_start_date":"","unreported_end_date":"","unreported_days":0,"coverage_counts":{"reported":0,"not_reported_by_api":0,"collection_failed":0,"repo_skipped":0}},"repo_chunks":{}},"chunks":{},"chunk_count":0}</script>
 
 
   <footer>
@@ -2550,7 +2550,8 @@
       const reporting = currentPayload()?.traffic_reporting || {};
       const lagDays = Number(reporting.lag_days || 0);
       const affected = reporting.affected_repos || [];
-      const latestReported = reporting.latest_reported_traffic_date || 'unknown';
+      const unreportedStart = reporting.unreported_start_date || '';
+      const unreportedEnd = reporting.unreported_end_date || '';
       const latestCollection = reporting.latest_collection_date || 'unknown';
       const notice = document.createElement('div');
       notice.className = 'dashboard-notice warning';
@@ -2568,9 +2569,12 @@
       const repoText = affected.length
         ? ' across ' + formatNumber(affected.length) + ' repositories'
         : '';
+      const rangeText = unreportedStart && unreportedEnd
+        ? ' for ' + (unreportedStart === unreportedEnd ? unreportedStart : unreportedStart + ' through ' + unreportedEnd)
+        : '';
       message.textContent = (
         'Latest collection is ' + latestCollection
-        + ', but GitHub traffic is only reported through ' + latestReported
+        + ', but GitHub traffic is unreported' + rangeText
         + (lagDays > 0 ? ' (' + formatNumber(lagDays) + ' day gap)' : '')
         + repoText
         + '. Charts show the missing trailing dates as unreported, not zero traffic.'

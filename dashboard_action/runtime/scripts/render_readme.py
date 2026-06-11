@@ -215,10 +215,18 @@ def _traffic_reporting_lines(reporting):
     lag_days = int(reporting.get("lag_days", 0) or 0)
     affected = len(reporting.get("affected_repos", []) or [])
     latest_collection = reporting.get("latest_collection_date") or "unknown"
-    latest_reported = reporting.get("latest_reported_traffic_date") or "unknown"
+    unreported_start = reporting.get("unreported_start_date") or ""
+    unreported_end = reporting.get("unreported_end_date") or ""
+    range_text = ""
+    if unreported_start and unreported_end:
+        range_text = (
+            f" for {unreported_start}"
+            if unreported_start == unreported_end
+            else f" for {unreported_start} through {unreported_end}"
+        )
     return [
         "> **GitHub traffic data is behind:** latest collection is "
-        + f"{latest_collection}, but traffic is reported through {latest_reported}"
+        + f"{latest_collection}, but traffic is unreported{range_text}"
         + (f" ({lag_days} day gap)" if lag_days else "")
         + (f" across {affected} repositories" if affected else "")
         + ". Missing trailing dates are unreported, not zero traffic.",

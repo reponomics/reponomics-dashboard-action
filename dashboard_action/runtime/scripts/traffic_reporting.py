@@ -120,7 +120,18 @@ def traffic_reporting_summary(coverage_rows: Rows, collection_days: Rows) -> dic
         for row in coverage_rows
         if row.get("coverage_state") == "not_reported_by_api"
     ]
-    lag_days = _days_between(latest_reported_date, latest_collection_date)
+    unreported_dates = sorted(
+        {
+            row.get("ts", "")
+            for row in not_reported
+            if row.get("ts")
+        }
+    )
+    lag_days = (
+        len(unreported_dates)
+        if unreported_dates
+        else _days_between(latest_reported_date, latest_collection_date)
+    )
     counts = _coverage_counts(coverage_rows)
 
     return {
@@ -131,6 +142,9 @@ def traffic_reporting_summary(coverage_rows: Rows, collection_days: Rows) -> dic
         "has_lag": bool(not_reported),
         "affected_repos": sorted({row.get("repo", "") for row in not_reported if row.get("repo")}),
         "unreported_ranges": _coverage_ranges(not_reported),
+        "unreported_start_date": unreported_dates[0] if unreported_dates else "",
+        "unreported_end_date": unreported_dates[-1] if unreported_dates else "",
+        "unreported_days": len(unreported_dates),
         "coverage_counts": counts,
     }
 

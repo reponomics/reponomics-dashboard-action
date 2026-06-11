@@ -233,3 +233,29 @@ co-located shape. The next release-design work should add fixtures for old
 template contracts before there are public users, so action compatibility can be
 tested against concrete historical template surfaces rather than only the
 current generated template.
+
+### 2026-06-11 Release Metadata Split
+
+- `.github/.release-please-manifest.json` now has two entries:
+  - `.` for the Marketplace action version.
+  - `template` for the generated template product version.
+- `.github/release-please-config.json` keeps the action package on bare `v*`
+  tags so `reponomics/reponomics-dashboard-action@v0` remains the action update
+  channel.
+- The template package uses component-prefixed release tags,
+  `reponomics-dashboard-v*`, to avoid competing with action tags in the shared
+  source repository.
+- Release Please updates `template-contract.yml`'s `template_version` for
+  template releases. It does not update the action runtime version for template
+  releases, and it does not update the template version for action releases.
+- `.github/workflows/publish-template.yml` now ignores ordinary action releases
+  and publishes `reponomics-dashboard` only for manual dispatch or
+  `reponomics-dashboard-v*` template releases.
+
+This is intentionally a first release split, not the final compatibility
+program. The known weak point is path attribution: the template component is
+keyed to `template/`, while some template-affecting source still lives in
+top-level scripts and `template-contract.yml`. Before public release, either
+tighten the Release Please path model or document the release-operator rule that
+template-affecting non-`template/` changes need an explicit template release
+commit.

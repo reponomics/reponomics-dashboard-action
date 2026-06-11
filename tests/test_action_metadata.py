@@ -5,6 +5,7 @@ import tomllib
 import yaml
 
 from dashboard_action.run_modules.core import VERSION
+from scripts import template_contract
 
 
 ACTION_EXPRESSION = re.compile(r"\$\{\{.*?\}\}")
@@ -95,6 +96,43 @@ def test_runtime_version_matches_release_metadata() -> None:
     assert release_manifest["."] == VERSION
     assert "dashboard_action/run_modules/core.py" in extra_files
     assert "dashboard_action/run.py" not in extra_files
+
+
+def test_template_version_matches_release_metadata() -> None:
+    contract = template_contract.load_contract()
+    release_manifest = yaml.safe_load(
+        Path(".github/.release-please-manifest.json").read_text(encoding="utf-8")
+    )
+    release_config = yaml.safe_load(
+        Path(".github/release-please-config.json").read_text(encoding="utf-8")
+    )
+    template_package = release_config["packages"]["template"]
+    extra_files = template_package["extra-files"]
+
+    assert release_manifest["template"] == contract.template_version
+    assert release_manifest["."] == VERSION
+    assert release_manifest["template"] != release_manifest["."]
+    assert release_config["packages"]["."]["include-component-in-tag"] is False
+    assert template_package["package-name"] == "reponomics-dashboard"
+    assert template_package["include-component-in-tag"] is True
+    assert template_package["skip-changelog"] is True
+    assert {
+        "type": "yaml",
+        "path": "template-contract.yml",
+        "jsonpath": "$.template_version",
+    } in extra_files
+
+
+def test_publish_template_workflow_only_runs_for_template_releases() -> None:
+    workflow = yaml.safe_load(
+        Path(".github/workflows/publish-template.yml").read_text(encoding="utf-8")
+    )
+    publish_job = workflow["jobs"]["publish-template"]
+
+    assert publish_job["if"] == (
+        "${{ github.event_name == 'workflow_dispatch' || "
+        + "startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}"
+    )
 
 
 def test_runtime_steps_execute_dashboard_action_as_module() -> None:

@@ -17,6 +17,7 @@ env:
 jobs:
   publish-template:
     name: Publish generated template
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read

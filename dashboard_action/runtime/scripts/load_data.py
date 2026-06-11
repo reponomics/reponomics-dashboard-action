@@ -55,6 +55,9 @@ from load_data_modules.trend_insights import (
     _spike_candidate,
     _window_change_candidate,
 )
+from traffic_reporting import (
+    traffic_reporting_summary,
+)
 
 __all__ = [
     "GROWTH_COUNTERS",
@@ -85,15 +88,18 @@ __all__ = [
     "latest_repo_metrics",
     "latest_repo_metrics_per_day",
     "load_collection_status",
+    "load_collection_days",
     "load_daily",
     "load_paths",
     "load_referrers",
     "load_repo_metrics",
+    "load_traffic_coverage",
     "repo_growth_series",
     "repo_metric_deltas",
     "storage",
     "top_paths",
     "top_referrers",
+    "traffic_reporting_summary",
 ]
 
 
@@ -124,6 +130,16 @@ def load_repo_metrics(data_dir=None):
 def load_collection_status(data_dir=None):
     """Load collection-status.csv and return the raw row list."""
     return _load_csv("collection-status.csv", data_dir)
+
+
+def load_collection_days(data_dir=None):
+    """Load collection-days.csv and return the raw row list."""
+    return _load_csv("collection-days.csv", data_dir)
+
+
+def load_traffic_coverage(data_dir=None):
+    """Load traffic-coverage.csv and return the raw row list."""
+    return _load_csv("traffic-coverage.csv", data_dir)
 
 
 def _load_csv(filename, data_dir=None):

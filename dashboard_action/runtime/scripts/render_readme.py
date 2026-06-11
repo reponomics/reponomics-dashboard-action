@@ -15,6 +15,8 @@ from load_data import (
     load_referrers,
     load_paths,
     load_repo_metrics,
+    load_collection_days,
+    load_traffic_coverage,
     aggregate_totals,
     aggregate_per_repo,
     top_referrers,
@@ -22,6 +24,7 @@ from load_data import (
     actionable_insights,
     compute_momentum,
     growth_analytics,
+    traffic_reporting_summary,
 )
 from readme_assets import (
     build_readme_asset_data,
@@ -206,6 +209,23 @@ def _growth_line(growth):
     )
 
 
+def _traffic_reporting_lines(reporting):
+    if not reporting.get("has_lag"):
+        return []
+    lag_days = int(reporting.get("lag_days", 0) or 0)
+    affected = len(reporting.get("affected_repos", []) or [])
+    latest_collection = reporting.get("latest_collection_date") or "unknown"
+    latest_reported = reporting.get("latest_reported_traffic_date") or "unknown"
+    return [
+        "> **GitHub traffic data is behind:** latest collection is "
+        + f"{latest_collection}, but traffic is reported through {latest_reported}"
+        + (f" ({lag_days} day gap)" if lag_days else "")
+        + (f" across {affected} repositories" if affected else "")
+        + ". Missing trailing dates are unreported, not zero traffic.",
+        "",
+    ]
+
+
 def _repo_growth_table_lines(per_repo_rows, growth):
     growth_rows = growth.get("per_repo", {})
     rows = []
@@ -273,11 +293,14 @@ def render():
     referrer_rows = load_referrers()
     path_rows = load_paths()
     metric_rows = load_repo_metrics()
+    collection_day_rows = load_collection_days()
+    coverage_rows = load_traffic_coverage()
 
     latest_capture = _format_capture_timestamp(
         _latest_capture_timestamp(daily_rows, referrer_rows, path_rows, metric_rows)
     )
     totals = aggregate_totals(daily_rows)
+    traffic_reporting = traffic_reporting_summary(coverage_rows, collection_day_rows)
     growth = growth_analytics(daily_rows, metric_rows)
     growth["totals"]["total_views"] = totals["total_views"]
     growth["totals"]["total_uniques"] = totals["total_uniques"]
@@ -287,7 +310,12 @@ def render():
     path_list = top_paths(path_rows, limit=10)
     asset_files = write_readme_svg_assets(
         ASSET_OUTPUT_DIR,
-        build_readme_asset_data(daily_rows, per_repo, totals=totals),
+        build_readme_asset_data(
+            daily_rows,
+            per_repo,
+            totals=totals,
+            traffic_reporting=traffic_reporting,
+        ),
     )
     asset_links = {
         name: (ASSET_DISPLAY_DIR / path.name).as_posix()
@@ -325,6 +353,7 @@ def render():
             "",
         ]
     )
+    lines.extend(_traffic_reporting_lines(traffic_reporting))
 
     # --- Hero stat banner (replaces markdown summary table) ---
     lines.extend(

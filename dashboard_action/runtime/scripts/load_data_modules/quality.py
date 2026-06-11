@@ -10,9 +10,10 @@ from load_data_modules.quality_summary import (
     _rows_for_capture,
 )
 from load_data_modules.types import Result, Rows
+from traffic_reporting import collection_quality_days_from_rows
 
 
-def collection_quality(status_rows: Rows) -> Result:
+def collection_quality(status_rows: Rows, collection_day_rows: Rows | None = None) -> Result:
     """Summarize the latest collection run quality from collection-status.csv."""
     if not status_rows:
         return dict(UNKNOWN_COLLECTION_QUALITY)
@@ -37,5 +38,9 @@ def collection_quality(status_rows: Rows) -> Result:
         "coverage_ratio": round(summary["coverage_ratio"], 4),
         "has_collection_gaps": summary["has_collection_gaps"],
         "repos": _gap_repos(summary),
-        "days": collection_quality_days(status_rows),
+        "days": (
+            collection_quality_days_from_rows(collection_day_rows)
+            if collection_day_rows
+            else collection_quality_days(status_rows)
+        ),
     }

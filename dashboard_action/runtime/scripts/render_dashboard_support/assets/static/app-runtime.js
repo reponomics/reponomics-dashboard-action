@@ -297,9 +297,16 @@
       if (!region) return;
       const errors = currentChunkLoadErrors();
       region.textContent = '';
-      if (!errors.length) {
+      if (!errors.length && !hasTrafficLag()) {
         region.hidden = true;
         region.removeAttribute('role');
+        return;
+      }
+      if (hasTrafficLag()) {
+        region.appendChild(buildTrafficLagNotice());
+      }
+      if (!errors.length) {
+        region.hidden = false;
         return;
       }
 
@@ -360,6 +367,47 @@
 
       region.appendChild(notice);
       region.hidden = false;
+    }
+
+    function hasTrafficLag() {
+      const reporting = currentPayload()?.traffic_reporting || {};
+      return !!reporting.has_lag;
+    }
+
+    function buildTrafficLagNotice() {
+      const reporting = currentPayload()?.traffic_reporting || {};
+      const lagDays = Number(reporting.lag_days || 0);
+      const affected = reporting.affected_repos || [];
+      const latestReported = reporting.latest_reported_traffic_date || 'unknown';
+      const latestCollection = reporting.latest_collection_date || 'unknown';
+      const notice = document.createElement('div');
+      notice.className = 'dashboard-notice warning';
+      notice.setAttribute('role', 'status');
+
+      const main = document.createElement('div');
+      main.className = 'dashboard-notice-main';
+      const copy = document.createElement('div');
+      copy.className = 'dashboard-notice-copy';
+      const title = document.createElement('div');
+      title.className = 'dashboard-notice-title';
+      title.textContent = 'GitHub traffic data is behind';
+      const message = document.createElement('div');
+      message.className = 'dashboard-notice-message';
+      const repoText = affected.length
+        ? ' across ' + formatNumber(affected.length) + ' repositories'
+        : '';
+      message.textContent = (
+        'Latest collection is ' + latestCollection
+        + ', but GitHub traffic is only reported through ' + latestReported
+        + (lagDays > 0 ? ' (' + formatNumber(lagDays) + ' day gap)' : '')
+        + repoText
+        + '. Charts show the missing trailing dates as unreported, not zero traffic.'
+      );
+      copy.appendChild(title);
+      copy.appendChild(message);
+      main.appendChild(copy);
+      notice.appendChild(main);
+      return notice;
     }
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
@@ -993,7 +1041,7 @@
         if (date >= cutoff) {
           Object.keys(windowed).forEach((key) => {
             if (!Array.isArray(windowed[key])) return;
-            windowed[key].push(key === 'dates' ? date : (series[key] || [])[idx] || 0);
+            windowed[key].push(key === 'dates' ? date : seriesValueAt(series, key, idx));
           });
         }
       });
@@ -1001,6 +1049,11 @@
         windowed.samples = (windowed.dates || []).length;
       }
       return windowed;
+    }
+
+    function seriesValueAt(series, key, idx) {
+      const values = (series && series[key]) || [];
+      return values[idx] === null || values[idx] === undefined ? null : values[idx];
     }
 
     function latestSeriesValue(series, key, fallback) {
@@ -1106,22 +1159,30 @@
             views: 0,
             uniques: 0,
             clones: 0,
-            clone_uniques: 0
+            clone_uniques: 0,
+            samples: { views: 0, uniques: 0, clones: 0, clone_uniques: 0 }
           };
-          current.views += Number(series.views[idx] || 0);
-          current.uniques += Number(series.uniques[idx] || 0);
-          current.clones += Number(series.clones[idx] || 0);
-          current.clone_uniques += Number(series.clone_uniques[idx] || 0);
+          ['views', 'uniques', 'clones', 'clone_uniques'].forEach((key) => {
+            const value = seriesValueAt(series, key, idx);
+            if (value !== null) {
+              current[key] += Number(value || 0);
+              current.samples[key] += 1;
+            }
+          });
           byDate.set(date, current);
         });
       });
       const dates = [...byDate.keys()].sort();
+      const projected = (date, key) => {
+        const row = byDate.get(date);
+        return row.samples[key] ? row[key] : null;
+      };
       return {
         dates,
-        views: dates.map((date) => byDate.get(date).views),
-        uniques: dates.map((date) => byDate.get(date).uniques),
-        clones: dates.map((date) => byDate.get(date).clones),
-        clone_uniques: dates.map((date) => byDate.get(date).clone_uniques)
+        views: dates.map((date) => projected(date, 'views')),
+        uniques: dates.map((date) => projected(date, 'uniques')),
+        clones: dates.map((date) => projected(date, 'clones')),
+        clone_uniques: dates.map((date) => projected(date, 'clone_uniques'))
       };
     }
 
@@ -1133,10 +1194,15 @@
           const parsed = parseIsoDate(date);
           if (!parsed) return;
           const weekday = (parsed.getUTCDay() + 6) % 7;
-          totals[weekday].views += Number(series.views[idx] || 0);
-          totals[weekday].uniques += Number((series.uniques || [])[idx] || 0);
-          totals[weekday].clones += Number(series.clones[idx] || 0);
-          totals[weekday].clone_uniques += Number((series.clone_uniques || [])[idx] || 0);
+          const views = seriesValueAt(series, 'views', idx);
+          const uniques = seriesValueAt(series, 'uniques', idx);
+          const clones = seriesValueAt(series, 'clones', idx);
+          const cloneUniques = seriesValueAt(series, 'clone_uniques', idx);
+          if (views === null && uniques === null && clones === null && cloneUniques === null) return;
+          totals[weekday].views += Number(views || 0);
+          totals[weekday].uniques += Number(uniques || 0);
+          totals[weekday].clones += Number(clones || 0);
+          totals[weekday].clone_uniques += Number(cloneUniques || 0);
           totals[weekday].samples += 1;
         });
       });
@@ -1827,11 +1893,10 @@
           const series = getRepoByName(repoName)?.series;
           if (!series) return;
           const dateMap = {};
-          const values = series[metric.key] || [];
-          (series.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const ds = makeAreaDataset(
             getShortName(repoName),
-            compareDates.map((date) => dateMap[date] || 0),
+            compareDates.map((date) => date in dateMap ? dateMap[date] : null),
             getRepoColor(repoName),
             { fill: false }
           );
@@ -1936,13 +2001,12 @@
         stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const color = getRepoColor(repoName);
           const inSet = state.compareRepos.includes(repoName);
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: inSet ? color : hexAlpha(color, 0.22),
             backgroundColor: 'transparent',
             borderDash: getRepoDash(repoName),
@@ -1963,13 +2027,12 @@
         stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const color = getRepoColor(repoName);
           const isFocus = repoName === focusName;
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: isFocus ? color : hexAlpha(color, 0.28),
             backgroundColor: isFocus ? hexAlpha(color, 0.32) : 'transparent',
             borderDash: getRepoDash(repoName),
@@ -1987,12 +2050,11 @@
         stackedChart.data.datasets = repoNames.map((repoName, idx) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, seriesIdx) => { dateMap[date] = values[seriesIdx] || 0; });
+          (series?.dates || []).forEach((date, seriesIdx) => { dateMap[date] = seriesValueAt(series, metric.key, seriesIdx); });
           const color = palette[idx % palette.length];
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: color,
             backgroundColor: hexAlpha(color, 0.55),
             borderDash: getRepoDash(repoName),

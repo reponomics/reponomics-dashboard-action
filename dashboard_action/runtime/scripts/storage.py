@@ -78,6 +78,17 @@ COLLECTION_STATUS_FIELDS = [
     "error_type", "error_message", "schema_version",
 ]
 
+COLLECTION_DAY_FIELDS = [
+    "ts", "status", "latest_captured_at", "run_count",
+    "tracked_repos", "with_data_repos", "zero_traffic_repos",
+    "skipped_repos", "error_repos", "schema_version",
+]
+
+TRAFFIC_COVERAGE_FIELDS = [
+    "repo", "ts", "coverage_state", "reported_at", "latest_collection_ts",
+    "latest_captured_at", "reason", "schema_version",
+]
+
 # Map filename -> (field list, date field used for retention trim)
 CSV_REGISTRY = {
     "traffic-log.csv":       (LOG_FIELDS,      "ts"),
@@ -87,6 +98,8 @@ CSV_REGISTRY = {
     "traffic-paths.csv":     (PATH_FIELDS,      "captured_at"),
     "repo-metrics.csv":      (REPO_METRIC_FIELDS, "ts"),
     "collection-status.csv": (COLLECTION_STATUS_FIELDS, "ts"),
+    "collection-days.csv":   (COLLECTION_DAY_FIELDS, "ts"),
+    "traffic-coverage.csv":  (TRAFFIC_COVERAGE_FIELDS, "ts"),
 }
 
 ARTIFACT_FILES = list(CSV_REGISTRY.keys()) + ["manifest.json"]
@@ -267,6 +280,28 @@ def dedup_collection_status(rows):
     for row in rows:
         key = (row["repo"], row["captured_at"], row.get("status", ""))
         seen[key] = row
+    return list(seen.values())
+
+
+def dedup_collection_days(rows):
+    """Remove duplicate collection-day summaries.
+
+    Key: ts.
+    """
+    seen = {}
+    for row in rows:
+        seen[row["ts"]] = row
+    return list(seen.values())
+
+
+def dedup_traffic_coverage(rows):
+    """Remove duplicate traffic coverage rows.
+
+    Key: (repo, ts).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["ts"])] = row
     return list(seen.values())
 
 

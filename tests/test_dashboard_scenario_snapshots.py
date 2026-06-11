@@ -93,6 +93,16 @@ def _write_scenario_data(
         run.storage.COLLECTION_STATUS_FIELDS,
         dataset.status_rows,
     )
+    _write_csv(
+        data_dir / "collection-days.csv",
+        run.storage.COLLECTION_DAY_FIELDS,
+        dataset.collection_day_rows,
+    )
+    _write_csv(
+        data_dir / "traffic-coverage.csv",
+        run.storage.TRAFFIC_COVERAGE_FIELDS,
+        dataset.traffic_coverage_rows,
+    )
 
 
 def _render_production_outputs(

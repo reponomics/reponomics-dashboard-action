@@ -102,6 +102,14 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
         "collection-status.csv": [
             _status_row("demo/app", "2026-05-01T12:00:00Z", "ok_with_data")
         ],
+        "collection-days.csv": [{"ts": "2026-05-01", "status": "healthy"}],
+        "traffic-coverage.csv": [
+            {
+                "repo": "demo/app",
+                "ts": "2026-05-01",
+                "coverage_state": "reported",
+            }
+        ],
     }
 
     def read_csv(path: str) -> list[dict[str, str]]:
@@ -115,6 +123,12 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
     assert load_data.load_repo_metrics(str(tmp_path)) is rows_by_file["repo-metrics.csv"]
     assert load_data.load_collection_status(str(tmp_path)) is rows_by_file[
         "collection-status.csv"
+    ]
+    assert load_data.load_collection_days(str(tmp_path)) is rows_by_file[
+        "collection-days.csv"
+    ]
+    assert load_data.load_traffic_coverage(str(tmp_path)) is rows_by_file[
+        "traffic-coverage.csv"
     ]
 
 
@@ -271,6 +285,79 @@ def test_collection_quality_days_uses_latest_run_per_day() -> None:
     ]
     assert days[1]["run_count"] == 1
     assert days[1]["status"] == "healthy"
+
+
+def test_collection_quality_uses_materialized_no_run_days() -> None:
+    quality = load_data.collection_quality(
+        [_status_row("demo/app", "2026-05-11T12:00:00Z", "ok_with_data")],
+        [
+            {
+                "ts": "2026-05-10",
+                "status": "no_run",
+                "latest_captured_at": "",
+                "run_count": "0",
+                "tracked_repos": "0",
+                "with_data_repos": "0",
+                "zero_traffic_repos": "0",
+                "skipped_repos": "0",
+                "error_repos": "0",
+            },
+            {
+                "ts": "2026-05-11",
+                "status": "healthy",
+                "latest_captured_at": "2026-05-11T12:00:00Z",
+                "run_count": "1",
+                "tracked_repos": "1",
+                "with_data_repos": "1",
+                "zero_traffic_repos": "0",
+                "skipped_repos": "0",
+                "error_repos": "0",
+            },
+        ],
+    )
+
+    assert [day["date"] for day in quality["days"]] == ["2026-05-10", "2026-05-11"]
+    assert quality["days"][0]["status"] == "no_run"
+
+
+def test_traffic_reporting_summary_ranges_upstream_lag() -> None:
+    summary = load_data.traffic_reporting_summary(
+        [
+            {
+                "repo": "demo/app",
+                "ts": "2026-06-08",
+                "coverage_state": "reported",
+            },
+            {
+                "repo": "demo/app",
+                "ts": "2026-06-09",
+                "coverage_state": "not_reported_by_api",
+            },
+            {
+                "repo": "demo/app",
+                "ts": "2026-06-10",
+                "coverage_state": "not_reported_by_api",
+            },
+            {
+                "repo": "demo/lib",
+                "ts": "2026-06-10",
+                "coverage_state": "collection_failed",
+            },
+        ],
+        [
+            {"ts": "2026-06-08", "status": "healthy"},
+            {"ts": "2026-06-09", "status": "healthy"},
+            {"ts": "2026-06-10", "status": "healthy"},
+        ],
+    )
+
+    assert summary["latest_collection_date"] == "2026-06-10"
+    assert summary["latest_reported_traffic_date"] == "2026-06-08"
+    assert summary["lag_days"] == 2
+    assert summary["affected_repos"] == ["demo/app"]
+    assert summary["unreported_ranges"] == [
+        {"repo": "demo/app", "start": "2026-06-09", "end": "2026-06-10", "days": 2}
+    ]
 
 
 def test_latest_repo_metrics_per_day_normalizes_blank_counters_and_skips_incomplete_rows() -> None:

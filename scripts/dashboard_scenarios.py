@@ -21,6 +21,7 @@ if str(RUNTIME_SCRIPTS_DIR) not in sys.path:
 import load_data  # noqa: E402
 import readme_assets  # noqa: E402
 import storage  # noqa: E402
+import traffic_reporting  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,14 @@ class ScenarioDataset:
     @cached_property
     def collection_quality(self) -> dict[str, Any]:
         return load_data.collection_quality(self.status_rows)
+
+    @cached_property
+    def collection_day_rows(self) -> list[dict[str, Any]]:
+        return traffic_reporting.collection_day_rows(self.status_rows)
+
+    @cached_property
+    def traffic_coverage_rows(self) -> list[dict[str, Any]]:
+        return traffic_reporting.traffic_coverage_rows(self.daily_rows, self.status_rows)
 
 
 def _row(
@@ -416,6 +425,56 @@ def large_corpus_scenario() -> ScenarioDataset:
     )
 
 
+def _upstream_lag_rows() -> list[dict[str, str]]:
+    start = date(2026, 6, 1)
+    repos = ["demo/api-monitor", "demo/docs-site", "demo/toolkit"]
+    rows: list[dict[str, str]] = []
+    for repo_index, repo in enumerate(repos):
+        for offset in range(8):
+            rows.append(
+                _row(
+                    repo,
+                    start + timedelta(days=offset),
+                    views=12 + repo_index * 4 + offset,
+                    uniques=7 + repo_index * 2,
+                    clones=2 + repo_index,
+                    cloners=1 + repo_index,
+                )
+            )
+    return rows
+
+
+def _upstream_lag_scenario() -> ScenarioDataset:
+    daily_rows = _upstream_lag_rows()
+    status_rows = [
+        {
+            "repo": repo,
+            "ts": "2026-06-11",
+            "captured_at": "2026-06-11T12:00:00Z",
+            "run_id": "dashboard-scenario",
+            "status": "ok_with_data",
+            "metric_source": "repo-detail",
+            "traffic_days": "14",
+            "referrer_rows": "1",
+            "path_rows": "1",
+            "error_type": "",
+            "error_message": "",
+            "schema_version": storage.SCHEMA_VERSION,
+        }
+        for repo in _repos(daily_rows)
+    ]
+    return ScenarioDataset(
+        key="upstream_traffic_lag",
+        title="Upstream traffic lag",
+        description="Collection is current but GitHub traffic reporting is three days behind.",
+        daily_rows=daily_rows,
+        referrer_rows=_synthetic_referrers(daily_rows),
+        path_rows=_synthetic_paths(daily_rows),
+        metric_rows=_synthetic_metrics(daily_rows),
+        status_rows=status_rows,
+    )
+
+
 def build_scenarios(fixture_data_dir: Path = DEFAULT_FIXTURE_DATA_DIR) -> list[ScenarioDataset]:
     """Return deterministic full-data scenarios for visual iteration and edge checks."""
     return [
@@ -450,4 +509,5 @@ def build_scenarios(fixture_data_dir: Path = DEFAULT_FIXTURE_DATA_DIR) -> list[S
             description="No retained traffic yet; every component should still render usefully.",
             daily_rows=[],
         ),
+        _upstream_lag_scenario(),
     ]

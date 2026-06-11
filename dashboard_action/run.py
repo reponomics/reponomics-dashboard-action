@@ -340,6 +340,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
             _restore_artifact(config)
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
+    merge.materialize_reporting_coverage()
     _set_version_status_env(config)
     _render_outputs(config, generate_readme=config.generate_readme)
     _git_commit_readme(config, "chore: publish Reponomics README dashboard [skip ci]")

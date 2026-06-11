@@ -10,9 +10,11 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`osv-scanner.yml`](osv-scanner.yml) runs OSV-Scanner recursively and uploads SARIF to GitHub code scanning. The workflow inlines the scanner, reporter, artifact upload, and SARIF upload steps so this repository's full-SHA action-pinning policy applies to every imported action.
 
-- [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It manages two components: the root Marketplace action, which keeps bare `v*` release tags and floating major/minor action tags, and the generated dashboard template, which uses component-prefixed `reponomics-dashboard-v*` release tags.
+- [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It manages the root Marketplace action only, keeping bare `v*` release tags and floating major/minor action tags for action consumers.
 
-- [`publish-template.yml`](publish-template.yml) builds the generated dashboard template from this repository and publishes it to `reponomics-dashboard`. It runs for manual dispatch and for `reponomics-dashboard-v*` template releases, leaving action releases as action-only events.
+- [`publish-template.yml`](publish-template.yml) builds the generated dashboard template from this repository and publishes it to `reponomics-dashboard`. It runs for `reponomics-dashboard-v*` template releases whose tag matches `template-contract.yml`, or for explicitly confirmed manual operator dispatches.
+
+- [`pre-release-validation.yml`](pre-release-validation.yml) is a manual, non-publishing validation pass for candidate refs. It builds the template from the candidate source, runs template smoke checks, runs generated-template consumer e2e against the same candidate action runtime, dry-runs template publication, and uploads the generated template for inspection.
 
 - [`sbom-provenance.yml`](sbom-provenance.yml) generates a repository SPDX SBOM and creates release source/SBOM attestations for release and manual runs. Release asset upload is explicitly disabled because immutable releases cannot be mutated after publication, and dependency snapshot upload is disabled so the third-party SBOM action runs with a read-only job token.
 

@@ -151,6 +151,24 @@ def _git_value(*args: str) -> str:
         return ""
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _validate_output_dir(output_dir: Path) -> None:
+    if output_dir == ROOT or _is_relative_to(output_dir, ROOT / ".git"):
+        raise TemplateBuildError(f"Refusing unsafe output directory: {output_dir}")
+    if _is_relative_to(output_dir, ROOT) and not _is_relative_to(output_dir, ROOT / "dist"):
+        raise TemplateBuildError(
+            "Refusing output directory inside repository source tree outside dist/: "
+            f"{output_dir}"
+        )
+
+
 def build_template(
     output_dir: Path = DEFAULT_OUTPUT,
     manifest_path: Path = DEFAULT_MANIFEST,
@@ -159,9 +177,7 @@ def build_template(
 ) -> Path:
     manifest = load_manifest(manifest_path)
     output_dir = output_dir.resolve()
-
-    if output_dir == ROOT or ROOT in output_dir.parents and output_dir.name == ".git":
-        raise TemplateBuildError(f"Refusing unsafe output directory: {output_dir}")
+    _validate_output_dir(output_dir)
 
     if clean and output_dir.exists():
         shutil.rmtree(output_dir)

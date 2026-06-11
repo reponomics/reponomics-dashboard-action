@@ -207,6 +207,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     collect_publish_workflow = yaml.safe_load(collect_publish)
     incident_reset_workflow = yaml.safe_load(incident_reset)
     doctor_workflow = yaml.safe_load(doctor)
+    rotate_workflow = yaml.safe_load(rotate)
 
     action_ref = f"uses: {contract.action_repository}@{contract.default_action_ref}"
     html_env = 'GENERATE_HTML_DASHBOARD: "false"'
@@ -303,6 +304,15 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         "contents": "read",
         "actions": "write",
     }
+    assert rotate_workflow["permissions"] == {"contents": "read"}
+    assert rotate_workflow["jobs"]["rotate"]["if"] == "github.ref == 'refs/heads/main'"
+    assert rotate_workflow["jobs"]["rotate"]["permissions"] == {
+        "contents": "write",
+        "actions": "read",
+        "pages": "write",
+        "id-token": "write",
+    }
+    assert rotate_workflow["jobs"]["rotate"]["steps"][0]["with"]["ref"] == "main"
     assert "workflow_run:" not in collect_publish
     assert "COLLECTION_TOKEN" not in keepalive
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in keepalive
@@ -588,6 +598,13 @@ def test_template_verify_rejects_forbidden_paths(tmp_path):
         build_template.verify_template(output)
 
 
+def test_template_build_rejects_source_tree_output_dirs():
+    with pytest.raises(build_template.TemplateBuildError):
+        build_template.build_template(Path("template"))
+    with pytest.raises(build_template.TemplateBuildError):
+        build_template.build_template(Path("scripts"))
+
+
 def test_publish_remote_safety_accepts_expected_repo():
     publish_generated_repo._assert_expected_repo(
         "git@github.com:reponomics/reponomics-dashboard.git",
@@ -603,6 +620,15 @@ def test_publish_remote_resolves_explicit_repository_url():
     assert publish_generated_repo._remote_url(
         "https://github.com/reponomics/reponomics-dashboard.git"
     ) == "https://github.com/reponomics/reponomics-dashboard.git"
+
+
+def test_publish_remote_display_redacts_url_credentials():
+    assert publish_generated_repo._display_remote_url(
+        "https://x-access-token:secret@example.com/reponomics/reponomics-dashboard.git"
+    ) == "https://example.com/reponomics/reponomics-dashboard.git"
+    assert publish_generated_repo._display_remote_url(
+        "git@github.com:reponomics/reponomics-dashboard.git"
+    ) == "git@github.com:reponomics/reponomics-dashboard.git"
 
 
 def test_publish_remote_safety_rejects_wrong_repo():

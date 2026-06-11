@@ -80,6 +80,16 @@ def _remote_repo_path(remote_url: str) -> str:
     return ""
 
 
+def _display_remote_url(remote_url: str) -> str:
+    parsed = urlparse(remote_url)
+    if parsed.scheme and parsed.hostname and "@" in parsed.netloc:
+        host = parsed.hostname
+        if parsed.port is not None:
+            host = f"{host}:{parsed.port}"
+        return parsed._replace(netloc=host).geturl()
+    return remote_url
+
+
 def _assert_expected_repo(remote_url: str, expected_repo: str) -> None:
     actual = _remote_repo_path(remote_url)
     expected = expected_repo.removesuffix(".git").strip("/")
@@ -119,8 +129,9 @@ def publish(
     if expected_repo:
         _assert_expected_repo(remote_url, expected_repo)
     source_commit = _git_value("rev-parse", "HEAD")
+    display_remote_url = _display_remote_url(remote_url)
     print(f"Preparing {len(files)} files from {output_dir}")
-    print(f"Target: {remote_url} {branch}")
+    print(f"Target: {display_remote_url} {branch}")
     if source_commit:
         print(f"Source commit: {source_commit}")
 
@@ -156,7 +167,7 @@ def publish(
             lease = f"--force-with-lease={remote_ref}:"
         _run(["git", "push", lease, "target", f"HEAD:{remote_ref}"], worktree)
 
-    print(f"Published {output_dir} to {remote}/{branch}")
+    print(f"Published {output_dir} to {display_remote_url}/{branch}")
 
 
 def main() -> None:

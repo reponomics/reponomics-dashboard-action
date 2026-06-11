@@ -4,6 +4,17 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git ref to publish from"
+        required: true
+        type: string
+        default: main
+      confirm_unreleased_template_publish:
+        description: "Publish without a reponomics-dashboard-v* release tag"
+        required: true
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -17,7 +28,7 @@ env:
 jobs:
   publish-template:
     name: Publish generated template
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}
+    if: ${{ (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v')) || (github.event_name == 'workflow_dispatch' && inputs.confirm_unreleased_template_publish) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -42,7 +53,30 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || 'main' }}
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.source_ref }}
+
+      - name: Validate template release tag
+        if: ${{ github.event_name == 'release' }}
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          template_version="$(sed -n 's/^template_version: //p' template-contract.yml | tr -d '"')"
+          expected_tag="reponomics-dashboard-v${template_version}"
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "Template release tag $RELEASE_TAG does not match template-contract.yml ($expected_tag)." >&2
+            exit 1
+          fi
+
+      - name: Record manual unreleased publication
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          {
+            echo "## Manual template publication"
+            echo
+            echo "This run publishes from \`${{ inputs.source_ref }}\` without a matching \`reponomics-dashboard-v*\` release tag."
+            echo "Use this only as an operator escape hatch; normal template publication should come from a template release tag matching \`template-contract.yml\`."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0

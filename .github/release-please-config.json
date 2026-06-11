@@ -32,19 +32,6 @@
           "path": "dashboard_action/run_modules/core.py"
         }
       ]
-    },
-    "template": {
-      "package-name": "reponomics-dashboard",
-      "release-type": "simple",
-      "include-component-in-tag": true,
-      "skip-changelog": true,
-      "extra-files": [
-        {
-          "type": "yaml",
-          "path": "template-contract.yml",
-          "jsonpath": "$.template_version"
-        }
-      ]
     }
   }
 }

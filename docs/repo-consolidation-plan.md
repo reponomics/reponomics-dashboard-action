@@ -236,6 +236,10 @@ current generated template.
 
 ### 2026-06-11 Release Metadata Split
 
+Superseded by the follow-up below. The branch briefly configured Release Please
+as a two-component action/template SemVer releaser, then backed that out because
+template versioning should not be auto-driven by Release Please.
+
 - `.github/.release-please-manifest.json` now has two entries:
   - `.` for the Marketplace action version.
   - `template` for the generated template product version.
@@ -271,3 +275,35 @@ commit.
 - `scripts/publish_generated_repo.py` still accepts configured git remote names,
   but also accepts explicit repository URLs/paths when they pass the
   `--expected-repo` safety check.
+
+### 2026-06-11 Review Findings Follow-Up
+
+- Release Please is action-only again. It may still help with action release
+  process, but it no longer owns the template product SemVer stream.
+- Template release publication is tag-driven: release events publish only
+  `reponomics-dashboard-v*` tags, and the workflow validates that the tag equals
+  `template-contract.yml`'s `template_version`.
+- Manual template publication remains available only as an explicitly confirmed
+  operator escape hatch and records that it is publishing an unreleased template
+  state.
+- `rotate-key.yml` now uses read-only top-level permissions, job-scoped write
+  permissions, a `main` branch guard, and checkout of `main`.
+- Template publication redacts credentialed HTTPS remote userinfo before logging.
+- Template build output is refused inside repository source directories outside
+  `dist/`.
+- Template smoke, consumer e2e, workflow classification, and publish dry-run are
+  now CI gates in this repository.
+- Stale maintainer docs are inventoried in `docs/OBSOLETE_DOCS_INVENTORY.md`
+  rather than rewritten during this migration pass.
+
+### 2026-06-11 Pre-release Action/Template Validation
+
+- Added `.github/workflows/pre-release-validation.yml` as a manual,
+  non-publishing candidate-ref validation workflow.
+- The workflow checks out the requested ref, validates action/workflow metadata,
+  builds the generated template, runs template smoke checks, runs generated
+  template consumer e2e against the same candidate action source, dry-runs
+  template publication, and uploads `dist/template` for inspection.
+- This is the lightweight staging substitute for now: no persistent staging
+  repository, no environment promotion state, and no semantic version automation
+  for the template product.

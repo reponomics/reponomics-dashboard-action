@@ -26,7 +26,10 @@ from storage import (
     dedup_paths,
     dedup_repo_metrics,
     dedup_collection_status,
+    dedup_collection_days,
+    dedup_traffic_coverage,
 )
+from traffic_reporting import collection_day_rows, traffic_coverage_rows
 
 # Map filenames to their dedup functions
 _DEDUP_FNS = {
@@ -36,6 +39,8 @@ _DEDUP_FNS = {
     "traffic-paths.csv":     dedup_paths,
     "repo-metrics.csv":      dedup_repo_metrics,
     "collection-status.csv": dedup_collection_status,
+    "collection-days.csv":   dedup_collection_days,
+    "traffic-coverage.csv":  dedup_traffic_coverage,
 }
 
 
@@ -81,6 +86,22 @@ def materialize_daily():
     write_csv(daily_path, daily_rows, DAILY_FIELDS)
 
 
+def materialize_reporting_coverage():
+    """Build daily cadence and traffic reporting coverage surfaces."""
+    daily_rows = read_csv(os.path.join(DATA_DIR, "traffic-daily.csv"))
+    status_rows = read_csv(os.path.join(DATA_DIR, "collection-status.csv"))
+    write_csv(
+        os.path.join(DATA_DIR, "collection-days.csv"),
+        collection_day_rows(status_rows),
+        CSV_REGISTRY["collection-days.csv"][0],
+    )
+    write_csv(
+        os.path.join(DATA_DIR, "traffic-coverage.csv"),
+        traffic_coverage_rows(daily_rows, status_rows),
+        CSV_REGISTRY["traffic-coverage.csv"][0],
+    )
+
+
 def trim_csv_by_date(filepath, date_field, cutoff_date):
     """Remove rows older than cutoff_date based on date_field."""
     rows = read_csv(filepath)
@@ -109,6 +130,8 @@ def main():
     dedup_all()
     print("Materializing daily summary...")
     materialize_daily()
+    print("Materializing reporting coverage...")
+    materialize_reporting_coverage()
     print("Trimming to retention window...")
     trim_all()
 

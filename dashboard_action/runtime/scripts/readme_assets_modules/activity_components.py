@@ -40,7 +40,7 @@ def month_labels(layout: ActivityLayout, theme: Theme) -> list[str]:
 def activity_cell(
     offset: int,
     layout: ActivityLayout,
-    values_by_date: dict[date, int],
+    values_by_date: dict[date, int | None],
     max_value: int,
     theme: Theme,
 ) -> str:
@@ -48,6 +48,11 @@ def activity_cell(
     value = values_by_date.get(current_date, 0)
     x, y = layout.cell_xy(offset)
     color = level_color(value, max_value, theme)
+    label = (
+        f"{current_date.isoformat()}: unreported traffic"
+        if value is None
+        else f"{current_date.isoformat()}: {value:,} views"
+    )
     fade_in = f"{offset * 0.012 / 14:.3f}"
     fade_in_end = f"{min((offset * 0.012 + 0.3) / 14, 0.15):.3f}"
     return (
@@ -56,12 +61,14 @@ def activity_cell(
         + '<animate attributeName="opacity" values="0;0;1;1;0" '
         + f'keyTimes="0;{fade_in};{fade_in_end};0.92;1" dur="14s" '
         + 'repeatCount="indefinite"/>'
-        + f"<title>{current_date.isoformat()}: {value:,} views</title></rect>"
+        + f"<title>{label}</title></rect>"
     )
 
 
-def level_color(value: int, max_val: int, theme: Theme) -> str:
+def level_color(value: int | None, max_val: int, theme: Theme) -> str:
     heatmap_colors = [theme.heatmap_empty] + theme.heatmap_scale
+    if value is None:
+        return theme.border
     if value <= 0 or max_val <= 0:
         return heatmap_colors[0]
     ratio = value / max_val

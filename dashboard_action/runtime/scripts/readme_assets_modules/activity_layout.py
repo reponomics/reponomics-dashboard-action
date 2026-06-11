@@ -10,7 +10,7 @@ from datetime import date, timedelta
 class ActivityLayout:
     def __init__(
         self,
-        pairs: list[tuple[date, int]],
+        pairs: list[tuple[date, int | None]],
         *,
         cell_size: int,
         gap: int,
@@ -39,7 +39,10 @@ class ActivityLayout:
         )
 
 
-def valid_date_pairs(dates: Sequence[str], values: Sequence[int]) -> list[tuple[date, int]]:
+def valid_date_pairs(
+    dates: Sequence[str],
+    values: Sequence[int | None],
+) -> list[tuple[date, int | None]]:
     pairs = []
     for raw_date, value in zip(dates, values):
         try:

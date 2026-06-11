@@ -297,9 +297,16 @@
       if (!region) return;
       const errors = currentChunkLoadErrors();
       region.textContent = '';
-      if (!errors.length) {
+      if (!errors.length && !hasTrafficLag()) {
         region.hidden = true;
         region.removeAttribute('role');
+        return;
+      }
+      if (hasTrafficLag()) {
+        region.appendChild(buildTrafficLagNotice());
+      }
+      if (!errors.length) {
+        region.hidden = false;
         return;
       }
 
@@ -360,6 +367,51 @@
 
       region.appendChild(notice);
       region.hidden = false;
+    }
+
+    function hasTrafficLag() {
+      const reporting = currentPayload()?.traffic_reporting || {};
+      return !!reporting.has_lag;
+    }
+
+    function buildTrafficLagNotice() {
+      const reporting = currentPayload()?.traffic_reporting || {};
+      const lagDays = Number(reporting.lag_days || 0);
+      const affected = reporting.affected_repos || [];
+      const unreportedStart = reporting.unreported_start_date || '';
+      const unreportedEnd = reporting.unreported_end_date || '';
+      const latestCollection = reporting.latest_collection_date || 'unknown';
+      const notice = document.createElement('div');
+      notice.className = 'dashboard-notice warning';
+      notice.setAttribute('role', 'status');
+
+      const main = document.createElement('div');
+      main.className = 'dashboard-notice-main';
+      const copy = document.createElement('div');
+      copy.className = 'dashboard-notice-copy';
+      const title = document.createElement('div');
+      title.className = 'dashboard-notice-title';
+      title.textContent = 'GitHub traffic data is behind';
+      const message = document.createElement('div');
+      message.className = 'dashboard-notice-message';
+      const repoText = affected.length
+        ? ' across ' + formatNumber(affected.length) + ' repositories'
+        : '';
+      const rangeText = unreportedStart && unreportedEnd
+        ? ' for ' + (unreportedStart === unreportedEnd ? unreportedStart : unreportedStart + ' through ' + unreportedEnd)
+        : '';
+      message.textContent = (
+        'Latest collection is ' + latestCollection
+        + ', but GitHub traffic is unreported' + rangeText
+        + (lagDays > 0 ? ' (' + formatNumber(lagDays) + ' day gap)' : '')
+        + repoText
+        + '. Charts show the missing trailing dates as unreported, not zero traffic.'
+      );
+      copy.appendChild(title);
+      copy.appendChild(message);
+      main.appendChild(copy);
+      notice.appendChild(main);
+      return notice;
     }
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
@@ -788,21 +840,94 @@
 
     function calendarStatusLabel(day) {
       if (!day) return 'no-run';
-      if (day.has_collection_gaps) return 'gap';
+      if (String(day.status || '') === 'no_run') return 'no-run';
+      if (day.has_collection_gaps) return 'collection-gap';
       if (String(day.status || '') === 'all_zero') return 'all-zero';
       return 'healthy';
     }
 
-    function formatCalendarDayTooltip(day) {
-      const statusLabel = calendarStatusLabel(day);
+    function visibleTrafficReportingRanges() {
+      const ranges = currentPayload()?.traffic_reporting?.unreported_ranges || [];
+      const visibleRepos = new Set(getVisibleRepos().map((repo) => repo.name));
+      if (!visibleRepos.size) return [];
+      return ranges.filter((range) => visibleRepos.has(String(range?.repo || '')));
+    }
+
+    function trafficReportingByDate() {
+      const byDate = new Map();
+      visibleTrafficReportingRanges().forEach((range) => {
+        const repo = String(range?.repo || '');
+        const start = parseIsoDate(range?.start);
+        const end = parseIsoDate(range?.end);
+        if (!repo || !start || !end) return;
+        const cursor = new Date(start.getTime());
+        while (cursor.getTime() <= end.getTime()) {
+          const iso = formatIsoDate(cursor);
+          if (!byDate.has(iso)) byDate.set(iso, []);
+          byDate.get(iso).push(repo);
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+      });
+      byDate.forEach((repos, date) => {
+        byDate.set(date, Array.from(new Set(repos)).sort());
+      });
+      return byDate;
+    }
+
+    function calendarStateForDay(day, unreportedRepos) {
+      if (!day || String(day.status || '') === 'no_run') {
+        return {
+          label: 'no-run',
+          className: 'calendar-day no-run',
+          summary: 'no workflow run',
+        };
+      }
+      const skipped = Number(day.skipped_repos || 0);
+      const errors = Number(day.error_repos || 0);
+      const hasTrafficLag = (unreportedRepos || []).length > 0;
+      if (errors > 0 || skipped > 0 || day.has_collection_gaps) {
+        return {
+          label: hasTrafficLag ? 'collection-gap + traffic-lag' : 'collection-gap',
+          className: `calendar-day gap${hasTrafficLag ? ' lag' : ''}`,
+          summary: 'collection ran with skipped or failed repo checks',
+        };
+      }
+      if (hasTrafficLag) {
+        return {
+          label: 'traffic-lag',
+          className: 'calendar-day lag',
+          summary: 'collection ran; GitHub did not report traffic for this trailing date',
+        };
+      }
+      if (String(day.status || '') === 'all_zero') {
+        return {
+          label: 'all-zero',
+          className: 'calendar-day zero',
+          summary: 'collection ran; GitHub reported zero traffic',
+        };
+      }
+      return {
+        label: 'healthy',
+        className: 'calendar-day ok',
+        summary: 'collection ran; traffic was reported',
+      };
+    }
+
+    function formatCalendarDayTooltip(day, unreportedRepos) {
+      const stateForDay = calendarStateForDay(day, unreportedRepos);
       const parts = [
-        `${day.date} · status: ${statusLabel}`,
+        `${day.date} · ${stateForDay.summary}`,
+        `status ${stateForDay.label}`,
         `tracked ${formatNumber(day.tracked_repos || 0)}`,
         `with data ${formatNumber(day.with_data_repos || 0)}`,
         `zero ${formatNumber(day.zero_traffic_repos || 0)}`,
         `skipped ${formatNumber(day.skipped_repos || 0)}`,
         `errors ${formatNumber(day.error_repos || 0)}`
       ];
+      if ((unreportedRepos || []).length) {
+        parts.push(`GitHub traffic unreported for ${formatNumber(unreportedRepos.length)} repo(s)`);
+        parts.push(`repos: ${unreportedRepos.slice(0, 4).join(', ')}${unreportedRepos.length > 4 ? ', …' : ''}`);
+      }
       if (Number(day.run_count || 0) > 1) {
         parts.push(`${formatNumber(day.run_count)} runs`);
       }
@@ -844,6 +969,7 @@
       }
 
       const byDate = new Map((days || []).map((day) => [String(day.date || ''), day]));
+      const reportingByDate = trafficReportingByDate();
       const firstDay = new Date(Date.UTC(parsed.year, parsed.month - 1, 1));
       const leading = (firstDay.getUTCDay() + 6) % 7;
       const count = daysInMonth(parsed.year, parsed.month);
@@ -855,14 +981,18 @@
       for (let dayNum = 1; dayNum <= count; dayNum += 1) {
         const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
         const day = byDate.get(iso);
+        const unreportedRepos = reportingByDate.get(iso) || [];
         let cls = 'calendar-day no-run';
-        let detail = `${iso} · status: no-run · no collection run`;
+        let detail = `${iso} · no workflow run · traffic availability unknown`;
         let title = detail;
         if (day) {
-          if (day.has_collection_gaps) cls = 'calendar-day gap';
-          else if (day.status === 'all_zero') cls = 'calendar-day zero';
-          else cls = 'calendar-day ok';
-          detail = formatCalendarDayTooltip(day);
+          const stateForDay = calendarStateForDay(day, unreportedRepos);
+          cls = stateForDay.className;
+          detail = formatCalendarDayTooltip(day, unreportedRepos);
+          title = detail;
+        } else if (unreportedRepos.length) {
+          cls = 'calendar-day lag';
+          detail = `${iso} · GitHub traffic unreported for ${formatNumber(unreportedRepos.length)} repo(s) · no collection-day row`;
           title = detail;
         }
         cells.push(
@@ -892,6 +1022,10 @@
       });
 
       const gapDays = days.filter((day) => day.has_collection_gaps).length;
+      const windowCutoff = getSelectedWindow() === 'all' ? '' : (getWindowCutoffDate() || '');
+      const lagDays = Array.from(reportingByDate.keys())
+        .filter((date) => !windowCutoff || date >= windowCutoff)
+        .length;
       const zeroDays = days.filter((day) => day.status === 'all_zero').length;
       const noRunStats = computeNoRunStats(days);
       const streakText = noRunStats.longestNoRunStreak > 0
@@ -900,7 +1034,8 @@
       hint.textContent = (
         `${formatNumber(noRunStats.collectedDays)} collected day(s), `
         + `${formatNumber(noRunStats.noRunDays)} no-run day(s)${streakText}, `
-        + `${formatNumber(gapDays)} gap day(s), `
+        + `${formatNumber(gapDays)} collection gap day(s), `
+        + `${formatNumber(lagDays)} traffic lag day(s), `
         + `${formatNumber(zeroDays)} all-zero day(s).`
       );
     }
@@ -917,10 +1052,13 @@
     }
 
     function computeNoRunStats(days) {
-      const collectedDates = Array.from(
-        new Set((days || []).map((day) => String(day.date || '')).filter(Boolean))
-      ).sort();
-      if (!collectedDates.length) {
+      const dayByDate = new Map(
+        (days || [])
+          .filter((day) => String(day?.date || ''))
+          .map((day) => [String(day.date), day])
+      );
+      const allDates = Array.from(dayByDate.keys()).sort();
+      if (!allDates.length) {
         return {
           collectedDays: 0,
           noRunDays: 0,
@@ -928,25 +1066,27 @@
         };
       }
 
-      const start = parseIsoDate(collectedDates[0]);
-      const end = parseIsoDate(collectedDates[collectedDates.length - 1]);
+      const start = parseIsoDate(allDates[0]);
+      const end = parseIsoDate(allDates[allDates.length - 1]);
       if (!start || !end) {
         return {
-          collectedDays: collectedDates.length,
+          collectedDays: allDates.filter((date) => String(dayByDate.get(date)?.status || '') !== 'no_run').length,
           noRunDays: 0,
           longestNoRunStreak: 0
         };
       }
 
-      const collectedSet = new Set(collectedDates);
       const cursor = new Date(start.getTime());
+      let collectedDays = 0;
       let noRunDays = 0;
       let streak = 0;
       let longestNoRunStreak = 0;
 
       while (cursor.getTime() <= end.getTime()) {
         const iso = formatIsoDate(cursor);
-        if (collectedSet.has(iso)) {
+        const day = dayByDate.get(iso);
+        if (day && String(day.status || '') !== 'no_run') {
+          collectedDays += 1;
           streak = 0;
         } else {
           noRunDays += 1;
@@ -957,7 +1097,7 @@
       }
 
       return {
-        collectedDays: collectedDates.length,
+        collectedDays,
         noRunDays,
         longestNoRunStreak
       };
@@ -993,7 +1133,7 @@
         if (date >= cutoff) {
           Object.keys(windowed).forEach((key) => {
             if (!Array.isArray(windowed[key])) return;
-            windowed[key].push(key === 'dates' ? date : (series[key] || [])[idx] || 0);
+            windowed[key].push(key === 'dates' ? date : seriesValueAt(series, key, idx));
           });
         }
       });
@@ -1001,6 +1141,11 @@
         windowed.samples = (windowed.dates || []).length;
       }
       return windowed;
+    }
+
+    function seriesValueAt(series, key, idx) {
+      const values = (series && series[key]) || [];
+      return values[idx] === null || values[idx] === undefined ? null : values[idx];
     }
 
     function latestSeriesValue(series, key, fallback) {
@@ -1106,22 +1251,30 @@
             views: 0,
             uniques: 0,
             clones: 0,
-            clone_uniques: 0
+            clone_uniques: 0,
+            samples: { views: 0, uniques: 0, clones: 0, clone_uniques: 0 }
           };
-          current.views += Number(series.views[idx] || 0);
-          current.uniques += Number(series.uniques[idx] || 0);
-          current.clones += Number(series.clones[idx] || 0);
-          current.clone_uniques += Number(series.clone_uniques[idx] || 0);
+          ['views', 'uniques', 'clones', 'clone_uniques'].forEach((key) => {
+            const value = seriesValueAt(series, key, idx);
+            if (value !== null) {
+              current[key] += Number(value || 0);
+              current.samples[key] += 1;
+            }
+          });
           byDate.set(date, current);
         });
       });
       const dates = [...byDate.keys()].sort();
+      const projected = (date, key) => {
+        const row = byDate.get(date);
+        return row.samples[key] ? row[key] : null;
+      };
       return {
         dates,
-        views: dates.map((date) => byDate.get(date).views),
-        uniques: dates.map((date) => byDate.get(date).uniques),
-        clones: dates.map((date) => byDate.get(date).clones),
-        clone_uniques: dates.map((date) => byDate.get(date).clone_uniques)
+        views: dates.map((date) => projected(date, 'views')),
+        uniques: dates.map((date) => projected(date, 'uniques')),
+        clones: dates.map((date) => projected(date, 'clones')),
+        clone_uniques: dates.map((date) => projected(date, 'clone_uniques'))
       };
     }
 
@@ -1133,10 +1286,15 @@
           const parsed = parseIsoDate(date);
           if (!parsed) return;
           const weekday = (parsed.getUTCDay() + 6) % 7;
-          totals[weekday].views += Number(series.views[idx] || 0);
-          totals[weekday].uniques += Number((series.uniques || [])[idx] || 0);
-          totals[weekday].clones += Number(series.clones[idx] || 0);
-          totals[weekday].clone_uniques += Number((series.clone_uniques || [])[idx] || 0);
+          const views = seriesValueAt(series, 'views', idx);
+          const uniques = seriesValueAt(series, 'uniques', idx);
+          const clones = seriesValueAt(series, 'clones', idx);
+          const cloneUniques = seriesValueAt(series, 'clone_uniques', idx);
+          if (views === null && uniques === null && clones === null && cloneUniques === null) return;
+          totals[weekday].views += Number(views || 0);
+          totals[weekday].uniques += Number(uniques || 0);
+          totals[weekday].clones += Number(clones || 0);
+          totals[weekday].clone_uniques += Number(cloneUniques || 0);
           totals[weekday].samples += 1;
         });
       });
@@ -1827,11 +1985,10 @@
           const series = getRepoByName(repoName)?.series;
           if (!series) return;
           const dateMap = {};
-          const values = series[metric.key] || [];
-          (series.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const ds = makeAreaDataset(
             getShortName(repoName),
-            compareDates.map((date) => dateMap[date] || 0),
+            compareDates.map((date) => date in dateMap ? dateMap[date] : null),
             getRepoColor(repoName),
             { fill: false }
           );
@@ -1936,13 +2093,12 @@
         stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const color = getRepoColor(repoName);
           const inSet = state.compareRepos.includes(repoName);
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: inSet ? color : hexAlpha(color, 0.22),
             backgroundColor: 'transparent',
             borderDash: getRepoDash(repoName),
@@ -1963,13 +2119,12 @@
         stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, idx) => { dateMap[date] = values[idx] || 0; });
+          (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
           const color = getRepoColor(repoName);
           const isFocus = repoName === focusName;
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: isFocus ? color : hexAlpha(color, 0.28),
             backgroundColor: isFocus ? hexAlpha(color, 0.32) : 'transparent',
             borderDash: getRepoDash(repoName),
@@ -1987,12 +2142,11 @@
         stackedChart.data.datasets = repoNames.map((repoName, idx) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
-          const values = series?.[metric.key] || [];
-          (series?.dates || []).forEach((date, seriesIdx) => { dateMap[date] = values[seriesIdx] || 0; });
+          (series?.dates || []).forEach((date, seriesIdx) => { dateMap[date] = seriesValueAt(series, metric.key, seriesIdx); });
           const color = palette[idx % palette.length];
           return {
             label: getShortName(repoName),
-            data: allDates.map((date) => dateMap[date] || 0),
+            data: allDates.map((date) => date in dateMap ? dateMap[date] : null),
             borderColor: color,
             backgroundColor: hexAlpha(color, 0.55),
             borderDash: getRepoDash(repoName),

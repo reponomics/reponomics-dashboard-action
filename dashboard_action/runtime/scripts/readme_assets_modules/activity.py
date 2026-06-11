@@ -11,7 +11,7 @@ from .theme import DARK, FONT_STYLE, Theme, empty_state_svg, responsive_svg
 
 def svg_activity_graph(
     dates: Sequence[str],
-    values: Sequence[int],
+    values: Sequence[int | None],
     cell_size: int = 11,
     gap: int = 3,
     theme: Theme = DARK,
@@ -25,7 +25,8 @@ def svg_activity_graph(
 
     layout = ActivityLayout(pairs, cell_size=cell_size, gap=gap)
     values_by_date = dict(pairs)
-    max_value = max(values_by_date.values()) if values_by_date else 1
+    numeric_values = [value for value in values_by_date.values() if value is not None]
+    max_value = max(numeric_values) if numeric_values else 1
     cells = [
         activity_cell(offset, layout, values_by_date, max_value, theme)
         for offset in range(layout.total_days)

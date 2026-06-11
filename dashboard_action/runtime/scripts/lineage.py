@@ -23,6 +23,8 @@ ROW_IDENTITY_FIELDS = {
     "traffic-paths.csv": ("repo", "captured_at", "path"),
     "repo-metrics.csv": ("repo", "captured_at"),
     "collection-status.csv": ("repo", "captured_at", "status"),
+    "collection-days.csv": ("ts",),
+    "traffic-coverage.csv": ("repo", "ts"),
 }
 
 

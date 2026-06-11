@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 SparkPoint = tuple[float, float, int | float]
+SparkValue = int | float | None
 
 
 class SparklineLayout:
@@ -18,19 +19,22 @@ class SparklineLayout:
         self.usable_height = height - self.top_pad - self.bottom_pad
 
 
-def spark_points(values: list[int | float], layout: SparklineLayout) -> list[SparkPoint]:
-    min_val = min(values)
-    max_val = max(values)
+def spark_points(values: list[SparkValue], layout: SparklineLayout) -> list[SparkPoint]:
+    numeric_values = [value for value in values if value is not None]
+    min_val = min(numeric_values)
+    max_val = max(numeric_values)
     value_range = max_val - min_val if max_val != min_val else 1
+    denominator = max(1, len(values) - 1)
     return [
         (
-            layout.left_pad + (i / (len(values) - 1)) * layout.usable_width,
+            layout.left_pad + (i / denominator) * layout.usable_width,
             layout.top_pad
             + layout.usable_height
             - ((value - min_val) / value_range) * layout.usable_height,
             value,
         )
         for i, value in enumerate(values)
+        if value is not None
     ]
 
 

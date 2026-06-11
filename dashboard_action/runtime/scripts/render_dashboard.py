@@ -25,7 +25,7 @@ import os
 import shutil
 import zipfile
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +47,8 @@ from load_data import (
     load_paths,
     load_repo_metrics,
     load_collection_status,
+    load_collection_days,
+    load_traffic_coverage,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -57,6 +59,7 @@ from load_data import (
     collection_quality,
     growth_analytics,
     latest_repo_community_profiles,
+    traffic_reporting_summary,
 )
 
 PAGE_INDEX_OUTPUT_PATH = "docs/index.html"
@@ -158,6 +161,56 @@ def _build_repo_series(daily_rows):
     return series
 
 
+def _date_range(start: str, end: str) -> list[str]:
+    if not start or not end:
+        return []
+    start_date = datetime.strptime(start, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    if start_date > end_date:
+        return []
+    dates = []
+    cursor = start_date
+    while cursor <= end_date:
+        dates.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return dates
+
+
+def _pad_metric_series(dates, series, end_date: str):
+    """Extend chart series through a reporting date with null unreported values."""
+    if not dates or not end_date or end_date <= dates[-1]:
+        return dates, series
+    extra_dates = _date_range(_next_day(dates[-1]), end_date)
+    padded_dates = [*dates, *extra_dates]
+    padded_series = {}
+    for key, values in series.items():
+        padded_series[key] = [*values, *([None] * len(extra_dates))]
+    return padded_dates, padded_series
+
+
+def _next_day(ts: str) -> str:
+    parsed = datetime.strptime(ts, "%Y-%m-%d").date()
+    return (parsed + timedelta(days=1)).isoformat()
+
+
+def _pad_repo_series(repo_series, end_date: str):
+    padded = {}
+    for repo, series in repo_series.items():
+        dates = series.get("dates", [])
+        padded_dates, padded_values = _pad_metric_series(
+            dates,
+            {
+                "views": series.get("views", []),
+                "uniques": series.get("uniques", []),
+                "clones": series.get("clones", []),
+                "clone_uniques": series.get("clone_uniques", []),
+            },
+            end_date,
+        )
+        padded[repo] = {"dates": padded_dates, **padded_values}
+    return padded
+
+
 def _build_weekday_summary(daily_rows):
     """Build average views/clones by weekday for a daily row collection."""
     daily_totals = defaultdict(lambda: {"views": 0, "clones": 0})
@@ -245,6 +298,7 @@ def _build_payload(
     insights,
     insights_structured,
     data_quality,
+    traffic_reporting,
     community_profiles,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
@@ -321,6 +375,7 @@ def _build_payload(
         "insights": insights,
         "insights_v2": insights_structured,
         "data_quality": data_quality,
+        "traffic_reporting": traffic_reporting,
     }
 
 
@@ -512,6 +567,8 @@ def render():
     path_rows = load_paths()
     metric_rows = load_repo_metrics()
     status_rows = load_collection_status()
+    collection_day_rows = load_collection_days()
+    coverage_rows = load_traffic_coverage()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -527,7 +584,11 @@ def render():
     repo_paths = _latest_snapshot_by_repo(path_rows)
     growth = growth_analytics(daily_rows, metric_rows)
     community_profiles = latest_repo_community_profiles(metric_rows)
-    data_quality = collection_quality(status_rows)
+    traffic_reporting = traffic_reporting_summary(coverage_rows, collection_day_rows)
+    reporting_end_date = traffic_reporting.get("latest_collection_date", "")
+    dates, series = _pad_metric_series(dates, series, reporting_end_date)
+    repo_series = _pad_repo_series(repo_series, reporting_end_date)
+    data_quality = collection_quality(status_rows, collection_day_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
     insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
@@ -549,6 +610,7 @@ def render():
         insights,
         insights_structured,
         data_quality,
+        traffic_reporting,
         community_profiles,
     )
 

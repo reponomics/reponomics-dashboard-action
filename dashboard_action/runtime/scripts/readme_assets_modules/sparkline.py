@@ -5,12 +5,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from .sparkline_components import date_labels, grid_lines, last_svg, peak_svg, polyline_svg
-from .sparkline_geometry import SparklineLayout, fill_points, polyline_points, spark_points
+from .sparkline_geometry import SparklineLayout, SparkValue, fill_points, polyline_points, spark_points
 from .theme import DARK, FONT_STYLE, Theme, empty_state_svg, responsive_svg
 
 
 def svg_sparkline(
-    values: Sequence[int | float],
+    values: Sequence[SparkValue],
     dates: Sequence[str] | None = None,
     width: int = 520,
     height: int = 100,
@@ -19,7 +19,8 @@ def svg_sparkline(
 ) -> str:
     """Generate an SVG sparkline with peak annotation and subtle grid."""
     stroke_color = stroke_color or theme.accent_blue
-    if not values or len(values) < 2:
+    numeric_values = [value for value in values if value is not None]
+    if not values or len(numeric_values) < 2:
         return empty_state_svg(
             "Not enough data for a trend chart.", width=width, height=height, theme=theme
         )
@@ -28,6 +29,7 @@ def svg_sparkline(
     vals = list(values)
     points = spark_points(vals, layout)
     line_points = polyline_points(points)
+    null_region = _null_region_svg(vals, layout, theme)
 
     inner = f"""{FONT_STYLE}
   <defs>
@@ -37,10 +39,31 @@ def svg_sparkline(
     </linearGradient>
   </defs>
   <rect width="100%" height="100%" fill="{theme.bg}" rx="8"/>
-  {''.join(grid_lines(layout, theme))}
+{null_region}  {''.join(grid_lines(layout, theme))}
   <polygon points="{fill_points(line_points, layout)}" fill="url(#sparkFill)" />
   {polyline_svg(line_points, stroke_color)}
-  {peak_svg(vals, points, stroke_color, theme)}
-  {last_svg(vals, points, theme)}
+  {peak_svg(numeric_values, points, stroke_color, theme)}
+  {last_svg(numeric_values, points, theme)}
   {date_labels(dates, layout, theme)}"""
     return responsive_svg(inner, width, height)
+
+
+def _null_region_svg(
+    values: list[SparkValue],
+    layout: SparklineLayout,
+    theme: Theme,
+) -> str:
+    try:
+        first_null = values.index(None)
+    except ValueError:
+        return ""
+    denominator = max(1, len(values) - 1)
+    start_x = layout.left_pad + (first_null / denominator) * layout.usable_width
+    width = max(0, layout.width - layout.right_pad - start_x)
+    if width <= 0:
+        return ""
+    return (
+        f'  <rect x="{start_x:.1f}" y="{layout.top_pad}" width="{width:.1f}" '
+        + f'height="{layout.usable_height}" fill="{theme.surface}" opacity="0.45" rx="3">'
+        + "<title>Unreported traffic dates</title></rect>\n"
+    )

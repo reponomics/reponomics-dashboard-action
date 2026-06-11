@@ -150,6 +150,172 @@ def test_merge_materializes_latest_daily_capture(tmp_path: Path) -> None:
     ]
 
 
+def _status_row(repo: str, ts: str, status: str) -> dict[str, str]:
+    return {
+        "repo": repo,
+        "ts": ts,
+        "captured_at": f"{ts}T12:00:00Z",
+        "run_id": "123",
+        "status": status,
+        "metric_source": "repo-detail",
+        "traffic_days": "14",
+        "referrer_rows": "0",
+        "path_rows": "0",
+        "error_type": "",
+        "error_message": "",
+        "schema_version": run.storage.SCHEMA_VERSION,
+    }
+
+
+def test_merge_materializes_collection_days_with_no_run_gaps(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    _write_csv(
+        data_dir / "collection-status.csv",
+        run.storage.COLLECTION_STATUS_FIELDS,
+        [
+            _status_row("demo/app", "2026-06-09", "ok_with_data"),
+            _status_row("demo/app", "2026-06-11", "ok_with_data"),
+        ],
+    )
+    _write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, [])
+
+    original_data_dir = run.merge.DATA_DIR
+    try:
+        run.merge.DATA_DIR = data_dir.as_posix()
+        run.merge.materialize_reporting_coverage()
+    finally:
+        run.merge.DATA_DIR = original_data_dir
+
+    assert _read_csv(data_dir / "collection-days.csv") == [
+        {
+            "ts": "2026-06-09",
+            "status": "healthy",
+            "latest_captured_at": "2026-06-09T12:00:00Z",
+            "run_count": "1",
+            "tracked_repos": "1",
+            "with_data_repos": "1",
+            "zero_traffic_repos": "0",
+            "skipped_repos": "0",
+            "error_repos": "0",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "ts": "2026-06-10",
+            "status": "no_run",
+            "latest_captured_at": "",
+            "run_count": "0",
+            "tracked_repos": "0",
+            "with_data_repos": "0",
+            "zero_traffic_repos": "0",
+            "skipped_repos": "0",
+            "error_repos": "0",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "ts": "2026-06-11",
+            "status": "healthy",
+            "latest_captured_at": "2026-06-11T12:00:00Z",
+            "run_count": "1",
+            "tracked_repos": "1",
+            "with_data_repos": "1",
+            "zero_traffic_repos": "0",
+            "skipped_repos": "0",
+            "error_repos": "0",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+
+
+def test_merge_materializes_upstream_lag_and_backfill_coverage(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    daily_rows = [
+        {
+            "repo": "demo/app",
+            "ts": "2026-06-08",
+            "views_count": "4",
+            "views_uniques": "2",
+            "clones_count": "1",
+            "clones_uniques": "1",
+            "captured_at": "2026-06-11T12:00:00Z",
+            "source": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    _write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, daily_rows)
+    _write_csv(
+        data_dir / "collection-status.csv",
+        run.storage.COLLECTION_STATUS_FIELDS,
+        [_status_row("demo/app", "2026-06-11", "ok_with_data")],
+    )
+
+    original_data_dir = run.merge.DATA_DIR
+    try:
+        run.merge.DATA_DIR = data_dir.as_posix()
+        run.merge.materialize_reporting_coverage()
+        first_states = {
+            (row["repo"], row["ts"]): row["coverage_state"]
+            for row in _read_csv(data_dir / "traffic-coverage.csv")
+        }
+        _write_csv(
+            data_dir / "traffic-daily.csv",
+            run.storage.DAILY_FIELDS,
+            [
+                *daily_rows,
+                {
+                    **daily_rows[0],
+                    "ts": "2026-06-09",
+                    "views_count": "7",
+                    "captured_at": "2026-06-12T12:00:00Z",
+                },
+            ],
+        )
+        run.merge.materialize_reporting_coverage()
+    finally:
+        run.merge.DATA_DIR = original_data_dir
+
+    assert first_states == {
+        ("demo/app", "2026-06-08"): "reported",
+        ("demo/app", "2026-06-09"): "not_reported_by_api",
+        ("demo/app", "2026-06-10"): "not_reported_by_api",
+        ("demo/app", "2026-06-11"): "not_reported_by_api",
+    }
+    second_states = {
+        (row["repo"], row["ts"]): row["coverage_state"]
+        for row in _read_csv(data_dir / "traffic-coverage.csv")
+    }
+    assert second_states[("demo/app", "2026-06-09")] == "reported"
+    assert second_states[("demo/app", "2026-06-10")] == "not_reported_by_api"
+    assert second_states[("demo/app", "2026-06-11")] == "not_reported_by_api"
+
+
+def test_merge_materializes_skipped_and_failed_traffic_coverage(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    _write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, [])
+    _write_csv(
+        data_dir / "collection-status.csv",
+        run.storage.COLLECTION_STATUS_FIELDS,
+        [
+            _status_row("demo/skipped", "2026-06-11", "skipped_unavailable"),
+            _status_row("demo/error", "2026-06-11", "error"),
+        ],
+    )
+
+    original_data_dir = run.merge.DATA_DIR
+    try:
+        run.merge.DATA_DIR = data_dir.as_posix()
+        run.merge.materialize_reporting_coverage()
+    finally:
+        run.merge.DATA_DIR = original_data_dir
+
+    assert {
+        (row["repo"], row["ts"]): row["coverage_state"]
+        for row in _read_csv(data_dir / "traffic-coverage.csv")
+    } == {
+        ("demo/error", "2026-06-11"): "collection_failed",
+        ("demo/skipped", "2026-06-11"): "repo_skipped",
+    }
+
+
 def test_merge_trim_csv_by_date_keeps_rows_on_or_after_cutoff(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     log_path = data_dir / "traffic-log.csv"

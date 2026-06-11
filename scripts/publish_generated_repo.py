@@ -55,7 +55,9 @@ def _remote_url(remote: str) -> str:
             stderr=subprocess.DEVNULL,
         ).strip()
     except subprocess.CalledProcessError as exc:
-        raise PublishError(f"Unknown git remote: {remote}") from exc
+        if "/" in _remote_repo_path(remote):
+            return remote
+        raise PublishError(f"Unknown git remote or repository URL: {remote}") from exc
 
 
 def _remote_repo_path(remote_url: str) -> str:

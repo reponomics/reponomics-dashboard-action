@@ -20,7 +20,7 @@ RUNTIME_LOCK := requirements-runtime.txt
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --upgrade --no-header --quiet
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
-TEMPLATE_REMOTE ?= reponomics-dashboard
+TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)

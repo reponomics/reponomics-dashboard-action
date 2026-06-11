@@ -259,3 +259,15 @@ top-level scripts and `template-contract.yml`. Before public release, either
 tighten the Release Please path model or document the release-operator rule that
 template-affecting non-`template/` changes need an explicit template release
 commit.
+
+### 2026-06-11 Publish Dry-Run Portability
+
+- `publish-template-dry-run` no longer requires a local
+  `reponomics-dashboard` git remote.
+- The Makefile default now points at
+  `https://github.com/reponomics/reponomics-dashboard.git`, while the GitHub
+  workflow still overrides `TEMPLATE_REMOTE` with the authenticated temporary
+  remote it creates during publication.
+- `scripts/publish_generated_repo.py` still accepts configured git remote names,
+  but also accepts explicit repository URLs/paths when they pass the
+  `--expected-repo` safety check.

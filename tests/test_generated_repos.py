@@ -599,6 +599,12 @@ def test_publish_remote_safety_accepts_expected_repo():
     )
 
 
+def test_publish_remote_resolves_explicit_repository_url():
+    assert publish_generated_repo._remote_url(
+        "https://github.com/reponomics/reponomics-dashboard.git"
+    ) == "https://github.com/reponomics/reponomics-dashboard.git"
+
+
 def test_publish_remote_safety_rejects_wrong_repo():
     with pytest.raises(publish_generated_repo.PublishError):
         publish_generated_repo._assert_expected_repo(

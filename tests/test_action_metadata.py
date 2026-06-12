@@ -140,7 +140,7 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert artifacts_job["needs"] == "publish-template"
     assert artifacts_job["permissions"] == {
         "attestations": "write",
-        "contents": "write",
+        "contents": "read",
         "id-token": "write",
     }
     assert "source_ref:" in workflow_text
@@ -158,7 +158,9 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "make template-consumer-e2e" in commands
     assert "make publish-template-dry-run" in commands
     assert "make package-template-release" in workflow_text
-    assert "gh release upload \"$RELEASE_TAG\" dist/template-release/* --clobber" in workflow_text
+    assert "gh release upload" not in workflow_text
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
+    assert "reponomics-dashboard-template-release-${{ github.event.release.tag_name }}" in workflow_text
     assert "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26" in workflow_text
     assert "dist/template-release/SHA256SUMS" in workflow_text
     assert step_names.index("Validate generated template release gates") < step_names.index(

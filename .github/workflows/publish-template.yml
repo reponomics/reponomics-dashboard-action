@@ -127,13 +127,13 @@ jobs:
             --push
 
   template-release-artifacts:
-    name: Publish template release artifacts
+    name: Attest template release artifacts
     if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}
     needs: publish-template
     runs-on: ubuntu-24.04
     permissions:
       attestations: write
-      contents: write
+      contents: read
       id-token: write
     steps:
       - name: Checkout release source
@@ -152,12 +152,12 @@ jobs:
           make package-template-release
 
       - name: Upload template release artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          gh release upload "$RELEASE_TAG" dist/template-release/* --clobber
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reponomics-dashboard-template-release-${{ github.event.release.tag_name }}
+          path: dist/template-release/*
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Attest template release artifacts
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0

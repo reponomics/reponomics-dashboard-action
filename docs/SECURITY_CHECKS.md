@@ -90,6 +90,8 @@ For published releases and manual runs, the workflow also creates a source archi
 
 The Anchore SBOM action's release-asset upload is disabled because this repository uses immutable GitHub Releases; release evidence is published through workflow artifacts and artifact attestations instead of mutating the release after publication.
 
+The generated-template release artifact path follows the same rule. `publish-template.yml` packages the generated template archive, canonical tree manifest, and `SHA256SUMS` as workflow artifacts and attests those files. It does not upload assets to a `reponomics-dashboard-v*` release after the release is published.
+
 The Anchore SBOM action's dependency snapshot upload is also disabled. GitHub's Dependency Submission API requires `contents: write`, and this repository prefers to keep the third-party SBOM action's job token read-only. Dependency visibility is covered separately by GitHub's native dependency graph/Dependabot behavior, `pip-audit`, OSV-Scanner, the runtime lock validator, and the vendored-asset validator.
 
 This repository is a composite action consumed by Git ref, not a package pushed to a package registry. The release attestation therefore covers the source archive produced from the release checkout rather than a registry package.

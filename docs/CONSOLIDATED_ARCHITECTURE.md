@@ -253,7 +253,7 @@ Current controls:
 - generated demo publication should also record `Source-Commit`
 - generated template output is produced from `template-manifest.yml`
 - generated template output includes `.reponomics/template-provenance.json` with source commit, template version, action compatibility metadata, and a canonical payload tree digest
-- generated template release artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
+- generated template release workflow artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
 - template release artifacts are attested by GitHub Actions on `reponomics-dashboard-v*` template releases
 - managed docs output includes a manifest with action repository, action version, UTC timestamp, namespace, and file hashes
 - pre-release validation uploads the generated `dist/template` artifact for inspection
@@ -288,7 +288,7 @@ Next-pass potential enhancement: Git's own object model can provide a useful sec
 
 ### Release Artifact Attestation
 
-The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, attach it to the `reponomics-dashboard-vX.Y.Z` GitHub release, publish checksum files, and generate a GitHub artifact attestation for the release artifact.
+The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, publish the package as a workflow artifact, publish checksum files, and generate a GitHub artifact attestation for the release artifact. Do not upload these files to an already-published GitHub Release from a `release.published` workflow; immutable releases cannot be mutated after publication. If first-class GitHub Release assets become necessary, the release protocol should change so a workflow builds and attaches assets while the release is still a draft, then publishes the release last.
 
 The release artifact set should probably include:
 

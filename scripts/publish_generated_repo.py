@@ -17,6 +17,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 
 ROOT = find_repo_root(Path(__file__))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import template_provenance  # noqa: E402
 
 
 class PublishError(RuntimeError):
@@ -114,6 +118,29 @@ def _commit_message(message: str, source_commit: str) -> str:
     return f"{message}\n\nSource-Commit: {source_commit}"
 
 
+def _verify_published_digest(output_dir: Path, remote_url: str, branch: str) -> str:
+    expected = template_provenance.verify_template_provenance(output_dir)["payload"]["digest"]
+    with tempfile.TemporaryDirectory(prefix="published-template-") as tmp:
+        worktree = Path(tmp) / "repo"
+        worktree.mkdir()
+        _run(["git", "init"], worktree)
+        _run(["git", "remote", "add", "target", remote_url], worktree)
+        _run(["git", "fetch", "--depth=1", "target", branch], worktree)
+        _run(["git", "checkout", "--detach", "FETCH_HEAD"], worktree)
+        try:
+            actual = template_provenance.verify_template_provenance(worktree)["payload"]["digest"]
+        except template_provenance.TemplateProvenanceError as exc:
+            actual = template_provenance.payload_tree_digest(worktree).digest
+            raise PublishError(
+                f"Published template payload digest mismatch: expected {expected}, got {actual}"
+            ) from exc
+    if actual != expected:
+        raise PublishError(
+            f"Published template payload digest mismatch: expected {expected}, got {actual}"
+        )
+    return actual
+
+
 def publish(
     output_dir: Path,
     remote: str,
@@ -129,6 +156,7 @@ def publish(
     files = _output_files(output_dir)
     if not files:
         raise PublishError(f"Generated output is empty: {output_dir}")
+    provenance = template_provenance.verify_template_provenance(output_dir)
 
     remote_url = _remote_url(remote)
     if expected_repo:
@@ -139,6 +167,7 @@ def publish(
     print(f"Target: {display_remote_url} {branch}")
     if source_commit:
         print(f"Source commit: {source_commit}")
+    print(f"Template payload digest: {provenance['payload']['digest']}")
 
     if not push:
         print("Dry run only. Re-run with --push to publish.")
@@ -159,7 +188,17 @@ def publish(
             worktree,
         )
         _run(["git", "add", "-A"], worktree)
-        _run(["git", "commit", "-m", _commit_message(message, source_commit)], worktree)
+        _run(
+            [
+                "git",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "commit",
+                "-m",
+                _commit_message(message, source_commit),
+            ],
+            worktree,
+        )
         _run(["git", "remote", "add", "target", remote_url], worktree)
         remote_ref = f"refs/heads/{branch}"
         lease_ref = f"refs/remotes/target/{branch}"
@@ -172,6 +211,8 @@ def publish(
             lease = f"--force-with-lease={remote_ref}:"
         _run(["git", "push", lease, "target", f"HEAD:{remote_ref}"], worktree)
 
+    digest = _verify_published_digest(output_dir, remote_url, branch)
+    print(f"Verified published template payload digest: {digest}")
     print(f"Published {output_dir} to {display_remote_url}/{branch}")
 
 

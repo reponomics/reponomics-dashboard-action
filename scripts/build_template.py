@@ -25,6 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import template_contract  # noqa: E402
+from scripts import template_provenance  # noqa: E402
 
 DEFAULT_MANIFEST = ROOT / "template-manifest.yml"
 DEFAULT_OUTPUT = ROOT / "dist" / "template"
@@ -197,6 +198,7 @@ def build_template(
         output_dir / contract.managed_docs_namespace,
         contract=contract,
     )
+    template_provenance.write_template_provenance(output_dir, contract=contract)
 
     verify_template(output_dir, manifest_path)
     return output_dir
@@ -245,6 +247,7 @@ def verify_template(
         contract=contract,
     )
     template_contract.verify_template_refs(output_dir, contract=contract)
+    template_provenance.verify_template_provenance(output_dir, contract=contract)
 
     commit = _git_value("rev-parse", "--short", "HEAD")
     print(

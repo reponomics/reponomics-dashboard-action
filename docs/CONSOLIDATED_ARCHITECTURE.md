@@ -252,6 +252,9 @@ Current controls:
 - generated template publication records `Source-Commit`
 - generated demo publication should also record `Source-Commit`
 - generated template output is produced from `template-manifest.yml`
+- generated template output includes `.reponomics/template-provenance.json` with source commit, template version, action compatibility metadata, and a canonical payload tree digest
+- generated template release workflow artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
+- template release artifacts are attested by GitHub Actions on `reponomics-dashboard-v*` template releases
 - managed docs output includes a manifest with action repository, action version, UTC timestamp, namespace, and file hashes
 - pre-release validation uploads the generated `dist/template` artifact for inspection
 - source-repository third-party GitHub Actions are SHA-pinned or covered by repository policy checks; generated template repositories intentionally use the compatible Reponomics action channel by default
@@ -260,9 +263,6 @@ Current controls:
 
 Recommended additions:
 
-- add a canonical generated-template tree digest so maintainers and users can verify that `dist/template` and `reponomics-dashboard@main` contain the same payload
-- attach an attested generated-template release artifact to template GitHub releases for a stronger release-artifact-backed proof
-- record the source commit, template version, and canonical tree digest in a machine-readable generated file in `reponomics-dashboard`, separate from managed docs if needed
 - keep template release tags immutable once public
 - require the template publish workflow to validate both the release tag and the generated output contract before push
 
@@ -284,9 +284,11 @@ payload_digest(dist/template) == payload_digest(reponomics-dashboard@main)
 
 This proof is not a cryptographic build attestation by itself, but it is easy for users to understand and directly answers whether the generated template that was built is the same tree that was published.
 
+Next-pass potential enhancement: Git's own object model can provide a useful secondary cross-check, but it should not be a Batch 4 requirement until the publication protocol is settled. The publish script creates a Git commit from the generated tree before force-pushing it to `reponomics-dashboard`; that commit has a commit SHA, and its root tree has a Git tree SHA that recursively identifies the published file names, file modes, and blob contents. A later hardening pass could record the generated commit SHA and root tree SHA in the publication summary or provenance, then compare them after fetching `reponomics-dashboard@main`. That should be treated as an auxiliary Git-native identity check, not as a replacement for the canonical payload digest or release artifact attestation.
+
 ### Release Artifact Attestation
 
-The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, attach it to the `reponomics-dashboard-vX.Y.Z` GitHub release, publish checksum files, and generate a GitHub artifact attestation for the release artifact.
+The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, publish the package as a workflow artifact, publish checksum files, and generate a GitHub artifact attestation for the release artifact before force-pushing the generated template repository. Do not upload these files to an already-published GitHub Release from a `release.published` workflow; immutable releases cannot be mutated after publication. If first-class GitHub Release assets become necessary, the release protocol should change so a workflow builds and attaches assets while the release is still a draft, then publishes the release last.
 
 The release artifact set should probably include:
 
@@ -502,7 +504,6 @@ Before public release, the most valuable hardening work is:
 
 - Create historical template compatibility fixtures and run current action code against them in CI.
 - Add a short template release checklist that encodes the manual SemVer decision points.
-- Decide whether generated `reponomics-dashboard` should include a machine-readable template provenance file outside `docs/reponomics/`.
 - Define and implement the demo profile for `reponomics-dashboard-demo`, including mocked collection fixtures, public demo key handling, demo-only README generation, and publication verification.
 - Review maintainer docs listed in `docs/OBSOLETE_DOCS_INVENTORY.md` and either archive or supersede them.
 - Tighten pre-release validation so it is clearly required by policy for product releases, even if GitHub cannot technically force it for every manual tag.

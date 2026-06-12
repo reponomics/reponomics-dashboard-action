@@ -4,6 +4,7 @@
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from scripts import build_template
 from scripts import publish_generated_repo
 from scripts import template_contract
 from scripts import template_consumer_e2e
+from scripts import template_provenance
 from scripts import verify_workflow_classification
 
 
@@ -51,6 +53,7 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         "README.md",
         "config.yaml",
         "config.example.yaml",
+        ".reponomics/template-provenance.json",
         "docs/reponomics/.manifest.json",
         "docs/reponomics/README.md",
         "docs/reponomics/configuration.md",
@@ -456,6 +459,75 @@ def test_template_contract_and_action_metadata_contract():
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
 
 
+def test_template_includes_verifiable_provenance(tmp_path):
+    output = tmp_path / "template"
+
+    build_template.build_template(output)
+    provenance = template_provenance.verify_template_provenance(output)
+    digest = template_provenance.payload_tree_digest(output)
+
+    assert provenance["schema_version"] == 1
+    assert provenance["source"]["commit"]
+    assert provenance["template"]["version"] == template_contract.load_contract().template_version
+    assert provenance["action"]["default_ref"] == "v0"
+    assert provenance["payload"]["tree_manifest_format"] == "reponomics-template-tree-v1"
+    assert provenance["payload"]["digest_algorithm"] == "sha256"
+    assert provenance["payload"]["digest"] == digest.digest
+    assert provenance["payload"]["excluded_paths"] == [".reponomics/template-provenance.json"]
+    assert ".reponomics/template-provenance.json" not in digest.manifest_bytes.decode("utf-8")
+
+
+def test_template_provenance_digest_is_stable_except_payload_tampering(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
+
+    original = template_provenance.payload_tree_digest(output).digest
+    provenance_path = output / template_provenance.PROVENANCE_PATH
+    provenance_payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance_path.write_text(
+        json.dumps(provenance_payload, indent=4, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    assert template_provenance.payload_tree_digest(output).digest == original
+
+    (output / "README.md").write_text("tampered\n", encoding="utf-8")
+    assert template_provenance.payload_tree_digest(output).digest != original
+    with pytest.raises(
+        template_provenance.TemplateProvenanceError,
+        match="Template provenance does not match",
+    ):
+        template_provenance.verify_template_provenance(output)
+
+
+def test_template_release_artifacts_include_manifest_archive_and_checksums(tmp_path):
+    output = tmp_path / "template"
+    artifacts_dir = tmp_path / "artifacts"
+    second_artifacts_dir = tmp_path / "artifacts-second"
+    build_template.build_template(output)
+
+    artifacts = template_provenance.package_release_artifacts(output, artifacts_dir)
+    second_artifacts = template_provenance.package_release_artifacts(output, second_artifacts_dir)
+
+    assert artifacts.archive.name.endswith(".tar.gz")
+    assert artifacts.tree_manifest.name.endswith(".tree.jsonl")
+    assert artifacts.checksums.name == "SHA256SUMS"
+    manifest = artifacts.tree_manifest.read_text(encoding="utf-8")
+    checksums = artifacts.checksums.read_text(encoding="utf-8")
+    assert '"path":"README.md"' in manifest
+    assert ".reponomics/template-provenance.json" not in manifest
+    assert artifacts.archive.name in checksums
+    assert artifacts.tree_manifest.name in checksums
+    assert hashlib.sha256(artifacts.archive.read_bytes()).hexdigest() == hashlib.sha256(
+        second_artifacts.archive.read_bytes()
+    ).hexdigest()
+    assert hashlib.sha256(artifacts.tree_manifest.read_bytes()).hexdigest() == hashlib.sha256(
+        second_artifacts.tree_manifest.read_bytes()
+    ).hexdigest()
+    assert artifacts.checksums.read_text(encoding="utf-8") == second_artifacts.checksums.read_text(
+        encoding="utf-8"
+    )
+
+
 def test_template_contract_normalizes_source_timestamp_to_utc():
     assert (
         template_contract._normalize_timestamp_utc("2026-06-11T14:28:07-04:00")
@@ -731,3 +803,48 @@ def test_publish_commit_message_records_source_commit():
     )
 
     assert message == "chore: publish generated template\n\nSource-Commit: abc123"
+
+
+def test_publish_verifies_published_template_digest(tmp_path):
+    output = tmp_path / "template"
+    remote = tmp_path / "remote.git"
+    clone = tmp_path / "clone"
+    build_template.build_template(output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+
+    publish_generated_repo.publish(
+        output,
+        remote.as_posix(),
+        "main",
+        "chore: publish generated template",
+        push=True,
+    )
+
+    assert publish_generated_repo._verify_published_digest(
+        output,
+        remote.as_posix(),
+        "main",
+    )
+
+    subprocess.run(["git", "clone", remote.as_posix(), clone], check=True)
+    subprocess.run(["git", "config", "user.name", "tester"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "tester@example.com"],
+        cwd=clone,
+        check=True,
+    )
+    (clone / "README.md").write_text("tampered\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "-c", "core.hooksPath=/dev/null", "commit", "-m", "tamper"],
+        cwd=clone,
+        check=True,
+    )
+    subprocess.run(["git", "push", "--force", "origin", "HEAD:main"], cwd=clone, check=True)
+
+    with pytest.raises(publish_generated_repo.PublishError, match="digest mismatch"):
+        publish_generated_repo._verify_published_digest(
+            output,
+            remote.as_posix(),
+            "main",
+        )

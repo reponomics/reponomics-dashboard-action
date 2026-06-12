@@ -48,6 +48,9 @@ DEMO_README_NOTICE = """\
 > **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, the Pages dashboard key is intentionally public, and this README dashboard is published because no private repository metrics are present.
 
 """
+DEMO_OWNER = "reponomics-demo"
+DEMO_REPO_PREFIX = "demo-"
+DEMO_DATASET_DENYLIST = ("reponomics-labs", "internal", "customer", "stealth")
 
 
 class DemoBuildError(RuntimeError):
@@ -96,7 +99,44 @@ def _load_dataset(path: Path) -> dict[str, Any]:
     repos = payload.get("repositories")
     if not isinstance(repos, list) or not repos:
         raise DemoBuildError("Demo dataset must define repositories.")
+    _validate_public_demo_names(payload)
     return payload
+
+
+def _validate_public_demo_names(dataset: dict[str, Any]) -> None:
+    owner = str(dataset.get("owner", "")).strip()
+    if owner != DEMO_OWNER:
+        raise DemoBuildError(f"Demo dataset owner must be {DEMO_OWNER!r}.")
+    featured = dataset.get("featured_repositories")
+    if not isinstance(featured, list):
+        raise DemoBuildError("Demo dataset must define featured_repositories.")
+    for item in featured:
+        if not isinstance(item, str) or not item.startswith(f"{DEMO_OWNER}/{DEMO_REPO_PREFIX}"):
+            raise DemoBuildError("Demo featured repositories must use reponomics-demo/demo-* names.")
+    for raw in dataset["repositories"]:
+        if not isinstance(raw, dict):
+            raise DemoBuildError("Each demo repository entry must be a mapping.")
+        name = str(raw.get("name", "")).strip()
+        if not name.startswith(DEMO_REPO_PREFIX):
+            raise DemoBuildError("Demo repository names must start with demo-.")
+    serialized = json.dumps(dataset, sort_keys=True).lower()
+    for term in DEMO_DATASET_DENYLIST:
+        if term in serialized:
+            raise DemoBuildError(f"Demo dataset contains brand-risk term: {term}")
+
+
+def _assert_no_demo_brand_risk_terms(output_dir: Path) -> None:
+    for path in output_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            content = path.read_text(encoding="utf-8").lower()
+        except UnicodeDecodeError:
+            continue
+        for term in DEMO_DATASET_DENYLIST:
+            if term in content:
+                relative = path.relative_to(output_dir)
+                raise DemoBuildError(f"Generated demo output contains brand-risk term {term}: {relative}")
 
 
 def _repo_specs(dataset: dict[str, Any]) -> list[RepoSpec]:
@@ -271,7 +311,9 @@ def _metric_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]]) -> lis
                     "language": spec.language,
                     "visibility": "public",
                     "default_branch": "main",
-                    "has_pages": "True" if spec.name in {"docs", "website", "status-page"} else "False",
+                    "has_pages": (
+                        "True" if spec.name in {"demo-docs", "demo-website", "demo-status-page"} else "False"
+                    ),
                     "has_discussions": "True",
                     "archived": "True" if spec.shape == "declining" else "False",
                     "disabled": "False",
@@ -520,6 +562,7 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH) -> None:
         raise DemoBuildError("Demo Pages dashboard is missing the public demo unlock panel.")
     if str(dataset["demo_key"]) not in html:
         raise DemoBuildError("Demo Pages dashboard does not expose the configured public demo key.")
+    _assert_no_demo_brand_risk_terms(output_dir)
     if "COLLECTION_TOKEN" in workflow or "DASHBOARD_SECRET_DO_NOT_REPLACE" in workflow:
         raise DemoBuildError("Demo workflow must not require collection or dashboard secrets.")
     provenance = json.loads((output_dir / DEMO_PROVENANCE_PATH).read_text(encoding="utf-8"))

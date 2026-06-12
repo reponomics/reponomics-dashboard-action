@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scripts.repo_paths import find_repo_root
@@ -61,6 +62,40 @@ def test_encrypted_html_renders_escaped_demo_unlock_panel() -> None:
     assert "Unlock &lt;demo&gt;" in html
 
 
+@pytest.mark.parametrize(
+    ("demo_unlock", "error_type"),
+    [
+        ({"label": "Public demo key", "key": "demo", "note": "Synthetic data."}, ValueError),
+        (
+            {
+                "label": "Public demo key",
+                "key": "demo",
+                "note": "Synthetic data.",
+                "button_label": "Unlock",
+                "unexpected": "value",
+            },
+            ValueError,
+        ),
+        (
+            {
+                "label": "Public demo key",
+                "key": "demo",
+                "note": "Synthetic data.",
+                "button_label": 42,
+            },
+            TypeError,
+        ),
+        ("demo", TypeError),
+    ],
+)
+def test_encrypted_html_rejects_malformed_demo_unlock_metadata(
+    demo_unlock: object,
+    error_type: type[Exception],
+) -> None:
+    with pytest.raises(error_type):
+        _encrypted_html(demo_unlock=demo_unlock)
+
+
 def test_public_action_surface_has_no_demo_unlock_input() -> None:
     action = yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))
 
@@ -75,11 +110,47 @@ def test_demo_dataset_has_single_owner_and_expected_size() -> None:
     owner = dataset["owner"]
     repos = dataset["repositories"]
 
-    assert owner == "reponomics-labs"
+    assert owner == "reponomics-demo"
     assert len(repos) == 30
     assert len(dataset["featured_repositories"]) == 10
     assert all("/" not in repo["name"] for repo in repos)
+    assert all(repo["name"].startswith("demo-") for repo in repos)
     assert all(item.startswith(f"{owner}/") for item in dataset["featured_repositories"])
+    assert all("/demo-" in item for item in dataset["featured_repositories"])
+
+
+def test_demo_dataset_rejects_ambiguous_public_brand_names(tmp_path: Path) -> None:
+    dataset = {
+        "schema_version": 1,
+        "dataset_revision": "test",
+        "owner": "reponomics-labs",
+        "window_days": 90,
+        "demo_key": "public-demo-key",
+        "featured_repositories": ["reponomics-labs/app-starter"],
+        "repositories": [
+            {
+                "name": "app-starter",
+                "shape": "launch",
+                "base_views": 10,
+                "clone_ratio": 0.1,
+                "language": "TypeScript",
+            }
+        ],
+    }
+    path = tmp_path / "dataset.yml"
+    path.write_text(yaml.safe_dump(dataset), encoding="utf-8")
+
+    with pytest.raises(build_demo_repo.DemoBuildError, match="owner must be"):
+        build_demo_repo._load_dataset(path)
+
+
+def test_demo_verifier_rejects_brand_risk_terms_in_generated_output(tmp_path: Path) -> None:
+    output = tmp_path / "output"
+    output.mkdir()
+    (output / "README.md").write_text("Synthetic repo: reponomics-labs/demo", encoding="utf-8")
+
+    with pytest.raises(build_demo_repo.DemoBuildError, match="brand-risk term"):
+        build_demo_repo._assert_no_demo_brand_risk_terms(output)
 
 
 def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Path) -> None:

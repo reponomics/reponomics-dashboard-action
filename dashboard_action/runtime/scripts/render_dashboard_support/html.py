@@ -7,7 +7,7 @@ import hashlib
 import html
 import json
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Mapping, TypedDict, cast
 
 from render_dashboard_support.assets import load_asset
 from render_dashboard_support.status import render_version_badges as _render_version_badges
@@ -30,6 +30,9 @@ class DemoUnlockMetadata(TypedDict):
     key: str
     note: str
     button_label: str
+
+
+DEMO_UNLOCK_METADATA_KEYS = frozenset(DemoUnlockMetadata.__annotations__)
 
 ACTION_ROOT = Path(__file__).resolve().parents[4]
 VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
@@ -523,10 +526,11 @@ def build_public_html(
 def _build_demo_unlock_panel(demo_unlock: DemoUnlockMetadata | None) -> str:
     if demo_unlock is None:
         return ""
-    label = html.escape(demo_unlock["label"])
-    key = html.escape(demo_unlock["key"])
-    note = html.escape(demo_unlock["note"])
-    button_label = html.escape(demo_unlock["button_label"])
+    metadata = _validate_demo_unlock_metadata(demo_unlock)
+    label = html.escape(metadata["label"])
+    key = html.escape(metadata["key"])
+    note = html.escape(metadata["note"])
+    button_label = html.escape(metadata["button_label"])
     return f"""
           <div class="demo-unlock-panel" id="demo-unlock-panel">
             <div class="demo-unlock-copy">
@@ -539,6 +543,17 @@ def _build_demo_unlock_panel(demo_unlock: DemoUnlockMetadata | None) -> str:
             </div>
           </div>
 """
+
+
+def _validate_demo_unlock_metadata(demo_unlock: object) -> DemoUnlockMetadata:
+    if not isinstance(demo_unlock, Mapping):
+        raise TypeError("demo_unlock must be a mapping")
+    if set(demo_unlock) != DEMO_UNLOCK_METADATA_KEYS:
+        expected = ", ".join(sorted(DEMO_UNLOCK_METADATA_KEYS))
+        raise ValueError(f"demo_unlock must contain exactly these keys: {expected}")
+    if not all(isinstance(demo_unlock[key], str) for key in DEMO_UNLOCK_METADATA_KEYS):
+        raise TypeError("demo_unlock values must be strings")
+    return cast(DemoUnlockMetadata, demo_unlock)
 
 
 def build_encrypted_html(

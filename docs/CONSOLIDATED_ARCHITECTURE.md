@@ -284,6 +284,8 @@ payload_digest(dist/template) == payload_digest(reponomics-dashboard@main)
 
 This proof is not a cryptographic build attestation by itself, but it is easy for users to understand and directly answers whether the generated template that was built is the same tree that was published.
 
+Next-pass potential enhancement: Git's own object model can provide a useful secondary cross-check, but it should not be a Batch 4 requirement until the publication protocol is settled. The publish script creates a Git commit from the generated tree before force-pushing it to `reponomics-dashboard`; that commit has a commit SHA, and its root tree has a Git tree SHA that recursively identifies the published file names, file modes, and blob contents. A later hardening pass could record the generated commit SHA and root tree SHA in the publication summary or provenance, then compare them after fetching `reponomics-dashboard@main`. That should be treated as an auxiliary Git-native identity check, not as a replacement for the canonical payload digest or release artifact attestation.
+
 ### Release Artifact Attestation
 
 The second proof should be stronger and release-artifact-backed. For each template release, package `dist/template` as a deterministic or manifest-backed artifact, attach it to the `reponomics-dashboard-vX.Y.Z` GitHub release, publish checksum files, and generate a GitHub artifact attestation for the release artifact.
@@ -502,7 +504,7 @@ Before public release, the most valuable hardening work is:
 
 - Create historical template compatibility fixtures and run current action code against them in CI.
 - Add a short template release checklist that encodes the manual SemVer decision points.
-- Decide whether generated `reponomics-dashboard` should include a machine-readable template provenance file outside `docs/reponomics/`.
+- Implement generated-template provenance outside `docs/reponomics/`, including a canonical payload tree digest that excludes the provenance file itself and can be compared against the published `reponomics-dashboard@main` tree.
 - Define and implement the demo profile for `reponomics-dashboard-demo`, including mocked collection fixtures, public demo key handling, demo-only README generation, and publication verification.
 - Review maintainer docs listed in `docs/OBSOLETE_DOCS_INVENTORY.md` and either archive or supersede them.
 - Tighten pre-release validation so it is clearly required by policy for product releases, even if GitHub cannot technically force it for every manual tag.

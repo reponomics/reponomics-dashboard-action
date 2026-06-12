@@ -528,6 +528,20 @@ def test_template_consumer_e2e_rejects_broken_composite_runtime_mapping():
     assert "inputs.allow-docs-sync" in error
 
 
+def test_template_consumer_e2e_rejects_unsupported_composite_runtime_shell():
+    action = yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
+    runtime_step = next(
+        step
+        for step in action["runs"]["steps"]
+        if step.get("name") == template_consumer_e2e.RUNTIME_STEP_NAME
+    )
+    runtime_step["shell"] = "pwsh"
+
+    error = template_consumer_e2e.runtime_step_contract_error(action)
+
+    assert "shell: bash" in error
+
+
 def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     contract = template_contract.load_contract()
     docs_root = tmp_path / "docs" / "reponomics"

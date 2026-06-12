@@ -27,6 +27,7 @@ DEFAULT_TEMPLATE = ROOT / "dist" / "template"
 DEFAULT_ACTION_REPO = ROOT
 DEFAULT_ACTION_PYTHON = DEFAULT_ACTION_REPO / "venv" / "bin" / "python"
 RUNTIME_STEP_NAME = "Run Reponomics runtime"
+RUNTIME_STEP_SHELL = "bash"
 REQUIRED_COMPOSITE_ENV = {
     "REPONOMICS_MODE": "${{ inputs.mode }}",
     "REPONOMICS_GITHUB_TOKEN": "${{ inputs.github-token }}",
@@ -271,6 +272,10 @@ def _runtime_step(action: dict) -> dict:
 
 
 def _assert_runtime_step_contract(step: dict) -> None:
+    if step.get("shell") != RUNTIME_STEP_SHELL:
+        raise TemplateConsumerE2EError(
+            f"{RUNTIME_STEP_NAME!r} must declare shell: {RUNTIME_STEP_SHELL}"
+        )
     env = step.get("env")
     if not isinstance(env, dict):
         raise TemplateConsumerE2EError(f"{RUNTIME_STEP_NAME!r} must declare env mappings")
@@ -369,7 +374,7 @@ def _invoke_composite_runtime_step(
             "PATH": f"{action_python.parent.as_posix()}{os.pathsep}{env.get('PATH', '')}",
         }
     )
-    _run(["bash", "-c", step["run"]], cwd=consumer_dir, env=env)
+    _run([step["shell"], "-c", step["run"]], cwd=consumer_dir, env=env)
 
 
 def _read_github_output(path: Path) -> dict[str, str]:

@@ -125,3 +125,44 @@ jobs:
             --expected-repo "${TEMPLATE_EXPECTED_REPO}" \
             --message "chore: publish generated template ${RELEASE_TAG}" \
             --push
+
+  template-release-artifacts:
+    name: Publish template release artifacts
+    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}
+    needs: publish-template
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build template release artifacts
+        run: |
+          set -euo pipefail
+          make package-template-release
+
+      - name: Upload template release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" dist/template-release/* --clobber
+
+      - name: Attest template release artifacts
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: |
+            dist/template-release/reponomics-dashboard-template-*.tar.gz
+            dist/template-release/reponomics-dashboard-template-*.tree.jsonl
+            dist/template-release/SHA256SUMS

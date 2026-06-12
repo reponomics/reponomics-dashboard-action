@@ -118,6 +118,7 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     workflow_text = Path(".github/workflows/publish-template.yml").read_text(encoding="utf-8")
     workflow = yaml.safe_load(workflow_text)
     publish_job = workflow["jobs"]["publish-template"]
+    artifacts_job = workflow["jobs"]["template-release-artifacts"]
     steps = publish_job["steps"]
     step_names = [step["name"] for step in steps]
     commands = "\n".join(step["run"] for step in steps if "run" in step)
@@ -131,6 +132,17 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
         + "inputs.confirm_unreleased_template_publish) }}"
     )
     assert publish_job["environment"] == "template-publication"
+    assert publish_job["permissions"] == {"contents": "read"}
+    assert artifacts_job["if"] == (
+        "${{ github.event_name == 'release' && "
+        + "startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}"
+    )
+    assert artifacts_job["needs"] == "publish-template"
+    assert artifacts_job["permissions"] == {
+        "attestations": "write",
+        "contents": "write",
+        "id-token": "write",
+    }
     assert "source_ref:" in workflow_text
     assert "confirm_unreleased_template_publish:" in workflow_text
     assert "expected_tag=\"reponomics-dashboard-v${template_version}\"" in workflow_text
@@ -145,6 +157,10 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "make template-smoke" in commands
     assert "make template-consumer-e2e" in commands
     assert "make publish-template-dry-run" in commands
+    assert "make package-template-release" in workflow_text
+    assert "gh release upload \"$RELEASE_TAG\" dist/template-release/* --clobber" in workflow_text
+    assert "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26" in workflow_text
+    assert "dist/template-release/SHA256SUMS" in workflow_text
     assert step_names.index("Validate generated template release gates") < step_names.index(
         "Create release app token"
     )

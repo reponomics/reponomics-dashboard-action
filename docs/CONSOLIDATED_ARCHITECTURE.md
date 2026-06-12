@@ -252,6 +252,9 @@ Current controls:
 - generated template publication records `Source-Commit`
 - generated demo publication should also record `Source-Commit`
 - generated template output is produced from `template-manifest.yml`
+- generated template output includes `.reponomics/template-provenance.json` with source commit, template version, action compatibility metadata, and a canonical payload tree digest
+- generated template release artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
+- template release artifacts are attested by GitHub Actions on `reponomics-dashboard-v*` template releases
 - managed docs output includes a manifest with action repository, action version, UTC timestamp, namespace, and file hashes
 - pre-release validation uploads the generated `dist/template` artifact for inspection
 - source-repository third-party GitHub Actions are SHA-pinned or covered by repository policy checks; generated template repositories intentionally use the compatible Reponomics action channel by default
@@ -260,9 +263,6 @@ Current controls:
 
 Recommended additions:
 
-- add a canonical generated-template tree digest so maintainers and users can verify that `dist/template` and `reponomics-dashboard@main` contain the same payload
-- attach an attested generated-template release artifact to template GitHub releases for a stronger release-artifact-backed proof
-- record the source commit, template version, and canonical tree digest in a machine-readable generated file in `reponomics-dashboard`, separate from managed docs if needed
 - keep template release tags immutable once public
 - require the template publish workflow to validate both the release tag and the generated output contract before push
 
@@ -504,7 +504,6 @@ Before public release, the most valuable hardening work is:
 
 - Create historical template compatibility fixtures and run current action code against them in CI.
 - Add a short template release checklist that encodes the manual SemVer decision points.
-- Implement generated-template provenance outside `docs/reponomics/`, including a canonical payload tree digest that excludes the provenance file itself and can be compared against the published `reponomics-dashboard@main` tree.
 - Define and implement the demo profile for `reponomics-dashboard-demo`, including mocked collection fixtures, public demo key handling, demo-only README generation, and publication verification.
 - Review maintainer docs listed in `docs/OBSOLETE_DOCS_INVENTORY.md` and either archive or supersede them.
 - Tighten pre-release validation so it is clearly required by policy for product releases, even if GitHub cannot technically force it for every manual tag.

@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e publish-template-dry-run publish-template
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -22,6 +22,7 @@ COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
+TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
 
@@ -113,6 +114,10 @@ template-consumer-e2e: build-template ## Run generated template consumers agains
 
 template-action-boundary-e2e: build-template ## Run the generated-template composite action.yml boundary check
 	$(PYTHON) scripts/template_consumer_e2e.py --composite-boundary --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
+
+package-template-release: build-template ## Build deterministic generated-template release artifacts
+	rm -rf $(TEMPLATE_RELEASE_ARTIFACTS_DIR)
+	$(PYTHON) scripts/template_provenance.py package --root dist/template --output-dir $(TEMPLATE_RELEASE_ARTIFACTS_DIR)
 
 publish-template-dry-run: build-template ## Show the generated template publish target without pushing
 	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)"

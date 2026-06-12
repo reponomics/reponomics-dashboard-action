@@ -254,7 +254,7 @@ Current controls:
 - generated template output is produced from `template-manifest.yml`
 - generated template output includes `.reponomics/template-provenance.json` with source commit, template version, action compatibility metadata, and a canonical payload tree digest
 - generated template release workflow artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
-- template release artifacts are attested by GitHub Actions on `reponomics-dashboard-v*` template releases
+- template release artifacts are uploaded as workflow artifacts and attested by GitHub Actions on `reponomics-dashboard-v*` template releases before the workflow creates the template-repository app token or force-pushes `reponomics-dashboard`
 - managed docs output includes a manifest with action repository, action version, UTC timestamp, namespace, and file hashes
 - pre-release validation uploads the generated `dist/template` artifact for inspection
 - source-repository third-party GitHub Actions are SHA-pinned or covered by repository policy checks; generated template repositories intentionally use the compatible Reponomics action channel by default

@@ -1,0 +1,167 @@
+schema_version: 1
+dataset_revision: 2026-06-demo-v1
+owner: reponomics-demo
+window_days: 90
+demo_key: reponomics-demo-public-key-2026-keep-this-visible-do-not-reuse
+featured_repositories:
+  - reponomics-demo/demo-app-starter
+  - reponomics-demo/demo-product-dashboard
+  - reponomics-demo/demo-docs
+  - reponomics-demo/demo-examples
+  - reponomics-demo/demo-api
+  - reponomics-demo/demo-sdk-js
+  - reponomics-demo/demo-sdk-python
+  - reponomics-demo/demo-cli
+  - reponomics-demo/demo-website
+  - reponomics-demo/demo-integration-hub
+repositories:
+  - name: demo-app-starter
+    shape: launch
+    base_views: 72
+    clone_ratio: 0.13
+    language: TypeScript
+  - name: demo-product-dashboard
+    shape: launch
+    base_views: 68
+    clone_ratio: 0.10
+    language: TypeScript
+  - name: demo-docs
+    shape: docs_growth
+    base_views: 58
+    clone_ratio: 0.03
+    language: Markdown
+  - name: demo-examples
+    shape: clone_heavy
+    base_views: 48
+    clone_ratio: 0.22
+    language: Python
+  - name: demo-api
+    shape: steady_growth
+    base_views: 44
+    clone_ratio: 0.12
+    language: Python
+  - name: demo-sdk-js
+    shape: release_spike
+    base_views: 38
+    clone_ratio: 0.18
+    language: TypeScript
+  - name: demo-sdk-python
+    shape: release_spike
+    base_views: 34
+    clone_ratio: 0.20
+    language: Python
+  - name: demo-cli
+    shape: clone_heavy
+    base_views: 28
+    clone_ratio: 0.28
+    language: Go
+  - name: demo-website
+    shape: high_attention
+    base_views: 62
+    clone_ratio: 0.02
+    language: Astro
+  - name: demo-integration-hub
+    shape: business_growth
+    base_views: 36
+    clone_ratio: 0.11
+    language: TypeScript
+  - name: demo-deploy-action
+    shape: steady_growth
+    base_views: 30
+    clone_ratio: 0.16
+    language: TypeScript
+  - name: demo-template-gallery
+    shape: late_riser
+    base_views: 26
+    clone_ratio: 0.14
+    language: TypeScript
+  - name: demo-community-plugins
+    shape: long_tail
+    base_views: 24
+    clone_ratio: 0.10
+    language: TypeScript
+  - name: demo-config-recipes
+    shape: docs_growth
+    base_views: 22
+    clone_ratio: 0.06
+    language: Markdown
+  - name: demo-auth
+    shape: high_attention
+    base_views: 20
+    clone_ratio: 0.08
+    language: TypeScript
+  - name: demo-data-exporter
+    shape: steady_growth
+    base_views: 19
+    clone_ratio: 0.14
+    language: Python
+  - name: demo-issue-triage
+    shape: long_tail
+    base_views: 18
+    clone_ratio: 0.09
+    language: Python
+  - name: demo-release-tools
+    shape: release_spike
+    base_views: 17
+    clone_ratio: 0.16
+    language: Go
+  - name: demo-status-page
+    shape: business_growth
+    base_views: 16
+    clone_ratio: 0.04
+    language: TypeScript
+  - name: demo-design-system
+    shape: steady_growth
+    base_views: 15
+    clone_ratio: 0.06
+    language: CSS
+  - name: demo-tools
+    shape: background
+    base_views: 8
+    clone_ratio: 0.06
+    language: Python
+  - name: demo-support-scripts
+    shape: background
+    base_views: 7
+    clone_ratio: 0.12
+    language: Shell
+  - name: demo-terraform-modules
+    shape: clone_heavy
+    base_views: 9
+    clone_ratio: 0.24
+    language: HCL
+  - name: demo-legacy-dashboard
+    shape: declining
+    base_views: 14
+    clone_ratio: 0.05
+    language: JavaScript
+  - name: demo-research-notebooks
+    shape: background
+    base_views: 7
+    clone_ratio: 0.04
+    language: Jupyter Notebook
+  - name: demo-playground
+    shape: late_riser
+    base_views: 8
+    clone_ratio: 0.10
+    language: TypeScript
+  - name: demo-archive-reader
+    shape: background
+    base_views: 6
+    clone_ratio: 0.07
+    language: Rust
+  - name: demo-changelog-bot
+    shape: long_tail
+    base_views: 6
+    clone_ratio: 0.11
+    language: Python
+  - name: demo-schema-fixtures
+    shape: background
+    base_views: 5
+    clone_ratio: 0.05
+    language: JSON
+  - name: demo-workflow-sandbox
+    shape: background
+    base_views: 5
+    clone_ratio: 0.09
+    language: YAML

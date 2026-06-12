@@ -45,6 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           make verify-workflow-classification
+          make validate-template-action-ref
           make template-smoke
 
       - name: Run generated template consumers against candidate action

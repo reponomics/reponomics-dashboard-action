@@ -118,6 +118,11 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     workflow_text = Path(".github/workflows/publish-template.yml").read_text(encoding="utf-8")
     workflow = yaml.safe_load(workflow_text)
     publish_job = workflow["jobs"]["publish-template"]
+    steps = publish_job["steps"]
+    step_names = [step["name"] for step in steps]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
+    checkout_step = next(step for step in steps if step["name"] == "Checkout release source")
+    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
 
     assert publish_job["if"] == (
         "${{ (github.event_name == 'release' && "
@@ -125,10 +130,27 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
         + "(github.event_name == 'workflow_dispatch' && "
         + "inputs.confirm_unreleased_template_publish) }}"
     )
+    assert publish_job["environment"] == "template-publication"
     assert "source_ref:" in workflow_text
     assert "confirm_unreleased_template_publish:" in workflow_text
     assert "expected_tag=\"reponomics-dashboard-v${template_version}\"" in workflow_text
     assert "Manual template publication" in workflow_text
+    assert "Manual template publication is restricted to main or reponomics-dashboard-v* tags" in workflow_text
+    assert "token" not in checkout_step["with"]
+    assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
+    assert "make verify-workflow-classification" in commands
+    assert "make build-template" in commands
+    assert "make verify-template" in commands
+    assert "make validate-template-action-ref" in commands
+    assert "make template-smoke" in commands
+    assert "make template-consumer-e2e" in commands
+    assert "make publish-template-dry-run" in commands
+    assert step_names.index("Validate generated template release gates") < step_names.index(
+        "Create release app token"
+    )
+    assert step_names.index("Create release app token") < step_names.index(
+        "Publish generated template repository"
+    )
 
 
 def test_ci_runs_generated_template_gates() -> None:
@@ -156,6 +178,7 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "make validate" in commands
     assert "make validate-action-pins" not in commands
     assert "make verify-workflow-classification" in commands
+    assert "make validate-template-action-ref" in commands
     assert "make template-smoke" in commands
     assert "make template-consumer-e2e" in commands
     assert "make publish-template-dry-run" in commands

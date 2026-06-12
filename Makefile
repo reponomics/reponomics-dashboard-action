@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification template-smoke template-consumer-e2e publish-template-dry-run publish-template
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e publish-template-dry-run publish-template
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -101,6 +101,9 @@ verify-template: install ## Verify dist/template/ against the template manifest
 
 verify-workflow-classification: install ## Verify maintainer vs template workflow boundaries
 	$(PYTHON) scripts/verify_workflow_classification.py
+
+validate-template-action-ref: install ## Verify the public template action ref satisfies the template contract
+	$(PYTHON) scripts/validate_template_action_ref.py
 
 template-smoke: build-template ## Smoke-test ephemeral template publish and generated workflows
 	$(PYTHON) scripts/smoke_template_release.py --output dist/template

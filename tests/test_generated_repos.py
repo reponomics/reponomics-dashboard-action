@@ -516,19 +516,40 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
         template_contract.verify_managed_docs_snapshot(docs_root, contract=contract)
 
 
-def test_template_contract_verify_rejects_stale_action_refs(tmp_path):
+@pytest.mark.parametrize(
+    "action_ref",
+    [
+        "reponomics/reponomics-dashboard-action@v0.15.0",
+        "reponomics/reponomics-dashboard-action@main",
+        "reponomics/reponomics-dashboard-action@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reponomics/reponomics-dashboard-action@v0.23.0-rc.1",
+    ],
+)
+def test_template_contract_verify_rejects_unexpected_action_refs(tmp_path, action_ref):
+    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
+    (tmp_path / "template-contract.yml").write_text(
+        Path("template-contract.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (tmp_path / "README.md").write_text(f"uses: {action_ref}\n", encoding="utf-8")
+
+    with pytest.raises(template_contract.TemplateContractError, match="Stale template action"):
+        template_contract.verify_template_refs(tmp_path)
+
+
+def test_template_contract_verify_accepts_expected_action_ref(tmp_path):
+    contract = template_contract.load_contract()
     (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
     (tmp_path / "template-contract.yml").write_text(
         Path("template-contract.yml").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     (tmp_path / "README.md").write_text(
-        "uses: reponomics/reponomics-dashboard-action@v0.15.0\n",
+        f"uses: {contract.action_repository}@{contract.default_action_ref}\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(template_contract.TemplateContractError, match="Stale template action"):
-        template_contract.verify_template_refs(tmp_path)
+    template_contract.verify_template_refs(tmp_path)
 
 
 def test_workflow_classification_contract():

@@ -30,10 +30,7 @@ MANAGED_DOCS_MANIFEST_SCHEMA_VERSION = 1
 REQUIRED_ACTION_INPUTS = {"allow-docs-sync"}
 REQUIRED_ACTION_OUTPUTS = {"docs-sync-state", "docs-action-version", "docs-updated-at"}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
-ACTION_REF_RE = re.compile(
-    r"reponomics/reponomics-dashboard-action@v(0|[1-9]\d*)"
-    + r"(?:\.(0|[1-9]\d*)\.(0|[1-9]\d*))?"
-)
+ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
 
 
 class TemplateContractError(RuntimeError):

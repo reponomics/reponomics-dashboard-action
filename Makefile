@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e publish-template-dry-run publish-template
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e publish-template-dry-run publish-template
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -110,6 +110,9 @@ template-smoke: build-template ## Smoke-test ephemeral template publish and gene
 
 template-consumer-e2e: build-template ## Run generated template consumers against the local action runtime
 	$(PYTHON) scripts/template_consumer_e2e.py --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
+
+template-action-boundary-e2e: build-template ## Run the generated-template composite action.yml boundary check
+	$(PYTHON) scripts/template_consumer_e2e.py --composite-boundary --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
 
 publish-template-dry-run: build-template ## Show the generated template publish target without pushing
 	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)"

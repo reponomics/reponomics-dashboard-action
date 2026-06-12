@@ -459,6 +459,8 @@ expensive, but bridge tests should block action-side PRs. A runtime change that
 breaks copied generated templates is an action regression even when no template
 files changed.
 
+The direct generated-template consumer e2e and the composite action boundary e2e are separate bridge checks. The direct runtime e2e proves that generated consumer repositories still work against the local runtime under realistic template data/config conditions. The composite boundary e2e proves that `action.yml` maps generated workflow inputs into the expected `REPONOMICS_*` environment and executes the runtime command through the composite action surface. They do not both need to run routinely for every PR: run the direct bridge as the regular generated-template behavior gate, and run the composite boundary gate when `action.yml`, generated workflow `with:` blocks, action input names/defaults, or runtime env-loading changes. Product release candidates may run both as an explicit pre-release confidence check.
+
 Compatibility fixtures should be phased by release maturity:
 
 - Before beta, compatibility fixtures are regression canaries only. They should

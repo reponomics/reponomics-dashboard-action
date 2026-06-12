@@ -24,14 +24,12 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`update-vendored-assets.yml`](update-vendored-assets.yml) periodically refreshes vendored browser assets from their recorded upstream npm packages, validates the refreshed files and manifests, and opens or updates a pull request when the vendored assets change.
 
-- [`validate-action-pins.yml`](validate-action-pins.yml) verifies that imported GitHub Actions in `action.yml` and repository workflow files are pinned to full commit SHAs, and rejects third-party reusable workflows that would hide unpinned transitive action use. It is both a standalone check and a reusable workflow called by `ci.yml`.
-
 - [`validate-runtime-lock.yml`](validate-runtime-lock.yml) verifies that `requirements-runtime.txt` remains synchronized with `pyproject.toml` and is accepted by `pip` in hash-required mode. This protects the composite action's runtime dependency installation from unpinned resolution at execution time.
 
 - [`validate-vendored-assets.yml`](validate-vendored-assets.yml) verifies vendored browser asset manifests, local hashes, upstream npm tarball integrity, license bytes, and OSV status for pinned package versions. It runs independently and through `ci.yml` so vendored asset provenance has both PR and scheduled coverage.
 
 ## Conventions
 
-Imported actions should be pinned by full commit SHA with a nearby version comment for maintainability. Workflows should keep workflow-level permissions minimal and grant write permissions only at the job level that needs them.
+Imported third-party actions in this source repository should be pinned by full commit SHA with a nearby version comment for maintainability. Repository/organization policy is the control; OpenSSF Scorecard and PolicyChecks provide public visibility into that posture. Workflows should keep workflow-level permissions minimal and grant write permissions only at the job level that needs them.
 
 Where a workflow exists partly to support a public badge or external security signal, keep the executable workflow small and put longer rationale in repository documentation such as [`../../docs/SECURITY_CHECKS.md`](../../docs/SECURITY_CHECKS.md) or [`../../docs/PROVENANCE.md`](../../docs/PROVENANCE.md).

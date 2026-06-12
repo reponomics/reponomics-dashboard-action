@@ -17,10 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-action-pins:
-    name: Validate action pins
-    uses: ./.github/workflows/validate-action-pins.yml
-
   validate-vendored-assets:
     name: Validate vendored assets
     uses: ./.github/workflows/validate-vendored-assets.yml

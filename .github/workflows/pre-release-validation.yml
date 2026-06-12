@@ -39,9 +39,7 @@ jobs:
       - name: Validate action and workflow metadata
         run: |
           set -euo pipefail
-          make validate-action
-          make validate-workflows
-          make validate-action-pins
+          make validate
 
       - name: Build and smoke-test generated template
         run: |

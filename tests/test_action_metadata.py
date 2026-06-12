@@ -153,9 +153,8 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "workflow_dispatch:" in workflow_text
     assert "source_ref:" in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
-    assert "make validate-action" in commands
-    assert "make validate-workflows" in commands
-    assert "make validate-action-pins" in commands
+    assert "make validate" in commands
+    assert "make validate-action-pins" not in commands
     assert "make verify-workflow-classification" in commands
     assert "make template-smoke" in commands
     assert "make template-consumer-e2e" in commands

@@ -3,7 +3,7 @@
 .PHONY: help install pre-commit-install pre-commit-run ci
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
-.PHONY: validate validate-action validate-workflows validate-action-pins validate-vendored-assets
+.PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template verify-workflow-classification template-smoke template-consumer-e2e publish-template-dry-run publish-template
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
@@ -79,16 +79,13 @@ lint: install ## Run lint checks
 type-check: install ## Run static type checks
 	$(PYTHON) -m mypy
 
-validate: validate-action validate-workflows validate-action-pins validate-runtime-lock validate-vendored-assets ## Run validation checks
+validate: validate-action validate-workflows validate-runtime-lock validate-vendored-assets ## Run validation checks
 
 validate-action: install ## Validate action.yml
 	$(PYTHON) -c "import pathlib, yaml; data = yaml.safe_load(pathlib.Path('action.yml').read_text()); assert data['runs']['using'] == 'composite'"
 
 validate-workflows: install ## Validate GitHub workflow YAML
 	$(PYTHON) -c "import pathlib, yaml; [yaml.safe_load(path.read_text()) for path in pathlib.Path('.github/workflows').glob('*.yml')]"
-
-validate-action-pins: install ## Validate imported GitHub Action SHA pins
-	$(PYTHON) scripts/validate_action_pins.py action.yml .github
 
 validate-vendored-assets: install ## Validate vendored third-party assets
 	$(PYTHON) scripts/validate_vendored_assets.py
@@ -117,7 +114,7 @@ publish-template-dry-run: build-template ## Show the generated template publish 
 publish-template: build-template ## Publish dist/template/ to the template repository main branch
 	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
 
-ci: lint type-check validate-action validate-workflows test coverage validate-action-pins validate-runtime-lock validate-vendored-assets ## Run CI checks
+ci: lint type-check validate test coverage ## Run CI checks
 
 fixtures: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard ## Run fixture checks
 

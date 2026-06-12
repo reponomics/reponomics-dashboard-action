@@ -156,7 +156,6 @@ reponomics-dashboard@v0.9.1
 - `make lint`
 - `make type-check`
 - `make validate-workflows`
-- `make validate-action-pins`
 
 ### Remaining Rough Edges
 

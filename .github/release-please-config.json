@@ -6,7 +6,22 @@
     ".": {
       "package-name": "reponomics-dashboard-action",
       "release-type": "simple",
+      "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
+      "exclude-paths": [
+        ".github/workflows/publish-template.yml",
+        "scripts/build_template.py",
+        "scripts/publish_generated_repo.py",
+        "scripts/smoke_template_release.py",
+        "scripts/template_consumer_e2e.py",
+        "scripts/template_contract.py",
+        "scripts/verify_workflow_classification.py",
+        "template",
+        "template-contract.yml",
+        "template-manifest.yml",
+        "tests/test_generated_repos.py",
+        "tests/test_template_setup_acceptance.py"
+      ],
       "extra-files": [
         {
           "type": "generic",

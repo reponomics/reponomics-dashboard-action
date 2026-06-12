@@ -1,0 +1,58 @@
+version: 1
+
+description: >
+  Files copied into the generated Reponomics dashboard template repository.
+  The template/ source tree is copied to the generated repository root. String
+  entries under template/ are copied to the same relative path with the leading
+  template/ prefix stripped. Source filenames carrying the .template marker
+  project without that marker so generated root metadata is visibly
+  non-authoritative in this development repository. String entries outside
+  template/ are copied to the same relative path. Use source/target mappings only
+  for true outliers. The docs/reponomics/ managed-docs snapshot is generated
+  during the template build from the local action bundle, not maintained as a
+  second source tree under template/. Anything not listed here is maintainer,
+  demo, cache, or internal source material.
+
+include:
+  - template
+
+forbidden:
+  - .DS_Store
+  - .coverage
+  - .coverage.*
+  - .dashboard-data-artifact
+  - .env
+  - .pytest_cache
+  - .github/workflows/dev-*.yml
+  - AGENTS.md
+  - __INTERNAL__
+  - Makefile
+  - __pycache__
+  - data
+  - demo-data
+  - dist
+  - "*.log"
+  - docs/BRANCH_MODEL.md
+  - docs/GENERATED_REPOSITORY_MODEL.md
+  - docs/FAQ.md
+  - docs/LAUNCH_CHECKLIST.md
+  - docs/PROVENANCE.md
+  - docs/REPOSITORY_POLICY.md
+  - docs/README.md
+  - docs/SECURE_DASHBOARD_KEY.md
+  - docs/TRUST_BOUNDARY.md
+  - docs/adr
+  - docs/archive
+  - docs/architecture
+  - docs/privacy-model-explainer.html
+  - maintainer.mk
+  - requirements.txt
+  - requirements-dev.txt
+  - scripts
+  - template
+  - template-action-release.yml
+  - template-contract.yml
+  - template-manifest.yml
+  - tests
+  - vendor
+  - venv

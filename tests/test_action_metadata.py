@@ -5,6 +5,7 @@ import tomllib
 import yaml
 
 from dashboard_action.run_modules.core import VERSION
+from scripts import template_contract
 
 
 ACTION_EXPRESSION = re.compile(r"\$\{\{.*?\}\}")
@@ -97,6 +98,72 @@ def test_runtime_version_matches_release_metadata() -> None:
     assert "dashboard_action/run.py" not in extra_files
 
 
+def test_release_please_remains_action_only() -> None:
+    contract = template_contract.load_contract()
+    release_manifest = yaml.safe_load(
+        Path(".github/.release-please-manifest.json").read_text(encoding="utf-8")
+    )
+    release_config = yaml.safe_load(
+        Path(".github/release-please-config.json").read_text(encoding="utf-8")
+    )
+
+    assert release_manifest["."] == VERSION
+    assert "template" not in release_manifest
+    assert "template" not in release_config["packages"]
+    assert release_config["packages"]["."]["include-component-in-tag"] is False
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
+
+
+def test_publish_template_workflow_requires_release_tag_or_manual_confirmation() -> None:
+    workflow_text = Path(".github/workflows/publish-template.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    publish_job = workflow["jobs"]["publish-template"]
+
+    assert publish_job["if"] == (
+        "${{ (github.event_name == 'release' && "
+        + "startsWith(github.event.release.tag_name, 'reponomics-dashboard-v')) || "
+        + "(github.event_name == 'workflow_dispatch' && "
+        + "inputs.confirm_unreleased_template_publish) }}"
+    )
+    assert "source_ref:" in workflow_text
+    assert "confirm_unreleased_template_publish:" in workflow_text
+    assert "expected_tag=\"reponomics-dashboard-v${template_version}\"" in workflow_text
+    assert "Manual template publication" in workflow_text
+
+
+def test_ci_runs_generated_template_gates() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["template"]["steps"]
+    commands = [step["run"] for step in steps if "run" in step]
+
+    assert "make verify-workflow-classification" in commands
+    assert "make template-smoke" in commands
+    assert "make template-consumer-e2e" in commands
+    assert "make publish-template-dry-run" in commands
+
+
+def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
+    workflow_text = Path(".github/workflows/pre-release-validation.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.safe_load(workflow_text)
+    steps = workflow["jobs"]["action-template"]["steps"]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
+
+    assert "workflow_dispatch:" in workflow_text
+    assert "source_ref:" in workflow_text
+    assert workflow["permissions"] == {"contents": "read"}
+    assert "make validate" in commands
+    assert "make validate-action-pins" not in commands
+    assert "make verify-workflow-classification" in commands
+    assert "make template-smoke" in commands
+    assert "make template-consumer-e2e" in commands
+    assert "make publish-template-dry-run" in commands
+    assert "scripts/publish_generated_repo.py" not in workflow_text
+    assert "--push" not in workflow_text
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
+
+
 def test_runtime_steps_execute_dashboard_action_as_module() -> None:
     runtime_steps = [
         _step_by_name("Run Reponomics runtime"),
@@ -110,6 +177,13 @@ def test_runtime_steps_execute_dashboard_action_as_module() -> None:
             'PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run'
         )
         assert "dashboard_action/run.py" not in command
+
+
+def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
+    workflow = Path(".github/workflows/release-please.yml").read_text(encoding="utf-8")
+
+    assert "reponomics-dashboard-dev" not in workflow
+    assert "repository_dispatch" not in workflow
 
 
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:

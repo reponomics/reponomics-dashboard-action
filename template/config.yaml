@@ -1,0 +1,47 @@
+# Reponomics dashboard configuration
+#
+# Setup and output behavior ---------------------------------------------------
+
+privacy_mode: strong
+retention_days: 90
+generate_html_dashboard: false
+generate_readme: false
+use_github_app: false
+
+# Repository selection --------------------------------------------------------
+#
+# By default, Reponomics auto-discovers up to 200 eligible repositories visible
+# to COLLECTION_TOKEN and fills the tracked set from newest to oldest by creation
+# date.
+#
+# Use full owner/repo names for explicit entries.
+
+max_repos: 200
+
+# If non-empty, track exactly these repositories and ignore all other selection
+# settings.
+include_only:
+  # - owner/repo-name
+
+# Repositories that must always be tracked when accessible.
+include:
+  # - owner/important-repo
+
+# Repositories that must never be tracked automatically.
+exclude:
+  # - owner/noisy-repo
+
+# Fill remaining slots with other eligible repositories.
+include_others: true
+
+# Allow repositories created after the initial automatic-selection baseline to
+# enter the automatic pool.
+include_new: false
+
+# Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
+# them.
+include_private: true
+
+# Reponomics may update docs/reponomics/ before collection after action upgrades.
+# Set to false before editing that directory yourself.
+allow_docs_sync: true

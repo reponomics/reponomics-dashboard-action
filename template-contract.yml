@@ -1,0 +1,7 @@
+schema_version: 1
+template_version: 0.9.1
+action_repository: reponomics/reponomics-dashboard-action
+default_action_ref: v0
+compatible_action_major: 0
+min_action_version: 0.22.1
+managed_docs_namespace: docs/reponomics

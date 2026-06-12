@@ -1,26 +1,28 @@
 # Maintainer Security Checks
 
-This repository ships a composite GitHub Action that handles sensitive repository metrics and encrypted artifacts. The checks below are intentionally enforced in CI, not only through local pre-commit hooks or repository settings, so pull requests expose a visible security signal and the README can display a badge.
+This maintainer document describes the security checks and public signals used for the Reponomics action source repository. The action handles sensitive repository metrics and encrypted artifacts, so the source repository combines source-tree CI gates, GitHub repository policy, and independently visible supply-chain signals.
 
-## Tooling Posture
+## Security Signals
 
-The repository uses both GitHub-native security automation and separately auditable open-source tools. CodeQL is best treated as a hybrid signal: the standard CodeQL libraries and queries are open source, while the CodeQL CLI/engine is separately licensed. Dependabot Core is open source, but hosted Dependabot is GitHub platform automation.
+The repository uses several kinds of security evidence:
 
-For OpenSSF-style evidence of independent open-source security tooling, this repository therefore does not rely only on CodeQL, Dependabot, or Scorecard. The additional open-source checks are `pip-audit`, OSV-Scanner, Syft-generated SBOMs through Anchore's SBOM action, vendored-asset validation, and the local action-pin validator.
+- GitHub-hosted signals: CodeQL, Dependabot, dependency graph, release settings, repository workflow policy, and artifact attestations.
+- OpenSSF Scorecard: a third-party OpenSSF supply-chain posture signal that includes checks such as maintained status and pinned dependencies/actions.
+- Open-source CI tools: `pip-audit`, OSV-Scanner, Syft-generated SBOMs through Anchore's SBOM action, and vendored-asset validation.
+- Project-operated visibility: PolicyChecks badges for repository settings that GitHub enforces but does not expose through a simple public badge.
 
-## GitHub Action SHA Pins
+## GitHub Action SHA Pinning Policy
 
-`scripts/validate_action_pins.py` scans `action.yml` and `.github` workflow YAML for imported GitHub Actions. Third-party `uses:` references must be pinned to a full 40-character lowercase commit SHA. Local actions and Docker image references are not checked by this script. Third-party remote reusable workflows are rejected even when the reusable workflow reference itself is SHA-pinned, because their internal `uses:` entries are outside this repository's local workflow YAML and can violate the repository's action policy at workflow startup. Reusable workflows owned by the `reponomics` organization are allowed when SHA-pinned.
+This source repository is part of the Reponomics Dashboard supply chain, so repository/organization policy requires third-party GitHub Actions to be pinned to full commit SHAs. The policy is the control; local workflow parsing is not the enforcement mechanism.
 
-CI runs this check through `.github/workflows/validate-action-pins.yml`, which is also called by the aggregate `.github/workflows/ci.yml` workflow.
+Public visibility for this posture comes from:
 
-Run it locally with:
+- OpenSSF Scorecard, which includes action pinning in its broader supply-chain checks.
+- PolicyChecks, a Reponomics-maintained badge service that reports selected repository settings with proof JSON. The README links to PolicyChecks badges for SHA pinning and immutable releases as additional public evidence of the current app-visible repository settings.
 
-```bash
-make validate-action-pins
-```
+PolicyChecks is intentionally narrow: it makes selected repository settings easier for reviewers to inspect. It is an additional public signal, not a replacement for the repository policy or for OpenSSF Scorecard.
 
-GitHub repository settings also enforce SHA-pinned actions, and the settings are configured according to an explicit allowlist. The script keeps local workflow changes auditable from code review and from the `CI` workflow result. A separate live repository-settings check may be added later for the public badge claim that the GitHub action policy itself has `selected` actions and SHA pinning enabled.
+Generated dashboard template repositories are different. They intentionally default to the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, so most users receive compatible bug fixes and security fixes without self-managing SHA updates. Users with stricter organization policy can pin generated workflows to exact tags or SHAs, but they then own the upgrade cadence.
 
 ## Vendored Assets
 

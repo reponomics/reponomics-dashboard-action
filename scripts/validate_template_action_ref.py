@@ -49,12 +49,14 @@ def validate_public_action_ref(
     resolver: Callable[
         [template_contract.TemplateContract],
         ResolvedActionRef,
-    ] = lambda contract: resolve_public_action_ref(contract),
+    ] | None = None,
     version_reader: Callable[
         [template_contract.TemplateContract, ResolvedActionRef],
         str,
-    ] = lambda contract, resolved: read_public_action_version(contract, resolved),
+    ] | None = None,
 ) -> ResolvedActionRef:
+    resolver = resolver or resolve_public_action_ref
+    version_reader = version_reader or read_public_action_version
     contract = template_contract.load_contract(root)
     resolved = resolver(contract)
     action_version = version_reader(contract, resolved)

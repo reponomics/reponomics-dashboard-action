@@ -36,6 +36,7 @@ from render_dashboard_support import access as dashboard_access
 from render_dashboard_support import status as dashboard_status
 from render_dashboard_support.assets import load_asset
 from render_dashboard_support.html import (
+    DemoUnlockMetadata,
     build_encrypted_html as _build_encrypted_html,
     build_public_html as _build_public_html,
 )
@@ -561,7 +562,7 @@ def _build_encrypted_dashboard_data(payload, dashboard_key):
     }
 
 
-def render():
+def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     daily_rows = load_daily()
     referrer_rows = load_referrers()
     path_rows = load_paths()
@@ -630,6 +631,7 @@ def render():
             _build_encrypted_dashboard_data(payload, dashboard_key),
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             export_manifest,
+            demo_unlock=demo_unlock,
         )
     else:
         published_html = _build_public_html(

@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -23,6 +23,9 @@ COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
 TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
+DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
+DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
+DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
 
@@ -124,6 +127,18 @@ publish-template-dry-run: build-template ## Show the generated template publish 
 
 publish-template: build-template ## Publish dist/template/ to the template repository main branch
 	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+
+build-demo: build-template ## Build the public demo repository tree in dist/demo/
+	$(PYTHON) scripts/build_demo_repo.py --output dist/demo
+
+verify-demo: install ## Verify dist/demo/ public demo repository output
+	$(PYTHON) scripts/build_demo_repo.py --output dist/demo --verify-only
+
+publish-demo-dry-run: build-demo ## Show the generated demo publish target without pushing
+	$(PYTHON) scripts/publish_demo_repo.py --output dist/demo --remote $(DEMO_REMOTE) --branch main --expected-repo $(DEMO_EXPECTED_REPO) --message "$(DEMO_PUBLISH_MESSAGE)"
+
+publish-demo: build-demo ## Publish dist/demo/ to the public demo repository main branch
+	$(PYTHON) scripts/publish_demo_repo.py --output dist/demo --remote $(DEMO_REMOTE) --branch main --expected-repo $(DEMO_EXPECTED_REPO) --message "$(DEMO_PUBLISH_MESSAGE)" --push
 
 ci: lint type-check validate test coverage ## Run CI checks
 

@@ -1,0 +1,89 @@
+name: Publish Demo Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git ref to publish from"
+        required: true
+        type: string
+        default: main
+      confirm_demo_publish:
+        description: "Publish generated demo repository"
+        required: true
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: demo-publication-${{ github.event.inputs.source_ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  publish-demo:
+    name: Publish generated demo
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_demo_publish }}
+    runs-on: ubuntu-24.04
+    environment: demo-publication
+    permissions:
+      contents: read
+    env:
+      DEMO_REMOTE: reponomics-dashboard-demo
+      DEMO_EXPECTED_REPO: reponomics/reponomics-dashboard-demo
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Validate manual publication source
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE_REF" in
+            main|refs/heads/main|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*|v*|refs/tags/v*) ;;
+            *)
+              echo "Manual demo publication is restricted to main or release tags, got $SOURCE_REF." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build and verify generated demo
+        run: |
+          set -euo pipefail
+          make build-demo
+          make verify-demo
+          DEMO_REMOTE="https://github.com/${DEMO_EXPECTED_REPO}.git" make publish-demo-dry-run
+
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard-demo
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Configure demo remote
+        env:
+          RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          git remote add "${DEMO_REMOTE}" "https://x-access-token:${RELEASE_TOKEN}@github.com/${DEMO_EXPECTED_REPO}.git"
+
+      - name: Publish generated demo repository
+        run: |
+          set -euo pipefail
+          make publish-demo DEMO_REMOTE="${DEMO_REMOTE}" DEMO_EXPECTED_REPO="${DEMO_EXPECTED_REPO}"

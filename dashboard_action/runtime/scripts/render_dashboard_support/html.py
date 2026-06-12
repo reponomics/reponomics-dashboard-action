@@ -24,6 +24,13 @@ class StatValues(TypedDict):
     total_clones: str
     total_clone_uniques: str
 
+
+class DemoUnlockMetadata(TypedDict):
+    label: str
+    key: str
+    note: str
+    button_label: str
+
 ACTION_ROOT = Path(__file__).resolve().parents[4]
 VENDORED_INTER_FONT_PATH = ACTION_ROOT / "vendor" / "inter" / "inter-latin-wght-normal.woff2"
 VENDORED_MONO_FONT_PATH = (
@@ -33,6 +40,68 @@ PBKDF2_ITERATIONS = 600_000
 BASE_STYLES = load_asset("base.css")
 APP_RUNTIME_JS = load_asset("app-runtime.js")
 SECURE_RUNTIME_JS = load_asset("secure-runtime.js")
+DEMO_UNLOCK_STYLES = """
+    .demo-unlock-panel {
+      border: 1px solid rgba(63, 185, 80, 0.32);
+      border-radius: 12px;
+      background: rgba(63, 185, 80, 0.08);
+      padding: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .demo-unlock-copy {
+      margin-bottom: 0.75rem;
+    }
+    .demo-unlock-label {
+      color: var(--text);
+      font-weight: 650;
+      font-size: 0.92rem;
+      margin-bottom: 0.25rem;
+    }
+    .demo-unlock-note {
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.45;
+      font-size: 0.9rem;
+    }
+    .demo-unlock-key-row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+    .demo-unlock-key {
+      flex: 1 1 240px;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-raised);
+      color: var(--text);
+      padding: 0.72rem 0.8rem;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.84rem;
+      overflow-wrap: anywhere;
+    }
+    .demo-unlock-button {
+      border: 1px solid rgba(63, 185, 80, 0.42);
+      border-radius: 10px;
+      background: rgba(63, 185, 80, 0.16);
+      color: var(--text);
+      min-height: 42px;
+      padding: 0 1rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 650;
+      cursor: pointer;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+    .demo-unlock-button:hover {
+      border-color: var(--c-positive);
+      background: rgba(63, 185, 80, 0.24);
+    }
+    .demo-unlock-button:focus-visible {
+      outline: 2px solid var(--c-positive);
+      outline-offset: 2px;
+    }
+"""
 
 
 def _font_face_rule(family: str, path: Path, weight_range: str) -> str:
@@ -355,10 +424,11 @@ def wrap_html(
     body_attributes: str = "",
     inline_chart_js: str = "",
     extra_csp_scripts: list[str] | None = None,
+    extra_styles: str = "",
 ) -> str:
     """Wrap page markup in the shared HTML shell."""
     body_attribute_text = f" {body_attributes}" if body_attributes else ""
-    style_content = f"{build_font_face_styles()}\n{BASE_STYLES}"
+    style_content = f"{build_font_face_styles()}\n{BASE_STYLES}{extra_styles}"
     theme_js = theme_bootstrap_js()
     script_blocks = [
         inline_chart_js,
@@ -450,12 +520,36 @@ def build_public_html(
     )
 
 
+def _build_demo_unlock_panel(demo_unlock: DemoUnlockMetadata | None) -> str:
+    if demo_unlock is None:
+        return ""
+    label = html.escape(demo_unlock["label"])
+    key = html.escape(demo_unlock["key"])
+    note = html.escape(demo_unlock["note"])
+    button_label = html.escape(demo_unlock["button_label"])
+    return f"""
+          <div class="demo-unlock-panel" id="demo-unlock-panel">
+            <div class="demo-unlock-copy">
+              <div class="demo-unlock-label">{label}</div>
+              <p class="demo-unlock-note">{note}</p>
+            </div>
+            <div class="demo-unlock-key-row">
+              <code class="demo-unlock-key" id="demo-unlock-key">{key}</code>
+              <button class="demo-unlock-button" id="demo-unlock-button" type="button">{button_label}</button>
+            </div>
+          </div>
+"""
+
+
 def build_encrypted_html(
     encrypted_dashboard_data: DashboardData,
     chart_loader: str,
     export_manifest: ExportManifest,
+    *,
+    demo_unlock: DemoUnlockMetadata | None = None,
 ) -> str:
     """Build the encrypted published dashboard HTML."""
+    demo_unlock_panel = _build_demo_unlock_panel(demo_unlock)
     auth_card = f"""
   <div id="auth-shell">
     <div class="auth-page">
@@ -503,10 +597,12 @@ def build_encrypted_html(
                 Enter your dashboard key to decrypt the latest dashboard snapshot
                 in this browser.
               </p>
-            </div>
-          </div>
+	            </div>
+	          </div>
 
-          <form class="auth-form" id="unlock-form" autocomplete="off">
+{demo_unlock_panel}
+
+	          <form class="auth-form" id="unlock-form" autocomplete="off">
             <label class="auth-hidden-username" aria-hidden="true">
               <input
                 id="dashboard-username"
@@ -592,4 +688,5 @@ def build_encrypted_html(
         extra_head='<meta name="robots" content="noindex, nofollow">',
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
         extra_csp_scripts=[encrypted_dashboard_data_json, export_manifest_json],
+        extra_styles=DEMO_UNLOCK_STYLES if demo_unlock is not None else "",
     )

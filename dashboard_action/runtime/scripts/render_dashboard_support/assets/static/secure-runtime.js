@@ -17,6 +17,8 @@
     const authShell = document.getElementById('auth-shell');
     const unlockForm = document.getElementById('unlock-form');
     const dashboardKeyInput = document.getElementById('dashboard-key');
+    const demoUnlockButton = document.getElementById('demo-unlock-button');
+    const demoUnlockKey = document.getElementById('demo-unlock-key');
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
     const authThemeToggle = document.getElementById('auth-theme-toggle');
@@ -568,8 +570,7 @@
       applyTheme(preferredTheme(), false);
     }
 
-    unlockForm.addEventListener('submit', async function(event) {
-      event.preventDefault();
+    async function unlockWithCurrentInput() {
       if (!dashboardKeyInput.value) {
         setUnlockStatus('Enter the dashboard key.', 'error');
         return;
@@ -631,4 +632,16 @@
           setUnlockStatus('Wrong dashboard key or corrupted data.', 'error');
         }
       }
+    }
+
+    unlockForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      await unlockWithCurrentInput();
     });
+
+    if (demoUnlockButton && demoUnlockKey) {
+      demoUnlockButton.addEventListener('click', async function() {
+        dashboardKeyInput.value = demoUnlockKey.textContent.trim();
+        await unlockWithCurrentInput();
+      });
+    }

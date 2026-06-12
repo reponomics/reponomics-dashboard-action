@@ -32,7 +32,9 @@ jobs:
     runs-on: ubuntu-24.04
     environment: template-publication
     permissions:
+      attestations: write
       contents: read
+      id-token: write
     env:
       TEMPLATE_REMOTE: reponomics-dashboard
       TEMPLATE_EXPECTED_REPO: reponomics/reponomics-dashboard
@@ -95,6 +97,30 @@ jobs:
           make template-consumer-e2e
           TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make publish-template-dry-run
 
+      - name: Build template release artifacts
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          set -euo pipefail
+          make package-template-release
+
+      - name: Upload template release artifacts
+        if: ${{ github.event_name == 'release' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reponomics-dashboard-template-release-${{ github.event.release.tag_name }}
+          path: dist/template-release/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attest template release artifacts
+        if: ${{ github.event_name == 'release' }}
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: |
+            dist/template-release/reponomics-dashboard-template-*.tar.gz
+            dist/template-release/reponomics-dashboard-template-*.tree.jsonl
+            dist/template-release/SHA256SUMS
+
       - name: Create release app token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -125,44 +151,3 @@ jobs:
             --expected-repo "${TEMPLATE_EXPECTED_REPO}" \
             --message "chore: publish generated template ${RELEASE_TAG}" \
             --push
-
-  template-release-artifacts:
-    name: Attest template release artifacts
-    if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v') }}
-    needs: publish-template
-    runs-on: ubuntu-24.04
-    permissions:
-      attestations: write
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout release source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ github.event.release.tag_name }}
-
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Build template release artifacts
-        run: |
-          set -euo pipefail
-          make package-template-release
-
-      - name: Upload template release artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: reponomics-dashboard-template-release-${{ github.event.release.tag_name }}
-          path: dist/template-release/*
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Attest template release artifacts
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
-        with:
-          subject-path: |
-            dist/template-release/reponomics-dashboard-template-*.tar.gz
-            dist/template-release/reponomics-dashboard-template-*.tree.jsonl
-            dist/template-release/SHA256SUMS

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.22.1...v0.23.0) (2026-06-12)
+
+
+### Features
+
+* demo repo wiring ([#112](https://github.com/reponomics/reponomics-dashboard-action/issues/112)) ([f29f63b](https://github.com/reponomics/reponomics-dashboard-action/commit/f29f63bb3c745d458a9719bab9910461642d5b68))
+
 ## [0.22.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.22.0...v0.22.1) (2026-06-11)
 
 

@@ -30,29 +30,16 @@ jobs:
     name: Publish generated template
     if: ${{ (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v')) || (github.event_name == 'workflow_dispatch' && inputs.confirm_unreleased_template_publish) }}
     runs-on: ubuntu-24.04
+    environment: template-publication
     permissions:
       contents: read
     env:
       TEMPLATE_REMOTE: reponomics-dashboard
       TEMPLATE_EXPECTED_REPO: reponomics/reponomics-dashboard
     steps:
-      - name: Create release app token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            ${{ github.event.repository.name }}
-            reponomics-dashboard
-          permission-contents: write
-          permission-workflows: write
-
       - name: Checkout release source
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          token: ${{ steps.app-token.outputs.token }}
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.source_ref }}
 
       - name: Validate template release tag
@@ -67,6 +54,20 @@ jobs:
             echo "Template release tag $RELEASE_TAG does not match template-contract.yml ($expected_tag)." >&2
             exit 1
           fi
+
+      - name: Validate manual publication source
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE_REF" in
+            main|refs/heads/main|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*) ;;
+            *)
+              echo "Manual template publication is restricted to main or reponomics-dashboard-v* tags, got $SOURCE_REF." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Record manual unreleased publication
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -83,22 +84,34 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Validate generated template release gates
+        run: |
+          set -euo pipefail
+          make verify-workflow-classification
+          make build-template
+          make verify-template
+          make validate-template-action-ref
+          make template-smoke
+          make template-consumer-e2e
+          TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make publish-template-dry-run
+
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard
+          permission-contents: write
+          permission-workflows: write
+
       - name: Configure template remote
         env:
           RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           git remote add "${TEMPLATE_REMOTE}" "https://x-access-token:${RELEASE_TOKEN}@github.com/${TEMPLATE_EXPECTED_REPO}.git"
-
-      - name: Verify workflow classification
-        run: |
-          set -euo pipefail
-          make verify-workflow-classification
-
-      - name: Build generated template
-        run: |
-          set -euo pipefail
-          make build-template
 
       - name: Publish generated template repository
         env:

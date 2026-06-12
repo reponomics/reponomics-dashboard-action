@@ -6,26 +6,31 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
 
-from dashboard_action.run_modules.core import MANAGED_DOCS_BUNDLE_DIR, VERSION
+try:
+    from scripts.repo_paths import find_repo_root
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = find_repo_root(Path(__file__))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from dashboard_action.run_modules.core import MANAGED_DOCS_BUNDLE_DIR, VERSION  # noqa: E402
 ACTION_REPOSITORY = "reponomics/reponomics-dashboard-action"
 MANAGED_DOCS_MANIFEST_NAME = ".manifest.json"
 MANAGED_DOCS_MANIFEST_SCHEMA_VERSION = 1
 REQUIRED_ACTION_INPUTS = {"allow-docs-sync"}
 REQUIRED_ACTION_OUTPUTS = {"docs-sync-state", "docs-action-version", "docs-updated-at"}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
-ACTION_REF_RE = re.compile(
-    r"reponomics/reponomics-dashboard-action@v(0|[1-9]\d*)"
-    + r"(?:\.(0|[1-9]\d*)\.(0|[1-9]\d*))?"
-)
+ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
 
 
 class TemplateContractError(RuntimeError):

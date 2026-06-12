@@ -10,8 +10,13 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.repo_paths import find_repo_root
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
 
-ROOT = Path(__file__).resolve().parents[1]
+
+ROOT = find_repo_root(Path(__file__))
 RUNTIME_SCRIPTS_DIR = ROOT / "dashboard_action" / "runtime" / "scripts"
 DEFAULT_FIXTURE_DATA_DIR = ROOT / "tests" / "fixtures" / "collection_quality_preview" / "data"
 

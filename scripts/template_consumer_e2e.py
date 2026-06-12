@@ -13,8 +13,13 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+try:
+    from scripts.repo_paths import find_repo_root
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
 
-ROOT = Path(__file__).resolve().parents[1]
+
+ROOT = find_repo_root(Path(__file__))
 DEFAULT_TEMPLATE = ROOT / "dist" / "template"
 DEFAULT_ACTION_REPO = ROOT
 ACTION_HELPER = r"""

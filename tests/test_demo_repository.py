@@ -161,6 +161,8 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow
     assert "actions/upload-pages-artifact@" in workflow
     assert "actions/deploy-pages@" in workflow
+    assert "# v6.0.0" in workflow
+    assert "# v5.0.0" in workflow
     assert "permissions: {}" in workflow
 
 
@@ -172,13 +174,30 @@ def test_source_demo_publish_workflow_is_manual_and_repo_scoped() -> None:
     assert workflow["permissions"] == {}
     assert "workflow_dispatch" in workflow[True]
     assert "schedule" not in workflow[True]
-    job = workflow["jobs"]["publish-demo"]
-    assert job["environment"] == "demo-publication"
-    assert job["permissions"] == {"contents": "read"}
-    steps = job["steps"]
-    token_step = next(step for step in steps if step["name"] == "Create release app token")
+
+    build_job = workflow["jobs"]["build-demo-artifact"]
+    assert "environment" not in build_job
+    assert build_job["permissions"] == {"contents": "read"}
+    build_step_names = [step["name"] for step in build_job["steps"]]
+    assert build_step_names.index("Validate manual publication source") < build_step_names.index("Checkout source")
+    assert any(step["name"] == "Build and verify generated demo" for step in build_job["steps"])
+    assert any(step["name"] == "Upload generated demo artifact" for step in build_job["steps"])
+
+    publish_job = workflow["jobs"]["publish-demo"]
+    assert publish_job["needs"] == "build-demo-artifact"
+    assert publish_job["environment"] == "demo-publication"
+    assert publish_job["permissions"] == {"actions": "read"}
+    steps = publish_job["steps"]
+    step_names = [step["name"] for step in steps]
+    assert step_names.index("Validate downloaded demo artifact") < step_names.index(
+        "Create demo publication app token"
+    )
+    token_step = next(step for step in steps if step["name"] == "Create demo publication app token")
+    assert token_step["with"]["client-id"] == "${{ vars.DEMO_PUBLISH_APP_CLIENT_ID }}"
+    assert token_step["with"]["private-key"] == "${{ secrets.DEMO_PUBLISH_APP_PRIVATE_KEY }}"
     assert token_step["with"]["repositories"] == "reponomics-dashboard-demo"
     assert token_step["with"]["permission-contents"] == "write"
     assert token_step["with"]["permission-workflows"] == "write"
     publish_step = next(step for step in steps if step["name"] == "Publish generated demo repository")
-    assert "make publish-demo" in publish_step["run"]
+    assert "make publish-demo" not in publish_step["run"]
+    assert "git push" in publish_step["run"]

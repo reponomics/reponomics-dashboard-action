@@ -20,6 +20,12 @@ updates:
       time: "09:30"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    ignore:
+      # Runtime crypto major upgrades need deliberate review because the action
+      # installs this hash-pinned lock inside user workflow runs.
+      - dependency-name: cryptography
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: build
       include: scope

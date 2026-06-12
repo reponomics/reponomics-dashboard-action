@@ -17,7 +17,8 @@ PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
-PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --upgrade --no-header --quiet
+PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
+PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
@@ -61,10 +62,11 @@ security-audit: install ## Audit Python dependencies for known vulnerabilities
 security: security-audit validate-runtime-lock validate-vendored-assets ## Run open-source security checks
 
 lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
-	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
+	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
 
-validate-runtime-lock: install ## Verify runtime dependency lock is current and hash-installable
+validate-runtime-lock: install ## Verify runtime lock matches constraints without upgrades and is hash-installable
 	tmp_lock=$$(mktemp); \
+	cp "$(RUNTIME_LOCK)" "$$tmp_lock"; \
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file "$$tmp_lock" pyproject.toml; \
 	if ! cmp -s "$(RUNTIME_LOCK)" "$$tmp_lock"; then \
 		echo "$(RUNTIME_LOCK) is stale; run make lock-runtime"; \

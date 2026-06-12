@@ -22,24 +22,17 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.11"
+  DEMO_EXPECTED_REPO: reponomics/reponomics-dashboard-demo
+  DEMO_BRANCH: main
 
 jobs:
-  publish-demo:
-    name: Publish generated demo
+  build-demo-artifact:
+    name: Build generated demo artifact
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_demo_publish }}
     runs-on: ubuntu-24.04
-    environment: demo-publication
     permissions:
       contents: read
-    env:
-      DEMO_REMOTE: reponomics-dashboard-demo
-      DEMO_EXPECTED_REPO: reponomics/reponomics-dashboard-demo
     steps:
-      - name: Checkout source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ inputs.source_ref }}
-
       - name: Validate manual publication source
         env:
           SOURCE_REF: ${{ inputs.source_ref }}
@@ -53,6 +46,11 @@ jobs:
               ;;
           esac
 
+      - name: Checkout source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.source_ref }}
+
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -65,25 +63,91 @@ jobs:
           make verify-demo
           DEMO_REMOTE="https://github.com/${DEMO_EXPECTED_REPO}.git" make publish-demo-dry-run
 
-      - name: Create release app token
+      - name: Package generated demo artifact
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD > demo-source-commit.txt
+          tar -C dist/demo -czf demo-repo.tar.gz .
+
+      - name: Upload generated demo artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-demo-repo
+          path: |
+            demo-repo.tar.gz
+            demo-source-commit.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-demo:
+    name: Publish generated demo
+    needs: build-demo-artifact
+    runs-on: ubuntu-24.04
+    environment: demo-publication
+    permissions:
+      actions: read
+    steps:
+      - name: Download generated demo artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: generated-demo-repo
+          path: publication-input
+
+      - name: Validate downloaded demo artifact
+        run: |
+          set -euo pipefail
+          mkdir demo-repo
+          tar -xzf publication-input/demo-repo.tar.gz -C demo-repo
+          test -f publication-input/demo-source-commit.txt
+          test -f demo-repo/README.md
+          test -f demo-repo/docs/index.html
+          test -f demo-repo/.reponomics/demo-provenance.json
+          test -f demo-repo/.github/workflows/publish-demo-dashboard.yml
+          if grep -R -n -E 'reponomics-labs|internal-tools|customer|stealth' demo-repo; then
+            echo "Generated demo output contains a blocked public brand-risk term." >&2
+            exit 1
+          fi
+
+      - name: Create demo publication app token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.DEMO_PUBLISH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEMO_PUBLISH_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: reponomics-dashboard-demo
           permission-contents: write
           permission-workflows: write
 
-      - name: Configure demo remote
+      - name: Publish generated demo repository
+        shell: bash
         env:
           RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          git remote add "${DEMO_REMOTE}" "https://x-access-token:${RELEASE_TOKEN}@github.com/${DEMO_EXPECTED_REPO}.git"
+          source_commit="$(cat publication-input/demo-source-commit.txt)"
+          if [[ ! "$source_commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Downloaded demo source commit is not a full commit SHA: $source_commit" >&2
+            exit 1
+          fi
 
-      - name: Publish generated demo repository
-        run: |
-          set -euo pipefail
-          make publish-demo DEMO_REMOTE="${DEMO_REMOTE}" DEMO_EXPECTED_REPO="${DEMO_EXPECTED_REPO}"
+          cd demo-repo
+          git init -b "${DEMO_BRANCH}"
+          git config user.name "reponomics-dashboard[bot]"
+          git config user.email "286571062+reponomics-dashboard[bot]@users.noreply.github.com"
+          git add -A
+          git -c core.hooksPath=/dev/null commit \
+            -m "chore: publish generated demo" \
+            -m "Source-Commit: ${source_commit}"
+          git remote add target "https://x-access-token:${RELEASE_TOKEN}@github.com/${DEMO_EXPECTED_REPO}.git"
+
+          remote_ref="refs/heads/${DEMO_BRANCH}"
+          lease_ref="refs/remotes/target/${DEMO_BRANCH}"
+          remote_oid="$(git ls-remote --heads target "${DEMO_BRANCH}" | awk '{print $1}')"
+          if [[ -n "$remote_oid" ]]; then
+            git fetch target "${remote_ref}:${lease_ref}"
+            lease="--force-with-lease=${remote_ref}:${remote_oid}"
+          else
+            lease="--force-with-lease=${remote_ref}:"
+          fi
+          git push "$lease" target "HEAD:${remote_ref}"

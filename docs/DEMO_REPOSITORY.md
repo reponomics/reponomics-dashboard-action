@@ -59,7 +59,12 @@ Publication refuses targets other than `reponomics/reponomics-dashboard-demo` un
 
 ## GitHub Workflow
 
-`.github/workflows/publish-demo.yml` is the source-repository publication workflow. It is manual-only for the initial pass. It builds, verifies, dry-runs, creates a release app token scoped to `reponomics-dashboard-demo`, and force-publishes the generated demo repository.
+`.github/workflows/publish-demo.yml` is the source-repository publication workflow. It is manual-only for the initial pass and split into two jobs:
+
+- `build-demo-artifact` checks out the requested source ref, builds, verifies, dry-runs, and packages `dist/demo` as a workflow artifact. This job has only `contents: read` and does not receive demo publication secrets.
+- `publish-demo` downloads and validates that artifact, then creates a demo publication app token scoped to `reponomics-dashboard-demo` and force-publishes the generated demo repository. After the token is minted, the job runs only a fixed shell publication sequence, not project Make targets or Python scripts.
+
+The publication app should be a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` on the `demo-publication` environment, and protect that environment with required reviewers.
 
 The target demo repository must have GitHub Pages enabled with source set to GitHub Actions. The generated target workflow uploads `docs/` and deploys Pages after the generated commit lands.
 
@@ -69,4 +74,5 @@ The target demo repository must have GitHub Pages enabled with source set to Git
 - The demo publishes synthetic metrics to public git history. Do not use real traffic data in `demo/dataset.yml`.
 - The demo builder bypasses the public action runtime validation layer, so tests must prove this path does not relax generated user workflows or `action.yml`.
 - The generated demo repository contains a special Pages deployment workflow. It is target-demo infrastructure, not a template workflow users should copy as setup guidance.
+- Demo publication requires `permission-workflows: write` only because the generated demo repo currently includes `.github/workflows/publish-demo-dashboard.yml`; remove that permission if the target Pages workflow becomes fixed infrastructure in the demo repo.
 - If renderer APIs change, `make build-demo` and `make verify-demo` should fail before publication.

@@ -306,3 +306,11 @@ commit.
 - This is the lightweight staging substitute for now: no persistent staging
   repository, no environment promotion state, and no semantic version automation
   for the template product.
+
+### 2026-06-12 Main Merge
+
+- The consolidated branch merged to `main` after local gates and GitHub PR checks passed.
+- No old `reponomics-dashboard-dev` repository-dispatch or sync workflow remains in the release path.
+- `validate-action-pins` was removed from workflows, Make targets, pre-commit hooks, tests, and public badges. Source-repository action pinning is now represented by repository/org policy, OpenSSF Scorecard, and PolicyChecks.
+- The remaining work is not merge gating. It is publication/release hardening: template publish gates, public action-ref/min-version validation, generated-template provenance/digest, release artifact attestation, compatibility fixtures, and stale maintainer-doc cleanup.
+- `dist/template` remains generated output. Managed docs and `docs/reponomics/.manifest.json` are regenerated from `dashboard_action/runtime/managed_docs/` and action version metadata through `make build-template`.

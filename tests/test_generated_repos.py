@@ -490,6 +490,58 @@ def test_template_consumer_e2e_defaults_to_local_action_repo():
     assert template_consumer_e2e.DEFAULT_ACTION_REPO == Path.cwd()
 
 
+def test_template_consumer_e2e_resolves_composite_runtime_env():
+    action = yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
+
+    env = template_consumer_e2e._resolve_runtime_env(
+        action,
+        provided_inputs={
+            "mode": "docs-sync",
+            "github-token": "ghp_runtime",
+            "allow-docs-sync": "true",
+        },
+        github={
+            "action_ref": "v0",
+            "action_repository": "reponomics/reponomics-dashboard-action",
+        },
+    )
+
+    assert env["REPONOMICS_MODE"] == "docs-sync"
+    assert env["REPONOMICS_GITHUB_TOKEN"] == "ghp_runtime"
+    assert env["REPONOMICS_ALLOW_DOCS_SYNC"] == "true"
+    assert env["REPONOMICS_ACTION_REF"] == "v0"
+    assert env["REPONOMICS_ACTION_REPOSITORY"] == "reponomics/reponomics-dashboard-action"
+
+
+def test_template_consumer_e2e_rejects_broken_composite_runtime_mapping():
+    action = yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
+    runtime_step = next(
+        step
+        for step in action["runs"]["steps"]
+        if step.get("name") == template_consumer_e2e.RUNTIME_STEP_NAME
+    )
+    runtime_step["env"]["REPONOMICS_ALLOW_DOCS_SYNC"] = "${{ inputs.docs-sync }}"
+
+    error = template_consumer_e2e.runtime_step_contract_error(action)
+
+    assert "REPONOMICS_ALLOW_DOCS_SYNC" in error
+    assert "inputs.allow-docs-sync" in error
+
+
+def test_template_consumer_e2e_rejects_unsupported_composite_runtime_shell():
+    action = yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
+    runtime_step = next(
+        step
+        for step in action["runs"]["steps"]
+        if step.get("name") == template_consumer_e2e.RUNTIME_STEP_NAME
+    )
+    runtime_step["shell"] = "pwsh"
+
+    error = template_consumer_e2e.runtime_step_contract_error(action)
+
+    assert "shell: bash" in error
+
+
 def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     contract = template_contract.load_contract()
     docs_root = tmp_path / "docs" / "reponomics"

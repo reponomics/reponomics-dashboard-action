@@ -10,8 +10,11 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+import yaml
 
 try:
     from scripts.repo_paths import find_repo_root
@@ -22,6 +25,16 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 ROOT = find_repo_root(Path(__file__))
 DEFAULT_TEMPLATE = ROOT / "dist" / "template"
 DEFAULT_ACTION_REPO = ROOT
+DEFAULT_ACTION_PYTHON = DEFAULT_ACTION_REPO / "venv" / "bin" / "python"
+RUNTIME_STEP_NAME = "Run Reponomics runtime"
+RUNTIME_STEP_SHELL = "bash"
+REQUIRED_COMPOSITE_ENV = {
+    "REPONOMICS_MODE": "${{ inputs.mode }}",
+    "REPONOMICS_GITHUB_TOKEN": "${{ inputs.github-token }}",
+    "REPONOMICS_ALLOW_DOCS_SYNC": "${{ inputs.allow-docs-sync }}",
+    "REPONOMICS_ACTION_REF": "${{ github.action_ref }}",
+    "REPONOMICS_ACTION_REPOSITORY": "${{ github.action_repository }}",
+}
 ACTION_HELPER = r"""
 import csv
 import json
@@ -247,6 +260,123 @@ def _invoke_action_runtime(
     _run([action_python.as_posix(), "-c", ACTION_HELPER], cwd=consumer_dir, env=env)
 
 
+def _load_action(action_repo: Path) -> dict:
+    return yaml.safe_load((action_repo / "action.yml").read_text(encoding="utf-8"))
+
+
+def _runtime_step(action: dict) -> dict:
+    for step in action["runs"]["steps"]:
+        if step.get("name") == RUNTIME_STEP_NAME:
+            return step
+    raise TemplateConsumerE2EError(f"action.yml is missing {RUNTIME_STEP_NAME!r}")
+
+
+def _assert_runtime_step_contract(step: dict) -> None:
+    if step.get("shell") != RUNTIME_STEP_SHELL:
+        raise TemplateConsumerE2EError(
+            f"{RUNTIME_STEP_NAME!r} must declare shell: {RUNTIME_STEP_SHELL}"
+        )
+    env = step.get("env")
+    if not isinstance(env, dict):
+        raise TemplateConsumerE2EError(f"{RUNTIME_STEP_NAME!r} must declare env mappings")
+    mismatches = [
+        f"{name}: expected {expected!r}, got {env.get(name)!r}"
+        for name, expected in sorted(REQUIRED_COMPOSITE_ENV.items())
+        if env.get(name) != expected
+    ]
+    if mismatches:
+        details = "\n".join(f"  - {entry}" for entry in mismatches)
+        raise TemplateConsumerE2EError(
+            f"{RUNTIME_STEP_NAME!r} has invalid required env mappings:\n{details}"
+        )
+    if step.get("run") != 'PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run':
+        raise TemplateConsumerE2EError(f"{RUNTIME_STEP_NAME!r} must execute the runtime module")
+
+
+def _action_input_defaults(action: dict) -> dict[str, str]:
+    defaults: dict[str, str] = {}
+    for name, metadata in action.get("inputs", {}).items():
+        default = metadata.get("default", "") if isinstance(metadata, dict) else ""
+        defaults[str(name)] = "" if default is None else str(default)
+    return defaults
+
+
+def _resolve_expression(value: str, *, inputs: Mapping[str, str], github: Mapping[str, str]) -> str:
+    stripped = value.strip()
+    prefix = "${{ "
+    suffix = " }}"
+    if not stripped.startswith(prefix) or not stripped.endswith(suffix):
+        return value
+    expression = stripped.removeprefix(prefix).removesuffix(suffix).strip()
+    if expression.startswith("inputs."):
+        return inputs.get(expression.removeprefix("inputs."), "")
+    if expression.startswith("github."):
+        return github.get(expression.removeprefix("github."), "")
+    return value
+
+
+def _resolve_runtime_env(
+    action: dict,
+    *,
+    provided_inputs: Mapping[str, str],
+    github: Mapping[str, str],
+) -> dict[str, str]:
+    step = _runtime_step(action)
+    _assert_runtime_step_contract(step)
+    inputs = _action_input_defaults(action)
+    inputs.update(provided_inputs)
+    env: dict[str, str] = {}
+    for name, value in step.get("env", {}).items():
+        env[str(name)] = _resolve_expression(str(value), inputs=inputs, github=github)
+    return env
+
+
+def _write_event_payload(path: Path, *, private: bool) -> None:
+    path.write_text(
+        json.dumps({"repository": {"private": private}}, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _invoke_composite_runtime_step(
+    *,
+    action_repo: Path,
+    action_python: Path,
+    consumer_dir: Path,
+    output_path: Path,
+) -> None:
+    action = _load_action(action_repo)
+    step = _runtime_step(action)
+    github = {
+        "action_ref": "template-action-boundary-e2e",
+        "action_repository": "reponomics/reponomics-dashboard-action",
+        "token": "ghp_runtime",
+    }
+    runtime_env = _resolve_runtime_env(
+        action,
+        provided_inputs={
+            "mode": "docs-sync",
+            "github-token": github["token"],
+            "allow-docs-sync": "true",
+        },
+        github=github,
+    )
+    event_path = consumer_dir / ".e2e-github-event.json"
+    _write_event_payload(event_path, private=True)
+    env = os.environ.copy()
+    env.update(runtime_env)
+    env.update(
+        {
+            "GITHUB_ACTION_PATH": action_repo.as_posix(),
+            "GITHUB_EVENT_PATH": event_path.as_posix(),
+            "GITHUB_EVENT_REPOSITORY_PRIVATE": "true",
+            "GITHUB_OUTPUT": output_path.as_posix(),
+            "PATH": f"{action_python.parent.as_posix()}{os.pathsep}{env.get('PATH', '')}",
+        }
+    )
+    _run([step["shell"], "-c", step["run"]], cwd=consumer_dir, env=env)
+
+
 def _read_github_output(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     if not path.exists():
@@ -344,6 +474,62 @@ def run_e2e(
             shutil.rmtree(temp_root, ignore_errors=True)
 
 
+def run_composite_boundary_e2e(
+    *,
+    template_dir: Path,
+    action_repo: Path,
+    action_python: Path,
+    keep_temp: bool = False,
+) -> None:
+    template_dir = _absolute_path(template_dir)
+    action_repo = _absolute_path(action_repo).resolve()
+    action_python = _absolute_path(action_python)
+    temp_root = Path(tempfile.mkdtemp(prefix="template-action-boundary-e2e-"))
+    try:
+        consumer_dir = temp_root / "repo"
+        remote_dir = temp_root / "remote.git"
+        _copy_template(template_dir.resolve(), consumer_dir)
+        _init_consumer_git_repo(consumer_dir, remote_dir)
+        stale_doc = consumer_dir / "docs" / "reponomics" / "README.md"
+        stale_doc.write_text("stale managed docs\n", encoding="utf-8")
+        _run(["git", "add", stale_doc.as_posix()], cwd=consumer_dir)
+        _run(["git", "commit", "-m", "test: stale managed docs"], cwd=consumer_dir)
+
+        output_path = consumer_dir / ".e2e-composite-github-output"
+        _invoke_composite_runtime_step(
+            action_repo=action_repo,
+            action_python=action_python,
+            consumer_dir=consumer_dir,
+            output_path=output_path,
+        )
+        outputs = _read_github_output(output_path)
+        if outputs.get("docs-action-version") is None:
+            raise TemplateConsumerE2EError("Composite boundary did not write docs-action-version")
+        if outputs.get("docs-sync-state") not in {"written", "updated", "current"}:
+            raise TemplateConsumerE2EError(
+                f"Unexpected docs-sync-state from composite boundary: {outputs.get('docs-sync-state')!r}"
+            )
+        if (consumer_dir / "docs" / "reponomics" / "README.md").read_text(
+            encoding="utf-8"
+        ) == "stale managed docs\n":
+            raise TemplateConsumerE2EError("Composite boundary did not refresh managed docs")
+        print("Template action boundary e2e passed: docs-sync composite runtime step")
+    finally:
+        if keep_temp:
+            print(f"Kept composite boundary temp directory: {temp_root}")
+        else:
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def runtime_step_contract_error(action: dict) -> str:
+    """Return the runtime-step contract error for tests, or an empty string."""
+    try:
+        _assert_runtime_step_contract(_runtime_step(deepcopy(action)))
+    except TemplateConsumerE2EError as exc:
+        return str(exc)
+    return ""
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template-dir", type=Path, default=DEFAULT_TEMPLATE)
@@ -351,10 +537,23 @@ def main() -> None:
     parser.add_argument(
         "--action-python",
         type=Path,
-        default=DEFAULT_ACTION_REPO / "venv" / "bin" / "python",
+        default=DEFAULT_ACTION_PYTHON,
+    )
+    parser.add_argument(
+        "--composite-boundary",
+        action="store_true",
+        help="Run only the composite action.yml runtime-step boundary check.",
     )
     parser.add_argument("--keep-temp", action="store_true")
     args = parser.parse_args()
+    if args.composite_boundary:
+        run_composite_boundary_e2e(
+            template_dir=args.template_dir,
+            action_repo=args.action_repo,
+            action_python=args.action_python,
+            keep_temp=args.keep_temp,
+        )
+        return
     run_e2e(
         template_dir=args.template_dir,
         action_repo=args.action_repo,

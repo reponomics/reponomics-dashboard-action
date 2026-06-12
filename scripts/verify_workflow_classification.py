@@ -10,7 +10,13 @@ from typing import Any
 import yaml
 
 
-ROOT = Path(__file__).resolve().parents[1]
+try:
+    from scripts.repo_paths import find_repo_root
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
+
+
+ROOT = find_repo_root(Path(__file__))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 

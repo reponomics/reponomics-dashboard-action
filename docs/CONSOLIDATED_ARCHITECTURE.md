@@ -378,6 +378,22 @@ To regenerate the template locally, run `make build-template`. To prove the gene
 
 Publishing `dist/template` to `reponomics-dashboard` is a product decision, not an automatic consequence of every action release. For action-only fixes that remain compatible with the existing template, no template publication is required. For managed-doc changes bundled in the action, no template publication is required unless new users need the updated initial docs before their first action run. If the first-copy template surface should change for new users, perform a template release or an explicitly recorded manual private publication.
 
+### Template Contract
+
+`template-contract.yml` is the human-owned compatibility contract between this source repository, the generated template repository, and the public action channel that generated workflows invoke. It is intentionally small: it should answer which template is being published, which Reponomics action line the template uses by default, the oldest compatible action version the template requires, and where generated managed docs belong.
+
+The current fields have these meanings:
+
+- `schema_version`: the contract file format. Version `1` means the fields below are required and validated by `scripts/template_contract.py`.
+- `template_version`: the SemVer version of the generated template product. Template release tags must be `reponomics-dashboard-v<template_version>`.
+- `action_repository`: the GitHub repository that generated workflows invoke. For this product line it must remain `reponomics/reponomics-dashboard-action`.
+- `default_action_ref`: the default ref written into executable generated workflows. During the `v0` beta line this should remain the compatible floating major ref `v0`, not a full SHA.
+- `compatible_action_major`: the action major line the template is allowed to use. It must match `default_action_ref`, so `compatible_action_major: 0` implies `default_action_ref: v0`.
+- `min_action_version`: the oldest action version that contains the behavior this template requires. Increase it when generated workflows, setup behavior, managed docs, provenance, or runtime assumptions depend on newer action behavior.
+- `managed_docs_namespace`: the generated repository path that receives the managed Reponomics docs snapshot. It is currently fixed at `docs/reponomics`.
+
+The contract is validated in three layers. Local validation proves the checked-out action version matches `compatible_action_major`, is greater than or equal to `min_action_version`, and still exposes action metadata required by generated workflows. Generated-template validation proves `dist/template` contains the expected managed-docs snapshot and executable workflow refs matching `action_repository@default_action_ref`. Release/publication validation should additionally prove that the public default action ref, such as `v0`, has already moved to an action version satisfying `min_action_version`.
+
 ### Coordinated Releases
 
 Some changes legitimately require both products:

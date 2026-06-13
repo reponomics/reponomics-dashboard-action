@@ -16,6 +16,7 @@ if str(RUNTIME_SCRIPTS) not in sys.path:
 
 from render_dashboard_support.html import build_encrypted_html  # noqa: E402
 from scripts import build_demo_repo  # noqa: E402
+from scripts import publish_demo_repo  # noqa: E402
 
 
 def _encrypted_html(**kwargs) -> str:
@@ -159,11 +160,42 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     workflow = (tmp_path / build_demo_repo.DEMO_PAGES_WORKFLOW).read_text(encoding="utf-8")
     assert "COLLECTION_TOKEN" not in workflow
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow
+    assert "Seed And Publish Demo Dashboard" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "generated-demo-dashboard-data" in workflow
+    assert "REPONOMICS_SOURCE_ARTIFACT_TOKEN" in workflow
+    assert "actions/download-artifact@" in workflow
+    assert "actions/upload-artifact@" in workflow
+    assert "name: dashboard-data" in workflow
     assert "actions/upload-pages-artifact@" in workflow
     assert "actions/deploy-pages@" in workflow
     assert "# v6.0.0" in workflow
     assert "# v5.0.0" in workflow
     assert "permissions: {}" in workflow
+    assert "reponomics/reponomics-dashboard-action@" not in workflow
+
+
+def test_demo_publisher_rejects_committed_retained_data(tmp_path: Path) -> None:
+    output = tmp_path / "demo"
+    (output / ".reponomics").mkdir(parents=True)
+    (output / ".reponomics" / "demo-provenance.json").write_text("{}", encoding="utf-8")
+    (output / "data").mkdir()
+
+    with pytest.raises(publish_demo_repo.DemoPublishError, match="must not include data"):
+        publish_demo_repo._assert_publish_tree_shape(output)
+
+
+def test_demo_publisher_rejects_gitignored_publish_files(tmp_path: Path) -> None:
+    output = tmp_path / "demo"
+    (output / ".reponomics").mkdir(parents=True)
+    (output / ".reponomics" / "demo-provenance.json").write_text("{}", encoding="utf-8")
+    (output / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
+    (output / "README.md").write_text("demo\n", encoding="utf-8")
+    (output / "ignored.txt").write_text("intended generated file\n", encoding="utf-8")
+    expected_files = publish_demo_repo._output_files(output)
+
+    with pytest.raises(publish_demo_repo.DemoPublishError, match="missing from git add -A: ignored.txt"):
+        publish_demo_repo._assert_git_add_stages_publish_tree(output, "main", expected_files)
 
 
 def test_source_demo_publish_workflow_is_manual_and_repo_scoped() -> None:
@@ -182,6 +214,7 @@ def test_source_demo_publish_workflow_is_manual_and_repo_scoped() -> None:
     assert build_step_names.index("Validate manual publication source") < build_step_names.index("Checkout source")
     assert any(step["name"] == "Build and verify generated demo" for step in build_job["steps"])
     assert any(step["name"] == "Upload generated demo artifact" for step in build_job["steps"])
+    assert any(step["name"] == "Upload encrypted demo dashboard data seed" for step in build_job["steps"])
 
     publish_job = workflow["jobs"]["publish-demo"]
     assert publish_job["needs"] == "build-demo-artifact"
@@ -198,6 +231,8 @@ def test_source_demo_publish_workflow_is_manual_and_repo_scoped() -> None:
     assert token_step["with"]["repositories"] == "reponomics-dashboard-demo"
     assert token_step["with"]["permission-contents"] == "write"
     assert token_step["with"]["permission-workflows"] == "write"
+    assert token_step["with"]["permission-actions"] == "write"
     publish_step = next(step for step in steps if step["name"] == "Publish generated demo repository")
     assert "make publish-demo" not in publish_step["run"]
     assert "git push" in publish_step["run"]
+    assert "seed-and-publish-demo-dashboard.yml/dispatches" in publish_step["run"]

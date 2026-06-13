@@ -67,6 +67,10 @@ jobs:
         run: |
           set -euo pipefail
           git rev-parse HEAD > demo-source-commit.txt
+          test -s dist/demo-seed/dashboard-data.enc
+          rm -rf demo-dashboard-data-seed
+          mkdir demo-dashboard-data-seed
+          cp dist/demo-seed/dashboard-data.enc demo-dashboard-data-seed/dashboard-data.enc
           tar -C dist/demo -czf demo-repo.tar.gz .
 
       - name: Upload generated demo artifact
@@ -76,6 +80,14 @@ jobs:
           path: |
             demo-repo.tar.gz
             demo-source-commit.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload encrypted demo dashboard data seed
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-demo-dashboard-data
+          path: demo-dashboard-data-seed/dashboard-data.enc
           if-no-files-found: error
           retention-days: 7
 
@@ -102,7 +114,10 @@ jobs:
           test -f demo-repo/README.md
           test -f demo-repo/docs/index.html
           test -f demo-repo/.reponomics/demo-provenance.json
-          test -f demo-repo/.github/workflows/publish-demo-dashboard.yml
+          test -f demo-repo/.github/workflows/seed-and-publish-demo-dashboard.yml
+          test ! -e demo-repo/data
+          test ! -e demo-repo/dist
+          test ! -e demo-repo/.dashboard-data-artifact
           if grep -R -n -E 'reponomics-labs|internal-tools|customer|stealth' demo-repo; then
             echo "Generated demo output contains a blocked public brand-risk term." >&2
             exit 1
@@ -118,11 +133,13 @@ jobs:
           repositories: reponomics-dashboard-demo
           permission-contents: write
           permission-workflows: write
+          permission-actions: write
 
       - name: Publish generated demo repository
         shell: bash
         env:
           RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           source_commit="$(cat publication-input/demo-source-commit.txt)"
@@ -151,3 +168,18 @@ jobs:
             lease="--force-with-lease=${remote_ref}:"
           fi
           git push "$lease" target "HEAD:${remote_ref}"
+
+          for attempt in 1 2 3 4 5; do
+            if GH_TOKEN="$RELEASE_TOKEN" gh api \
+              --method POST \
+              "repos/${DEMO_EXPECTED_REPO}/actions/workflows/seed-and-publish-demo-dashboard.yml/dispatches" \
+              -f ref="${DEMO_BRANCH}" \
+              -f inputs[source_run_id]="${SOURCE_RUN_ID}" \
+              -f inputs[source_repository]="${GITHUB_REPOSITORY}"; then
+              exit 0
+            fi
+            sleep "$((attempt * 3))"
+          done
+
+          echo "Failed to dispatch target demo seed-and-publish workflow." >&2
+          exit 1

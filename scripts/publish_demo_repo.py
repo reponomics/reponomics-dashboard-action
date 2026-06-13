@@ -97,6 +97,51 @@ def _output_files(output_dir: Path) -> list[str]:
     )
 
 
+def _assert_publish_tree_shape(output_dir: Path) -> None:
+    for relative in ("data", "dist", ".dashboard-data-artifact"):
+        if (output_dir / relative).exists():
+            raise DemoPublishError(f"Generated demo publish tree must not include {relative}/")
+
+
+def _git_ls_files(cwd: Path) -> list[str]:
+    raw = subprocess.check_output(
+        ["git", "ls-files", "-z"],
+        cwd=cwd,
+        stderr=subprocess.DEVNULL,
+    )
+    return sorted(item.decode("utf-8") for item in raw.split(b"\0") if item)
+
+
+def _staged_files_after_git_add(output_dir: Path, branch: str) -> list[str]:
+    with tempfile.TemporaryDirectory(prefix="generated-demo-stage-check-") as tmp:
+        worktree = Path(tmp) / "repo"
+        shutil.copytree(output_dir, worktree)
+        _run(["git", "init", "-b", branch], worktree)
+        _run(["git", "add", "-A"], worktree)
+        return _git_ls_files(worktree)
+
+
+def _assert_git_add_stages_publish_tree(output_dir: Path, branch: str, expected_files: list[str]) -> None:
+    staged_files = _staged_files_after_git_add(output_dir, branch)
+    if staged_files == expected_files:
+        return
+    missing = sorted(set(expected_files) - set(staged_files))
+    unexpected = sorted(set(staged_files) - set(expected_files))
+    details = []
+    if missing:
+        details.append("missing from git add -A: " + ", ".join(missing[:10]))
+    if unexpected:
+        details.append("unexpectedly staged: " + ", ".join(unexpected[:10]))
+    if len(missing) > 10:
+        details.append(f"{len(missing) - 10} additional missing file(s)")
+    if len(unexpected) > 10:
+        details.append(f"{len(unexpected) - 10} additional unexpected file(s)")
+    raise DemoPublishError(
+        "Generated demo publish tree does not match files staged by git add -A: "
+        + "; ".join(details)
+    )
+
+
 def _commit_message(message: str, source_commit: str) -> str:
     if not source_commit:
         return message
@@ -117,9 +162,11 @@ def publish(
         raise DemoPublishError(f"Generated demo output does not exist: {output_dir}")
     if not (output_dir / DEMO_PROVENANCE_PATH).is_file():
         raise DemoPublishError(f"Generated demo output is missing {DEMO_PROVENANCE_PATH}")
+    _assert_publish_tree_shape(output_dir)
     files = _output_files(output_dir)
     if not files:
         raise DemoPublishError(f"Generated demo output is empty: {output_dir}")
+    _assert_git_add_stages_publish_tree(output_dir, branch, files)
     remote_url = _remote_url(remote)
     _assert_expected_repo(remote_url, expected_repo)
     source_commit = _git_value("rev-parse", "HEAD")

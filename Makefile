@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -22,7 +22,11 @@ PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
+TEMPLATE_EXPECTED_REPO ?= reponomics/reponomics-dashboard
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
+TEMPLATE_STAGING_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-staging.git
+TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging
+TEMPLATE_STAGING_PUBLISH_MESSAGE ?= chore: publish generated template staging
 TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
 DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
 DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
@@ -125,10 +129,16 @@ package-template-release: build-template ## Build deterministic generated-templa
 	$(PYTHON) scripts/template_provenance.py package --root dist/template --output-dir $(TEMPLATE_RELEASE_ARTIFACTS_DIR)
 
 publish-template-dry-run: build-template ## Show the generated template publish target without pushing
-	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)"
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo $(TEMPLATE_EXPECTED_REPO) --message "$(TEMPLATE_PUBLISH_MESSAGE)"
 
 publish-template: build-template ## Publish dist/template/ to the template repository main branch
-	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo $(TEMPLATE_EXPECTED_REPO) --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+
+publish-template-staging-dry-run: build-template ## Show the generated template staging publish target without pushing
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_STAGING_REMOTE) --branch main --expected-repo $(TEMPLATE_STAGING_EXPECTED_REPO) --message "$(TEMPLATE_STAGING_PUBLISH_MESSAGE)"
+
+publish-template-staging: build-template ## Publish dist/template/ to the private staging template repository
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_STAGING_REMOTE) --branch main --expected-repo $(TEMPLATE_STAGING_EXPECTED_REPO) --message "$(TEMPLATE_STAGING_PUBLISH_MESSAGE)" --push
 
 build-demo: build-template ## Build the public demo repository tree in dist/demo/
 	$(PYTHON) scripts/build_demo_repo.py --output dist/demo

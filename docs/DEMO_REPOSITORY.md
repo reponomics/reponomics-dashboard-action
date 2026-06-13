@@ -125,12 +125,14 @@ Publication refuses targets other than `reponomics/reponomics-dashboard-demo` un
 
 ## GitHub Workflow
 
-`.github/workflows/publish-demo.yml` is the source-repository publication workflow. It is manual-only for the current pass and split into two jobs:
+`.github/workflows/publish-demo.yml` is the source-repository publication workflow. It supports manual publication and scheduled daily refresh, and it is split into two jobs:
 
-- `build-demo-artifact` checks out the requested source ref, builds, verifies, dry-runs, packages `dist/demo` as a workflow artifact, and uploads `dist/demo-seed/dashboard-data.enc` as `generated-demo-dashboard-data`. This job has only `contents: read` and does not receive demo publication secrets.
+- `build-demo-artifact` resolves the allowed source ref, checks it out, builds, verifies, dry-runs, packages `dist/demo` as a workflow artifact, and uploads `dist/demo-seed/dashboard-data.enc` as `generated-demo-dashboard-data`. This job has only `contents: read` and does not receive demo publication secrets.
 - `publish-demo` downloads and validates the generated tree, then creates a demo publication app token scoped to `reponomics-dashboard-demo`, force-publishes the generated demo repository, and dispatches the generated target seed workflow with the source workflow run ID. After the token is minted, the job runs only a fixed shell publication sequence, not project Make targets or Python scripts.
 
-The publication app should be a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. It needs `contents: write`, `workflows: write`, and `actions: write` on the demo repository so it can force-push the generated tree and dispatch the target seed workflow. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` on the `demo-publication` environment.
+Manual publication and scheduled daily refresh use the same demo-only publication app. The scheduled source ref defaults to `main`; set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` or an allowed release tag if the demo should follow a promoted ref instead of main.
+
+The publication app should be a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. It needs `contents: write`, `workflows: write`, and `actions: write` on the demo repository so it can force-push the generated tree and dispatch the target seed workflow. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository.
 
 The target demo repository must have GitHub Pages enabled with source set to GitHub Actions. The generated target workflow stores the encrypted seed artifact and deploys the Pages shell after the generated commit lands.
 
@@ -143,7 +145,7 @@ The demo should be regenerated and republished when:
 - `demo/dataset.yml` changes;
 - the relative synthetic 90-day window needs to roll forward.
 
-The current daily-refresh cadence is not yet fully operationalized. Until it is, demo publication remains manual.
+The scheduled workflow rolls the relative synthetic data window forward daily. Treat failures in that path as demo-publication failures, not as action or template release failures.
 
 ## Later Enhancement: Artifact History
 

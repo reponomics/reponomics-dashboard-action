@@ -555,6 +555,13 @@ def test_action_repo_has_template_publication_targets():
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
     assert "publish-template:" in makefile
+    assert "publish-template-staging-dry-run:" in makefile
+    assert "publish-template-staging:" in makefile
+    assert "TEMPLATE_EXPECTED_REPO ?= reponomics/reponomics-dashboard" in makefile
+    assert (
+        "TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging"
+        in makefile
+    )
     assert "scripts/publish_generated_repo.py" in makefile
 
 

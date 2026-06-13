@@ -196,7 +196,7 @@ This is the right direction. The template job is the key addition made possible 
 
 ### Pre-release Validation
 
-`.github/workflows/pre-release-validation.yml` should be treated as the lightweight staging substitute. It should validate a candidate ref without publishing:
+`.github/workflows/pre-release-validation.yml` should validate a candidate ref without publishing:
 
 - action metadata and source-repository workflow policy
 - generated template build
@@ -205,7 +205,9 @@ This is the right direction. The template job is the key addition made possible 
 - template publication dry-run
 - generated template artifact upload for inspection
 
-This should be run before action releases that affect runtime behavior used by templates, and before every template release. It does not need to become a full staging environment unless the product later needs persistent external state.
+This should be run before action releases that affect runtime behavior used by templates, and before every template release.
+
+`.github/workflows/publish-template-staging.yml` is the persistent private staging surface. It publishes generated output to `reponomics-dashboard-staging` after running generated-template gates. Use it when maintainers need to copy, smoke-test, or inspect a candidate generated template in a repository that reflects the eventual production template repository without touching `reponomics-dashboard`.
 
 ### Template Publication
 
@@ -368,10 +370,12 @@ Release Please may still help as process tooling if configured narrowly, for exa
    - `make template-smoke`
    - `make template-consumer-e2e`
    - `make publish-template-dry-run`
+   - `make publish-template-staging-dry-run`
 4. Run pre-release validation on the candidate ref.
-5. Create `reponomics-dashboard-vX.Y.Z`.
-6. Let `publish-template.yml` publish the generated output to `reponomics-dashboard`.
-7. Add or update compatibility fixtures for this template release.
+5. Publish to `reponomics-dashboard-staging` and smoke-test a copied staging template when the change has user-visible setup or workflow impact.
+6. Create `reponomics-dashboard-vX.Y.Z`.
+7. Let `publish-template.yml` publish the generated output to `reponomics-dashboard`.
+8. Add or update compatibility fixtures for this template release.
 
 ### Generated Template Regeneration Protocol
 
@@ -423,7 +427,7 @@ The demo should not drive SemVer, but it should follow product releases:
 1. After a template release, regenerate and publish the demo from the new template if the setup surface, docs, workflows, or first-run experience changed.
 2. After an action release, regenerate and publish the demo if runtime output, README rendering, Pages rendering, managed docs, doctor/incident guidance, or setup behavior changed.
 3. When curated demo data changes, publish the demo without implying an action or template version bump.
-4. Once refresh cadence is automated, treat daily synthetic-date rollover failures as demo-publication failures, not action/template release failures.
+4. Treat scheduled synthetic-date rollover failures as demo-publication failures, not action/template release failures.
 
 The demo should disclose which action version, template version, source commit, synthetic data revision, and public demo key it uses. That makes it useful both to prospective users and to skeptical reviewers trying to trace what they are seeing.
 

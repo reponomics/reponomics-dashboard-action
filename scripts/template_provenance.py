@@ -85,9 +85,9 @@ def _source_commit() -> str:
     return _git_value("rev-parse", "HEAD") or "unknown"
 
 
-def _is_excluded(relative: str) -> bool:
+def _is_excluded(relative: str, excluded_paths: frozenset[str]) -> bool:
     path = Path(relative)
-    return relative in EXCLUDED_PAYLOAD_PATHS or ".git" in path.parts
+    return relative in excluded_paths or ".git" in path.parts
 
 
 def _mode_for(path: Path) -> str:
@@ -95,11 +95,15 @@ def _mode_for(path: Path) -> str:
     return "100755" if mode & stat.S_IXUSR else "100644"
 
 
-def _iter_payload_files(root: Path) -> list[Path]:
+def _iter_payload_files(
+    root: Path,
+    *,
+    excluded_paths: frozenset[str] = EXCLUDED_PAYLOAD_PATHS,
+) -> list[Path]:
     files: list[Path] = []
     for path in root.rglob("*"):
         relative = path.relative_to(root).as_posix()
-        if _is_excluded(relative):
+        if _is_excluded(relative, excluded_paths):
             continue
         if path.is_symlink():
             raise TemplateProvenanceError(f"Template payload must not contain symlinks: {relative}")
@@ -108,10 +112,14 @@ def _iter_payload_files(root: Path) -> list[Path]:
     return sorted(files, key=lambda path: path.relative_to(root).as_posix())
 
 
-def canonical_tree_manifest(root: Path) -> bytes:
+def canonical_tree_manifest(
+    root: Path,
+    *,
+    excluded_paths: frozenset[str] = EXCLUDED_PAYLOAD_PATHS,
+) -> bytes:
     root = root.resolve()
     entries: list[dict[str, Any]] = []
-    for path in _iter_payload_files(root):
+    for path in _iter_payload_files(root, excluded_paths=excluded_paths):
         data = path.read_bytes()
         relative = path.relative_to(root).as_posix()
         entries.append(
@@ -128,8 +136,12 @@ def canonical_tree_manifest(root: Path) -> bytes:
     )
 
 
-def payload_tree_digest(root: Path) -> TreeDigest:
-    manifest_bytes = canonical_tree_manifest(root)
+def payload_tree_digest(
+    root: Path,
+    *,
+    excluded_paths: frozenset[str] = EXCLUDED_PAYLOAD_PATHS,
+) -> TreeDigest:
+    manifest_bytes = canonical_tree_manifest(root, excluded_paths=excluded_paths)
     entries = [line for line in manifest_bytes.splitlines() if line]
     byte_count = sum(json.loads(line)["size"] for line in entries)
     return TreeDigest(

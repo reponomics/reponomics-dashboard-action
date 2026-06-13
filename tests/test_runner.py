@@ -2140,6 +2140,7 @@ def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_pay
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert 'id="calendarMonthLabel"' in dashboard
     assert "function shiftCalendarMonth(delta)" in dashboard
+    assert "Array.isArray(day?.repos) && day.repos.length > 0" in dashboard
     assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in dashboard
     assert '"date":"2026-04-30","status":"gaps_detected"' in dashboard
     assert '"date":"2026-05-14","status":"all_zero"' in dashboard
@@ -2184,6 +2185,9 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     assert "Star Growth" in dashboard
     assert "Watcher Growth" in dashboard
     assert "Fork Growth" in dashboard
+    assert "function buildGrowthDeltaSeries(series)" in dashboard
+    assert "stars_delta: deltaFor('stargazers')" in dashboard
+    assert "SERIES_METRIC_KEYS" in dashboard
     assert '"total_subscribers":2' not in dashboard
     assert '"total_forks_delta":0' not in dashboard
 
@@ -2261,6 +2265,8 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert 'id="calendarGrid"' in dashboard_html
     assert 'id="calendarMonthLabel"' in dashboard_html
     assert 'data-detail="' in dashboard_html
+    assert "function configureYAxis(chart, labels, datasets, stacked)" in dashboard_html
+    assert "y.max = Math.max(1, Math.ceil(max) + 1)" in dashboard_html
     assert "function renderCollectionCalendar()" in dashboard_html
     assert "function computeNoRunStats(days)" in dashboard_html
     assert "function calendarStatusLabel(day)" in dashboard_html

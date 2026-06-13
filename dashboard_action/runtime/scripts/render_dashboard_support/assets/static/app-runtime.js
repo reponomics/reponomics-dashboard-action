@@ -46,6 +46,7 @@
       subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#1f6feb', growth: true },
       forks:    { key: 'forks_delta',   label: 'Fork Growth',   color: '#3fb950', growth: true }
     };
+    const SERIES_METRIC_KEYS = ['views', 'uniques', 'clones', 'clone_uniques', 'stars_delta', 'subscribers_delta', 'forks_delta'];
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
     const DEFAULT_WINDOW = '14';
     const MAX_DISPLAY_REPOS = 20;
@@ -516,6 +517,12 @@
       return String(Math.round(n));
     }
 
+    function axisTickLabel(value) {
+      const n = Number(value || 0);
+      if (Math.abs(n) <= 10 && !Number.isInteger(n)) return '';
+      return compactNumber(n);
+    }
+
     function formatSigned(value) {
       const n = Number(value || 0);
       return (n >= 0 ? '+' : '') + formatNumber(n);
@@ -771,7 +778,7 @@
     }
 
     function applyVisibilityThresholdToQualityDays(days) {
-      const hasRepoBreakdown = (days || []).some((day) => Array.isArray(day?.repos));
+      const hasRepoBreakdown = (days || []).some((day) => Array.isArray(day?.repos) && day.repos.length > 0);
       if (!hasRepoBreakdown) return days;
       const visibleRepoNames = new Set(getVisibleRepos().map((repo) => repo.name));
       if (!visibleRepoNames.size) return [];
@@ -1162,6 +1169,51 @@
       return Number(values[values.length - 1] || 0) - Number(values[0] || 0);
     }
 
+    function buildGrowthDeltaSeries(series) {
+      const dates = Array.isArray(series?.dates) ? series.dates.slice() : [];
+      const deltaFor = function(sourceKey) {
+        return dates.map((_, idx) => {
+          const current = seriesValueAt(series, sourceKey, idx);
+          if (current === null) return null;
+          if (idx === 0) return 0;
+          const previous = seriesValueAt(series, sourceKey, idx - 1);
+          if (previous === null) return null;
+          return Number(current || 0) - Number(previous || 0);
+        });
+      };
+      return {
+        dates,
+        stars_delta: deltaFor('stargazers'),
+        subscribers_delta: deltaFor('subscribers'),
+        forks_delta: deltaFor('forks')
+      };
+    }
+
+    function mergeMetricSeries(trafficSeries, growthDeltaSeries) {
+      const dates = [...new Set([
+        ...((trafficSeries && trafficSeries.dates) || []),
+        ...((growthDeltaSeries && growthDeltaSeries.dates) || [])
+      ])].sort();
+      const valueMap = function(series, key) {
+        const map = new Map();
+        (series?.dates || []).forEach((date, idx) => {
+          map.set(date, seriesValueAt(series, key, idx));
+        });
+        return map;
+      };
+      const maps = Object.fromEntries(
+        SERIES_METRIC_KEYS.map((key) => [
+          key,
+          valueMap(['stars_delta', 'subscribers_delta', 'forks_delta'].includes(key) ? growthDeltaSeries : trafficSeries, key)
+        ])
+      );
+      const merged = { dates };
+      SERIES_METRIC_KEYS.forEach((key) => {
+        merged[key] = dates.map((date) => maps[key].has(date) ? maps[key].get(date) : null);
+      });
+      return merged;
+    }
+
     function buildRepoMetrics(repoName) {
       const data = dashboardData();
       const baseRepo = data?.getRepoSummary(repoName) || {};
@@ -1169,6 +1221,8 @@
       const growthRow = data?.getRepoGrowth(repoName) || {};
       const deltas = growthRow.deltas || {};
       const growthSeries = seriesForRange(growthRow.series || {});
+      const growthDeltaSeries = buildGrowthDeltaSeries(growthSeries);
+      const chartSeries = mergeMetricSeries(series, growthDeltaSeries);
       const sum = (values) => (values || []).reduce((total, value) => total + Number(value || 0), 0);
       const hasSeries = (series.dates || []).length > 0;
       const starsDelta = seriesDelta(growthSeries, 'stargazers', deltas.stars_delta || deltas.stargazers_delta);
@@ -1204,7 +1258,7 @@
           has_readme: community.has_readme,
           has_license: community.has_license
         },
-        series
+        series: chartSeries
       };
     }
 
@@ -1248,13 +1302,10 @@
         const series = repo.series || {};
         (series.dates || []).forEach((date, idx) => {
           const current = byDate.get(date) || {
-            views: 0,
-            uniques: 0,
-            clones: 0,
-            clone_uniques: 0,
-            samples: { views: 0, uniques: 0, clones: 0, clone_uniques: 0 }
+            samples: Object.fromEntries(SERIES_METRIC_KEYS.map((key) => [key, 0]))
           };
-          ['views', 'uniques', 'clones', 'clone_uniques'].forEach((key) => {
+          SERIES_METRIC_KEYS.forEach((key) => {
+            if (!(key in current)) current[key] = 0;
             const value = seriesValueAt(series, key, idx);
             if (value !== null) {
               current[key] += Number(value || 0);
@@ -1269,43 +1320,37 @@
         const row = byDate.get(date);
         return row.samples[key] ? row[key] : null;
       };
-      return {
-        dates,
-        views: dates.map((date) => projected(date, 'views')),
-        uniques: dates.map((date) => projected(date, 'uniques')),
-        clones: dates.map((date) => projected(date, 'clones')),
-        clone_uniques: dates.map((date) => projected(date, 'clone_uniques'))
-      };
+      return Object.assign(
+        { dates },
+        Object.fromEntries(SERIES_METRIC_KEYS.map((key) => [key, dates.map((date) => projected(date, key))]))
+      );
     }
 
     function buildWeekdaySummaryFromSeries(seriesMap) {
       const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      const totals = labels.map(() => ({ views: 0, uniques: 0, clones: 0, clone_uniques: 0, samples: 0 }));
+      const totals = labels.map(() => ({
+        samples: Object.fromEntries(SERIES_METRIC_KEYS.map((key) => [key, 0]))
+      }));
       Object.values(seriesMap || {}).forEach((series) => {
         (series.dates || []).forEach((date, idx) => {
           const parsed = parseIsoDate(date);
           if (!parsed) return;
           const weekday = (parsed.getUTCDay() + 6) % 7;
-          const views = seriesValueAt(series, 'views', idx);
-          const uniques = seriesValueAt(series, 'uniques', idx);
-          const clones = seriesValueAt(series, 'clones', idx);
-          const cloneUniques = seriesValueAt(series, 'clone_uniques', idx);
-          if (views === null && uniques === null && clones === null && cloneUniques === null) return;
-          totals[weekday].views += Number(views || 0);
-          totals[weekday].uniques += Number(uniques || 0);
-          totals[weekday].clones += Number(clones || 0);
-          totals[weekday].clone_uniques += Number(cloneUniques || 0);
-          totals[weekday].samples += 1;
+          SERIES_METRIC_KEYS.forEach((key) => {
+            if (!(key in totals[weekday])) totals[weekday][key] = 0;
+            const value = seriesValueAt(series, key, idx);
+            if (value !== null) {
+              totals[weekday][key] += Number(value || 0);
+              totals[weekday].samples[key] += 1;
+            }
+          });
         });
       });
-      const avg = (field) => totals.map((b) => b.samples ? Math.round((b[field] / b.samples) * 10) / 10 : 0);
-      return {
-        labels,
-        views: avg('views'),
-        uniques: avg('uniques'),
-        clones: avg('clones'),
-        clone_uniques: avg('clone_uniques')
-      };
+      const avg = (field) => totals.map((b) => b.samples[field] ? Math.round((b[field] / b.samples[field]) * 10) / 10 : 0);
+      return Object.assign(
+        { labels },
+        Object.fromEntries(SERIES_METRIC_KEYS.map((key) => [key, avg(key)]))
+      );
     }
 
     function getCurrentWindowData() {
@@ -1588,16 +1633,70 @@
           },
           y: {
             beginAtZero: true,
+            grace: '8%',
             stacked: !!stacked,
             ticks: {
               color: tick,
-              callback: function(value) { return compactNumber(value); }
+              precision: 0,
+              callback: function(value) { return axisTickLabel(value); }
             },
             grid: { color: grid, drawTicks: false },
             border: { display: false }
           }
         }
       };
+    }
+
+    function numericDatasetValues(datasets) {
+      return (datasets || []).flatMap((dataset) =>
+        (dataset.data || [])
+          .filter((value) => value !== null && value !== undefined)
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value))
+      );
+    }
+
+    function stackedDatasetValues(labels, datasets) {
+      return (labels || []).map((_, idx) =>
+        (datasets || []).reduce((total, dataset) => {
+          const value = dataset.data?.[idx];
+          const n = Number(value);
+          return Number.isFinite(n) ? total + n : total;
+        }, 0)
+      );
+    }
+
+    function configureYAxis(chart, labels, datasets, stacked) {
+      const y = chart?.options?.scales?.y;
+      if (!y) return;
+      const values = stacked ? stackedDatasetValues(labels, datasets) : numericDatasetValues(datasets);
+      const finite = values.filter((value) => Number.isFinite(value));
+      const min = finite.length ? Math.min(...finite) : 0;
+      const max = finite.length ? Math.max(...finite) : 0;
+      const largest = Math.max(Math.abs(min), Math.abs(max));
+
+      y.beginAtZero = min >= 0;
+      y.grace = '8%';
+      delete y.min;
+      delete y.max;
+      delete y.suggestedMax;
+      if (y.ticks) {
+        y.ticks.precision = 0;
+        delete y.ticks.stepSize;
+        y.ticks.callback = function(value) { return axisTickLabel(value); };
+      }
+
+      if (largest <= 5) {
+        y.grace = 0;
+        if (y.ticks) y.ticks.stepSize = 1;
+        if (min < 0) {
+          y.min = Math.floor(min) - 1;
+          y.max = Math.ceil(max) + 1;
+        } else {
+          y.min = 0;
+          y.max = Math.max(1, Math.ceil(max) + 1);
+        }
+      }
     }
 
     function resetCheckboxes() {
@@ -2015,6 +2114,7 @@
       }
 
       dailyChart.data.datasets = datasets;
+      configureYAxis(dailyChart, dailyChart.data.labels, datasets, false);
       dailyChart.update();
     }
 
@@ -2064,6 +2164,7 @@
 
       weekdayChart.data.labels = labels;
       weekdayChart.data.datasets = datasets;
+      configureYAxis(weekdayChart, labels, datasets, false);
       weekdayChart.update();
     }
 
@@ -2158,6 +2259,7 @@
           };
         });
       }
+      configureYAxis(stackedChart, stackedChart.data.labels, stackedChart.data.datasets, !!stackedChart.options.scales.y.stacked);
       stackedChart.update();
     }
 

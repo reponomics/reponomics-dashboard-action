@@ -163,7 +163,7 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     assert "Seed And Publish Demo Dashboard" in workflow
     assert "workflow_dispatch:" in workflow
     assert "generated-demo-dashboard-data" in workflow
-    assert "REPONOMICS_SOURCE_ARTIFACT_TOKEN" in workflow
+    assert "github-token: ${{ github.token }}" in workflow
     assert "actions/download-artifact@" in workflow
     assert "actions/upload-artifact@" in workflow
     assert "name: dashboard-data" in workflow

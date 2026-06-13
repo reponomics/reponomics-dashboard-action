@@ -470,7 +470,7 @@ jobs:
           path: .dashboard-data-artifact
           repository: ${{ inputs.source_repository }}
           run-id: ${{ inputs.source_run_id }}
-          github-token: ${{ secrets.REPONOMICS_SOURCE_ARTIFACT_TOKEN }}
+          github-token: ${{ github.token }}
 
       - name: Validate encrypted demo dashboard data seed
         shell: bash

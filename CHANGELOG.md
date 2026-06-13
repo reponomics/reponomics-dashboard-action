@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.1...v0.23.2) (2026-06-13)
+
+
+### Bug Fixes
+
+* dashboard graph bugs and demo workflow token ([6f5a161](https://github.com/reponomics/reponomics-dashboard-action/commit/6f5a16151400466d4ae9fb79f96a7d42f931d944))
+
 ## [0.23.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.0...v0.23.1) (2026-06-13)
 
 

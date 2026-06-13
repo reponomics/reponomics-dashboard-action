@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install pre-commit-install pre-commit-run ci
+.PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
@@ -33,9 +33,113 @@ DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
+STAGING_SMOKE_SOURCE_REPO ?= reponomics/reponomics-dashboard-action
+STAGING_SMOKE_SOURCE_REF ?= main
+STAGING_SMOKE_TEMPLATE_REPO ?= reponomics/reponomics-dashboard-staging
+STAGING_SMOKE_ENCRYPTED_REPO ?= reponomics/reponomics-dashboard-staging-private-encrypted-fresh
+STAGING_SMOKE_PLAIN_REPO ?= reponomics/reponomics-dashboard-staging-private-plaintext-with-history
+STAGING_SMOKE_COLLECTION_MODE ?= pat
+STAGING_SMOKE_PHASE ?= recurring
+STAGING_SMOKE_GH_DELAY_SECONDS ?= 1
+STAGING_SMOKE_ALLOW_BOOTSTRAP ?= 0
+STAGING_SMOKE_REPORT ?= .tmp/staging-smoke/report.md
+STAGING_SMOKE_BROWSER_CHECKLIST ?= .tmp/staging-smoke/browser-checklist.md
+STAGING_SMOKE_ENCRYPTED_PAGES_URL ?= <encrypted-pages-url>
+STAGING_SMOKE_PLAIN_LOCAL_URL ?= http://localhost:8765
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+staging-smoke-instructions: ## Show the manual staging smoke runbook for local Codex runs
+	@cat docs/STAGING_SMOKE.md
+
+staging-smoke-live-order: install ## Show the concise live staging smoke command order
+	$(PYTHON) scripts/staging_smoke_live_order.py
+
+staging-smoke-provision-plan: install ## Print one-time staging repo provisioning commands without creating repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_provision.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-provision: install ## Create missing private staging repos; secrets remain manual
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_provision.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--execute
+
+staging-smoke-plan: install ## Print the guarded staging smoke execution plan
+	$(PYTHON) scripts/staging_smoke_run.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE) \
+		--phase $(STAGING_SMOKE_PHASE) \
+		--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS) \
+		--write-report-template $(STAGING_SMOKE_REPORT)
+
+staging-smoke-preflight: install ## Check local/GitHub prerequisites for staging smoke repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_preflight.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE)
+
+staging-smoke-reset-fresh-plan: install ## Build fresh encrypted staging tree without force-pushing
+	$(PYTHON) scripts/staging_smoke_reset_fresh.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO)
+
+staging-smoke-reset-fresh: install ## Force-reset encrypted fresh repo; requires CONFIRM_TARGET exact repo
+	$(PYTHON) scripts/staging_smoke_reset_fresh.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--execute \
+		--confirm-target "$(CONFIRM_TARGET)"
+
+staging-smoke-seed-plain-history-plan: install ## Build seed tree for empty plain history repo without pushing
+	$(PYTHON) scripts/staging_smoke_seed_plain_history.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-seed-plain-history: install ## Seed empty plain history repo without force-push; requires CONFIRM_TARGET exact repo
+	$(PYTHON) scripts/staging_smoke_seed_plain_history.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--execute \
+		--confirm-target "$(CONFIRM_TARGET)"
+
+staging-smoke-evidence: install ## Read-only evidence checks for completed staging smoke repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_evidence.py \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-browser-checklist: install ## Write the staging browser smoke checklist
+	$(PYTHON) scripts/staging_smoke_browser_checklist.py \
+		--encrypted-pages-url "$(STAGING_SMOKE_ENCRYPTED_PAGES_URL)" \
+		--plain-local-url "$(STAGING_SMOKE_PLAIN_LOCAL_URL)" \
+		--output $(STAGING_SMOKE_BROWSER_CHECKLIST)
+
+staging-smoke-run: install ## Run local staging smoke gates; set DISPATCH_TEMPLATE_STAGING=1 to dispatch staging publication
+	$(PYTHON) scripts/staging_smoke_run.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE) \
+		--phase $(STAGING_SMOKE_PHASE) \
+		--execute \
+		--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS) \
+		--write-report-template $(STAGING_SMOKE_REPORT) \
+		$(if $(filter 1 true yes,$(STAGING_SMOKE_ALLOW_BOOTSTRAP)),--allow-bootstrap-preflight-failures,) \
+		$(if $(filter 1 true yes,$(DISPATCH_TEMPLATE_STAGING)),--dispatch-template-staging,)
 
 install: $(INSTALL_STAMP) ## Create venv and install dependencies
 

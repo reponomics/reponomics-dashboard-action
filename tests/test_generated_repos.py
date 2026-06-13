@@ -12,9 +12,17 @@ import yaml
 
 from scripts import build_template
 from scripts import publish_generated_repo
+from scripts import staging_smoke_browser_checklist
+from scripts import staging_smoke_evidence
+from scripts import staging_smoke_live_order
+from scripts import staging_smoke_provision
+from scripts import staging_smoke_reset_fresh
+from scripts import staging_smoke_seed_plain_history
+from scripts import staging_smoke_wait_for_run
 from scripts import template_contract
 from scripts import template_consumer_e2e
 from scripts import template_provenance
+from scripts import staging_smoke_run
 from scripts import verify_workflow_classification
 
 
@@ -554,6 +562,17 @@ def test_action_repo_has_template_publication_targets():
     assert "verify-template:" in makefile
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
+    assert "staging-smoke-instructions:" in makefile
+    assert "staging-smoke-live-order:" in makefile
+    assert "staging-smoke-provision-plan:" in makefile
+    assert "staging-smoke-provision:" in makefile
+    assert "staging-smoke-plan:" in makefile
+    assert "staging-smoke-preflight:" in makefile
+    assert "staging-smoke-reset-fresh-plan:" in makefile
+    assert "staging-smoke-reset-fresh:" in makefile
+    assert "staging-smoke-browser-checklist:" in makefile
+    assert "staging-smoke-evidence:" in makefile
+    assert "staging-smoke-run:" in makefile
     assert "publish-template:" in makefile
     assert "publish-template-staging-dry-run:" in makefile
     assert "publish-template-staging:" in makefile
@@ -562,7 +581,386 @@ def test_action_repo_has_template_publication_targets():
         "TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging"
         in makefile
     )
+    assert "STAGING_SMOKE_SOURCE_REF ?= main" in makefile
+    assert "STAGING_SMOKE_PHASE ?= recurring" in makefile
+    assert "STAGING_SMOKE_GH_DELAY_SECONDS ?= 1" in makefile
+    assert "STAGING_SMOKE_ALLOW_BOOTSTRAP ?= 0" in makefile
+    assert "STAGING_SMOKE_REPORT ?= .tmp/staging-smoke/report.md" in makefile
+    assert "STAGING_SMOKE_BROWSER_CHECKLIST ?= .tmp/staging-smoke/browser-checklist.md" in makefile
+    assert "scripts/staging_smoke_live_order.py" in makefile
+    assert "scripts/staging_smoke_browser_checklist.py" in makefile
+    assert "scripts/staging_smoke_provision.py" in makefile
+    assert "scripts/staging_smoke_reset_fresh.py" in makefile
+    assert "scripts/staging_smoke_seed_plain_history.py" in makefile
+    assert "--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS)" in makefile
+    assert "--write-report-template $(STAGING_SMOKE_REPORT)" in makefile
+    assert '--confirm-target "$(CONFIRM_TARGET)"' in makefile
+    assert "scripts/staging_smoke_preflight.py" in makefile
+    assert "scripts/staging_smoke_evidence.py" in makefile
+    assert "scripts/staging_smoke_run.py" in makefile
+    assert Path("scripts/slow_gh.py").exists()
+    assert Path("scripts/staging_smoke_wait_for_run.py").exists()
     assert "scripts/publish_generated_repo.py" in makefile
+
+
+def test_staging_smoke_runbook_documents_required_profiles():
+    runbook = Path("docs/STAGING_SMOKE.md").read_text(encoding="utf-8")
+
+    assert "reponomics-dashboard-staging-private-encrypted-fresh" in runbook
+    assert "reponomics-dashboard-staging-private-plaintext-with-history" in runbook
+    assert "One-Time GitHub Provisioning" in runbook
+    assert "Plain mode does not publish a Pages dashboard" in runbook
+    assert "guided interactive runbook" in runbook
+    assert "printed `gh secret set` commands omit `--body`" in runbook
+    assert "guided interactive checkpoints" in runbook
+    assert "make staging-smoke-live-order" in runbook
+    assert "make staging-smoke-plan" in runbook
+    assert "make staging-smoke-provision-plan" in runbook
+    assert "make staging-smoke-provision" in runbook
+    assert "make staging-smoke-preflight" in runbook
+    assert "make staging-smoke-reset-fresh-plan" in runbook
+    assert "make staging-smoke-reset-fresh CONFIRM_TARGET=" in runbook
+    assert "make staging-smoke-seed-plain-history-plan" in runbook
+    assert "make staging-smoke-seed-plain-history CONFIRM_TARGET=" in runbook
+    assert "make staging-smoke-browser-checklist" in runbook
+    assert "make staging-smoke-evidence" in runbook
+    assert "make staging-smoke-run" in runbook
+    assert "STAGING_SMOKE_PHASE=bootstrap" in runbook
+    assert "STAGING_SMOKE_PHASE=recurring" in runbook
+    assert "STAGING_SMOKE_ALLOW_BOOTSTRAP=1" in runbook
+    assert "DISPATCH_TEMPLATE_STAGING=1" in runbook
+    assert "STAGING_SMOKE_GH_DELAY_SECONDS" in runbook
+    assert "scripts/slow_gh.py" in runbook
+    assert ".tmp/staging-smoke/report.md" in runbook
+    assert "PAT-only" in runbook
+    assert "Rotate Reponomics dashboard key" in runbook
+    assert "html-dashboard-plain" in runbook
+    assert "DASHBOARD_NEXT_SECRET" in runbook
+    assert "Review `config.yaml` in the encrypted fresh repo after setup" in runbook
+    assert "Recurring plaintext/history smoke should preserve the existing config" in runbook
+    assert "Local Clone Policy" in runbook
+    assert "temporary clones under `.tmp/staging-smoke/`" in runbook
+    assert "persistent local clone of the plain-history repo is acceptable" in runbook
+
+
+def test_staging_smoke_live_order_lists_command_sequence():
+    text = staging_smoke_live_order.live_order()
+
+    assert "make staging-smoke-provision-plan" in text
+    assert "make staging-smoke-provision" in text
+    assert "make staging-smoke-preflight" in text
+    assert "Default mode is recurring" in text
+    assert "## One-time bootstrap" in text
+    assert "## Recurring smoke" in text
+    assert "make staging-smoke-plan STAGING_SMOKE_PHASE=bootstrap" in text
+    assert "make staging-smoke-plan" in text
+    assert "make staging-smoke-plan STAGING_SMOKE_PHASE=recurring" in text
+    assert "make staging-smoke-run DISPATCH_TEMPLATE_STAGING=1" in text
+    assert (
+        "STAGING_SMOKE_PHASE=bootstrap STAGING_SMOKE_ALLOW_BOOTSTRAP=1 DISPATCH_TEMPLATE_STAGING=1"
+        in text
+    )
+    assert "make staging-smoke-browser-checklist" in text
+    assert "make staging-smoke-evidence" in text
+    assert ".tmp/staging-smoke/report.md" in text
+
+
+def test_staging_smoke_provision_defaults_to_private_staging_repos():
+    args = staging_smoke_provision.parse_args([])
+    specs = staging_smoke_provision.repo_specs(args)
+
+    assert [spec.repo for spec in specs] == [
+        "reponomics/reponomics-dashboard-staging",
+        "reponomics/reponomics-dashboard-staging-private-encrypted-fresh",
+        "reponomics/reponomics-dashboard-staging-private-plaintext-with-history",
+    ]
+    for spec in specs:
+        command = staging_smoke_provision._create_command(spec)
+        assert "scripts/slow_gh.py repo create" in command
+        assert "--private" in command
+        assert "--disable-issues" in command
+        assert "--disable-wiki" in command
+        assert "secret set" not in command
+        assert "push --force" not in command
+
+
+def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
+    report = tmp_path / "smoke-report.md"
+    result = subprocess.run(
+        [
+            "venv/bin/python",
+            "scripts/staging_smoke_run.py",
+            "--source-repo",
+            "owner/action",
+            "--source-ref",
+            "main",
+            "--template-staging-repo",
+            "owner/template-staging",
+            "--encrypted-fresh-repo",
+            "owner/encrypted-fresh",
+            "--plain-history-repo",
+            "owner/plain-history",
+            "--command-delay-seconds",
+            "2",
+            "--phase",
+            "bootstrap",
+            "--write-report-template",
+            str(report),
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    output = result.stdout
+    assert "Dry run: no commands will be executed." in output
+    assert "STAGING_SMOKE_GH_DELAY_SECONDS=2.0" in output
+    assert "COLLECTION_TOKEN" in output
+    assert "COLLECTION_APP_PRIVATE_KEY" not in output
+    assert "venv/bin/python scripts/slow_gh.py workflow run publish-template-staging.yml" in output
+    assert "--workflow publish-template-staging.yml --branch 'main' --created-after \"$started_at\"" in output
+    assert "venv/bin/python scripts/slow_gh.py workflow run setup.yml" in output
+    assert "Review encrypted config before collection" in output
+    assert "Review plain-history config before first collection" in output
+    assert "venv/bin/python scripts/staging_smoke_wait_for_run.py" in output
+    assert "--created-after \"$started_at\"" in output
+    assert "venv/bin/python scripts/slow_gh.py workflow run rotate-key.yml" in output
+    assert "use_github_app=false" in output
+    assert "make staging-smoke-reset-fresh-plan" in output
+    assert "make staging-smoke-reset-fresh" in output
+    assert "make staging-smoke-seed-plain-history-plan" in output
+    assert "make staging-smoke-seed-plain-history" in output
+    assert "make staging-smoke-evidence" in output
+    assert "make staging-smoke-browser-checklist" in output
+    assert "venv/bin/python scripts/slow_gh.py api repos/owner/encrypted-fresh/pages" in output
+    assert "venv/bin/python scripts/slow_gh.py run download '<plain-collect-run-id>'" in output
+    assert "--yes" not in output
+    assert report.exists()
+    report_text = report.read_text(encoding="utf-8")
+    assert "Reponomics Staging Smoke Report" in report_text
+    assert "- Repository: `owner/encrypted-fresh`" in report_text
+    assert "- Repository: `owner/plain-history`" in report_text
+    assert "- Setup run after fresh codebase reset:" in report_text
+    assert "- Config reviewed/updated before collection:" in report_text
+    assert "- Seed/setup run, bootstrap only:" in report_text
+    assert "- Config reviewed/updated, bootstrap only:" in report_text
+
+
+def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
+    report = tmp_path / "smoke-report.md"
+    result = subprocess.run(
+        [
+            "venv/bin/python",
+            "scripts/staging_smoke_run.py",
+            "--source-repo",
+            "owner/action",
+            "--source-ref",
+            "main",
+            "--template-staging-repo",
+            "owner/template-staging",
+            "--encrypted-fresh-repo",
+            "owner/encrypted-fresh",
+            "--plain-history-repo",
+            "owner/plain-history",
+            "--phase",
+            "recurring",
+            "--write-report-template",
+            str(report),
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    output = result.stdout
+    assert "make staging-smoke-reset-fresh" in output
+    assert "workflow run setup.yml --repo 'owner/encrypted-fresh'" in output
+    assert "Review encrypted config before collection" in output
+    assert "privacy_mode=strong" in output
+    assert "workflow run collect-and-publish.yml --repo 'owner/encrypted-fresh'" in output
+    assert "workflow run collect-and-publish.yml --repo 'owner/plain-history'" in output
+    assert "secret set COLLECTION_TOKEN" not in output
+    assert "secret set COMPARISON_SECRET" not in output
+    assert "secret set DASHBOARD_NEXT_SECRET" in output
+    assert "secret set DASHBOARD_SECRET_DO_NOT_REPLACE" in output
+    assert "staging-smoke-seed-plain-history" not in output
+    assert "Review plain-history config before first collection" not in output
+    assert "- Smoke phase: `recurring`" in report.read_text(encoding="utf-8")
+
+
+def test_staging_smoke_browser_checklist_covers_required_browser_regressions():
+    text = staging_smoke_browser_checklist.checklist(
+        "https://example.test/dashboard",
+        "http://localhost:9999",
+    )
+
+    assert "https://example.test/dashboard" in text
+    assert "http://localhost:9999" in text
+    assert "incorrect key does not unlock" in text
+    assert "non-traffic growth metric" in text
+    assert "traffic metric" in text
+    assert "clipped or truncated" in text
+    assert "collection calendar" in text
+    assert "html-dashboard-plain" in text
+    assert "Do not paste dashboard keys" in text
+
+
+def test_staging_smoke_runner_plan_keeps_consumer_writes_non_executable():
+    args = staging_smoke_run.parse_args(
+        [
+            "--source-repo",
+            "owner/action",
+            "--template-staging-repo",
+            "owner/template-staging",
+            "--encrypted-fresh-repo",
+            "owner/encrypted-fresh",
+            "--plain-history-repo",
+            "owner/plain-history",
+            "--phase",
+            "bootstrap",
+        ]
+    )
+
+    operations = staging_smoke_run.build_plan(args)
+    executable_titles = [operation.title for operation in operations if operation.executable]
+
+    assert executable_titles == ["Inspect and preflight", "Run local template gates"]
+    reset_commands = [
+        command
+        for operation in operations
+        for command in operation.commands
+        if "staging-smoke-reset-fresh" in command
+    ]
+    assert reset_commands
+    assert any("CONFIRM_TARGET='owner/encrypted-fresh'" in command for command in reset_commands)
+    seed_commands = [
+        command
+        for operation in operations
+        for command in operation.commands
+        if "staging-smoke-seed-plain-history" in command
+    ]
+    assert seed_commands
+    assert any("CONFIRM_TARGET='owner/plain-history'" in command for command in seed_commands)
+    assert not any(
+        operation.executable and "push --force" in command
+        for operation in operations
+        for command in operation.commands
+    )
+
+
+def test_staging_smoke_reset_fresh_requires_exact_target_confirmation():
+    args = staging_smoke_reset_fresh.parse_args(
+        [
+            "--encrypted-fresh-repo",
+            "owner/encrypted-fresh",
+            "--execute",
+            "--confirm-target",
+            "owner/other",
+        ]
+    )
+
+    try:
+        staging_smoke_reset_fresh.reset_fresh(args)
+    except staging_smoke_reset_fresh.ResetFreshError as exc:
+        assert "--confirm-target must exactly match" in str(exc)
+    else:
+        raise AssertionError("expected reset_fresh to reject mismatched target")
+
+
+def test_staging_smoke_seed_plain_history_requires_exact_target_confirmation():
+    args = staging_smoke_seed_plain_history.parse_args(
+        [
+            "--plain-history-repo",
+            "owner/plain-history",
+            "--execute",
+            "--confirm-target",
+            "owner/other",
+        ]
+    )
+
+    try:
+        staging_smoke_seed_plain_history.seed_plain_history(args)
+    except staging_smoke_seed_plain_history.SeedHistoryError as exc:
+        assert "--confirm-target must exactly match" in str(exc)
+    else:
+        raise AssertionError("expected seed_plain_history to reject mismatched target")
+
+
+def test_staging_smoke_evidence_print_counts_required_failures(capsys):
+    checks = [
+        staging_smoke_evidence.Evidence("ok", "passed"),
+        staging_smoke_evidence.Evidence("warn", "watch"),
+        staging_smoke_evidence.Evidence("fail", "missing"),
+    ]
+
+    failures = staging_smoke_evidence.print_evidence(checks)
+
+    output = capsys.readouterr().out
+    assert failures == 1
+    assert "[OK] passed" in output
+    assert "[WARN] watch" in output
+    assert "[FAIL] missing" in output
+
+
+def test_staging_smoke_evidence_defaults_to_staging_consumer_repos():
+    args = staging_smoke_evidence.parse_args([])
+
+    assert args.encrypted_fresh_repo == "reponomics/reponomics-dashboard-staging-private-encrypted-fresh"
+    assert args.plain_history_repo == "reponomics/reponomics-dashboard-staging-private-plaintext-with-history"
+
+
+def test_staging_smoke_evidence_rejects_plain_history_pages(monkeypatch):
+    monkeypatch.setattr(
+        staging_smoke_evidence,
+        "_pages_payload",
+        lambda _repo: {"html_url": "https://example.test/plain"},
+    )
+
+    checks = staging_smoke_evidence._plain_pages_evidence("owner/plain-history")
+
+    assert checks == [
+        staging_smoke_evidence.Evidence(
+            "fail",
+            "plain history: Pages configuration must be absent: https://example.test/plain",
+        )
+    ]
+
+
+def test_staging_smoke_wait_for_run_selects_latest_matching_dispatch():
+    created_after = staging_smoke_wait_for_run._parse_timestamp("2026-06-13T12:00:00Z")
+    runs = [
+        {
+            "databaseId": 1,
+            "event": "workflow_dispatch",
+            "createdAt": "2026-06-13T11:59:59Z",
+        },
+        {
+            "databaseId": 2,
+            "event": "schedule",
+            "createdAt": "2026-06-13T12:01:00Z",
+        },
+        {
+            "databaseId": 3,
+            "event": "workflow_dispatch",
+            "createdAt": "2026-06-13T12:02:00Z",
+        },
+        {
+            "databaseId": 4,
+            "event": "workflow_dispatch",
+            "createdAt": "2026-06-13T12:01:00Z",
+        },
+    ]
+
+    selected = staging_smoke_wait_for_run.select_run(
+        runs,
+        created_after=created_after,
+        event="workflow_dispatch",
+    )
+
+    assert selected is not None
+    assert selected["databaseId"] == 3
 
 
 def test_template_consumer_e2e_defaults_to_local_action_repo():

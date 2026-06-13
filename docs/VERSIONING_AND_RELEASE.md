@@ -66,7 +66,7 @@ Staging setup checklist:
 4. Install the staging publication app only on `reponomics-dashboard-staging`.
 5. Configure `TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID` and `TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY` in this source repository.
 6. Run `.github/workflows/publish-template-staging.yml` from `main` with confirmation enabled.
-7. Copy the staging template into a throwaway private consumer repository for setup, collect, publish, and Pages smoke testing when the change warrants it.
+7. Run the private consumer staging smoke protocol in `docs/STAGING_SMOKE.md` when the change warrants it.
 
 Do not use `publish-template.yml` for routine staging. That workflow is the production template publication path for `reponomics-dashboard-v*` releases; its manual dispatch remains an operator recovery escape hatch.
 

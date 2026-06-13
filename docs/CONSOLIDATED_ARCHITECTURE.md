@@ -207,7 +207,9 @@ This is the right direction. The template job is the key addition made possible 
 
 This should be run before action releases that affect runtime behavior used by templates, and before every template release.
 
-`.github/workflows/publish-template-staging.yml` is the persistent private staging surface. It publishes generated output to `reponomics-dashboard-staging` after running generated-template gates. Use it when maintainers need to copy, smoke-test, or inspect a candidate generated template in a repository that reflects the eventual production template repository without touching `reponomics-dashboard`.
+`.github/workflows/publish-template-staging.yml` is the persistent private generated-template staging surface. It publishes generated output to `reponomics-dashboard-staging` after running generated-template gates. Use it when maintainers need to inspect a candidate generated template in a repository that reflects the eventual production template repository without touching `reponomics-dashboard`.
+
+Consumer-mode smoke testing should happen in separate staging dashboard repositories, not in the generated-template staging repo itself. The current maintainer protocol is in `docs/STAGING_SMOKE.md`: one private encrypted repo is reset from the staging template for fresh setup, Pages, README, and key-rotation coverage, while one private plain repo preserves history for artifact-only HTML, README, and retained-data continuity checks.
 
 ### Template Publication
 

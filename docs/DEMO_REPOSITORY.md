@@ -51,9 +51,11 @@ Implementation sequence:
 
 This avoids the misleading impression that users should commit retained traffic CSVs. It also keeps the useful product truth visible: Reponomics dashboard data is artifact-backed, while the public README and Pages dashboard are rendered outputs.
 
-The target artifact-import workflow uses `actions/download-artifact` with `github-token`, `repository`, and `run-id` to download a source artifact from `reponomics/reponomics-dashboard-action`, then re-uploads the payload as `dashboard-data` in `reponomics-dashboard-demo`. That cross-repository artifact path should remain demo-specific until it is designed as a user-facing import or recovery workflow.
+The target artifact-import workflow uses `actions/download-artifact` with `github-token`, `repository`, and `run-id` to download a source artifact from `reponomics/reponomics-dashboard-action`, then re-uploads the payload as `dashboard-data` in `reponomics-dashboard-demo`. It passes the target workflow's `${{ github.token }}` as the explicit `github-token` input. This was validated against public source artifact run `27471925728` and target demo run `27472044670`: the target repo `GITHUB_TOKEN` could download the public source artifact, store it as `dashboard-data`, and deploy Pages.
 
-The target repository needs a secret named `REPONOMICS_SOURCE_ARTIFACT_TOKEN` with read access to Actions artifacts in `reponomics/reponomics-dashboard-action`. The demo publication GitHub App also needs `contents: write`, `workflows: write`, and `actions: write` on `reponomics-dashboard-demo` so it can force-push the generated tree and dispatch the target seed workflow.
+This avoids a second source-artifact App or PAT while `reponomics-dashboard-action` and the seed artifact are public. If the source repo becomes private, artifact visibility changes, or GitHub tightens cross-repository artifact access, fall back to minting a narrowly scoped source-artifact GitHub App token in the target workflow. That cross-repository artifact path should remain demo-specific until it is designed as a user-facing import or recovery workflow.
+
+The demo publication GitHub App needs `contents: write`, `workflows: write`, and `actions: write` on `reponomics-dashboard-demo` so it can force-push the generated tree and dispatch the target seed workflow.
 
 ### Later Enhancement: Previous Artifact Illusion
 

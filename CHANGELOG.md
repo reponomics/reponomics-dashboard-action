@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.0...v0.23.1) (2026-06-13)
+
+
+### Bug Fixes
+
+* harden demo artifact publication ([#114](https://github.com/reponomics/reponomics-dashboard-action/issues/114)) ([da0a87e](https://github.com/reponomics/reponomics-dashboard-action/commit/da0a87e9d25fcc11c3d3089498bd393b944e8b72))
+
 ## [0.23.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.22.1...v0.23.0) (2026-06-12)
 
 

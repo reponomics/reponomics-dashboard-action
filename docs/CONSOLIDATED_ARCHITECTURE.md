@@ -14,7 +14,7 @@ Reponomics has one development repository and two independently versioned produc
 
 The generated template is not a second development repository. It is a published artifact built from this source tree. The retired `reponomics-dashboard-dev` repository should not sit in the release path.
 
-The demo repository is also not a third development repository. It should be a generated consumer of the same action/template system with an explicit demo profile layered on top.
+The demo repository is also not a third development repository. It is generated from this source repository with an explicit demo profile layered on top.
 
 This split is necessary because copied GitHub template repositories cannot be updated in place by the publisher. After a user copies the template, that copy is effectively durable. The action is therefore the ongoing delivery channel for compatible fixes, enhancements, runtime docs, and operational behavior.
 
@@ -55,7 +55,7 @@ The major areas of responsibility are:
 | `scripts/template_contract.py` | Validates local action/template compatibility, managed docs snapshots, and action references in generated output. |
 | `scripts/publish_generated_repo.py` | Publishes a generated output tree to `reponomics-dashboard` with target safety checks. |
 | `scripts/template_consumer_e2e.py` and `scripts/smoke_template_release.py` | Local generated-template validation against the current action source. |
-| Future demo tooling | Builds and publishes `reponomics-dashboard-demo` from the generated template plus explicit demo fixtures and overrides. |
+| Demo tooling | Builds and publishes `reponomics-dashboard-demo` from the generated template plus explicit synthetic data, demo fixtures, and demo-only publication overrides. |
 | `tests/` | Action runtime tests, generated-template tests, scenario snapshots, security/contract checks, and compatibility fixtures. |
 | `.github/workflows/` | CI, release, template publish, pre-release validation, and repository hygiene workflows. |
 | `docs/` | Maintainer documentation for this development repository. User-facing generated-repo docs should live in managed docs or `template/`. |
@@ -114,21 +114,21 @@ The generated commit message should continue to record `Source-Commit: S`. That 
 
 ### Demo Repository
 
-`reponomics-dashboard-demo` should be a public generated repository that answers a different user question than the template: "What will this look like after I copy the template and run setup?"
+`reponomics-dashboard-demo` is a public generated repository that answers a different user question than the template: "What will this look like after I copy the template and run setup?"
 
-The demo should be generated from the same template output, then configured by an explicit demo profile. That profile should be narrow and auditable:
+The demo is generated from the same template output, then configured by an explicit demo profile. That profile is narrow and auditable:
 
 - use the same repository layout as a real generated template repository
-- use the same action entry points, workflow modes, rendering paths, artifact lifecycle, managed docs sync behavior, and Pages publication path wherever possible
-- replace live GitHub collection with deterministic mocked responses for a manicured portfolio of repositories
+- use the same repository layout, rendering paths, encrypted artifact format, Pages publication path, and managed docs surface wherever possible
+- replace live GitHub collection with deterministic synthetic canonical data for a manicured portfolio of repositories
 - publish a README dashboard even though normal public generated repositories prohibit README dashboard generation
 - publish a Pages dashboard, which is normal and supported
 - use encrypted dashboard mode with an intentionally public demo key so visitors can unlock the Pages dashboard
 - label the public demo key unmistakably as a demo credential that must never be reused
 
-The demo should intentionally violate real-template constraints only where the demonstration requires it. Those violations should live in demo-specific source, scripts, or workflow inputs rather than weakening the normal template contract. In particular, the public-template rule that blocks README dashboard generation in public repositories should remain true for users; the demo should bypass it through a named demo mode or controlled fixture path, not by relaxing the production validation rule.
+The demo intentionally violates real-template constraints only where the demonstration requires it. Those violations live in demo-specific source, scripts, or workflow inputs rather than weakening the normal template contract. In particular, the public-template rule that blocks README dashboard generation in public repositories remains true for users; the demo bypasses it through the demo builder and generated demo workflow, not by relaxing the production validation rule.
 
-The demo repository should be treated as a public showroom and an integration test surface, not as a third SemVer product. It should normally track the current compatible action/template line and be republished when action or template changes materially affect the displayed experience.
+The demo repository should be treated as a public showroom and an integration test surface, not as a third SemVer product. It should normally track the current compatible action/template line and be republished when action or template changes materially affect the displayed experience. The initial artifact-backed demo publication path has landed; the remaining work is cadence automation, continued UI/product polish, and optional richer artifact-history simulation.
 
 ## Development Tooling
 
@@ -144,7 +144,7 @@ Recommended command groups:
 - `make template-consumer-e2e`: run generated template consumers against the local action source.
 - `make publish-template-dry-run`: verify the publication target without pushing.
 - `make publish-template`: operator-only push to the generated template repo.
-- Future demo commands should mirror the same pattern: build the demo from generated template output, run mocked setup/collect/publish, verify no output drift, dry-run publication, and then publish to `reponomics-dashboard-demo`.
+- Demo commands mirror the same pattern: build the demo from generated template output, materialize synthetic canonical data, render public README and encrypted Pages outputs, verify no output drift, dry-run publication, and then publish to `reponomics-dashboard-demo`.
 
 Python development should continue to use `venv/` and Python 3.11 as the release workflow baseline, while CI also checks newer supported Python versions for runtime compatibility. Source-repository GitHub Actions should remain full-SHA pinned or covered by repository policy checks, with top-level workflow permissions read-only or empty and write permissions scoped to the specific job that needs them. Generated user repositories intentionally default to the compatible Reponomics action channel rather than full-SHA pinning.
 
@@ -167,7 +167,7 @@ Current and recommended layers:
 | Scenario snapshots | Hold dashboard output stable across representative data shapes. |
 | Template smoke | Exercise generated template workflow shape and release/publish assumptions cheaply. |
 | Template consumer e2e | Build a generated template and run it against the local action source, closing the old action-repo-to-dashboard-dev gap. |
-| Demo e2e | Build a public demo repository from the generated template, run mocked collection against curated repository data, render README and Pages outputs, and verify drift. |
+| Demo build/verify | Build a public demo repository from the generated template, materialize curated synthetic repository data, render README and Pages outputs, verify retained data is not committed, verify demo provenance, and check publication drift. |
 | Compatibility fixtures | Future requirement: preserve old published template contracts and run new action versions against them. |
 
 The largest remaining architectural testing gap is historical compatibility. Before public release, create at least one fixture representing the first published template surface. After each template release, retain a minimal fixture that captures:
@@ -188,7 +188,7 @@ Normal CI should remain split into jobs with different purposes:
 
 - Python matrix job for lint, typing, metadata validation, workflow syntax, and full tests.
 - Dedicated template job for workflow classification, template smoke, template consumer e2e, and template publication dry-run.
-- Future demo job for mocked demo setup/collect/publish and demo publication dry-run.
+- Demo publication workflow for generated demo build/verify, demo publication dry-run, generated repository force-push, artifact seed import, and Pages deployment.
 - Scenario snapshot job for dashboard rendering stability.
 - Security and supply-chain jobs for source-repository action pinning or policy verification, runtime lock, vendored assets, OSV, Scorecard, and SBOM/provenance generation.
 
@@ -228,9 +228,12 @@ Demo publication should be generated and verified, not hand-maintained. The reco
 source tree at commit S
   -> make build-template
   -> build demo overlay/profile from dist/template
-  -> run mocked setup/collect/publish lifecycle
+  -> materialize deterministic synthetic canonical data
+  -> render public README and encrypted Pages outputs
+  -> upload encrypted retained-data seed artifact
   -> verify demo output drift
   -> publish generated tree to reponomics-dashboard-demo main
+  -> dispatch demo-only target workflow to store dashboard-data artifact and deploy Pages
 ```
 
 The demo should have its own expected-repo safety guard, source commit trailer, and generated provenance. It may publish on a different cadence from template releases: for example, after every template release, after action releases that affect rendered output or setup behavior, and manually when curated demo data changes.
@@ -250,7 +253,7 @@ Current controls:
 - action releases are tied to Git tags in this source repository
 - floating action tags are moved by release automation
 - generated template publication records `Source-Commit`
-- generated demo publication should also record `Source-Commit`
+- generated demo publication records source commit in `.reponomics/demo-provenance.json` and in the generated publication commit
 - generated template output is produced from `template-manifest.yml`
 - generated template output includes `.reponomics/template-provenance.json` with source commit, template version, action compatibility metadata, and a canonical payload tree digest
 - generated template release workflow artifacts include a deterministic archive, canonical tree manifest, and `SHA256SUMS`
@@ -420,8 +423,9 @@ The demo should not drive SemVer, but it should follow product releases:
 1. After a template release, regenerate and publish the demo from the new template if the setup surface, docs, workflows, or first-run experience changed.
 2. After an action release, regenerate and publish the demo if runtime output, README rendering, Pages rendering, managed docs, doctor/incident guidance, or setup behavior changed.
 3. When curated demo data changes, publish the demo without implying an action or template version bump.
+4. Once refresh cadence is automated, treat daily synthetic-date rollover failures as demo-publication failures, not action/template release failures.
 
-The demo should disclose which action version, template version, source commit, mock data revision, and public demo key it uses. That makes it useful both to prospective users and to skeptical reviewers trying to trace what they are seeing.
+The demo should disclose which action version, template version, source commit, synthetic data revision, and public demo key it uses. That makes it useful both to prospective users and to skeptical reviewers trying to trace what they are seeing.
 
 ## Product And Test Boundary Constraints
 
@@ -504,7 +508,7 @@ Before public release, the most valuable hardening work is:
 
 - Create historical template compatibility fixtures and run current action code against them in CI.
 - Add a short template release checklist that encodes the manual SemVer decision points.
-- Define and implement the demo profile for `reponomics-dashboard-demo`, including mocked collection fixtures, public demo key handling, demo-only README generation, and publication verification.
+- Operationalize the demo refresh cadence and keep validating the live public demo after UI/rendering changes.
 - Review maintainer docs listed in `docs/OBSOLETE_DOCS_INVENTORY.md` and either archive or supersede them.
 - Tighten pre-release validation so it is clearly required by policy for product releases, even if GitHub cannot technically force it for every manual tag.
 - Keep public beta on the `v0` compatibility line and document the beta compatibility commitment, including the process for any explicitly coordinated breaking beta reset.

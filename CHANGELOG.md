@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.2...v0.23.3) (2026-06-14)
+
+
+### Continuous Integration
+
+* add staging automation procedures ([#118](https://github.com/reponomics/reponomics-dashboard-action/issues/118)) ([c8bd2d1](https://github.com/reponomics/reponomics-dashboard-action/commit/c8bd2d132eb4cc3cb1c48e829b4180145832e0a7))
+
 ## [0.23.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.1...v0.23.2) (2026-06-13)
 
 

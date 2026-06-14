@@ -1,10 +1,10 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install pre-commit-install pre-commit-run ci
+.PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -22,16 +22,124 @@ PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
+TEMPLATE_EXPECTED_REPO ?= reponomics/reponomics-dashboard
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
+TEMPLATE_STAGING_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-staging.git
+TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging
+TEMPLATE_STAGING_PUBLISH_MESSAGE ?= chore: publish generated template staging
 TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
 DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
 DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
+STAGING_SMOKE_SOURCE_REPO ?= reponomics/reponomics-dashboard-action
+STAGING_SMOKE_SOURCE_REF ?= main
+STAGING_SMOKE_TEMPLATE_REPO ?= reponomics/reponomics-dashboard-staging
+STAGING_SMOKE_ENCRYPTED_REPO ?= reponomics/reponomics-dashboard-staging-private-encrypted-fresh
+STAGING_SMOKE_PLAIN_REPO ?= reponomics/reponomics-dashboard-staging-private-plaintext-with-history
+STAGING_SMOKE_COLLECTION_MODE ?= pat
+STAGING_SMOKE_PHASE ?= recurring
+STAGING_SMOKE_GH_DELAY_SECONDS ?= 1
+STAGING_SMOKE_ALLOW_BOOTSTRAP ?= 0
+STAGING_SMOKE_REPORT ?= .tmp/staging-smoke/report.md
+STAGING_SMOKE_BROWSER_CHECKLIST ?= .tmp/staging-smoke/browser-checklist.md
+STAGING_SMOKE_ENCRYPTED_PAGES_URL ?= <encrypted-pages-url>
+STAGING_SMOKE_PLAIN_LOCAL_URL ?= http://localhost:8765
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+staging-smoke-instructions: ## Show the manual staging smoke runbook for local Codex runs
+	@cat docs/STAGING_SMOKE.md
+
+staging-smoke-live-order: install ## Show the concise live staging smoke command order
+	$(PYTHON) scripts/staging_smoke/live_order.py
+
+staging-smoke-provision-plan: install ## Print one-time staging repo provisioning commands without creating repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/provision.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-provision: install ## Create missing private staging repos; secrets remain manual
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/provision.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--execute
+
+staging-smoke-plan: install ## Print the guarded staging smoke execution plan
+	$(PYTHON) scripts/staging_smoke/run.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE) \
+		--phase $(STAGING_SMOKE_PHASE) \
+		--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS) \
+		--write-report-template $(STAGING_SMOKE_REPORT)
+
+staging-smoke-preflight: install ## Check local/GitHub prerequisites for staging smoke repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/preflight.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE)
+
+staging-smoke-reset-fresh-plan: install ## Build fresh encrypted staging tree without force-pushing
+	$(PYTHON) scripts/staging_smoke/reset_fresh.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO)
+
+staging-smoke-reset-fresh: install ## Force-reset encrypted fresh repo; requires CONFIRM_TARGET exact repo
+	$(PYTHON) scripts/staging_smoke/reset_fresh.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--execute \
+		--confirm-target "$(CONFIRM_TARGET)"
+
+staging-smoke-seed-plain-history-plan: install ## Build seed tree for empty plain history repo without pushing
+	$(PYTHON) scripts/staging_smoke/seed_plain_history.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-seed-plain-history: install ## Seed empty plain history repo without force-push; requires CONFIRM_TARGET exact repo
+	$(PYTHON) scripts/staging_smoke/seed_plain_history.py \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--execute \
+		--confirm-target "$(CONFIRM_TARGET)"
+
+staging-smoke-evidence: install ## Read-only evidence checks for completed staging smoke repos
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/evidence.py \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
+
+staging-smoke-browser-checklist: install ## Write the staging browser smoke checklist
+	$(PYTHON) scripts/staging_smoke/browser_checklist.py \
+		--encrypted-pages-url "$(STAGING_SMOKE_ENCRYPTED_PAGES_URL)" \
+		--plain-local-url "$(STAGING_SMOKE_PLAIN_LOCAL_URL)" \
+		--output $(STAGING_SMOKE_BROWSER_CHECKLIST)
+
+staging-smoke-run: install ## Run local staging smoke gates; set DISPATCH_TEMPLATE_STAGING=1 to dispatch staging publication
+	$(PYTHON) scripts/staging_smoke/run.py \
+		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
+		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
+		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
+		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
+		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
+		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE) \
+		--phase $(STAGING_SMOKE_PHASE) \
+		--execute \
+		--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS) \
+		--write-report-template $(STAGING_SMOKE_REPORT) \
+		$(if $(filter 1 true yes,$(STAGING_SMOKE_ALLOW_BOOTSTRAP)),--allow-bootstrap-preflight-failures,) \
+		$(if $(filter 1 true yes,$(DISPATCH_TEMPLATE_STAGING)),--dispatch-template-staging,)
 
 install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
@@ -125,10 +233,16 @@ package-template-release: build-template ## Build deterministic generated-templa
 	$(PYTHON) scripts/template_provenance.py package --root dist/template --output-dir $(TEMPLATE_RELEASE_ARTIFACTS_DIR)
 
 publish-template-dry-run: build-template ## Show the generated template publish target without pushing
-	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)"
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo $(TEMPLATE_EXPECTED_REPO) --message "$(TEMPLATE_PUBLISH_MESSAGE)"
 
 publish-template: build-template ## Publish dist/template/ to the template repository main branch
-	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo reponomics/reponomics-dashboard --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo $(TEMPLATE_EXPECTED_REPO) --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+
+publish-template-staging-dry-run: build-template ## Show the generated template staging publish target without pushing
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_STAGING_REMOTE) --branch main --expected-repo $(TEMPLATE_STAGING_EXPECTED_REPO) --message "$(TEMPLATE_STAGING_PUBLISH_MESSAGE)"
+
+publish-template-staging: build-template ## Publish dist/template/ to the private staging template repository
+	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_STAGING_REMOTE) --branch main --expected-repo $(TEMPLATE_STAGING_EXPECTED_REPO) --message "$(TEMPLATE_STAGING_PUBLISH_MESSAGE)" --push
 
 build-demo: build-template ## Build the public demo repository tree in dist/demo/
 	$(PYTHON) scripts/build_demo_repo.py --output dist/demo

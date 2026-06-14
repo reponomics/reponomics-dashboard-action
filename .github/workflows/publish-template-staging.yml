@@ -1,0 +1,100 @@
+name: Publish Template Staging Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git ref to publish to staging"
+        required: true
+        type: string
+        default: main
+      confirm_staging_template_publish:
+        description: "Publish generated template to staging"
+        required: true
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: template-staging-${{ inputs.source_ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  publish-template-staging:
+    name: Publish generated template to staging
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_staging_template_publish }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      TEMPLATE_STAGING_REMOTE: reponomics-dashboard-staging
+      TEMPLATE_STAGING_EXPECTED_REPO: reponomics/reponomics-dashboard-staging
+    steps:
+      - name: Validate staging publication source
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          case "$SOURCE_REF" in
+            main|refs/heads/main|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*|v*|refs/tags/v*) ;;
+            *)
+              echo "Template staging publication is restricted to main or release tags, got $SOURCE_REF." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout candidate source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Validate generated template staging gates
+        run: |
+          set -euo pipefail
+          make verify-workflow-classification
+          make build-template
+          make verify-template
+          make validate-template-action-ref
+          make template-smoke
+          make template-consumer-e2e
+          TEMPLATE_STAGING_REMOTE="https://github.com/${TEMPLATE_STAGING_EXPECTED_REPO}.git" make publish-template-staging-dry-run
+
+      - name: Create staging publication app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard-staging
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Configure staging template remote
+        env:
+          STAGING_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          git remote add "${TEMPLATE_STAGING_REMOTE}" "https://x-access-token:${STAGING_TOKEN}@github.com/${TEMPLATE_STAGING_EXPECTED_REPO}.git"
+
+      - name: Publish generated staging template repository
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          venv/bin/python scripts/publish_generated_repo.py \
+            --output dist/template \
+            --remote "${TEMPLATE_STAGING_REMOTE}" \
+            --branch main \
+            --expected-repo "${TEMPLATE_STAGING_EXPECTED_REPO}" \
+            --message "chore: publish generated template staging ${SOURCE_REF}" \
+            --push

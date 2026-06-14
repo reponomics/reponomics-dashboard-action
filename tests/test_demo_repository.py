@@ -198,27 +198,35 @@ def test_demo_publisher_rejects_gitignored_publish_files(tmp_path: Path) -> None
         publish_demo_repo._assert_git_add_stages_publish_tree(output, "main", expected_files)
 
 
-def test_source_demo_publish_workflow_is_manual_and_repo_scoped() -> None:
+def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -> None:
     workflow = yaml.safe_load(
         (ROOT / ".github" / "workflows" / "publish-demo.yml").read_text(encoding="utf-8")
     )
 
     assert workflow["permissions"] == {}
     assert "workflow_dispatch" in workflow[True]
-    assert "schedule" not in workflow[True]
+    assert "schedule" in workflow[True]
+    assert workflow["env"]["DEMO_DAILY_SOURCE_REF"] == "${{ vars.DEMO_DAILY_SOURCE_REF || 'main' }}"
 
     build_job = workflow["jobs"]["build-demo-artifact"]
+    assert build_job["if"] == (
+        "${{ github.event_name == 'schedule' || "
+        + "(github.event_name == 'workflow_dispatch' && inputs.confirm_demo_publish) }}"
+    )
     assert "environment" not in build_job
     assert build_job["permissions"] == {"contents": "read"}
     build_step_names = [step["name"] for step in build_job["steps"]]
-    assert build_step_names.index("Validate manual publication source") < build_step_names.index("Checkout source")
+    assert build_step_names.index("Resolve publication source") < build_step_names.index("Checkout source")
+    resolve_step = next(step for step in build_job["steps"] if step["name"] == "Resolve publication source")
+    assert "DEMO_DAILY_SOURCE_REF" in resolve_step["run"]
+    assert "demo-stable" in resolve_step["run"]
     assert any(step["name"] == "Build and verify generated demo" for step in build_job["steps"])
     assert any(step["name"] == "Upload generated demo artifact" for step in build_job["steps"])
     assert any(step["name"] == "Upload encrypted demo dashboard data seed" for step in build_job["steps"])
 
     publish_job = workflow["jobs"]["publish-demo"]
     assert publish_job["needs"] == "build-demo-artifact"
-    assert publish_job["environment"] == "demo-publication"
+    assert "environment" not in publish_job
     assert publish_job["permissions"] == {"actions": "read"}
     steps = publish_job["steps"]
     step_names = [step["name"] for step in steps]

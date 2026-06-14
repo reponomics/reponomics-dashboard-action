@@ -173,6 +173,59 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     )
 
 
+def test_publish_template_staging_workflow_targets_staging_repo_only() -> None:
+    workflow_text = Path(".github/workflows/publish-template-staging.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.safe_load(workflow_text)
+    publish_job = workflow["jobs"]["publish-template-staging"]
+    steps = publish_job["steps"]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
+    step_names = [step["name"] for step in steps]
+    app_token_step = next(
+        step for step in steps if step["name"] == "Create staging publication app token"
+    )
+
+    assert workflow["permissions"] == {}
+    assert "workflow_dispatch" in workflow[True]
+    assert publish_job["if"] == (
+        "${{ github.event_name == 'workflow_dispatch' && "
+        + "inputs.confirm_staging_template_publish }}"
+    )
+    assert "environment" not in publish_job
+    assert publish_job["permissions"] == {"contents": "read"}
+    assert publish_job["env"]["TEMPLATE_STAGING_EXPECTED_REPO"] == (
+        "reponomics/reponomics-dashboard-staging"
+    )
+    assert (
+        "Template staging publication is restricted to main or release tags" in workflow_text
+    )
+    assert "make verify-workflow-classification" in commands
+    assert "make build-template" in commands
+    assert "make verify-template" in commands
+    assert "make validate-template-action-ref" in commands
+    assert "make template-smoke" in commands
+    assert "make template-consumer-e2e" in commands
+    assert "make publish-template-staging-dry-run" in commands
+    assert "make package-template-release" not in workflow_text
+    assert "actions/attest@" not in workflow_text
+    assert app_token_step["with"]["client-id"] == (
+        "${{ vars.TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID }}"
+    )
+    assert app_token_step["with"]["private-key"] == (
+        "${{ secrets.TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY }}"
+    )
+    assert app_token_step["with"]["repositories"] == "reponomics-dashboard-staging"
+    assert app_token_step["with"]["permission-contents"] == "write"
+    assert app_token_step["with"]["permission-workflows"] == "write"
+    assert step_names.index("Validate generated template staging gates") < step_names.index(
+        "Create staging publication app token"
+    )
+    assert step_names.index("Create staging publication app token") < step_names.index(
+        "Publish generated staging template repository"
+    )
+
+
 def test_ci_runs_generated_template_gates() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
     steps = workflow["jobs"]["template"]["steps"]

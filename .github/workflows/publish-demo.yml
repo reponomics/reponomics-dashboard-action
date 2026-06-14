@@ -1,6 +1,8 @@
 name: Publish Demo Repository
 
 on:
+  schedule:
+    - cron: "23 8 * * *"
   workflow_dispatch:
     inputs:
       source_ref:
@@ -22,34 +24,57 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.11"
+  DEMO_DAILY_SOURCE_REF: ${{ vars.DEMO_DAILY_SOURCE_REF || 'main' }}
   DEMO_EXPECTED_REPO: reponomics/reponomics-dashboard-demo
   DEMO_BRANCH: main
 
 jobs:
   build-demo-artifact:
     name: Build generated demo artifact
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_demo_publish }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.confirm_demo_publish) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - name: Validate manual publication source
+      - name: Resolve publication source
+        id: source-ref
         env:
-          SOURCE_REF: ${{ inputs.source_ref }}
+          MANUAL_SOURCE_REF: ${{ inputs.source_ref || '' }}
         run: |
           set -euo pipefail
-          case "$SOURCE_REF" in
-            main|refs/heads/main|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*|v*|refs/tags/v*) ;;
+
+          case "${GITHUB_EVENT_NAME}" in
+            schedule)
+              source_ref="${DEMO_DAILY_SOURCE_REF}"
+              ;;
+            workflow_dispatch)
+              source_ref="${MANUAL_SOURCE_REF}"
+              ;;
             *)
-              echo "Manual demo publication is restricted to main or release tags, got $SOURCE_REF." >&2
+              echo "Unsupported demo publication event: ${GITHUB_EVENT_NAME}" >&2
               exit 1
               ;;
           esac
 
+          if [[ -z "$source_ref" ]]; then
+            echo "Demo publication source ref is empty." >&2
+            exit 1
+          fi
+
+          case "$source_ref" in
+            main|refs/heads/main|demo-stable|refs/heads/demo-stable|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*|v*|refs/tags/v*) ;;
+            *)
+              echo "Demo publication is restricted to main, demo-stable, or release tags; got $source_ref." >&2
+              exit 1
+              ;;
+          esac
+
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout source
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ steps.source-ref.outputs.source_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -95,7 +120,6 @@ jobs:
     name: Publish generated demo
     needs: build-demo-artifact
     runs-on: ubuntu-24.04
-    environment: demo-publication
     permissions:
       actions: read
     steps:

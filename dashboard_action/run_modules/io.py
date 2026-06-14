@@ -57,7 +57,7 @@ def _restore_artifact(
 
 
 def _decrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
-    if config.resolved_artifact_mode != "encrypted":
+    if config.resolved_data_mode != "encrypted":
         encrypted = config.data_dir / "dashboard-data.enc"
         encrypted.unlink(missing_ok=True)
         return
@@ -69,7 +69,7 @@ def _decrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
 
 
 def _encrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
-    if config.resolved_artifact_mode != "encrypted":
+    if config.resolved_data_mode != "encrypted":
         return
     crypto_artifact.encrypt(
         config.data_dir,
@@ -179,7 +179,7 @@ def _write_outputs(
     outputs = {
         "tracked-repos": ",".join(_tracked_repos(config.data_dir)),
         "collected-at": _manifest_value(config.data_dir, "last_updated"),
-        "artifact-mode": config.resolved_artifact_mode,
+        "data-mode": config.resolved_data_mode,
         "publish-pages": str(config.publish_pages).lower(),
         "pages-path": config.pages_index_path.parent.as_posix(),
         "readme-updated": str(before.get("readme") != after.get("readme")).lower(),

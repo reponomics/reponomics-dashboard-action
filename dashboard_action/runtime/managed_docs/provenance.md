@@ -110,7 +110,7 @@ The action's SBOM/provenance workflow creates SPDX SBOMs and GitHub artifact att
 
 ## How To Think About Generated Dashboard Artifacts
 
-Dashboard HTML, Pages artifacts, README output, and private plain dashboard artifacts are generated inside your dashboard repository's workflow run. They inherit your repository's:
+Dashboard HTML, Pages artifacts, README output, and private plaintext dashboard artifacts are generated inside your dashboard repository's workflow run. They inherit your repository's:
 
 - workflow files and action refs
 - repository secrets and permissions

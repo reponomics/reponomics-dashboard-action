@@ -1,4 +1,4 @@
-"""Generate plain and encrypted HTML dashboards from canonical CSV data.
+"""Generate plaintext and encrypted HTML dashboards from canonical CSV data.
 
 Reads traffic-daily.csv, traffic-referrers.csv, and traffic-paths.csv
 via the shared load_data module and produces:
@@ -11,8 +11,8 @@ The dashboard renderer supports two access modes:
 - public: unencrypted metrics in the generated Pages index artifact
 - encrypted: encrypted metrics in the generated Pages index artifact, decrypted client-side
 
-Plain privacy mode uses the public access mode and uploads the generated HTML as
-the private `html-dashboard-plain` workflow artifact instead of publishing it to
+Plaintext data mode uses the public access mode and uploads the generated HTML as
+the private `html-dashboard-plaintext` workflow artifact instead of publishing it to
 GitHub Pages.
 """
 
@@ -523,7 +523,7 @@ def _build_encrypted_export_manifest(
     }
 
 
-def _build_plain_dashboard_data(payload):
+def _build_plaintext_dashboard_data(payload):
     """Build the v2 plaintext summary plus lazy per-repository chunk object."""
     summary, chunks = _split_dashboard_payload(payload)
     serialized_chunks = {
@@ -635,7 +635,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         )
     else:
         published_html = _build_public_html(
-            _build_plain_dashboard_data(payload),
+            _build_plaintext_dashboard_data(payload),
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
         )
 
@@ -645,7 +645,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
 
     standalone_chart_js = _load_vendored_chart_js()
     standalone_html = _build_public_html(
-        _build_plain_dashboard_data(payload),
+        _build_plaintext_dashboard_data(payload),
         f"<script>{standalone_chart_js}</script>",
         inline_chart_js=standalone_chart_js,
     )

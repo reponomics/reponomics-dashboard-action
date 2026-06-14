@@ -12,21 +12,21 @@ The first version is intentionally a guided interactive runbook, not a fully una
 
 Use one generated-template staging repo and two private consumer staging repos at minimum:
 
-| Repository | Role | Reset policy | Privacy mode | Expected outputs |
+| Repository | Role | Reset policy | Data mode | Expected outputs |
 | --- | --- | --- | --- | --- |
 | `reponomics-dashboard-staging` | Generated template staging surface | Force-pushed from source staging workflow | none | Template files only |
-| `reponomics-dashboard-staging-private-encrypted-fresh` | Private encrypted consumer smoke | Force-push a fresh template-derived codebase for each smoke pass | `strong` | README dashboard, encrypted `dashboard-data`, encrypted Pages dashboard |
-| `reponomics-dashboard-staging-private-plaintext-with-history` | Private plain consumer continuity smoke | Preserve repository and artifact history between smoke passes | `plain` | README dashboard, plain `dashboard-data`, private `html-dashboard-plain` artifact |
+| `reponomics-dashboard-staging-private-encrypted-fresh` | Private encrypted consumer smoke | Force-push a fresh template-derived codebase for each smoke pass | `encrypted` | README dashboard, encrypted `dashboard-data`, encrypted Pages dashboard |
+| `reponomics-dashboard-staging-private-plaintext-with-history` | Private plaintext consumer continuity smoke | Preserve repository and artifact history between smoke passes | `plaintext` | README dashboard, plaintext `dashboard-data`, private `html-dashboard-plaintext` artifact |
 
-The encrypted/fresh repo proves the first-run codebase path. The repository itself is persistent: repository settings and Actions secrets remain configured between smoke passes, while the git tree/history is force-pushed back to a fresh generated-template state. The plain/history repo proves a durable private repository can keep accumulating real retained data over time.
+The encrypted/fresh repo proves the first-run codebase path. The repository itself is persistent: repository settings and Actions secrets remain configured between smoke passes, while the git tree/history is force-pushed back to a fresh generated-template state. The plaintext/history repo proves a durable private repository can keep accumulating real retained data over time.
 
 A public encrypted consumer repo is also valuable before recommending public encrypted dashboards broadly, but it is a next-stage surface. A personal public encrypted dashboard can serve as a confidence signal; treat it as a real user repository, not as the minimum staging fleet.
 
 ## Product Boundaries
 
-Plain mode does not publish a Pages dashboard. That is intentional. Plain-mode HTML is a private workflow artifact named `html-dashboard-plain`.
+Plaintext mode does not publish a Pages dashboard. That is intentional. Plaintext HTML is a private workflow artifact named `html-dashboard-plaintext`.
 
-Public repositories must not use `privacy_mode: plain` and must not generate a README dashboard through the normal action runtime.
+Public repositories must not use `data_mode: plaintext` and must not generate a README dashboard through the normal action runtime.
 
 ## Required Local Inputs
 
@@ -37,7 +37,7 @@ Before running a local Codex smoke pass, provide these values to the agent:
 - Encrypted fresh consumer repository, normally `reponomics/reponomics-dashboard-staging-private-encrypted-fresh`.
 - Plain history consumer repository, normally `reponomics/reponomics-dashboard-staging-private-plaintext-with-history`.
 - Collection PAT to configure as `COLLECTION_TOKEN` in each consumer repo.
-- Strong dashboard key for encrypted mode.
+- Dashboard key for encrypted mode.
 - Temporary next dashboard key for rotation smoke.
 - Comparison key, if comparison unlock behavior should be checked.
 - Repository list or config changes that should be collected during this smoke pass.
@@ -283,16 +283,16 @@ Protocol:
 4. Run local gates: make validate-workflows, make verify-workflow-classification, make build-template, make verify-template, make validate-template-action-ref, make template-smoke, make template-consumer-e2e, make publish-template-staging-dry-run. If this is the first empty-repository bootstrap pass and preflight failures match the expected bootstrap checklist, run the local gate driver with `STAGING_SMOKE_ALLOW_BOOTSTRAP=1`.
 5. Confirm or run the staging template publication workflow for the intended source ref.
 6. Reset the encrypted fresh consumer repo codebase from the staging template with `make staging-smoke-reset-fresh CONFIRM_TARGET=<exact encrypted fresh repo>`. This force-pushes the git tree/history only; repository settings and Actions secrets should persist. Do not preserve prior commits as evidence for this profile.
-7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. Run setup after each fresh codebase reset to write the generated repository config with privacy_mode=strong, generate_html_dashboard=true, generate_readme=true, use_github_app=false.
+7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. Run setup after each fresh codebase reset to write the generated repository config with data_mode=encrypted, generate_html_dashboard=true, generate_readme=true, use_github_app=false.
 8. Review `config.yaml` in the encrypted fresh repo after setup. If this smoke pass should cover a specific repository set, commit that config change before running collect-and-publish with skip_collect=false.
 9. Validate encrypted fresh outputs: setup marker, docs manifest, README dashboard, dashboard-data artifact, Pages deployment, docs/index.html and assets, collect/publish summaries, no unexpected workflow failures.
 10. Run encrypted key rotation: set DASHBOARD_NEXT_SECRET, dispatch rotate-key with confirm_rotation=true, wait for completion, promote the next key into DASHBOARD_SECRET_DO_NOT_REPLACE, remove DASHBOARD_NEXT_SECRET, then run collect-and-publish again.
 11. Run make staging-smoke-browser-checklist, then browser-test encrypted Pages dashboard with the active dashboard key. Confirm unlock succeeds, charts render, repo selector works, a non-traffic growth metric renders, a traffic metric does not appear clipped, and the collection calendar has expected statuses.
-12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, then run setup to write config with privacy_mode=plain, generate_html_dashboard=false, generate_readme=true, and use_github_app=false.
+12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, then run setup to write config with data_mode=plaintext, generate_html_dashboard=false, generate_readme=true, and use_github_app=false.
 13. During bootstrap, review `config.yaml` in the plain history repo after setup and commit any intended repository selection before the first retained-data run. During recurring smoke, preserve the existing config.
 14. Run collect-and-publish on the plain history repo with skip_collect=false.
-15. Validate plain history outputs: README dashboard, dashboard-data artifact containing retained plain data, html-dashboard-plain artifact, absent Pages configuration, docs manifest, and no unexpected workflow failures.
-16. Download the plain html-dashboard-plain artifact locally and browser-test it from a temporary local HTTP server. Confirm charts render and the README/dashboard values are coherent with collected data.
+15. Validate plaintext history outputs: README dashboard, dashboard-data artifact containing retained plaintext data, html-dashboard-plaintext artifact, absent Pages configuration, docs manifest, and no unexpected workflow failures.
+16. Download the plaintext html-dashboard-plaintext artifact locally and browser-test it from a temporary local HTTP server. Confirm charts render and the README/dashboard values are coherent with collected data.
 17. Run doctor on both consumer repos using the latest successful collect/publish workflow run ID. Confirm doctor completes or report exact restore/validation failure.
 18. Run make staging-smoke-evidence and resolve or record any required failures.
 19. Produce a concise smoke report with source commit, template staging commit, consumer repo commits, workflow run URLs, artifacts observed, browser checks performed, failures, and follow-up recommendations.
@@ -317,7 +317,7 @@ During bootstrap, configure repository secrets:
 
 For recurring smoke passes, do not re-enter these persistent secrets unless intentionally rotating or replacing them; preflight should verify that they already exist. Run `Set up Reponomics dashboard` after each fresh codebase reset with:
 
-- `privacy_mode`: `strong`
+- `data_mode`: `encrypted`
 - `generate_html_dashboard`: `true`
 - `generate_readme`: `true`
 - `use_github_app`: `false`
@@ -360,7 +360,7 @@ The seed helper refuses mismatched confirmation targets, pushes without `--force
 
 Run setup with:
 
-- `privacy_mode`: `plain`
+- `data_mode`: `plaintext`
 - `generate_html_dashboard`: `false`
 - `generate_readme`: `true`
 - `use_github_app`: `false`
@@ -372,13 +372,13 @@ Then run `Collect And Publish Reponomics Dashboard` with `skip_collect=false`.
 Minimum checks:
 
 - README dashboard was generated.
-- `dashboard-data` artifact exists and contains retained plain files.
-- `html-dashboard-plain` artifact exists.
+- `dashboard-data` artifact exists and contains retained plaintext files.
+- `html-dashboard-plaintext` artifact exists.
 - Pages configuration must be absent.
 - repeated runs preserve growing retained history within the configured retention window.
-- doctor can restore the latest plain dashboard artifacts and run successfully.
+- doctor can restore the latest plaintext dashboard artifacts and run successfully.
 
-For browser smoke, download `html-dashboard-plain`, serve it locally, and inspect it in a browser. This is deliberately not a hosted Pages check.
+For browser smoke, download `html-dashboard-plaintext`, serve it locally, and inspect it in a browser. This is deliberately not a hosted Pages check.
 
 ## Smoke Report
 

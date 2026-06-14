@@ -13,9 +13,9 @@ This document is the long-lived technical reference for CSV export delivery. ADR
 
 ## Scope
 
-- Applies to encrypted dashboard publication modes (`strong`, `casual`).
+- Applies to encrypted dashboard publication mode (`encrypted`).
 - Export payload is canonical retained data, not dashboard-view projections.
-- `plain` mode does not publish a Pages dashboard export path.
+- `plaintext` mode does not publish a Pages dashboard export path.
 
 ## Architecture Summary
 

@@ -99,7 +99,7 @@
           throw dashboardChunkError('schema', 'Dashboard chunk was not an object.', {
             repoName,
             chunkId: chunkIdFor(repoName) || '',
-            mode: isEncrypted ? 'encrypted' : 'plain',
+            mode: isEncrypted ? 'encrypted' : 'plaintext',
             summaryDecrypted: isEncrypted
           });
         }
@@ -107,7 +107,7 @@
           throw dashboardChunkError('schema', 'Dashboard chunk did not match requested repo.', {
             repoName,
             chunkId: chunkIdFor(repoName) || '',
-            mode: isEncrypted ? 'encrypted' : 'plain',
+            mode: isEncrypted ? 'encrypted' : 'plaintext',
             summaryDecrypted: isEncrypted
           });
         }
@@ -116,7 +116,7 @@
             throw dashboardChunkError('schema', 'Dashboard chunk was missing required field: ' + field + '.', {
               repoName,
               chunkId: chunkIdFor(repoName) || '',
-              mode: isEncrypted ? 'encrypted' : 'plain',
+              mode: isEncrypted ? 'encrypted' : 'plaintext',
               summaryDecrypted: isEncrypted,
               missingField: field
             });
@@ -130,7 +130,7 @@
           throw dashboardChunkError('missing', 'Dashboard chunk was missing.', {
             repoName,
             chunkId: chunkId || '',
-            mode: 'plain',
+            mode: 'plaintext',
             summaryDecrypted: false
           });
         }
@@ -142,7 +142,7 @@
           throw dashboardChunkError('parse', error.message || 'Dashboard chunk was not valid JSON.', {
             repoName,
             chunkId,
-            mode: 'plain',
+            mode: 'plaintext',
             summaryDecrypted: false,
             originalName: error.name || '',
             originalMessage: error.message || String(error)
@@ -246,7 +246,7 @@
       return {
         repoName,
         chunkId,
-        mode: error?.mode || (data?.isEncrypted?.() ? 'encrypted' : 'plain'),
+        mode: error?.mode || (data?.isEncrypted?.() ? 'encrypted' : 'plaintext'),
         stage: CHUNK_FAILURE_LABELS[stage] ? stage : 'runtime',
         label: CHUNK_FAILURE_LABELS[stage] || CHUNK_FAILURE_LABELS.runtime,
         summaryDecrypted: !!error?.summaryDecrypted,

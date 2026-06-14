@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 DEFAULTS = {
-    "PRIVACY_MODE": "strong",
+    "DATA_MODE": "encrypted",
     "RETENTION_DAYS": "90",
     "GENERATE_HTML_DASHBOARD": "false",
     "GENERATE_README": "false",
@@ -19,14 +19,14 @@ DEFAULTS = {
 }
 
 CONFIG_KEYS = {
-    "privacy_mode": "PRIVACY_MODE",
+    "data_mode": "DATA_MODE",
     "retention_days": "RETENTION_DAYS",
     "generate_html_dashboard": "GENERATE_HTML_DASHBOARD",
     "generate_readme": "GENERATE_README",
     "use_github_app": "USE_GITHUB_APP",
 }
 
-VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
+VALID_DATA_MODES = {"encrypted", "plaintext"}
 
 
 def _summary(*lines: str) -> None:
@@ -77,12 +77,12 @@ def _resolve(config_path: Path) -> dict[str, str]:
     resolved = dict(DEFAULTS)
     scalars = _load_top_level_scalars(config_path)
 
-    if "privacy_mode" in scalars:
-        privacy_mode = scalars["privacy_mode"].strip().lower()
-        if privacy_mode not in VALID_PRIVACY_MODES:
-            allowed = ", ".join(sorted(VALID_PRIVACY_MODES))
-            raise ValueError(f"privacy_mode must be one of: {allowed}.")
-        resolved["PRIVACY_MODE"] = privacy_mode
+    if "data_mode" in scalars:
+        data_mode = scalars["data_mode"].strip().lower()
+        if data_mode not in VALID_DATA_MODES:
+            allowed = ", ".join(sorted(VALID_DATA_MODES))
+            raise ValueError(f"data_mode must be one of: {allowed}.")
+        resolved["DATA_MODE"] = data_mode
 
     if "retention_days" in scalars:
         try:

@@ -87,7 +87,7 @@ def _setup_step_env(step_name: str, base_env: dict[str, str]) -> dict[str, str]:
     if step_name == "Resolve setup modes":
         env.update(
             {
-                "PRIVACY_MODE": "strong",
+                "DATA_MODE": "encrypted",
                 "GENERATE_HTML_DASHBOARD": "false",
                 "GENERATE_README": "false",
                 "USE_GITHUB_APP": "true",

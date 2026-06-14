@@ -15,7 +15,6 @@ from dashboard_action import run
 @pytest.fixture(autouse=True)
 def _restore_run_environment() -> Any:
     keys = {
-        "ARTIFACT_SECURITY_MODE",
         "COMPARISON_SECRET",
         "DASHBOARD_ACCESS_MODE",
         "DASHBOARD_KEY",
@@ -134,7 +133,7 @@ def test_load_config_rejects_invalid_boolean_and_retention(
 def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> None:
     config = _config_for_run_tests(
         tmp_path,
-        privacy_mode="strong",
+        data_mode="encrypted",
         repo_is_public=True,
         generate_readme=True,
         github_token="ghp_test",
@@ -149,25 +148,27 @@ def test_load_config_rejects_invalid_artifact_run_id(
 ) -> None:
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_MODE", "publish")
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "plain")
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "plaintext")
     monkeypatch.setenv("REPONOMICS_ARTIFACT_RUN_ID", "latest")
 
     with pytest.raises(run.ActionError, match="artifact-run-id must be a positive integer"):
         run.load_config_from_env()
 
 
-def test_load_config_supports_auto_and_legacy_privacy_modes(
+def test_load_config_defaults_to_encrypted_and_rejects_legacy_data_modes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "auto")
-    assert run.load_config_from_env().privacy_mode == "strong"
+    monkeypatch.delenv("REPONOMICS_DATA_MODE", raising=False)
+    assert run.load_config_from_env().data_mode == "encrypted"
 
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    assert run.load_config_from_env().privacy_mode == "plain"
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "auto")
+    with pytest.raises(run.ActionError, match="data-mode must be one of"):
+        run.load_config_from_env()
 
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "encrypted")
-    assert run.load_config_from_env().privacy_mode == "strong"
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "strong")
+    with pytest.raises(run.ActionError, match="data-mode must be one of"):
+        run.load_config_from_env()
 
 
 def test_load_config_reads_comparison_secret(
@@ -322,7 +323,7 @@ def test_runtime_env_sets_optional_tokens_and_next_dashboard_key(
         dashboard_next_secret="next-secret",
         action_ref="refs/tags/v1",
         action_repository="demo/action",
-        privacy_mode="strong",
+        data_mode="encrypted",
     )
 
     run._set_runtime_env(config, next_key=True)
@@ -350,7 +351,7 @@ def test_collect_provenance_writes_runtime_contract(
     config = _config_for_run_tests(
         tmp_path,
         mode="collect",
-        privacy_mode="strong",
+        data_mode="encrypted",
         action_ref="v1",
         action_repository="reponomics/reponomics-dashboard-action",
         publish_pages_requested=False,
@@ -366,7 +367,7 @@ def test_collect_provenance_writes_runtime_contract(
         "action_repository": "reponomics/reponomics-dashboard-action",
         "action_sha": "b" * 40,
         "generate_readme": "true",
-        "privacy_mode": "strong",
+        "data_mode": "encrypted",
         "publish_pages": "false",
         "retention_days": "90",
         "runtime_version": run.VERSION,
@@ -469,7 +470,7 @@ def test_publish_restores_and_validates_collect_provenance(
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "plain",
+                "data_mode": "plaintext",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -484,6 +485,7 @@ def test_publish_restores_and_validates_collect_provenance(
     monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
     monkeypatch.setattr(run, "_decrypt_if_needed", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_prepare_data_schema", lambda _config: None)
+    monkeypatch.setattr(run.merge, "materialize_reporting_coverage", lambda: None)
     monkeypatch.setattr(run, "_set_version_status_env", lambda _config: None)
     monkeypatch.setattr(run, "_render_outputs", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_git_commit_readme", lambda *_args, **_kwargs: None)
@@ -526,7 +528,7 @@ def test_publish_restores_dashboard_data_from_provenance_run(
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "plain",
+                "data_mode": "plaintext",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -541,6 +543,7 @@ def test_publish_restores_dashboard_data_from_provenance_run(
     monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
     monkeypatch.setattr(run, "_decrypt_if_needed", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_prepare_data_schema", lambda _config: None)
+    monkeypatch.setattr(run.merge, "materialize_reporting_coverage", lambda: None)
     monkeypatch.setattr(run, "_set_version_status_env", lambda _config: None)
     monkeypatch.setattr(run, "_render_outputs", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_git_commit_readme", lambda *_args, **_kwargs: None)
@@ -582,7 +585,7 @@ def test_publish_rejects_collect_provenance_run_id_mismatch(
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "plain",
+                "data_mode": "plaintext",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -600,7 +603,7 @@ def test_publish_rejects_collect_provenance_run_id_mismatch(
         run.run_publish(config)
 
 
-def test_publish_rejects_collect_provenance_artifact_mode_mismatch(
+def test_publish_rejects_collect_provenance_data_mode_mismatch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -619,7 +622,7 @@ def test_publish_rejects_collect_provenance_artifact_mode_mismatch(
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "strong",
+                "data_mode": "encrypted",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -631,13 +634,13 @@ def test_publish_rejects_collect_provenance_artifact_mode_mismatch(
     monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
     monkeypatch.setattr(run, "_set_runtime_env", lambda _config: None)
     monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
-    config = _config_for_run_tests(tmp_path, mode="publish", privacy_mode="plain")
+    config = _config_for_run_tests(tmp_path, mode="publish", data_mode="plaintext")
 
-    with pytest.raises(run.ActionError, match="artifact mode encrypted"):
+    with pytest.raises(run.ActionError, match="data mode encrypted"):
         run.run_publish(config)
 
 
-def test_publish_allows_collect_provenance_privacy_label_change_with_same_artifact_mode(
+def test_publish_allows_collect_provenance_with_same_data_mode(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -657,7 +660,7 @@ def test_publish_allows_collect_provenance_privacy_label_change_with_same_artifa
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "strong",
+                "data_mode": "encrypted",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -672,11 +675,12 @@ def test_publish_allows_collect_provenance_privacy_label_change_with_same_artifa
     monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
     monkeypatch.setattr(run, "_decrypt_if_needed", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_prepare_data_schema", lambda _config: None)
+    monkeypatch.setattr(run.merge, "materialize_reporting_coverage", lambda: None)
     monkeypatch.setattr(run, "_set_version_status_env", lambda _config: None)
     monkeypatch.setattr(run, "_render_outputs", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_git_commit_readme", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_write_outputs", lambda *_args, **_kwargs: None)
-    config = _config_for_run_tests(tmp_path, mode="publish", privacy_mode="casual")
+    config = _config_for_run_tests(tmp_path, mode="publish", data_mode="encrypted")
 
     run.run_publish(config)
 
@@ -703,7 +707,7 @@ def test_publish_rejects_collect_provenance_from_another_runtime(
                 "action_ref": "v1",
                 "action_sha": "b" * 40,
                 "runtime_version": run.VERSION,
-                "privacy_mode": "plain",
+                "data_mode": "plaintext",
                 "retention_days": "90",
                 "publish_pages": "false",
                 "generate_readme": "false",
@@ -970,38 +974,38 @@ def test_validate_config_covers_encrypted_modes_and_incident_failures(tmp_path: 
     with pytest.raises(run.ActionError, match="github-token"):
         run.validate_config(_config_for_run_tests(tmp_path, github_token=""))
 
-    with pytest.raises(run.ActionError, match="privacy-mode plain"):
+    with pytest.raises(run.ActionError, match="data-mode plaintext"):
         run.validate_config(
             _config_for_run_tests(
                 tmp_path,
                 github_token="ghp_test",
                 repo_is_public=True,
-                privacy_mode="plain",
+                data_mode="plaintext",
             )
         )
 
-    with pytest.raises(run.ActionError, match="requires strong or casual"):
-        run.validate_config(_config_for_run_tests(tmp_path, mode="rotate-key", privacy_mode="plain"))
+    with pytest.raises(run.ActionError, match="requires encrypted data mode"):
+        run.validate_config(_config_for_run_tests(tmp_path, mode="rotate-key", data_mode="plaintext"))
 
     with pytest.raises(run.ActionError, match="dashboard-next-secret"):
         run.validate_config(
             _config_for_run_tests(
                 tmp_path,
                 mode="rotate-key",
-                privacy_mode="strong",
+                data_mode="encrypted",
                 dashboard_next_secret="",
             )
         )
 
     with pytest.raises(run.ActionError, match="incident-reset requires"):
-        run.validate_config(_config_for_run_tests(tmp_path, mode="incident-reset", privacy_mode="plain"))
+        run.validate_config(_config_for_run_tests(tmp_path, mode="incident-reset", data_mode="plaintext"))
 
     with pytest.raises(run.ActionError, match="incident-confirm-mode"):
         run.validate_config(
             _config_for_run_tests(
                 tmp_path,
                 mode="incident-reset",
-                privacy_mode="casual",
+                data_mode="encrypted",
                 github_token="ghp_test",
                 dashboard_next_secret="next",
             )
@@ -1123,7 +1127,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "dashboard_secret": "dashboard-secret-" + ("x" * 40),
         "dashboard_next_secret": "",
         "comparison_secret": "",
-        "privacy_mode": "plain",
+        "data_mode": "plaintext",
         "repo_is_public": False,
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",

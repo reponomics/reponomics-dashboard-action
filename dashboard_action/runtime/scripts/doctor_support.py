@@ -18,8 +18,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 ENCRYPTED_DASHBOARD_SCRIPT_ID = "encrypted-dashboard-data"
-PLAIN_DASHBOARD_SCRIPT_ID = "plain-dashboard-data"
-PLAIN_DASHBOARD_CONST_NAME = "dashboardDataObject"
+PLAINTEXT_DASHBOARD_SCRIPT_ID = "plaintext-dashboard-data"
 EXPORT_MANIFEST_SCRIPT_ID = "export-manifest"
 EXPECTED_DASHBOARD_DATA_VERSION = 2
 EXPECTED_EXPORT_MANIFEST_VERSION = 1
@@ -33,8 +32,8 @@ EXPORT_ASSET_RE = re.compile(r"^assets/export-data-[a-f0-9]{16}\.enc$")
 SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 
 DoctorStageStatus = Literal["passed", "failed", "skipped", "warning"]
-DoctorArtifactMode = Literal["encrypted", "plain"]
-DetectedDashboardMode = Literal["encrypted", "plain", "unknown"]
+DoctorDataMode = Literal["encrypted", "plaintext"]
+DetectedDashboardMode = Literal["encrypted", "plaintext", "unknown"]
 
 
 @dataclass(frozen=True)
@@ -96,7 +95,7 @@ class DoctorSecretResult:
 class DashboardDoctorResult:
     """Staged dashboard artifact diagnostic result."""
 
-    configured_artifact_mode: DoctorArtifactMode
+    configured_data_mode: DoctorDataMode
     detected_dashboard_mode: DetectedDashboardMode
     dashboard_html_found: DoctorStageStatus
     browser_payload_contract_valid: DoctorStageStatus
@@ -134,7 +133,7 @@ class DashboardDoctorResult:
 
     def to_jsonable(self) -> dict[str, Any]:
         return {
-            "configured_artifact_mode": self.configured_artifact_mode,
+            "configured_data_mode": self.configured_data_mode,
             "detected_dashboard_mode": self.detected_dashboard_mode,
             "dashboard_html_found": self.dashboard_html_found,
             "browser_payload_contract_valid": self.browser_payload_contract_valid,

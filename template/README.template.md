@@ -3,7 +3,7 @@
 > [!WARNING]
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this repository should not be considered authoritative.
 
-This is the setup README for your Reponomics dashboard repository. It helps you configure collection, privacy, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
+This is the setup README for your Reponomics dashboard repository. It helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
 
 The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs sync are owned by the versioned action:
 
@@ -15,8 +15,8 @@ uses: reponomics/reponomics-dashboard-action@v0
 
 1. Review `config.yaml` and decide which repositories this dashboard should track.
 2. Create a collection credential and store it as the repository secret `COLLECTION_TOKEN`. Most single-owner dashboards should use a fine-grained personal access token with repository `Administration: read`.
-3. Choose a privacy mode: `strong`, `casual`, or `plain`. Public repositories should normally use `strong`.
-4. For `strong` or `casual`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. See [Secure Dashboard Key Generation](docs/reponomics/secure-dashboard-key.md).
+3. Choose a data mode: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
+4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Secure Dashboard Key Generation](docs/reponomics/secure-dashboard-key.md) for the security tradeoffs.
 5. Run **Actions -> Set up Reponomics dashboard -> Run workflow**.
 6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 
@@ -60,8 +60,8 @@ This template currently supports one collection credential. If one dashboard nee
 
 The canonical store is the `dashboard-data` Actions artifact.
 
-- `strong` and `casual` store encrypted retained data.
-- `plain` stores retained CSV files directly in the artifact and is rejected in public repositories.
+- `encrypted` stores retained data encrypted with `DASHBOARD_SECRET_DO_NOT_REPLACE`.
+- `plaintext` stores retained CSV files directly in the artifact and is rejected in public repositories.
 - Hosted encrypted dashboard publication is optional and requires GitHub Pages to use GitHub Actions as the deployment source.
 - Plain-mode HTML dashboards are private-repository downloadable artifacts only and are not published to Pages.
 - Metric README dashboard generation is only available in private repositories.

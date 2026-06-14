@@ -9,9 +9,9 @@
 # Setup and output behavior ---------------------------------------------------
 #
 # These keys are written by the setup workflow and may be edited afterward.
-# Public repositories may not use plain privacy mode or README dashboard output.
+# Public repositories may not use plaintext data mode or README dashboard output.
 
-privacy_mode: strong
+data_mode: encrypted
 retention_days: 90
 generate_html_dashboard: false
 generate_readme: false

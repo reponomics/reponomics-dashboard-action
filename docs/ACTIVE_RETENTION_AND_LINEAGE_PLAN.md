@@ -9,10 +9,10 @@ The canonical policy is [ADR 014](./adr/014-canonical-artifact-lineage-and-activ
 `dashboard-data` remains the stable user-facing artifact name. GitHub Actions artifact `retention-days` is a long expiration safety window, not the primary history policy. The primary history policy is active supersession:
 
 1. Restore the latest retained `dashboard-data` artifact.
-2. Decrypt it when `privacy-mode` is `strong` or `casual`.
+2. Decrypt it when `data-mode` is `encrypted`.
 3. Validate the restored parent payload against its lineage manifest when one exists.
 4. Collect fresh GitHub data and merge it into the canonical CSV payload.
-5. Build a new child lineage manifest over the decrypted/plain canonical payload.
+5. Build a new child lineage manifest over the decrypted/plaintext canonical payload.
 6. Verify that the child preserves all parent rows still inside the configured retention horizon, allowing only explicit retention drops and compatible migrations.
 7. Encrypt the child payload when required.
 8. Upload the fresh `dashboard-data` artifact.
@@ -28,7 +28,7 @@ Active cleanup keeps storage and incident exposure bounded despite the long expi
 
 ## Lineage Manifest
 
-The manifest is part of the canonical payload and is committed to the artifact before encryption. In encrypted modes, digests are computed before encryption over canonical plaintext files. In `plain`, digests are computed over the same canonical files directly.
+The manifest is part of the canonical payload and is committed to the artifact before encryption. In encrypted modes, digests are computed before encryption over canonical plaintext files. In `plaintext`, digests are computed over the same canonical files directly.
 
 The initial manifest should include:
 

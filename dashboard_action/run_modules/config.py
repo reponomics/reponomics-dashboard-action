@@ -11,7 +11,7 @@ import yaml
 
 from .core import (
     VALID_MODES,
-    VALID_PRIVACY_MODES,
+    VALID_DATA_MODES,
     ActionError,
     RuntimeConfig,
 )
@@ -46,13 +46,8 @@ def _choice(value: str, choices: set[str], *, name: str) -> str:
     return normalized
 
 
-def _normalize_privacy_mode(value: str, *, repo_is_public: bool) -> str:
-    normalized = value.strip().lower()
-    if normalized == "encrypted":
-        return "strong"
-    if normalized == "auto":
-        return "strong" if repo_is_public else "plain"
-    return _choice(normalized, VALID_PRIVACY_MODES, name="privacy-mode")
+def _normalize_data_mode(value: str) -> str:
+    return _choice(value, VALID_DATA_MODES, name="data-mode")
 
 
 def _parse_retention_days(raw: str) -> int:
@@ -133,10 +128,7 @@ def _repo_is_public() -> bool:
 def load_config_from_env() -> RuntimeConfig:
     mode = _choice(_env("REPONOMICS_MODE", "collect"), VALID_MODES, name="mode")
     repo_is_public = _repo_is_public()
-    privacy_mode = _normalize_privacy_mode(
-        _first_env("REPONOMICS_PRIVACY_MODE", "REPONOMICS_ARTIFACT_SECURITY_MODE") or "strong",
-        repo_is_public=repo_is_public,
-    )
+    data_mode = _normalize_data_mode(_env("REPONOMICS_DATA_MODE", "encrypted"))
     config_path = Path(_env("REPONOMICS_CONFIG_PATH", "config.yaml"))
     return RuntimeConfig(
         mode=mode,
@@ -157,7 +149,7 @@ def load_config_from_env() -> RuntimeConfig:
             "DASHBOARD_NEXT_SECRET",
         ),
         comparison_secret=_first_env("REPONOMICS_COMPARISON_SECRET", "COMPARISON_SECRET"),
-        privacy_mode=privacy_mode,
+        data_mode=data_mode,
         repo_is_public=repo_is_public,
         config_path=config_path,
         data_dir=Path("data"),

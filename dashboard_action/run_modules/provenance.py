@@ -51,8 +51,8 @@ def current_source_sha() -> str:
     return _commit_sha(_env("GITHUB_SHA"))
 
 
-def collect_artifact_mode(provenance: CollectProvenance) -> str:
-    return "plain" if provenance.privacy_mode == "plain" else "encrypted"
+def collect_data_mode(provenance: CollectProvenance) -> str:
+    return provenance.data_mode
 
 
 def current_action_sha() -> str:
@@ -137,7 +137,7 @@ def write_collect_provenance(config: RuntimeConfig) -> CollectProvenance:
         action_ref=config.action_ref,
         action_sha=action_sha,
         runtime_version=VERSION,
-        privacy_mode=config.privacy_mode,
+        data_mode=config.data_mode,
         retention_days=str(config.retention_days),
         publish_pages=str(config.publish_pages_requested).lower(),
         generate_readme=str(config.generate_readme).lower(),
@@ -181,7 +181,7 @@ def read_collect_provenance(path: Path = COLLECT_PROVENANCE_PATH) -> CollectProv
             action_ref=str(payload.get("action_ref") or ""),
             action_sha=str(payload.get("action_sha") or ""),
             runtime_version=str(payload.get("runtime_version") or ""),
-            privacy_mode=str(payload.get("privacy_mode") or ""),
+            data_mode=str(payload.get("data_mode") or ""),
             retention_days=str(payload.get("retention_days") or ""),
             publish_pages=str(payload.get("publish_pages") or ""),
             generate_readme=str(payload.get("generate_readme") or ""),
@@ -209,14 +209,14 @@ def validate_collect_provenance(
     }.items():
         if not _commit_sha(value):
             raise ActionError(f"Collect provenance {label} is not a commit SHA.")
-    if provenance.privacy_mode not in {"strong", "casual", "plain"}:
-        raise ActionError("Collect provenance privacy mode is invalid.")
-    if collect_artifact_mode(provenance) != config.resolved_artifact_mode:
+    if provenance.data_mode not in {"encrypted", "plaintext"}:
+        raise ActionError("Collect provenance data mode is invalid.")
+    if collect_data_mode(provenance) != config.resolved_data_mode:
         raise ActionError(
-            "Collect provenance artifact mode "
-            + f"{collect_artifact_mode(provenance)} does not match this publish "
-            + f"configuration's artifact mode {config.resolved_artifact_mode}. "
-            + "Run collect again after changing retained artifact privacy mode."
+            "Collect provenance data mode "
+            + f"{collect_data_mode(provenance)} does not match this publish "
+            + f"configuration's data mode {config.resolved_data_mode}. "
+            + "Run collect again after changing retained data mode."
         )
     try:
         retention_days = int(provenance.retention_days)

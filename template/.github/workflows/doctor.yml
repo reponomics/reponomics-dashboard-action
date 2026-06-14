@@ -44,7 +44,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Restore encrypted dashboard HTML artifact
-        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE != 'plain'
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'encrypted'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: html-dashboard-encrypted
@@ -52,11 +52,11 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.artifact_run_id }}
 
-      - name: Restore plain dashboard HTML artifact
-        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE == 'plain'
+      - name: Restore plaintext dashboard HTML artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'plaintext'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: html-dashboard-plain
+          name: html-dashboard-plaintext
           path: docs
           github-token: ${{ github.token }}
           run-id: ${{ inputs.artifact_run_id }}
@@ -94,7 +94,7 @@ jobs:
           fi
 
       - name: Restore encrypted retained dashboard-data artifact
-        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE != 'plain'
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'encrypted'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dashboard-data
@@ -102,8 +102,8 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.artifact_run_id }}
 
-      - name: Restore plain retained dashboard-data artifact
-        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.PRIVACY_MODE == 'plain'
+      - name: Restore plaintext retained dashboard-data artifact
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'plaintext'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dashboard-data
@@ -139,7 +139,7 @@ jobs:
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           comparison-secret: ${{ secrets.COMPARISON_SECRET }}
-          privacy-mode: ${{ env.PRIVACY_MODE }}
+          data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
           publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
           generate-readme: ${{ env.GENERATE_README }}

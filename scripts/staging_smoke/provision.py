@@ -138,7 +138,7 @@ def repo_specs(args: argparse.Namespace) -> tuple[RepoProvisionSpec, ...]:
         RepoProvisionSpec(
             "plain history",
             args.plain_history_repo,
-            "Private durable plain-mode Reponomics dashboard smoke repository.",
+            "Private durable plaintext Reponomics dashboard smoke repository.",
         ),
     )
 

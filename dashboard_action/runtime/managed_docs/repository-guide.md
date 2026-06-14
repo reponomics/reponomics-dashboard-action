@@ -48,17 +48,16 @@ Advanced option: use a user-owned GitHub App installation token for collection i
 
 `allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` before collection. The default is `true`. Set `allow_docs_sync: false` before editing that directory yourself. Managed docs sync writes only that namespace, commits with `[skip ci]`, and reports missing write permission without failing collection by default.
 
-## Privacy Modes
+## Data Modes
 
-`privacy-mode` is the disclosure control passed to the action.
+`data-mode` is the disclosure control passed to the action.
 
 | Mode | Retained artifact | Hosted dashboard | Downloadable dashboard artifact | Secret requirement | Intended use |
 | --- | --- | --- | --- | --- | --- |
-| `strong` | encrypted `dashboard-data.enc` | optional encrypted Pages artifact | encrypted when hosted publication is disabled | generated high-entropy `DASHBOARD_SECRET_DO_NOT_REPLACE` | default for public or sensitive dashboards |
-| `casual` | encrypted `dashboard-data.enc` | optional encrypted Pages artifact | encrypted when hosted publication is disabled | any non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` | low-sensitivity sharing where accidental discovery is the concern |
-| `plain` | plaintext retained CSV files | disabled | plaintext, private repositories only | none | private repositories that use GitHub repo/artifact access as the boundary |
+| `encrypted` | encrypted `dashboard-data.enc` | optional encrypted Pages artifact | encrypted when hosted publication is disabled | non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` | default; required for public repositories and hosted Pages dashboards |
+| `plaintext` | plaintext retained CSV files | disabled | plaintext, private repositories only | none | private repositories that use GitHub repo/artifact access as the boundary |
 
-`plain` is rejected in public repositories. Public repositories can use `strong` or `casual`, but README dashboard generation is rejected there so repository metrics are not committed to public git history.
+`plaintext` is rejected in public repositories. README dashboard generation is rejected in public repositories so repository metrics are not committed to public git history.
 
 > [!NOTE]
 > We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` precisely because there is no other way in the Action > Secrets UI to convey the message to the user that if they want to rotate the key, they should not do so by simply replacing that value, which seems like a tempting mistake.
@@ -69,7 +68,7 @@ The canonical data store is the `dashboard-data` GitHub Actions artifact.
 
 - `collect` restores the prior artifact, collects current GitHub data, merges and trims retained CSV history, verifies lineage, uploads a new `dashboard-data` artifact, then deletes at most one older superseded `dashboard-data` artifact while keeping rollback artifacts.
 - `collect` also uploads a `reponomics-collect-provenance` artifact. That artifact records the collected repository revision, requested action ref, resolved action commit SHA, runtime version, and publication settings.
-- `publish` restores retained data and collect provenance, renders dashboard output, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for `strong` and `casual` only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
+- `publish` restores retained data and collect provenance, renders dashboard output, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for encrypted mode only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
 - `rotate-key` restores encrypted retained state, decrypts with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, and publishes rotated encrypted outputs.
 - `incident-reset` is a manual emergency workflow for suspected dashboard-key exposure. Make the dashboard repository private and disable any exposed Pages dashboard first. The action restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, uploads the new retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts.
 - `docs-sync` runs before collection and writes the action-bundled managed documentation to `docs/reponomics/` when enabled.
@@ -93,9 +92,9 @@ Ordinary collection outages are handled by artifact retention and active superse
 
 Encrypted hosted dashboards include an `Export CSV` control after unlock. The browser downloads an encrypted export asset, decrypts it locally with the dashboard key, verifies ciphertext and plaintext SHA-256 digests, and downloads a canonical ZIP of retained CSV files. Plaintext CSV is not uploaded back to GitHub during export.
 
-Generated HTML dashboards use a chunked data model: the page loads a summary first and loads per-repository detail chunks only as repositories are selected for display. In `strong` and `casual`, the summary and chunks are encrypted. In `plain`, the same summary/chunk boundary is used for the downloadable plaintext HTML artifact, but it does not add confidentiality.
+Generated HTML dashboards use a chunked data model: the page loads a summary first and loads per-repository detail chunks only as repositories are selected for display. In encrypted mode, the summary and chunks are encrypted. In plaintext mode, the same summary/chunk boundary is used for the downloadable plaintext HTML artifact, but it does not add confidentiality.
 
-For `plain`, download the `dashboard-data` workflow artifact directly.
+For plaintext retained data, download the `dashboard-data` workflow artifact directly.
 
 ## Offline Viewing
 
@@ -119,4 +118,4 @@ Normal collection refuses to run while `DASHBOARD_NEXT_SECRET` is set, so rotati
 For a hosted encrypted dashboard, manually configure this repository's **Settings -> Pages** page so **Build and deployment -> Source** is **GitHub Actions**. The Reponomics publish workflow renders the dashboard shell and uploads it as a GitHub Pages artifact only when hosted publication is enabled; retained dashboard data remains in the `dashboard-data` Actions artifact. The action verifies the existing Pages setting during deployment, but it does not enable Pages or change the publishing source. If GitHub suggests workflow templates while you are changing the setting, skip them.
 
 > [!WARNING]
-> Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `privacy-mode=strong` when the hosted dashboard must not disclose metrics to people without the dashboard key.
+> Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `data-mode=encrypted` when the hosted dashboard must not disclose metrics to people without the dashboard key.

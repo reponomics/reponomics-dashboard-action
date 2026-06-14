@@ -24,7 +24,7 @@ This document records the intended before/after mapping for the naming cutover. 
 | `traffic-data` | `dashboard-data` | Canonical retained Actions artifact for all dashboard data families, not only traffic metrics. |
 | `traffic-data.enc` | `dashboard-data.enc` | Encrypted retained dashboard data payload. |
 | `.traffic-artifact` | `.dashboard-data-artifact` | Local restore/upload staging directory. |
-| `traffic-dashboard-plain` | `html-dashboard-plain` | Plain-mode HTML dashboard artifact. |
+| `traffic-dashboard-plain` | `html-dashboard-plaintext` | Plain-mode HTML dashboard artifact. |
 | `traffic artifact` | `dashboard data artifact` | Prose name for the retained Actions artifact. |
 | `traffic data artifact` | `dashboard data artifact` | Prose name for the retained Actions artifact. |
 | `traffic dashboard plane` | `HTML dashboard plane` | Prose name for the hosted or artifact-delivered HTML dashboard surface. |

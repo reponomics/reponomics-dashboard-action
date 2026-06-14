@@ -17,7 +17,7 @@ import lineage
 import storage
 from doctor_support import (
     EXPECTED_KDF_ITERATIONS,
-    DoctorArtifactMode,
+    DoctorDataMode,
     DoctorSecretResult,
     DoctorStage,
     DoctorStageStatus,
@@ -253,14 +253,14 @@ def _diagnose_encrypted_retained_artifact(
     return stages, "failed"
 
 
-def _diagnose_plain_retained_artifact(data_dir: Path) -> tuple[list[DoctorStage], DoctorStageStatus]:
+def _diagnose_plaintext_retained_artifact(data_dir: Path) -> tuple[list[DoctorStage], DoctorStageStatus]:
     present_files = [filename for filename in storage.ARTIFACT_FILES if (data_dir / filename).is_file()]
     if not present_files:
         return [
             _stage("workflow_artifact_restore_requested", "skipped", "no restored retained artifact contents were found"),
             _stage("retained_artifact_found", "skipped", "no restored retained artifact contents were found"),
             _stage("retained_artifact_readable", "skipped", "no restored retained artifact contents were found"),
-            _stage("retained_artifact_decrypts", "skipped", "plain mode has no retained artifact decryption key"),
+            _stage("retained_artifact_decrypts", "skipped", "plaintext mode has no retained artifact decryption key"),
             _stage("retained_artifact_schema_valid", "skipped", "no restored retained artifact contents were found"),
             _stage("retained_artifact_lineage_valid", "skipped", "no restored retained artifact contents were found"),
         ], "skipped"
@@ -270,7 +270,7 @@ def _diagnose_plain_retained_artifact(data_dir: Path) -> tuple[list[DoctorStage]
         _stage("workflow_artifact_restore_requested", "passed", "inspecting restored retained artifact path"),
         _stage("retained_artifact_found", "passed", f"found retained artifact contents at {data_dir.as_posix()}"),
         _stage("retained_artifact_readable", "passed", "retained artifact contents are readable"),
-        _stage("retained_artifact_decrypts", "skipped", "plain mode has no retained artifact decryption key"),
+        _stage("retained_artifact_decrypts", "skipped", "plaintext mode has no retained artifact decryption key"),
         schema_stage,
         lineage_stage,
     ]
@@ -281,7 +281,7 @@ def _diagnose_plain_retained_artifact(data_dir: Path) -> tuple[list[DoctorStage]
 def _diagnose_retained_artifact(
     retained_data_dir: Path | None,
     *,
-    configured_mode: DoctorArtifactMode,
+    configured_mode: DoctorDataMode,
     secret_inputs: list[tuple[str, str]],
     secret_results: list[DoctorSecretResult],
 ) -> tuple[list[DoctorStage], DoctorStageStatus]:
@@ -295,8 +295,8 @@ def _diagnose_retained_artifact(
             _stage("retained_artifact_lineage_valid", "skipped", "no retained artifact path was configured"),
         ], "skipped"
 
-    if configured_mode == "plain":
-        return _diagnose_plain_retained_artifact(retained_data_dir)
+    if configured_mode == "plaintext":
+        return _diagnose_plaintext_retained_artifact(retained_data_dir)
 
     for candidate in _retained_encrypted_candidates(retained_data_dir):
         if candidate.is_file():

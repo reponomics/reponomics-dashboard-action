@@ -2,7 +2,7 @@
 #
 # Setup and output behavior ---------------------------------------------------
 
-privacy_mode: strong
+data_mode: encrypted
 retention_days: 90
 generate_html_dashboard: false
 generate_readme: false

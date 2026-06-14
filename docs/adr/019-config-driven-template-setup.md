@@ -63,6 +63,10 @@ After the marker exists, operational workflows still resolve `config.yaml` at ru
 
 ## Open Questions
 
-- Should the template resolver continue using its small scalar parser, or should generated repositories vendor or invoke a stricter YAML parser for better diagnostics?
-- Should `doctor` report publication settings as active runtime configuration, or only validate the settings that directly affect diagnostics?
-- When beta compatibility fixtures are introduced, should the first fixture capture this config-driven setup shape as the initial supported template surface?
+None at this point.
+
+## Resolved Follow-Ups
+
+- Keep the generated resolver as a copied local script rather than a reusable workflow. The resolver now keeps the small scalar parser but treats it as a fail-closed validation boundary: malformed top-level syntax, duplicate setup keys, unterminated quoted values, control characters, and unsafe environment-file assignments stop the workflow before normalized config values are exported.
+- Keep `doctor` aligned with runtime configuration by resolving `config.yaml` like the other operational workflows and passing normalized publication settings into the action. The doctor workflow should not become a second source of configuration reporting; human-facing diagnostic reporting belongs in doctor mode output and targeted workflow summaries.
+- The first beta compatibility fixture should capture this config-driven setup shape as the initial supported template surface, including the required setup keys, `.reponomics/setup-complete` gating, runtime config resolution, and fail-closed validation expectations.

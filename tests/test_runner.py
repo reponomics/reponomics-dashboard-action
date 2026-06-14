@@ -196,6 +196,30 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
     return run.RuntimeConfig(**values)
 
 
+def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
+    values: dict[str, Any] = {
+        "i_have_read_the_readme": True,
+        "data_mode": "encrypted",
+        "publish_pages_dashboard": True,
+        "publish_readme_dashboard": False,
+        "allow_docs_sync": True,
+        "artifact_retention_days": 90,
+        "use_github_app": False,
+    }
+    values.update(overrides)
+
+    def yaml_value(value: Any) -> str:
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
+
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        "".join(f"{key}: {yaml_value(value)}\n" for key, value in values.items()),
+        encoding="utf-8",
+    )
+
+
 @pytest.fixture(autouse=True)
 def _stub_version_status_releases(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(run.version_status, "_fetch_releases", lambda: [])
@@ -621,7 +645,9 @@ def test_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
     monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", github_event_repository_private)
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, artifact_retention_days=30)
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
     monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
@@ -648,7 +674,7 @@ def test_allow_docs_sync_uses_config_when_input_is_unset(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("allow_docs_sync: false\n", encoding="utf-8")
+    _write_runtime_config(config_path, allow_docs_sync=False)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
@@ -658,19 +684,18 @@ def test_allow_docs_sync_uses_config_when_input_is_unset(
     assert config.allow_docs_sync is False
 
 
-def test_allow_docs_sync_input_overrides_config(
+def test_allow_docs_sync_input_must_match_config(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("allow_docs_sync: false\n", encoding="utf-8")
+    _write_runtime_config(config_path, allow_docs_sync=False)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_ALLOW_DOCS_SYNC", "true")
 
-    config = run.load_config_from_env()
-
-    assert config.allow_docs_sync is True
+    with pytest.raises(run.ActionError, match="allow-docs-sync"):
+        run.load_config_from_env()
 
 
 def test_allow_docs_sync_rejects_non_boolean_config(
@@ -678,7 +703,21 @@ def test_allow_docs_sync_rejects_non_boolean_config(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text('allow_docs_sync: "false"\n', encoding="utf-8")
+    config_path.write_text(
+        "\n".join(
+            [
+                "i_have_read_the_readme: true",
+                "data_mode: encrypted",
+                "publish_pages_dashboard: true",
+                "publish_readme_dashboard: false",
+                'allow_docs_sync: "false"',
+                "artifact_retention_days: 90",
+                "use_github_app: false",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
@@ -698,7 +737,13 @@ def test_use_github_app_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
     monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(
+        config_path,
+        artifact_retention_days=30,
+        use_github_app=True,
+    )
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
     monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
@@ -751,7 +796,13 @@ def test_publish_pages_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "false")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(
+        config_path,
+        artifact_retention_days=30,
+        publish_pages_dashboard=False,
+    )
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "false")
     monkeypatch.setenv("REPONOMICS_README_PATH", str(tmp_path / "README.md"))
@@ -762,13 +813,105 @@ def test_publish_pages_input_normalization_from_env(
     assert config.publish_pages is False
 
 
-def test_generate_readme_default_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_readme_uses_config_when_input_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, publish_readme_dashboard=False)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.delenv("REPONOMICS_GENERATE_README", raising=False)
 
     config = run.load_config_from_env()
 
     assert config.generate_readme is False
+
+
+def test_runtime_config_requires_config_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "missing.yaml"))
+
+    with pytest.raises(run.ActionError, match="Required config file is missing"):
+        run.load_config_from_env()
+
+
+def test_runtime_config_requires_setup_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("allow_docs_sync: true\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+
+    with pytest.raises(run.ActionError, match="missing required setup field"):
+        run.load_config_from_env()
+
+
+def test_runtime_config_rejects_duplicate_setup_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") + "data_mode: plaintext\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+
+    with pytest.raises(run.ActionError, match="duplicate key 'data_mode'"):
+        run.load_config_from_env()
+
+
+def test_runtime_config_rejects_non_string_top_level_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") + "123: unexpected\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+
+    with pytest.raises(run.ActionError, match="top-level keys must be strings"):
+        run.load_config_from_env()
+
+
+@pytest.mark.parametrize(
+    ("env_name", "env_value", "config_override", "expected"),
+    [
+        ("REPONOMICS_DATA_MODE", "plaintext", {}, "data-mode"),
+        ("REPONOMICS_RETENTION_DAYS", "30", {}, "retention-days"),
+        ("REPONOMICS_PUBLISH_PAGES", "false", {}, "publish-pages"),
+        ("REPONOMICS_GENERATE_README", "true", {}, "generate-readme"),
+        ("REPONOMICS_USE_GITHUB_APP", "true", {}, "use-github-app"),
+    ],
+)
+def test_runtime_config_rejects_input_config_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    env_name: str,
+    env_value: str,
+    config_override: dict[str, Any],
+    expected: str,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, **config_override)
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv(env_name, env_value)
+
+    with pytest.raises(run.ActionError, match=expected):
+        run.load_config_from_env()
 
 
 def test_runtime_outputs_include_pages_path(

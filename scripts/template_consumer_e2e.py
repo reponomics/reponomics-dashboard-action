@@ -227,6 +227,34 @@ def _copy_template(template_dir: Path, consumer_dir: Path) -> None:
     shutil.copytree(template_dir, consumer_dir)
 
 
+def _write_setup_config(
+    consumer_dir: Path,
+    *,
+    data_mode: str = "encrypted",
+    publish_pages_dashboard: bool = True,
+    publish_readme_dashboard: bool = False,
+    allow_docs_sync: bool = True,
+    artifact_retention_days: int = 90,
+    use_github_app: bool = False,
+) -> None:
+    config_path = consumer_dir / "config.yaml"
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        raise TemplateConsumerE2EError("Generated config.yaml must contain a mapping")
+    payload.update(
+        {
+            "i_have_read_the_readme": True,
+            "data_mode": data_mode,
+            "publish_pages_dashboard": publish_pages_dashboard,
+            "publish_readme_dashboard": publish_readme_dashboard,
+            "allow_docs_sync": allow_docs_sync,
+            "artifact_retention_days": artifact_retention_days,
+            "use_github_app": use_github_app,
+        }
+    )
+    config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
 def _init_consumer_git_repo(consumer_dir: Path, remote_dir: Path) -> None:
     _run(["git", "init", "-b", "main"], cwd=consumer_dir)
     _run(["git", "config", "user.name", "template-consumer-e2e"], cwd=consumer_dir)
@@ -457,6 +485,12 @@ def run_e2e(
             consumer_dir = temp_root / profile.name / "repo"
             remote_dir = temp_root / profile.name / "remote.git"
             _copy_template(template_dir.resolve(), consumer_dir)
+            _write_setup_config(
+                consumer_dir,
+                data_mode=profile.data_mode,
+                publish_pages_dashboard=profile.expected_publish_pages,
+                publish_readme_dashboard=profile.generate_readme,
+            )
             _init_consumer_git_repo(consumer_dir, remote_dir)
             _invoke_action_runtime(
                 action_python=action_python,
@@ -489,6 +523,7 @@ def run_composite_boundary_e2e(
         consumer_dir = temp_root / "repo"
         remote_dir = temp_root / "remote.git"
         _copy_template(template_dir.resolve(), consumer_dir)
+        _write_setup_config(consumer_dir)
         _init_consumer_git_repo(consumer_dir, remote_dir)
         stale_doc = consumer_dir / "docs" / "reponomics" / "README.md"
         stale_doc.write_text("stale managed docs\n", encoding="utf-8")

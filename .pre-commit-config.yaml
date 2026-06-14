@@ -1,3 +1,6 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: local
     hooks:
@@ -35,14 +38,9 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: verify-template
-        name: Verify generated template
-        entry: make verify-template
+      - id: build-and-verify-generated
+        name: Build and verify generated outputs
+        entry: make build-and-verify-generated
         language: system
         pass_filenames: false
-
-      - id: verify-demo
-        name: Verify generated demo
-        entry: make verify-demo
-        language: system
-        pass_filenames: false
+        stages: [pre-commit, pre-push]

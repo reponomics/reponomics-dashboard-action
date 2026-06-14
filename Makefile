@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -150,7 +150,7 @@ $(INSTALL_STAMP): pyproject.toml
 	touch $(INSTALL_STAMP)
 
 pre-commit-install: install ## Install local pre-commit hooks
-	GIT_CONFIG_GLOBAL=/dev/null $(PRE_COMMIT) install --install-hooks
+	GIT_CONFIG_GLOBAL=/dev/null $(PRE_COMMIT) install --install-hooks --hook-type pre-commit --hook-type pre-push
 
 pre-commit-run: install ## Run pre-commit hooks against all files
 	$(PRE_COMMIT) run --all-files
@@ -212,6 +212,12 @@ build-template: install ## Build the clean generated template tree in dist/templ
 
 verify-template: install ## Verify dist/template/ against the template manifest
 	$(PYTHON) scripts/build_template.py --verify-only
+
+build-and-verify-generated: install ## Build and verify generated template and demo outputs
+	$(MAKE) build-template
+	$(MAKE) verify-template
+	$(MAKE) build-demo
+	$(MAKE) verify-demo
 
 verify-workflow-classification: install ## Verify maintainer vs template workflow boundaries
 	$(PYTHON) scripts/verify_workflow_classification.py

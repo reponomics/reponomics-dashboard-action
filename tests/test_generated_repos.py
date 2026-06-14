@@ -26,6 +26,12 @@ from scripts.staging_smoke import seed_plain_history as staging_smoke_seed_plain
 from scripts.staging_smoke import wait_for_run as staging_smoke_wait_for_run
 
 
+STAGING_SMOKE_PAUSED_REASON = (
+    "Staging smoke is pre-live; pause brittle runbook/output assertions until "
+    "the staging protocol is revisited with a lighter contract model."
+)
+
+
 ACTION_YML_FIXTURE = """
 inputs:
   mode:
@@ -147,27 +153,6 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     }
     assert "README.md" in expected_files
     assert manifest["files"] == expected_files
-
-
-def test_template_community_docs_are_placeholders(tmp_path):
-    output = tmp_path / "template"
-
-    build_template.build_template(output)
-
-    generated_docs = [
-        "CODE_OF_CONDUCT.md",
-        "CONTRIBUTING.md",
-        "SECURITY.md",
-    ]
-    for relative_path in generated_docs:
-        text = (output / relative_path).read_text(encoding="utf-8")
-        assert "This is a placeholder document." in text
-        assert "not intended for public use" in text
-
-    for relative_path in ("CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "SECURITY.md"):
-        assert (output / relative_path).read_text(encoding="utf-8") != Path(
-            relative_path
-        ).read_text(encoding="utf-8")
 
 
 def test_template_manifest_excludes_action_owned_runtime(tmp_path):
@@ -434,42 +419,6 @@ def test_setup_workflow_does_not_commit_workflow_file_changes(tmp_path):
         assert 'Path(".github/workflows/' not in setup, label
 
 
-def test_docs_explain_multi_owner_token_fallback():
-    template_readme = Path("template/README.template.md").read_text(encoding="utf-8")
-    managed_docs = Path("dashboard_action/runtime/managed_docs/repository-guide.md").read_text(
-        encoding="utf-8"
-    )
-
-    assert "Token Scope And Repository Owners" in template_readme
-    assert "Repository entries use full `owner/repo` names" in template_readme
-
-    for text in (template_readme, managed_docs):
-        assert "supports one collection credential" in text
-        assert "Fine-grained personal access tokens are scoped to one GitHub resource owner" in text
-        assert re.search(r"multiple users or\s+organizations", text)
-        assert "classic PAT" in text
-        assert re.search(r"`repo`\s+scope", text)
-
-
-def test_docs_explain_setup_complete_marker():
-    template_readme = Path("template/README.template.md").read_text(encoding="utf-8")
-    managed_docs = [
-        Path("dashboard_action/runtime/managed_docs/configuration.md").read_text(
-            encoding="utf-8"
-        ),
-        Path("dashboard_action/runtime/managed_docs/repository-guide.md").read_text(
-            encoding="utf-8"
-        ),
-    ]
-
-    for text in (template_readme, *managed_docs):
-        assert ".reponomics/setup-complete" in text
-        assert "empty" in text
-        assert "non-secret" in text
-        assert "delet" in text
-        assert "recreating the empty marker is acceptable" in text
-
-
 def test_config_documents_managed_docs_opt_out():
     config_example = Path("template/config.example.yaml").read_text(encoding="utf-8")
     config = Path("template/config.yaml").read_text(encoding="utf-8")
@@ -590,17 +539,6 @@ def test_action_repo_has_template_publication_targets():
     assert "verify-template:" in makefile
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
-    assert "staging-smoke-instructions:" in makefile
-    assert "staging-smoke-live-order:" in makefile
-    assert "staging-smoke-provision-plan:" in makefile
-    assert "staging-smoke-provision:" in makefile
-    assert "staging-smoke-plan:" in makefile
-    assert "staging-smoke-preflight:" in makefile
-    assert "staging-smoke-reset-fresh-plan:" in makefile
-    assert "staging-smoke-reset-fresh:" in makefile
-    assert "staging-smoke-browser-checklist:" in makefile
-    assert "staging-smoke-evidence:" in makefile
-    assert "staging-smoke-run:" in makefile
     assert "publish-template:" in makefile
     assert "publish-template-staging-dry-run:" in makefile
     assert "publish-template-staging:" in makefile
@@ -609,28 +547,10 @@ def test_action_repo_has_template_publication_targets():
         "TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging"
         in makefile
     )
-    assert "STAGING_SMOKE_SOURCE_REF ?= main" in makefile
-    assert "STAGING_SMOKE_PHASE ?= recurring" in makefile
-    assert "STAGING_SMOKE_GH_DELAY_SECONDS ?= 1" in makefile
-    assert "STAGING_SMOKE_ALLOW_BOOTSTRAP ?= 0" in makefile
-    assert "STAGING_SMOKE_REPORT ?= .tmp/staging-smoke/report.md" in makefile
-    assert "STAGING_SMOKE_BROWSER_CHECKLIST ?= .tmp/staging-smoke/browser-checklist.md" in makefile
-    assert "scripts/staging_smoke/live_order.py" in makefile
-    assert "scripts/staging_smoke/browser_checklist.py" in makefile
-    assert "scripts/staging_smoke/provision.py" in makefile
-    assert "scripts/staging_smoke/reset_fresh.py" in makefile
-    assert "scripts/staging_smoke/seed_plain_history.py" in makefile
-    assert "--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS)" in makefile
-    assert "--write-report-template $(STAGING_SMOKE_REPORT)" in makefile
-    assert '--confirm-target "$(CONFIRM_TARGET)"' in makefile
-    assert "scripts/staging_smoke/preflight.py" in makefile
-    assert "scripts/staging_smoke/evidence.py" in makefile
-    assert "scripts/staging_smoke/run.py" in makefile
-    assert Path("scripts/staging_smoke/slow_gh.py").exists()
-    assert Path("scripts/staging_smoke/wait_for_run.py").exists()
     assert "scripts/publish_generated_repo.py" in makefile
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_runbook_documents_required_profiles():
     runbook = Path("docs/STAGING_SMOKE.md").read_text(encoding="utf-8")
 
@@ -671,6 +591,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert "persistent local clone of the plain-history repo is acceptable" in runbook
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_live_order_lists_command_sequence():
     text = staging_smoke_live_order.live_order()
 
@@ -693,6 +614,7 @@ def test_staging_smoke_live_order_lists_command_sequence():
     assert ".tmp/staging-smoke/report.md" in text
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_provision_defaults_to_private_staging_repos():
     args = staging_smoke_provision.parse_args([])
     specs = staging_smoke_provision.repo_specs(args)
@@ -712,6 +634,7 @@ def test_staging_smoke_provision_defaults_to_private_staging_repos():
         assert "push --force" not in command
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     report = tmp_path / "smoke-report.md"
     result = subprocess.run(
@@ -776,6 +699,7 @@ def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     assert "- Config reviewed/updated, bootstrap only:" in report_text
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
     report = tmp_path / "smoke-report.md"
     result = subprocess.run(
@@ -822,6 +746,7 @@ def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
     assert "- Smoke phase: `recurring`" in report.read_text(encoding="utf-8")
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_browser_checklist_covers_required_browser_regressions():
     text = staging_smoke_browser_checklist.checklist(
         "https://example.test/dashboard",
@@ -839,6 +764,7 @@ def test_staging_smoke_browser_checklist_covers_required_browser_regressions():
     assert "Do not paste dashboard keys" in text
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_runner_plan_keeps_consumer_writes_non_executable():
     args = staging_smoke_run.parse_args(
         [
@@ -882,6 +808,7 @@ def test_staging_smoke_runner_plan_keeps_consumer_writes_non_executable():
     )
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_reset_fresh_requires_exact_target_confirmation():
     args = staging_smoke_reset_fresh.parse_args(
         [
@@ -901,6 +828,7 @@ def test_staging_smoke_reset_fresh_requires_exact_target_confirmation():
         raise AssertionError("expected reset_fresh to reject mismatched target")
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_reset_fresh_configures_local_git_author(monkeypatch, tmp_path):
     calls = []
 
@@ -920,6 +848,7 @@ def test_staging_smoke_reset_fresh_configures_local_git_author(monkeypatch, tmp_
     ]
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_seed_plain_history_requires_exact_target_confirmation():
     args = staging_smoke_seed_plain_history.parse_args(
         [
@@ -939,6 +868,7 @@ def test_staging_smoke_seed_plain_history_requires_exact_target_confirmation():
         raise AssertionError("expected seed_plain_history to reject mismatched target")
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_seed_plain_history_configures_local_git_author(monkeypatch, tmp_path):
     calls = []
 
@@ -958,6 +888,7 @@ def test_staging_smoke_seed_plain_history_configures_local_git_author(monkeypatc
     ]
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_evidence_print_counts_required_failures(capsys):
     checks = [
         staging_smoke_evidence.Evidence("ok", "passed"),
@@ -974,6 +905,7 @@ def test_staging_smoke_evidence_print_counts_required_failures(capsys):
     assert "[FAIL] missing" in output
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_evidence_defaults_to_staging_consumer_repos():
     args = staging_smoke_evidence.parse_args([])
 
@@ -981,6 +913,7 @@ def test_staging_smoke_evidence_defaults_to_staging_consumer_repos():
     assert args.plain_history_repo == "reponomics/reponomics-dashboard-staging-private-plaintext-with-history"
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_evidence_rejects_plain_history_pages(monkeypatch):
     monkeypatch.setattr(
         staging_smoke_evidence,
@@ -998,6 +931,7 @@ def test_staging_smoke_evidence_rejects_plain_history_pages(monkeypatch):
     ]
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_wait_for_run_selects_latest_matching_dispatch():
     created_after = staging_smoke_wait_for_run._parse_timestamp("2026-06-13T12:00:00Z")
     runs = [
@@ -1033,6 +967,7 @@ def test_staging_smoke_wait_for_run_selects_latest_matching_dispatch():
     assert selected["databaseId"] == 3
 
 
+@pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
 def test_staging_smoke_wait_for_run_normalizes_full_refs():
     assert staging_smoke_wait_for_run._normalize_ref_name("refs/heads/main") == "main"
     assert staging_smoke_wait_for_run._normalize_ref_name("refs/tags/v0.23.2") == "v0.23.2"

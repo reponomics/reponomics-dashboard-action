@@ -41,7 +41,7 @@ Out of scope:
 - denial-of-service reports without a plausible security impact;
 - reports that require access to a user's own GitHub token, repository settings, or dashboard secret without another vulnerability;
 - social engineering, phishing, or physical attacks;
-- vulnerability reports based only on unsupported or intentionally weakened configuration, such as opting into weak dashboard secrets ("casual" privacy mode).
+- vulnerability reports based only on a repository owner's low-entropy dashboard key choice, unless the report also shows a concrete implementation flaw in encrypted mode.
 
 ## Public Pre-Release Expectations
 

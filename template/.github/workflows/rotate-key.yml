@@ -54,6 +54,6 @@ jobs:
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           dashboard-next-secret: ${{ secrets.DASHBOARD_NEXT_SECRET }}
-          privacy-mode: ${{ env.PRIVACY_MODE }}
+          data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
           generate-readme: ${{ env.GENERATE_README }}

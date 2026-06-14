@@ -4,18 +4,16 @@ on:
   # Manual trigger
   workflow_dispatch:
     inputs:
-      privacy_mode:
-        description: "Privacy mode"
+      data_mode:
+        description: "Data mode"
         type: choice
         required: true
-        default: strong
+        default: encrypted
         options:
-          # Encrypted artifacts and hosted dashboard; requires a generated high-entropy key.
-          - strong
-          # Encrypted artifacts and hosted dashboard; accepts any non-empty key.
-          - casual
-          # Plain retained CSV artifacts; private repositories only, no hosted Pages dashboard.
-          - plain
+          # Encrypted artifacts and hosted dashboard.
+          - encrypted
+          # Plaintext retained CSV artifacts; private repositories only, no hosted Pages dashboard.
+          - plaintext
       generate_html_dashboard:
         description: "Publish hosted HTML dashboard after collection"
         type: boolean
@@ -50,7 +48,7 @@ jobs:
 
       - name: Resolve setup modes
         env:
-          PRIVACY_MODE: ${{ inputs.privacy_mode }}
+          DATA_MODE: ${{ inputs.data_mode }}
           GENERATE_HTML_DASHBOARD: ${{ inputs.generate_html_dashboard }}
           GENERATE_README: ${{ inputs.generate_readme }}
           USE_GITHUB_APP: ${{ inputs.use_github_app }}
@@ -58,22 +56,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          case "$PRIVACY_MODE" in
-            strong|casual|plain)
-              resolved_privacy_mode="$PRIVACY_MODE"
+          case "$DATA_MODE" in
+            encrypted|plaintext)
+              resolved_data_mode="$DATA_MODE"
               ;;
             *)
-              echo "Unsupported privacy_mode input: $PRIVACY_MODE" >&2
+              echo "Unsupported data_mode input: $DATA_MODE" >&2
               exit 1
               ;;
           esac
 
-          if [ "$resolved_privacy_mode" = "plain" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
+          if [ "$resolved_data_mode" = "plaintext" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
             {
               echo "## Setup stopped"
               echo
-              echo "\`privacy_mode=plain\` is only supported for private repositories."
-              echo "Use \`strong\` or \`casual\` for public repositories."
+              echo "\`data_mode=plaintext\` is only supported for private repositories."
+              echo "Use \`encrypted\` for public repositories."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
@@ -94,7 +92,7 @@ jobs:
           fi
 
           {
-            echo "PRIVACY_MODE=$resolved_privacy_mode"
+            echo "DATA_MODE=$resolved_data_mode"
             echo "GENERATE_HTML_DASHBOARD=$GENERATE_HTML_DASHBOARD"
             echo "GENERATE_README=$GENERATE_README"
             echo "USE_GITHUB_APP=$USE_GITHUB_APP"
@@ -115,8 +113,6 @@ jobs:
           token_url="https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&target_name=$GITHUB_REPOSITORY_OWNER&expires_in=366&administration=read"
           app_url="https://github.com/settings/apps/new"
           key_doc_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/secure-dashboard-key.md"
-          privacy_matrix_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/privacy-configuration-matrix.md"
-
           collection_app_id="${COLLECTION_APP_ID_VAR:-}"
           if [ -z "$collection_app_id" ] && [ -n "${COLLECTION_APP_ID_SECRET:-}" ]; then
             collection_app_id="${COLLECTION_APP_ID_SECRET:-}"
@@ -178,27 +174,14 @@ jobs:
             fi
           fi
 
-          if [ "$PRIVACY_MODE" = "strong" ] || [ "$PRIVACY_MODE" = "casual" ]; then
+          if [ "$DATA_MODE" = "encrypted" ]; then
             if [ -z "${DASHBOARD_SECRET_DO_NOT_REPLACE:-}" ]; then
               {
                 echo "## Setup stopped"
                 echo
-                echo "\`privacy_mode=$PRIVACY_MODE\` needs a repository secret named \`DASHBOARD_SECRET_DO_NOT_REPLACE\`."
+                echo "\`data_mode=$DATA_MODE\` needs a repository secret named \`DASHBOARD_SECRET_DO_NOT_REPLACE\`."
                 echo
                 echo "See [Secure Dashboard Key]($key_doc_url) for key generation options."
-              } >> "$GITHUB_STEP_SUMMARY"
-              exit 1
-            fi
-
-            if [ "${#DASHBOARD_SECRET_DO_NOT_REPLACE}" -lt 40 ] && [ "$PRIVACY_MODE" = "strong" ]; then
-              {
-                echo "## Setup stopped"
-                echo
-                echo "\`DASHBOARD_SECRET_DO_NOT_REPLACE\` is not strong enough for \`privacy_mode=strong\`."
-                echo "Please generate a strong password following one of the methods described [here]($key_doc_url)."
-                echo
-                echo "Use \`privacy_mode=casual\` only if you explicitly accept"
-                echo "the risk of a targeted brute-force attack. See [here]($privacy_matrix_url) for more detail."
               } >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
@@ -219,7 +202,7 @@ jobs:
           config_path = Path("config.yaml")
           text = config_path.read_text(encoding="utf-8")
           values = {
-              "privacy_mode": os.environ["PRIVACY_MODE"],
+              "data_mode": os.environ["DATA_MODE"],
               "retention_days": os.environ["RETENTION_DAYS"],
               "generate_html_dashboard": os.environ["GENERATE_HTML_DASHBOARD"].lower(),
               "generate_readme": os.environ["GENERATE_README"].lower(),
@@ -273,7 +256,7 @@ jobs:
             echo "- Incident reset workflow: active after setup"
             echo "- Scheduled workflow keepalive: active after setup"
             echo "- Hosted HTML dashboard generation: \`$GENERATE_HTML_DASHBOARD\`"
-            echo "- Privacy mode: \`$PRIVACY_MODE\`"
+            echo "- Data mode: \`$DATA_MODE\`"
             echo "- Collection auth mode: \`$COLLECTION_AUTH_MODE\`"
             echo "- README generation: \`$GENERATE_README\`"
             echo "- Artifact retention: \`$RETENTION_DAYS\` day(s)"
@@ -296,7 +279,7 @@ jobs:
             echo "the workflows from the Actions tab."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$PRIVACY_MODE" != "plain" ]; then
+          if [ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]; then
             {
               echo
               echo "## Manual GitHub Pages step"

@@ -84,7 +84,7 @@ def build_config(mode):
         "dashboard_secret": profile["dashboard_secret"],
         "dashboard_next_secret": "",
         "comparison_secret": "",
-        "privacy_mode": profile["privacy_mode"],
+        "data_mode": profile["data_mode"],
         "repo_is_public": profile["repo_is_public"],
         "config_path": consumer_repo / "config.yaml",
         "data_dir": data_dir,
@@ -136,7 +136,7 @@ if profile["expect_error"]:
 @dataclass(frozen=True)
 class ConsumerProfile:
     name: str
-    privacy_mode: str
+    data_mode: str
     repo_is_public: bool
     generate_readme: bool
     dashboard_secret: str
@@ -148,8 +148,8 @@ class ConsumerProfile:
 
 PROFILES = [
     ConsumerProfile(
-        name="strong-private-readme",
-        privacy_mode="strong",
+        name="encrypted-private-readme",
+        data_mode="encrypted",
         repo_is_public=False,
         generate_readme=True,
         dashboard_secret="DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789",
@@ -157,8 +157,8 @@ PROFILES = [
         expected_publish_pages=True,
     ),
     ConsumerProfile(
-        name="casual-private-encrypted",
-        privacy_mode="casual",
+        name="encrypted-private-short-key",
+        data_mode="encrypted",
         repo_is_public=False,
         generate_readme=False,
         dashboard_secret="weak",
@@ -166,23 +166,23 @@ PROFILES = [
         expected_publish_pages=True,
     ),
     ConsumerProfile(
-        name="plain-private-readme",
-        privacy_mode="plain",
+        name="plaintext-private-readme",
+        data_mode="plaintext",
         repo_is_public=False,
         generate_readme=True,
         dashboard_secret="",
-        expected_artifact_mode="plain",
+        expected_artifact_mode="plaintext",
         expected_publish_pages=False,
     ),
     ConsumerProfile(
-        name="plain-public-rejected",
-        privacy_mode="plain",
+        name="plaintext-public-rejected",
+        data_mode="plaintext",
         repo_is_public=True,
         generate_readme=False,
         dashboard_secret="",
-        expected_artifact_mode="plain",
+        expected_artifact_mode="plaintext",
         expected_publish_pages=False,
-        expect_error="plain is only supported for private repositories",
+        expect_error="plaintext is only supported for private repositories",
     ),
 ]
 
@@ -414,9 +414,9 @@ def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> 
         if not list((consumer_dir / "docs" / "assets").glob("export-data-*.enc")):
             raise TemplateConsumerE2EError(f"{profile.name}: encrypted export asset missing")
     elif "encrypted-dashboard-data" in dashboard or "encrypted-payload" in dashboard:
-        raise TemplateConsumerE2EError(f"{profile.name}: plain dashboard contains encrypted data")
-    elif "dashboardDataObject" not in dashboard or "dashboardPayload" in dashboard:
-        raise TemplateConsumerE2EError(f"{profile.name}: plain dashboard chunk object missing")
+        raise TemplateConsumerE2EError(f"{profile.name}: plaintext dashboard contains encrypted data")
+    elif "plaintextDashboardData" not in dashboard or "dashboardPayload" in dashboard:
+        raise TemplateConsumerE2EError(f"{profile.name}: plaintext dashboard chunk object missing")
 
     managed_manifest = consumer_dir / "docs" / "reponomics" / ".manifest.json"
     if not managed_manifest.is_file():

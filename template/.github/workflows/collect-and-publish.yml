@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PRIVACY_MODE: "strong"
+  DATA_MODE: "encrypted"
   RETENTION_DAYS: "90"
   GENERATE_HTML_DASHBOARD: "false"
   GENERATE_README: "false"
@@ -137,7 +137,7 @@ jobs:
           use-github-app: ${{ env.USE_GITHUB_APP }}
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
-          privacy-mode: ${{ env.PRIVACY_MODE }}
+          data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
           publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
           generate-readme: ${{ env.GENERATE_README }}
@@ -171,7 +171,7 @@ jobs:
           artifact-run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
-          privacy-mode: ${{ env.PRIVACY_MODE }}
+          data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
           publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
           generate-readme: ${{ env.GENERATE_README }}
@@ -204,7 +204,7 @@ jobs:
           require-collect-provenance: "true"
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
-          privacy-mode: ${{ env.PRIVACY_MODE }}
+          data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
           publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
           generate-readme: ${{ env.GENERATE_README }}

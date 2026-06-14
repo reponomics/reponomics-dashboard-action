@@ -13,9 +13,9 @@ PAGES_DEPLOYMENT_IF = (
     "${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && " +
     "steps.runtime.outputs.publish-pages == 'true' }}"
 )
-PLAIN_DASHBOARD_ARTIFACT_IF = (
+PLAINTEXT_DASHBOARD_ARTIFACT_IF = (
     "${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == " +
-    "'false' && steps.runtime.outputs.artifact-mode == 'plain' }}"
+    "'false' && steps.runtime.outputs.artifact-mode == 'plaintext' }}"
 )
 ENCRYPTED_DASHBOARD_ARTIFACT_IF = (
     "${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && " +
@@ -298,22 +298,22 @@ def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> N
 def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     upload_pages = _step_by_uses("actions/upload-pages-artifact@")
     deploy_pages = _step_by_uses("actions/deploy-pages@")
-    plain_dashboard = _step_by_name("Upload plain dashboard artifact")
+    plaintext_dashboard = _step_by_name("Upload plaintext dashboard artifact")
     encrypted_dashboard = _step_by_name("Upload encrypted dashboard artifact")
     encrypted_data = _step_by_name("Upload encrypted dashboard data artifact")
-    plain_data = _step_by_name("Upload dashboard data artifact")
+    plaintext_data = _step_by_name("Upload dashboard data artifact")
     provenance = _step_by_name("Upload collect provenance artifact")
 
     assert upload_pages["if"] == PAGES_DEPLOYMENT_IF
     assert upload_pages["with"]["name"] == "html-dashboard-encrypted"
     assert deploy_pages["if"] == PAGES_DEPLOYMENT_IF
     assert deploy_pages["with"]["artifact_name"] == "html-dashboard-encrypted"
-    assert plain_dashboard["if"] == PLAIN_DASHBOARD_ARTIFACT_IF
-    assert plain_dashboard["with"]["name"] == "html-dashboard-plain"
+    assert plaintext_dashboard["if"] == PLAINTEXT_DASHBOARD_ARTIFACT_IF
+    assert plaintext_dashboard["with"]["name"] == "html-dashboard-plaintext"
     assert encrypted_dashboard["if"] == ENCRYPTED_DASHBOARD_ARTIFACT_IF
     assert encrypted_dashboard["with"]["name"] == "html-dashboard-encrypted"
     assert DATA_ARTIFACT_MODE_EXCLUSION in encrypted_data["if"]
-    assert DATA_ARTIFACT_MODE_EXCLUSION in plain_data["if"]
+    assert DATA_ARTIFACT_MODE_EXCLUSION in plaintext_data["if"]
     assert provenance["if"] == "${{ inputs.mode == 'collect' }}"
     assert provenance["with"]["name"] == "reponomics-collect-provenance"
     assert provenance["with"]["path"] == ".reponomics/collect-provenance/collect-provenance.json"

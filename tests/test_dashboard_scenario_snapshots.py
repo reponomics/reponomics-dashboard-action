@@ -116,6 +116,12 @@ def _render_production_outputs(
     monkeypatch.chdir(workdir)
     monkeypatch.setattr(run, "VERSION", SNAPSHOT_ACTION_VERSION)
     monkeypatch.setattr(run.render_dashboard, "datetime", FixedDashboardDatetime)
+    for env_name in (
+        run.DOCS_ACTION_VERSION_ENV,
+        run.DOCS_SYNC_STATE_ENV,
+        run.DOCS_UPDATED_AT_ENV,
+    ):
+        monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setattr(
         run.version_status,
         "_fetch_releases",
@@ -137,7 +143,7 @@ def _render_production_outputs(
         dashboard_secret="",
         dashboard_next_secret="",
         comparison_secret="",
-        privacy_mode="plain",
+        data_mode="plaintext",
         repo_is_public=False,
         config_path=workdir / "config.yaml",
         data_dir=data_dir,
@@ -331,8 +337,8 @@ def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
     assert "fonts.googleapis.com" not in rendered.dashboard
     assert "encrypted-payload" not in rendered.dashboard
     assert "encrypted-dashboard-data" not in rendered.dashboard
-    assert "plain-dashboard-data" in rendered.dashboard
-    assert "dashboardDataObject" in rendered.dashboard
+    assert "plaintext-dashboard-data" in rendered.dashboard
+    assert "plaintextDashboardData" in rendered.dashboard
     assert "dashboardPayload" not in rendered.dashboard
     assert "Dashboard disabled" not in rendered.dashboard
 

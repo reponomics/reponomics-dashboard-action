@@ -133,7 +133,7 @@ def build_dashboard_shell(
     stat_values: StatValues,
     hidden: bool = False,
 ) -> str:
-    """Build the shared dashboard markup used by plain and encrypted pages."""
+    """Build the shared dashboard markup used by plaintext and encrypted pages."""
     hidden_attr = ' class="dashboard-hidden"' if hidden else ""
     return f"""
   <div id="dashboard-app"{hidden_attr}>
@@ -504,15 +504,15 @@ def build_public_html(
     dashboard_data_json = json.dumps(dashboard_data, separators=(",", ":"))
     body = (
         shell
-        + "\n  <script id=\"plain-dashboard-data\" type=\"application/json\">"
+        + "\n  <script id=\"plaintext-dashboard-data\" type=\"application/json\">"
         + dashboard_data_json
         + "</script>\n"
     )
     runtime_js = (
         APP_RUNTIME_JS
-        + "\nconst dashboardDataObject = JSON.parse("
-        + "document.getElementById('plain-dashboard-data').textContent"
-        + ");\nrenderDashboard(dashboardDataObject);\n"
+        + "\nconst plaintextDashboardData = JSON.parse("
+        + "document.getElementById('plaintext-dashboard-data').textContent"
+        + ");\nrenderDashboard(plaintextDashboardData);\n"
     )
     return wrap_html(
         body,

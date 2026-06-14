@@ -5,11 +5,11 @@
 
 Reponomics separates retained dashboard data from committed repository files. Collection writes retained data to GitHub Actions artifacts, not to git history.
 
-`strong` privacy mode encrypts retained data and hosted dashboard export assets with a high-entropy dashboard secret. Public dashboard repositories should normally use this mode.
+`encrypted` data mode encrypts retained data and hosted dashboard export assets with `DASHBOARD_SECRET_DO_NOT_REPLACE`. Public dashboard repositories must use this mode.
 
-`casual` privacy mode also encrypts retained data and hosted dashboard export assets, but accepts any non-empty dashboard secret. It is meant for non-targeted access control, not resistance to offline brute-force attacks.
+`plaintext` data mode stores retained CSV artifacts without encryption and is allowed only for private repositories. It does not publish a public GitHub Pages dashboard. During `publish`, Reponomics uploads the rendered HTML dashboard as a private workflow artifact named `html-dashboard-plaintext`. That artifact uses the same summary plus per-repository chunk dashboard data model as encrypted dashboards so large dashboards do not need to parse every repository detail object on first render.
 
-`plain` privacy mode stores retained CSV artifacts without encryption and is allowed only for private repositories. It does not publish a public GitHub Pages dashboard. During `publish`, Reponomics uploads the rendered HTML dashboard as a private workflow artifact named `html-dashboard-plain`. That artifact uses the same summary plus per-repository chunk dashboard data model as encrypted dashboards so large dashboards do not need to parse every repository detail object on first render.
+Encrypted mode requires a non-empty dashboard key, but the action does not enforce key length, complexity, or entropy. See [Security Info](security-info.md) for key-generation and threat-model guidance.
 
 Workflow artifacts are readable by anyone with repository read access. In public repositories, that means public artifact access according to GitHub's artifact visibility rules. In private repositories, collaborators who can read workflow runs can read artifacts.
 

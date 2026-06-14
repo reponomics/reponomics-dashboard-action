@@ -13,6 +13,7 @@ Start here:
 - [Dashboard repository guide](repository-guide.md)
 - [Upgrade notes](upgrade.md)
 - [Configuration reference](configuration.md)
+- [Security info](security-info.md)
 - [Secure dashboard key](secure-dashboard-key.md)
 - [Privacy configuration matrix](privacy-configuration-matrix.md)
 - [Privacy and artifacts](privacy-and-artifacts.md)

@@ -275,7 +275,7 @@ preview-collection-quality-dashboard: install ## Render dashboard from collectio
 	cp -R $(COLLECTION_QUALITY_PREVIEW_FIXTURE)/. $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/
 	cd $(COLLECTION_QUALITY_PREVIEW_OUTPUT) && \
 		REPONOMICS_MODE=publish \
-		REPONOMICS_PRIVACY_MODE=plain \
+		REPONOMICS_DATA_MODE=plaintext \
 		GITHUB_EVENT_REPOSITORY_PRIVATE=true \
 		REPONOMICS_GENERATE_README=false \
 		$(abspath $(PYTHON)) -m dashboard_action.run

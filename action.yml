@@ -23,11 +23,11 @@ inputs:
     required: false
     default: ""
   dashboard-secret:
-    description: Current dashboard/artifact encryption secret. Required when privacy-mode is strong or casual.
+    description: Current dashboard/artifact encryption secret. Required when data-mode is encrypted.
     required: false
     default: ""
   dashboard-next-secret:
-    description: Next dashboard/artifact encryption secret for strong or casual rotate-key or incident-reset mode.
+    description: Next dashboard/artifact encryption secret for encrypted rotate-key or incident-reset mode.
     required: false
     default: ""
   comparison-secret:
@@ -46,10 +46,10 @@ inputs:
     description: Destructive incident-reset confirmation. Must be IRREVERSIBLE_ACTION_CONFIRMED for incident-reset mode.
     required: false
     default: ""
-  privacy-mode:
-    description: "Privacy model: strong, casual, or plain. Strong requires a high-entropy dashboard secret; casual encrypts with any non-empty dashboard secret for non-targeted access control; plain stores retained CSV artifacts without encryption for private-repository use."
+  data-mode:
+    description: "Data storage mode: encrypted or plaintext. Encrypted mode stores retained CSV artifacts and dashboard payloads encrypted with a dashboard secret. Plaintext mode stores retained CSV artifacts without encryption and is private-repository only."
     required: false
-    default: strong
+    default: encrypted
   config-path:
     description: Repository selection config path.
     required: false
@@ -150,7 +150,7 @@ runs:
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
         REPONOMICS_COMPARISON_SECRET: ${{ inputs.comparison-secret }}
-        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
         REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_PUBLISH_PAGES: ${{ inputs.publish-pages }}
@@ -187,11 +187,11 @@ runs:
       with:
         artifact_name: html-dashboard-encrypted
 
-    - name: Upload plain dashboard artifact
-      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'plain' }}
+    - name: Upload plaintext dashboard artifact
+      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'plaintext' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: html-dashboard-plain
+        name: html-dashboard-plaintext
         path: ${{ steps.runtime.outputs.pages-path }}
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
@@ -224,7 +224,7 @@ runs:
         overwrite: true
 
     - name: Upload dashboard data artifact
-      if: ${{ steps.runtime.outputs.artifact-mode == 'plain' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
+      if: ${{ steps.runtime.outputs.artifact-mode == 'plaintext' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data
@@ -247,7 +247,7 @@ runs:
       env:
         REPONOMICS_MODE: collect
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
-        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY: "true"
       run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run
@@ -260,7 +260,7 @@ runs:
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
-        REPONOMICS_PRIVACY_MODE: ${{ inputs.privacy-mode }}
+        REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}

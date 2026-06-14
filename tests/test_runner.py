@@ -140,14 +140,14 @@ def _decrypt_encrypted_dashboard_data(
     return summary, chunks
 
 
-def _decode_plain_dashboard_data(
-    plain_dashboard_data: dict[str, Any],
+def _decode_plaintext_dashboard_data(
+    plaintext_dashboard_data: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     chunks = {
         chunk_id: json.loads(chunk)
-        for chunk_id, chunk in plain_dashboard_data["chunks"].items()
+        for chunk_id, chunk in plaintext_dashboard_data["chunks"].items()
     }
-    return plain_dashboard_data["summary"], chunks
+    return plaintext_dashboard_data["summary"], chunks
 
 
 def _replace_script_json(html: str, script_id: str, value: dict[str, Any]) -> str:
@@ -175,7 +175,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "dashboard_secret": OLD_KEY,
         "dashboard_next_secret": "",
         "comparison_secret": "",
-        "privacy_mode": "strong",
+        "data_mode": "encrypted",
         "repo_is_public": False,
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
@@ -619,7 +619,7 @@ def test_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghp_collection")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", github_event_repository_private)
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
@@ -634,7 +634,7 @@ def test_input_normalization_from_env(
     assert config.github_token == "ghp_test"
     assert config.data_dir == Path("data")
     assert config.pages_index_path == Path("docs/index.html")
-    assert config.privacy_mode == "strong"
+    assert config.data_mode == "encrypted"
     assert config.repo_is_public is expected_repo_is_public
     assert config.resolved_artifact_mode == "encrypted"
     assert config.publish_pages is True
@@ -696,7 +696,7 @@ def test_use_github_app_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "30")
@@ -710,32 +710,30 @@ def test_use_github_app_input_normalization_from_env(
 
 @pytest.mark.parametrize(
     (
-        "privacy_mode",
+        "data_mode",
         "publish_pages_requested",
         "expected_artifact_mode",
         "expected_publish_pages",
     ),
     [
-        ("strong", True, "encrypted", True),
-        ("strong", False, "encrypted", False),
-        ("casual", True, "encrypted", True),
-        ("casual", False, "encrypted", False),
-        ("plain", True, "plain", False),
-        ("plain", False, "plain", False),
+        ("encrypted", True, "encrypted", True),
+        ("encrypted", False, "encrypted", False),
+        ("plaintext", True, "plaintext", False),
+        ("plaintext", False, "plaintext", False),
     ],
 )
-def test_publish_pages_values_follow_privacy_mode(
+def test_publish_pages_values_follow_data_mode(
     tmp_path: Path,
-    privacy_mode: str,
+    data_mode: str,
     publish_pages_requested: bool,
     expected_artifact_mode: str,
     expected_publish_pages: bool,
 ) -> None:
     config = _config(
         tmp_path,
-        privacy_mode=privacy_mode,
+        data_mode=data_mode,
         publish_pages_requested=publish_pages_requested,
-        dashboard_secret="" if privacy_mode == "plain" else OLD_KEY,
+        dashboard_secret="" if data_mode == "plaintext" else OLD_KEY,
     )
 
     assert config.resolved_artifact_mode == expected_artifact_mode
@@ -750,7 +748,7 @@ def test_publish_pages_input_normalization_from_env(
     monkeypatch.setenv("REPONOMICS_COLLECTION_TOKEN", "ghp_collection")
     monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("REPONOMICS_DASHBOARD_SECRET", OLD_KEY)
-    monkeypatch.setenv("REPONOMICS_PRIVACY_MODE", "strong")
+    monkeypatch.setenv("REPONOMICS_DATA_MODE", "encrypted")
     monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "false")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(tmp_path / "config.yaml"))
@@ -925,28 +923,28 @@ def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         run.load_config_from_env()
 
 
-def test_legacy_privacy_mode_aliases_are_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_legacy_artifact_security_mode_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
     monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "encrypted")
 
     config = run.load_config_from_env()
 
-    assert config.privacy_mode == "strong"
+    assert config.data_mode == "encrypted"
     assert config.resolved_artifact_mode == "encrypted"
 
 
-def test_public_plain_privacy_mode_is_rejected(
+def test_public_plaintext_data_mode_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    config = _config(tmp_path, privacy_mode="plain", repo_is_public=True)
+    config = _config(tmp_path, data_mode="plaintext", repo_is_public=True)
 
-    with pytest.raises(run.ActionError, match="plain is only supported for private repositories"):
+    with pytest.raises(run.ActionError, match="plaintext is only supported for private repositories"):
         run.validate_config(config)
 
 
-def test_secret_validation_for_encrypted_collect(tmp_path: Path) -> None:
-    config = _config(tmp_path, dashboard_secret="too-short")
+def test_encrypted_collect_requires_non_empty_secret(tmp_path: Path) -> None:
+    config = _config(tmp_path, dashboard_secret="")
 
     with pytest.raises(run.ActionError):
         run.validate_config(config)
@@ -959,11 +957,11 @@ def test_collect_requires_github_token_before_upload(tmp_path: Path) -> None:
         run.validate_config(config)
 
 
-def test_casual_privacy_mode_allows_low_entropy_secret(tmp_path: Path) -> None:
+def test_encrypted_data_mode_allows_short_non_empty_secret(tmp_path: Path) -> None:
     config = _config(
         tmp_path,
         dashboard_secret="too-short",
-        privacy_mode="casual",
+        data_mode="encrypted",
     )
 
     run.validate_config(config)
@@ -1360,7 +1358,7 @@ def test_doctor_treats_empty_encrypted_dashboard_as_semantically_valid(
     )
 
 
-def test_doctor_treats_empty_plain_dashboard_as_semantically_valid(
+def test_doctor_treats_empty_plaintext_dashboard_as_semantically_valid(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1368,7 +1366,7 @@ def test_doctor_treats_empty_plain_dashboard_as_semantically_valid(
     config = _config(
         tmp_path,
         mode="publish",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         generate_readme=False,
     )
@@ -1378,7 +1376,7 @@ def test_doctor_treats_empty_plain_dashboard_as_semantically_valid(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="plain",
+        configured_artifact_mode="plaintext",
         secrets=[],
     )
 
@@ -1535,7 +1533,7 @@ def test_doctor_mode_escapes_warning_workflow_data(
     assert output == expected
 
 
-def test_doctor_mode_validates_plain_dashboard_without_key(
+def test_doctor_mode_validates_plaintext_dashboard_without_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1544,7 +1542,7 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     config = _config(
         tmp_path,
         mode="publish",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         generate_readme=False,
     )
@@ -1555,7 +1553,7 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     doctor_config = _config(
         tmp_path,
         mode="doctor",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         comparison_secret="",
     )
@@ -1563,14 +1561,14 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
     monkeypatch.setattr(
         run.requests,
         "get",
-        lambda *_args, **_kwargs: pytest.fail("plain doctor should not query Pages API"),
+        lambda *_args, **_kwargs: pytest.fail("plaintext doctor should not query Pages API"),
     )
 
     run.run_doctor(doctor_config)
 
     summary = summary_path.read_text(encoding="utf-8")
-    assert "- Configured artifact mode: `plain`" in summary
-    assert "- Detected dashboard mode: `plain`" in summary
+    assert "- Configured artifact mode: `plaintext`" in summary
+    assert "- Detected dashboard mode: `plaintext`" in summary
     assert "| Key cryptographically accepted | `skipped` |" in summary
     assert "| Dashboard data semantically consistent | `passed` |" in summary
     assert "| `DASHBOARD_SECRET_DO_NOT_REPLACE` | not provided | `skipped` | `skipped` | secret was not configured |" in summary
@@ -1581,8 +1579,8 @@ def test_doctor_mode_validates_plain_dashboard_without_key(
             encoding="utf-8"
         )
     )
-    assert report["configured_artifact_mode"] == "plain"
-    assert report["detected_dashboard_mode"] == "plain"
+    assert report["configured_artifact_mode"] == "plaintext"
+    assert report["detected_dashboard_mode"] == "plaintext"
     assert report["key_cryptographically_accepted"] == "skipped"
     assert report["retained_data_artifact_decryptable"] == "passed"
     assert _report_stage(report, "pages_configuration_found")["status"] == "skipped"
@@ -2022,7 +2020,7 @@ def test_publish_skips_readme_when_generate_readme_is_false(
     assert config.pages_index_path.exists()
 
 
-def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
+def test_publish_plaintext_private_renders_plaintext_dashboard_for_artifact_download(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -2030,7 +2028,7 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     config = _config(
         tmp_path,
         mode="publish",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         generate_readme=False,
     )
@@ -2043,24 +2041,24 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-dashboard-data" not in dashboard
-    assert "plain-dashboard-data" in dashboard
-    assert "dashboardDataObject" in dashboard
+    assert "plaintext-dashboard-data" in dashboard
+    assert "plaintextDashboardData" in dashboard
     assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
-    plain_data = _script_json(dashboard, "plain-dashboard-data")
-    summary, chunks = _decode_plain_dashboard_data(plain_data)
+    plaintext_data = _script_json(dashboard, "plaintext-dashboard-data")
+    summary, chunks = _decode_plaintext_dashboard_data(plaintext_data)
     repo_names = [repo["name"] for repo in summary["repos"]]
-    assert plain_data == {
+    assert plaintext_data == {
         "version": run.render_dashboard.DASHBOARD_DATA_VERSION,
         "encoding": "json",
         "summary": summary,
-        "chunks": plain_data["chunks"],
+        "chunks": plaintext_data["chunks"],
         "chunk_count": len(repo_names),
     }
-    assert set(plain_data["chunks"]) == set(summary["repo_chunks"].values())
+    assert set(plaintext_data["chunks"]) == set(summary["repo_chunks"].values())
     assert set(chunks) == set(summary["repo_chunks"].values())
     assert "repo_series" not in summary
     assert "repo_weekday" not in summary
@@ -2070,7 +2068,7 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
     assert "series" not in summary["growth"]
 
     for repo_name, chunk_id in summary["repo_chunks"].items():
-        assert isinstance(plain_data["chunks"][chunk_id], str)
+        assert isinstance(plaintext_data["chunks"][chunk_id], str)
         chunk = chunks[chunk_id]
         assert chunk["repo"] == repo_name
         assert set(chunk) == {
@@ -2086,7 +2084,7 @@ def test_publish_plain_private_renders_plain_dashboard_for_artifact_download(
         assert "series" in chunk["growth"]["per_repo"]
 
 
-def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
+def test_publish_large_corpus_writes_one_plaintext_chunk_per_repo(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -2094,7 +2092,7 @@ def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
     config = _config(
         tmp_path,
         mode="publish",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         generate_readme=False,
     )
@@ -2105,12 +2103,12 @@ def test_publish_large_corpus_writes_one_plain_chunk_per_repo(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    plain_data = _script_json(dashboard, "plain-dashboard-data")
-    summary, chunks = _decode_plain_dashboard_data(plain_data)
+    plaintext_data = _script_json(dashboard, "plaintext-dashboard-data")
+    summary, chunks = _decode_plaintext_dashboard_data(plaintext_data)
 
     assert summary["totals"]["repo_count"] == 200
-    assert plain_data["chunk_count"] == 200
-    assert len(plain_data["chunks"]) == 200
+    assert plaintext_data["chunk_count"] == 200
+    assert len(plaintext_data["chunks"]) == 200
     assert len(summary["repo_chunks"]) == 200
     assert len(chunks) == 200
     assert "series" not in summary["growth"]
@@ -2126,7 +2124,7 @@ def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_pay
     config = _config(
         tmp_path,
         mode="publish",
-        privacy_mode="plain",
+        data_mode="plaintext",
         dashboard_secret="",
         generate_readme=False,
         config_path=fixture / "config.yaml",

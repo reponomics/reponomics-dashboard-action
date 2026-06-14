@@ -28,8 +28,7 @@ from doctor_support import (
     EXPECTED_SALT_BYTES,
     EXPORT_ASSET_RE,
     EXPORT_MANIFEST_SCRIPT_ID,
-    PLAIN_DASHBOARD_CONST_NAME,
-    PLAIN_DASHBOARD_SCRIPT_ID,
+    PLAINTEXT_DASHBOARD_SCRIPT_ID,
     SHA256_HEX_RE,
     DashboardDoctorError as _DashboardDoctorError,
     DashboardDoctorResult,
@@ -48,7 +47,6 @@ from doctor_support import (
     _json_object,
     _object_dict,
     _optional_script_content,
-    _runtime_const_json,
     _stage,
     _stage_passed,
     _status_from_stages,
@@ -61,7 +59,7 @@ def _parse_dashboard_payload(
 ) -> tuple[DetectedDashboardMode, dict[str, Any] | None, list[DoctorStage]]:
     stages: list[DoctorStage] = []
     encrypted_content = _optional_script_content(html, ENCRYPTED_DASHBOARD_SCRIPT_ID)
-    plain_script_content = _optional_script_content(html, PLAIN_DASHBOARD_SCRIPT_ID)
+    plaintext_script_content = _optional_script_content(html, PLAINTEXT_DASHBOARD_SCRIPT_ID)
 
     if encrypted_content:
         stages.append(
@@ -86,65 +84,45 @@ def _parse_dashboard_payload(
         stages.append(_stage("dashboard_script_json_valid", "passed", "encrypted payload is JSON"))
         return "encrypted", data, stages
 
-    if plain_script_content:
+    if plaintext_script_content:
         stages.append(
             _stage(
                 "detected_dashboard_mode_recorded",
                 "passed",
-                "plain dashboard payload marker was found",
+                "plaintext dashboard payload marker was found",
             )
         )
         stages.append(
             _stage(
                 "dashboard_script_found",
                 "passed",
-                f"script payload {PLAIN_DASHBOARD_SCRIPT_ID!r} was found",
+                f"script payload {PLAINTEXT_DASHBOARD_SCRIPT_ID!r} was found",
             )
         )
         try:
-            data = _json_object(plain_script_content, PLAIN_DASHBOARD_SCRIPT_ID)
+            data = _json_object(plaintext_script_content, PLAINTEXT_DASHBOARD_SCRIPT_ID)
         except _DashboardDoctorError as exc:
             stages.append(_stage("dashboard_script_json_valid", "failed", exc.detail))
-            return "plain", None, stages
-        stages.append(_stage("dashboard_script_json_valid", "passed", "plain payload is JSON"))
-        return "plain", data, stages
-
-    try:
-        data = _runtime_const_json(html, PLAIN_DASHBOARD_CONST_NAME)
-    except _DashboardDoctorError:
-        stages.extend(
-            [
-                _stage(
-                    "detected_dashboard_mode_recorded",
-                    "failed",
-                    "no encrypted or plain dashboard payload marker was found",
-                ),
-                _stage("dashboard_script_found", "failed", "dashboard payload was not found"),
-            ]
-        )
-        return "unknown", None, stages
+            return "plaintext", None, stages
+        stages.append(_stage("dashboard_script_json_valid", "passed", "plaintext payload is JSON"))
+        return "plaintext", data, stages
 
     stages.extend(
         [
             _stage(
                 "detected_dashboard_mode_recorded",
-                "passed",
-                "plain dashboard payload was found in the transitional JS assignment",
+                "failed",
+                "no encrypted or plaintext dashboard payload marker was found",
             ),
-            _stage(
-                "dashboard_script_found",
-                "warning",
-                "plain payload uses dashboardDataObject assignment; migrate to a JSON script tag",
-            ),
-            _stage("dashboard_script_json_valid", "passed", "plain payload is JSON"),
+            _stage("dashboard_script_found", "failed", "dashboard payload was not found"),
         ]
     )
-    return "plain", data, stages
+    return "unknown", None, stages
 
 
 def _validate_configured_mode(mode: str) -> tuple[DoctorArtifactMode, DoctorStage]:
-    if mode == "plain":
-        return "plain", _stage("configured_artifact_mode_recorded", "passed", "configured plain mode")
+    if mode == "plaintext":
+        return "plaintext", _stage("configured_artifact_mode_recorded", "passed", "configured plaintext mode")
     if mode == "encrypted":
         return (
             "encrypted",
@@ -336,7 +314,7 @@ def _validate_plain_contract(data: dict[str, Any]) -> list[DoctorStage]:
         _stage(
             "browser_envelope_encoding_valid",
             "passed" if data.get("encoding") == "json" else "failed",
-            "plain encoding is supported" if data.get("encoding") == "json" else "plain encoding is unsupported",
+            "plaintext encoding is supported" if data.get("encoding") == "json" else "plaintext encoding is unsupported",
         )
     )
     chunks_raw = data.get("chunks")
@@ -670,7 +648,7 @@ def _diagnose_export_artifact(
             _stage(
                 "export_manifest_found",
                 "skipped",
-                "plain mode has no encrypted export artifact",
+                "plaintext mode has no encrypted export artifact",
             )
         ], "skipped"
 
@@ -926,18 +904,18 @@ def _diagnose_plain_data(data: dict[str, Any]) -> tuple[list[DoctorStage], int, 
         raw_chunk = chunks.get(chunk_id)
         subject = f"{repo_name}:{chunk_id}"
         if not isinstance(raw_chunk, str):
-            stages.append(_stage("chunk_payload_present", "failed", "plain chunk was missing", subject))
+            stages.append(_stage("chunk_payload_present", "failed", "plaintext chunk was missing", subject))
             continue
         stages.append(_stage("chunk_payload_present", "passed", "referenced chunk payload is present", subject))
         try:
             chunk = json.loads(raw_chunk)
         except json.JSONDecodeError as exc:
-            stages.append(_stage("chunk_json_valid", "failed", f"plain chunk was not valid JSON: {exc}", subject))
+            stages.append(_stage("chunk_json_valid", "failed", f"plaintext chunk was not valid JSON: {exc}", subject))
             continue
         if not isinstance(chunk, dict):
-            stages.append(_stage("chunk_json_valid", "failed", "plain chunk was not a JSON object", subject))
+            stages.append(_stage("chunk_json_valid", "failed", "plaintext chunk was not a JSON object", subject))
             continue
-        stages.append(_stage("chunk_json_valid", "passed", "plain chunk parsed as JSON", subject))
+        stages.append(_stage("chunk_json_valid", "passed", "plaintext chunk parsed as JSON", subject))
         stages.extend(_validate_chunk_staged(repo_name, chunk_id, chunk))
         chunks_checked += 1
     if _stage_passed(summary_stages, "summary_repo_chunk_mapping_valid"):
@@ -1106,7 +1084,7 @@ def diagnose_dashboard_artifact(
                 chunks_checked = checked
                 chunk_count = total_chunks
                 repo_count = total_repos
-    elif payload is not None and detected_mode == "plain":
+    elif payload is not None and detected_mode == "plaintext":
         stages.extend(_validate_plain_contract(payload))
         plain_stages, chunks_checked, chunk_count, repo_count = _diagnose_plain_data(payload)
         stages.extend(plain_stages)
@@ -1115,7 +1093,7 @@ def diagnose_dashboard_artifact(
                 _skip_secret_result(
                     label,
                     provided=bool(secret),
-                    detail="plain mode has no dashboard decryption key",
+                    detail="plaintext mode has no dashboard decryption key",
                 )
             )
     else:
@@ -1154,7 +1132,7 @@ def diagnose_dashboard_artifact(
     )
 
     accepted_secret = next((result for result in secret_results if result.accepted), None)
-    if configured_mode == "plain":
+    if configured_mode == "plaintext":
         key_status: DoctorStageStatus = "skipped"
         data_stages = []
     else:

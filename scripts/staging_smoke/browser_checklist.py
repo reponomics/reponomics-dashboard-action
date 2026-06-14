@@ -37,10 +37,10 @@ Do not paste dashboard keys into this file or into the transcript. Record only p
 
 ## Plain History Local HTML Artifact
 
-- [ ] Download `html-dashboard-plain` from the latest plain-history collect/publish run.
+- [ ] Download `html-dashboard-plaintext` from the latest plain-history collect/publish run.
 - [ ] Serve the artifact locally, for example from `.tmp/staging-smoke/plain-html`.
 - [ ] Open local URL: `{plain_local_url}`
-- [ ] Confirm the plain dashboard renders without a hosted Pages deployment.
+- [ ] Confirm the plaintext dashboard renders without a hosted Pages deployment.
 - [ ] Confirm summary cards, main chart, repo selector, metric selector, and collection calendar render.
 - [ ] Switch to at least one non-traffic growth metric and one traffic metric.
 - [ ] Confirm README dashboard values are coherent with the rendered HTML dashboard at a smoke-test level.

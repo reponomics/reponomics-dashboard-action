@@ -10,7 +10,6 @@ from pathlib import Path
 VERSION = "0.23.3"  # x-release-please-version
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "runtime" / "scripts"
-MIN_SECRET_LENGTH = 40
 MIN_MASK_LENGTH = 3
 INCIDENT_CONFIRM_MODE = "INCIDENT_RESET_CONFIRMED"
 INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
@@ -31,7 +30,7 @@ DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_STALE = "stale"
 
 VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "docs-sync", "doctor"}
-VALID_PRIVACY_MODES = {"strong", "casual", "plain"}
+VALID_DATA_MODES = {"encrypted", "plaintext"}
 
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -50,7 +49,7 @@ class RuntimeConfig:
     dashboard_secret: str
     dashboard_next_secret: str
     comparison_secret: str
-    privacy_mode: str
+    data_mode: str
     repo_is_public: bool
     config_path: Path
     data_dir: Path
@@ -69,11 +68,11 @@ class RuntimeConfig:
 
     @property
     def resolved_artifact_mode(self) -> str:
-        return "plain" if self.privacy_mode == "plain" else "encrypted"
+        return self.data_mode
 
     @property
     def publish_pages(self) -> bool:
-        return self.publish_pages_requested and self.privacy_mode != "plain"
+        return self.publish_pages_requested and self.data_mode != "plaintext"
 
 
 @dataclass(frozen=True)
@@ -110,7 +109,7 @@ class CollectProvenance:
     action_ref: str
     action_sha: str
     runtime_version: str
-    privacy_mode: str
+    data_mode: str
     retention_days: str
     publish_pages: str
     generate_readme: str

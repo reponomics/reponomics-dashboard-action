@@ -18,8 +18,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 ENCRYPTED_DASHBOARD_SCRIPT_ID = "encrypted-dashboard-data"
-PLAIN_DASHBOARD_SCRIPT_ID = "plain-dashboard-data"
-PLAIN_DASHBOARD_CONST_NAME = "dashboardDataObject"
+PLAINTEXT_DASHBOARD_SCRIPT_ID = "plaintext-dashboard-data"
 EXPORT_MANIFEST_SCRIPT_ID = "export-manifest"
 EXPECTED_DASHBOARD_DATA_VERSION = 2
 EXPECTED_EXPORT_MANIFEST_VERSION = 1
@@ -33,8 +32,8 @@ EXPORT_ASSET_RE = re.compile(r"^assets/export-data-[a-f0-9]{16}\.enc$")
 SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 
 DoctorStageStatus = Literal["passed", "failed", "skipped", "warning"]
-DoctorArtifactMode = Literal["encrypted", "plain"]
-DetectedDashboardMode = Literal["encrypted", "plain", "unknown"]
+DoctorArtifactMode = Literal["encrypted", "plaintext"]
+DetectedDashboardMode = Literal["encrypted", "plaintext", "unknown"]
 
 
 @dataclass(frozen=True)

@@ -28,7 +28,7 @@ COMMON_REQUIRED_FILES = (
     "README.md",
 )
 
-ARTIFACT_NAMES = {"dashboard-data", "html-dashboard-plain", "html-dashboard-encrypted"}
+ARTIFACT_NAMES = {"dashboard-data", "html-dashboard-plaintext", "html-dashboard-encrypted"}
 
 
 @dataclass(frozen=True)
@@ -305,7 +305,7 @@ def collect_evidence(args: argparse.Namespace) -> list[Evidence]:
             _artifact_evidence(
                 args.plain_history_repo,
                 label="plain history",
-                expected={"dashboard-data", "html-dashboard-plain"},
+                expected={"dashboard-data", "html-dashboard-plaintext"},
             )
         )
         checks.extend(

@@ -285,7 +285,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in doctor
     assert "run-id: ${{ inputs.artifact_run_id }}" in doctor
     assert "name: html-dashboard-encrypted" in doctor
-    assert "name: html-dashboard-plain" in doctor
+    assert "name: html-dashboard-plaintext" in doctor
     assert "name: dashboard-data" in doctor
     assert "mode: doctor" in doctor
     assert "comparison-secret: ${{ secrets.COMPARISON_SECRET }}" in doctor
@@ -333,10 +333,10 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert '"generate_readme": "GENERATE_README"' in resolver
 
 
-def test_setup_workflow_resolves_privacy_modes():
+def test_setup_workflow_resolves_data_modes():
     setup = Path("template/.github/workflows/setup.yml").read_text(encoding="utf-8")
 
-    for mode in ("strong", "casual", "plain"):
+    for mode in ("encrypted", "plaintext"):
         assert re.search(rf"^\s+- {mode}$", setup, flags=re.MULTILINE)
 
     assert "generate_html_dashboard:" in setup
@@ -351,7 +351,7 @@ def test_setup_workflow_resolves_privacy_modes():
     assert "PUBLISH_TO_PAGES" not in setup
     assert "PUBLISH_README" not in setup
     assert "COMMIT_README_SNAPSHOT" not in setup
-    assert 'echo "PRIVACY_MODE=$resolved_privacy_mode"' in setup
+    assert 'echo "DATA_MODE=$resolved_data_mode"' in setup
     assert 'echo "GENERATE_HTML_DASHBOARD=$GENERATE_HTML_DASHBOARD"' in setup
     assert 'echo "GENERATE_README=$GENERATE_README"' in setup
     assert '"generate_html_dashboard": os.environ["GENERATE_HTML_DASHBOARD"].lower()' in setup
@@ -368,12 +368,11 @@ def test_setup_workflow_resolves_privacy_modes():
     assert "Managed docs sync" in setup
     assert ": > .reponomics/setup-complete" in setup
     assert "git add README.md README.backup.md config.yaml .reponomics/setup-complete" in setup
-    assert '"privacy_mode": os.environ["PRIVACY_MODE"]' in setup
+    assert '"data_mode": os.environ["DATA_MODE"]' in setup
     assert '"retention_days": os.environ["RETENTION_DAYS"]' in setup
-    assert "privacy_mode=plain" in setup
+    assert "data_mode=plaintext" in setup
     assert "is only supported for private repositories." in setup
-    assert "privacy_mode=strong" in setup
-    assert "privacy_mode=casual" in setup
+    assert "default: encrypted" in setup
     assert re.search(r"^permissions:\n  contents: read$", setup, flags=re.MULTILINE)
     assert re.search(r"^\s+permissions:\n\s+contents: write$", setup, flags=re.MULTILINE)
     assert "actions: write" not in setup
@@ -395,15 +394,9 @@ def test_setup_workflow_resolves_privacy_modes():
     assert "COLLECTION_APP_ID" in setup
     assert '"use_github_app": os.environ["USE_GITHUB_APP"].lower()' in setup
     assert "docs/reponomics/secure-dashboard-key.md" in setup
-    assert "docs/reponomics/privacy-configuration-matrix.md" in setup
-    assert "not strong enough for \\`privacy_mode=strong\\`" in setup
-    assert "Casual privacy mode selected" not in setup
-    casual_length_check = (
-        '${#DASHBOARD_SECRET_DO_NOT_REPLACE}" -lt 40 ] && [ "$PRIVACY_MODE" = "casual"'
-    )
-    assert casual_length_check not in setup
+    assert '${#DASHBOARD_SECRET_DO_NOT_REPLACE}' not in setup
     assert "Manual GitHub Pages step" in setup
-    assert '[ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$PRIVACY_MODE" != "plain" ]' in setup
+    assert '[ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]' in setup
     assert "Collection auth mode" in setup
     assert "Settings -> Pages" in setup
     assert "skip them" in setup
@@ -609,7 +602,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert "reponomics-dashboard-staging-private-encrypted-fresh" in runbook
     assert "reponomics-dashboard-staging-private-plaintext-with-history" in runbook
     assert "One-Time GitHub Provisioning" in runbook
-    assert "Plain mode does not publish a Pages dashboard" in runbook
+    assert "Plaintext mode does not publish a Pages dashboard" in runbook
     assert "guided interactive runbook" in runbook
     assert "printed `gh secret set` commands omit `--body`" in runbook
     assert "guided interactive checkpoints" in runbook
@@ -634,7 +627,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert ".tmp/staging-smoke/report.md" in runbook
     assert "PAT-only" in runbook
     assert "Rotate Reponomics dashboard key" in runbook
-    assert "html-dashboard-plain" in runbook
+    assert "html-dashboard-plaintext" in runbook
     assert "DASHBOARD_NEXT_SECRET" in runbook
     assert "Review `config.yaml` in the encrypted fresh repo after setup" in runbook
     assert "Recurring plaintext/history smoke should preserve the existing config" in runbook
@@ -778,7 +771,7 @@ def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
     assert "make staging-smoke-reset-fresh" in output
     assert "workflow run setup.yml --repo 'owner/encrypted-fresh'" in output
     assert "Review encrypted config before collection" in output
-    assert "privacy_mode=strong" in output
+    assert "data_mode=encrypted" in output
     assert "workflow run collect-and-publish.yml --repo 'owner/encrypted-fresh'" in output
     assert "workflow run collect-and-publish.yml --repo 'owner/plain-history'" in output
     assert "secret set COLLECTION_TOKEN" not in output
@@ -803,7 +796,7 @@ def test_staging_smoke_browser_checklist_covers_required_browser_regressions():
     assert "traffic metric" in text
     assert "clipped or truncated" in text
     assert "collection calendar" in text
-    assert "html-dashboard-plain" in text
+    assert "html-dashboard-plaintext" in text
     assert "Do not paste dashboard keys" in text
 
 
@@ -1159,7 +1152,7 @@ def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_pa
     )
     profile = template_consumer_e2e.ConsumerProfile(
         name="chunked-encrypted",
-        privacy_mode="strong",
+        data_mode="encrypted",
         repo_is_public=False,
         generate_readme=False,
         dashboard_secret="DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789",

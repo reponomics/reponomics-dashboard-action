@@ -124,7 +124,7 @@ def _artifact_list_command(repo: str) -> str:
     jq = " ".join(
         [
             '.artifacts[] | select(.name == "dashboard-data"',
-            'or .name == "html-dashboard-plain"',
+            'or .name == "html-dashboard-plaintext"',
             'or .name == "html-dashboard-encrypted")',
             "| [.name, .workflow_run.id, .expired, .created_at] | @tsv",
         ]
@@ -145,7 +145,7 @@ def _plain_artifact_download_command(repo: str) -> str:
                     "--repo",
                     _quote(repo),
                     "--name",
-                    "html-dashboard-plain",
+                    "html-dashboard-plaintext",
                     "--dir",
                     ".tmp/staging-smoke/plain-html",
                 ]
@@ -287,7 +287,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
                 _workflow_run_command(
                     args.encrypted_fresh_repo,
                     "setup.yml",
-                    "privacy_mode=strong",
+                    "data_mode=encrypted",
                     "generate_html_dashboard=true",
                     "generate_readme=true",
                     "use_github_app=false",
@@ -367,7 +367,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
             _sentence(
                 "Seed from the staging template only if the repo is empty.",
                 "Otherwise preserve commits and existing artifacts.",
-                "Then run setup to write config with privacy_mode=plain,",
+                "Then run setup to write config with data_mode=plaintext,",
                 "generate_html_dashboard=false, and generate_readme=true.",
             ),
             (
@@ -392,7 +392,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
                 _workflow_run_command(
                     args.plain_history_repo,
                     "setup.yml",
-                    "privacy_mode=plain",
+                    "data_mode=plaintext",
                     "generate_html_dashboard=false",
                     "generate_readme=true",
                     "use_github_app=false",
@@ -414,8 +414,8 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
         ),
         Operation(
             "plain history",
-            "Collect, publish, and inspect plain artifacts",
-            "Run collect-and-publish with skip_collect=false, then validate README, dashboard-data, html-dashboard-plain, retained history, and absence of a Pages requirement.",
+            "Collect, publish, and inspect plaintext artifacts",
+            "Run collect-and-publish with skip_collect=false, then validate README, dashboard-data, html-dashboard-plaintext, retained history, and absence of a Pages requirement.",
             (
                 _workflow_run_command(
                     args.plain_history_repo,
@@ -428,8 +428,8 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
         ),
         Operation(
             "plain history",
-            "Browser smoke local plain HTML artifact",
-            "Download html-dashboard-plain, serve it from a temporary local HTTP server, and verify charts and dashboard values locally.",
+            "Browser smoke local plaintext HTML artifact",
+            "Download html-dashboard-plaintext, serve it from a temporary local HTTP server, and verify charts and dashboard values locally.",
             (_plain_artifact_download_command(args.plain_history_repo), "open http://localhost:8765"),
         ),
         Operation(
@@ -557,7 +557,7 @@ Operator:
 - Collect/publish run:
 - Doctor run:
 - `dashboard-data` artifact observed:
-- `html-dashboard-plain` artifact observed:
+- `html-dashboard-plaintext` artifact observed:
 - Local browser artifact path:
 - Charts/readme/dashboard coherence checks:
 - Browser checklist path:

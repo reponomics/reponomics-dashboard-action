@@ -107,7 +107,15 @@ jobs:
               } >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
-            echo "collection_token=$APP_COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
+            if [[ "$APP_COLLECTION_TOKEN" == *$'\n'* || "$APP_COLLECTION_TOKEN" == *$'\r'* ]]; then
+              {
+                echo "## Collection stopped"
+                echo
+                echo "Advanced GitHub App collection mode produced an invalid multiline token."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            printf '%s=%s\n' collection_token "$APP_COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -119,7 +127,15 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "collection_token=$COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
+          if [[ "$COLLECTION_TOKEN" == *$'\n'* || "$COLLECTION_TOKEN" == *$'\r'* ]]; then
+            {
+              echo "## Collection stopped"
+              echo
+              echo "\`COLLECTION_TOKEN\` must be a single-line token value."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          printf '%s=%s\n' collection_token "$COLLECTION_TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Collect retained dashboard data
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'

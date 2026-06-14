@@ -246,3 +246,60 @@ def test_setup_config_resolver_rejects_public_plaintext(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "data_mode=plaintext is only supported for private repositories" in result.stderr
+
+
+def test_setup_config_resolver_rejects_control_character_payload(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, data_mode="encrypted\x1b[31m")
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "contains unsupported control characters" in result.stderr
+    env = _read_env_file(tmp_path / "github-env")
+    assert "DATA_MODE" not in env
+    assert env == {"REPONOMICS_SETUP_COMPLETE": "false"}
+
+
+def test_setup_config_resolver_rejects_newline_injection_payload(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo)
+    config_path = repo / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "data_mode: encrypted",
+            'data_mode: "encrypted\nEVIL=1"',
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "unterminated quoted value" in result.stderr
+    env = _read_env_file(tmp_path / "github-env")
+    assert "DATA_MODE" not in env
+    assert "EVIL" not in env
+
+
+def test_setup_config_resolver_rejects_duplicate_setup_keys(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo)
+    config_path = repo / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") +
+        "\npublish_pages_dashboard: true\n",
+        encoding="utf-8",
+    )
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "defines publish_pages_dashboard more than once" in result.stderr

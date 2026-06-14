@@ -23,6 +23,8 @@ CONFIG_KEYS = {
 
 REQUIRED_KEYS = tuple(CONFIG_KEYS)
 VALID_DATA_MODES = {"encrypted", "plaintext"}
+ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$")
 
 
 def _summary(*lines: str) -> None:
@@ -35,14 +37,22 @@ def _summary(*lines: str) -> None:
         summary.write("\n")
 
 
-def _parse_scalar(raw: str) -> str:
+def _parse_scalar(raw: str, *, key: str, line_number: int) -> str:
     value = raw.strip()
     if value.startswith("#"):
         return ""
     if " #" in value:
         value = value.split(" #", 1)[0].rstrip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+    if value[:1] in {'"', "'"}:
+        if len(value) < 2 or value[-1] != value[0]:
+            raise ValueError(
+                f"config.yaml line {line_number}: {key} has an unterminated quoted value."
+            )
         value = value[1:-1]
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        raise ValueError(
+            f"config.yaml line {line_number}: {key} contains unsupported control characters."
+        )
     return value
 
 
@@ -50,15 +60,22 @@ def _load_top_level_scalars(config_path: Path) -> dict[str, str]:
     if not config_path.exists():
         raise ValueError(f"{config_path} is required.")
     values: dict[str, str] = {}
-    for line in config_path.read_text(encoding="utf-8").splitlines():
+    for line_number, line in enumerate(
+        config_path.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
         if not line or line.startswith((" ", "\t", "#")):
             continue
-        match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$", line)
+        match = TOP_LEVEL_KEY_RE.match(line)
         if not match:
-            continue
+            raise ValueError(
+                f"config.yaml line {line_number} is not valid top-level key syntax."
+            )
         key, raw = match.groups()
         if key in CONFIG_KEYS:
-            values[key] = _parse_scalar(raw)
+            if key in values:
+                raise ValueError(f"config.yaml defines {key} more than once.")
+            values[key] = _parse_scalar(raw, key=key, line_number=line_number)
     return values
 
 
@@ -181,11 +198,22 @@ def _write_env(values: dict[str, str]) -> None:
     env_path = os.environ.get("GITHUB_ENV", "").strip()
     if not env_path:
         for key, value in values.items():
+            _validate_env_assignment(key, value)
             print(f"{key}={value}")
         return
     with Path(env_path).open("a", encoding="utf-8") as env_file:
         for key, value in values.items():
+            _validate_env_assignment(key, value)
             env_file.write(f"{key}={value}\n")
+
+
+def _validate_env_assignment(key: str, value: str) -> None:
+    if not ENV_KEY_RE.match(key):
+        raise ValueError(f"Internal error: invalid environment key {key!r}.")
+    if any(character in value for character in ("\r", "\n")):
+        raise ValueError(
+            f"Internal error: environment value for {key} contains a newline."
+        )
 
 
 def main() -> int:

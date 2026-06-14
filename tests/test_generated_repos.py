@@ -283,8 +283,10 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         "actions": "read",
     }
     assert "artifact_run_id:" in doctor
+    assert "Validate artifact run ID" in doctor
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in doctor
-    assert "run-id: ${{ inputs.artifact_run_id }}" in doctor
+    assert "run-id: ${{ env.ARTIFACT_RUN_ID }}" in doctor
+    assert "Restoring dashboard artifacts from workflow run \\`$ARTIFACT_RUN_ID\\`" in doctor
     assert "name: html-dashboard-encrypted" in doctor
     assert "name: html-dashboard-plaintext" in doctor
     assert "name: dashboard-data" in doctor
@@ -298,7 +300,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "Doctor did not run because an earlier artifact download or HTML normalization step failed." in doctor
     assert r"this workflow has \`actions: read\` permission" in doctor
     assert "github-token: ${{ github.token }}" in collect_publish
-    assert 'USE_GITHUB_APP: "false"' in collect_publish
+    assert 'USE_GITHUB_APP: "false"' not in collect_publish
     assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in collect_publish
     assert "app-id: ${{ vars.COLLECTION_APP_ID || secrets.COLLECTION_APP_ID }}" in collect_publish
     assert "use-github-app: ${{ env.USE_GITHUB_APP }}" in collect_publish
@@ -334,6 +336,21 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
     assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
     assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
+
+
+def test_generated_workflow_run_steps_do_not_interpolate_untrusted_contexts():
+    """Untrusted workflow values must pass through env/validation before shell."""
+    untrusted_patterns = ("${{ inputs.", "${{ github.event.")
+    for workflow_path in Path("template/.github/workflows").glob("*.yml"):
+        workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+        for job_name, job in workflow.get("jobs", {}).items():
+            for step in job.get("steps", []):
+                script = step.get("run", "")
+                for pattern in untrusted_patterns:
+                    assert pattern not in script, (
+                        f"{workflow_path}:{job_name}:{step.get('name')} "
+                        + f"interpolates {pattern} directly into a run block"
+                    )
 
 
 def test_setup_workflow_resolves_data_modes():

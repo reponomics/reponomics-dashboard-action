@@ -451,6 +451,25 @@ def test_docs_explain_multi_owner_token_fallback():
         assert re.search(r"`repo`\s+scope", text)
 
 
+def test_docs_explain_setup_complete_marker():
+    template_readme = Path("template/README.template.md").read_text(encoding="utf-8")
+    managed_docs = [
+        Path("dashboard_action/runtime/managed_docs/configuration.md").read_text(
+            encoding="utf-8"
+        ),
+        Path("dashboard_action/runtime/managed_docs/repository-guide.md").read_text(
+            encoding="utf-8"
+        ),
+    ]
+
+    for text in (template_readme, *managed_docs):
+        assert ".reponomics/setup-complete" in text
+        assert "empty" in text
+        assert "non-secret" in text
+        assert "delet" in text
+        assert "recreating the empty marker is acceptable" in text
+
+
 def test_config_documents_managed_docs_opt_out():
     config_example = Path("template/config.example.yaml").read_text(encoding="utf-8")
     config = Path("template/config.yaml").read_text(encoding="utf-8")

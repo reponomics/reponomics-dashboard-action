@@ -22,6 +22,8 @@ uses: reponomics/reponomics-dashboard-action@v0
 
 Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.
 
+The `.reponomics/setup-complete` marker is an empty, non-secret file and does not contain dashboard data. It is a git-tracked switch that tells the generated workflows the repository has completed initial setup. If it is deleted, collect, publish, rotate-key, doctor, incident-reset, docs-sync, and keepalive workflows will treat setup as incomplete and skip their normal work until setup writes the marker again. If you intentionally complete `config.yaml` and choose to manage setup manually, recreating the empty marker is acceptable; normal setup writes it for you.
+
 ## Configuration
 
 `config.yaml` is owned by this repository. Reponomics reads it during setup and workflow runs but does not silently rewrite it. The top setup fields must be filled before setup can proceed:

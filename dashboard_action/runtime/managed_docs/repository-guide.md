@@ -18,6 +18,7 @@ Your repository owns:
 - `config.yaml`
 - repository secrets
 - workflow schedule and permissions
+- the `.reponomics/setup-complete` setup marker
 - the pinned action version
 - retained `dashboard-data` workflow artifacts
 - static post-setup README output
@@ -45,6 +46,8 @@ Advanced option: use a user-owned GitHub App installation token for collection i
 `config.yaml` is the active configuration for this repository. It is user-owned: collection and publication runs read it, but do not silently rewrite it.
 
 `config.example.yaml` shows the supported configuration shape. The setup fields at the top of `config.yaml` are required and explicit keys in `config.yaml` are treated as your choices.
+
+`.reponomics/setup-complete` is an empty, non-secret marker file. Setup writes it after validating `config.yaml` and required secrets. Generated operational workflows treat its presence as the setup-complete signal; deleting it pauses normal workflow work until setup writes it again. If you intentionally complete `config.yaml` and manage setup manually, recreating the empty marker is acceptable.
 
 `allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` before collection. Set `allow_docs_sync: false` before editing that directory yourself. Managed docs sync writes only that namespace, commits with `[skip ci]`, and reports missing write permission without failing collection by default.
 

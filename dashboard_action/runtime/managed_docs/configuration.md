@@ -23,6 +23,8 @@ use_github_app: false
 
 `publish_pages_dashboard: true` requires `data_mode: encrypted`. Public repositories must use `data_mode: encrypted` and cannot enable `publish_readme_dashboard`.
 
+After setup succeeds, the repository contains `.reponomics/setup-complete`. This empty, non-secret file is the setup-completion marker used by generated workflows. If it is deleted, operational workflows skip their normal work until setup writes it again. If you deliberately complete `config.yaml` and manage setup manually, recreating the empty marker is acceptable.
+
 `allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` automatically when the repo's version of the action is updated. Set it to `false` before editing the managed docs directory yourself.
 
 Example `config.yaml` opt-out:

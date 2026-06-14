@@ -221,7 +221,6 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     rotate_workflow = yaml.safe_load(rotate)
 
     action_ref = f"uses: {contract.action_repository}@{contract.default_action_ref}"
-    html_env = 'GENERATE_HTML_DASHBOARD: "false"'
     assert "skip_collect:" in collect_publish
     assert "docs-sync:" in collect_publish
     assert "resolve-reponomics-config.py --require-setup" in collect_publish
@@ -234,7 +233,9 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert action_ref in incident_reset
     assert 'REPONOMICS_ACTION_REF: "' not in collect_publish
     assert 'REPONOMICS_ACTION_SHA: "' not in collect_publish
-    assert html_env in collect_publish
+    assert 'GENERATE_HTML_DASHBOARD: "false"' not in collect_publish
+    assert "PUBLISH_PAGES_DASHBOARD" in collect_publish
+    assert "PUBLISH_README_DASHBOARD" in collect_publish
     assert "reponomics-collect-provenance" not in collect_publish
     assert "source_sha" not in collect_publish
     assert "workflow_run_id" not in collect_publish
@@ -330,34 +331,28 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "resolve-reponomics-config.py --require-setup" in keepalive
     assert "60 days without repository activity" in keepalive
     assert ".reponomics/setup-complete" in resolver
-    assert '"generate_readme": "GENERATE_README"' in resolver
+    assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
+    assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
+    assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
 
 
 def test_setup_workflow_resolves_data_modes():
     setup = Path("template/.github/workflows/setup.yml").read_text(encoding="utf-8")
 
-    for mode in ("encrypted", "plaintext"):
-        assert re.search(rf"^\s+- {mode}$", setup, flags=re.MULTILINE)
-
-    assert "generate_html_dashboard:" in setup
-    assert 'description: "Publish hosted HTML dashboard after collection"' in setup
-    assert "generate_readme:" in setup
-    assert 'description: "Generate README after collection (private repositories only)"' in setup
-    assert "use_github_app:" in setup
-    assert 'description: "Advanced collection auth: use a user-owned GitHub App installation token"' in setup
+    assert "inputs:" not in setup
+    assert "Resolve setup configuration" in setup
+    assert "resolve-reponomics-config.py" in setup
+    assert "generate_html_dashboard:" not in setup
+    assert "generate_readme:" not in setup
+    assert "use_github_app:" not in setup
     assert "publish_dashboard:" not in setup
     assert "commit_readme:" not in setup
     assert "commit_readme_snapshot:" not in setup
     assert "PUBLISH_TO_PAGES" not in setup
-    assert "PUBLISH_README" not in setup
     assert "COMMIT_README_SNAPSHOT" not in setup
-    assert 'echo "DATA_MODE=$resolved_data_mode"' in setup
-    assert 'echo "GENERATE_HTML_DASHBOARD=$GENERATE_HTML_DASHBOARD"' in setup
-    assert 'echo "GENERATE_README=$GENERATE_README"' in setup
-    assert '"generate_html_dashboard": os.environ["GENERATE_HTML_DASHBOARD"].lower()' in setup
-    assert '"generate_readme": os.environ["GENERATE_README"].lower()' in setup
-    assert 'echo "USE_GITHUB_APP=$USE_GITHUB_APP"' in setup
-    assert "README dashboard generation is only supported for private repositories." in setup
+    assert "PUBLISH_PAGES_DASHBOARD" in setup
+    assert "PUBLISH_README_DASHBOARD" in setup
+    assert "README dashboard generation is only supported for private repositories." not in setup
     assert "cp README.md README.backup.md" in setup
     assert "cat > README.md <<'MD'" in setup
     assert setup.index("cp README.md README.backup.md") < setup.index(
@@ -367,12 +362,11 @@ def test_setup_workflow_resolves_data_modes():
     assert "allow_docs_sync: false" in setup
     assert "Managed docs sync" in setup
     assert ": > .reponomics/setup-complete" in setup
-    assert "git add README.md README.backup.md config.yaml .reponomics/setup-complete" in setup
-    assert '"data_mode": os.environ["DATA_MODE"]' in setup
-    assert '"retention_days": os.environ["RETENTION_DAYS"]' in setup
-    assert "data_mode=plaintext" in setup
-    assert "is only supported for private repositories." in setup
-    assert "default: encrypted" in setup
+    assert "git add README.md README.backup.md .reponomics/setup-complete" in setup
+    assert '"data_mode": os.environ["DATA_MODE"]' not in setup
+    assert '"retention_days": os.environ["RETENTION_DAYS"]' not in setup
+    assert "data_mode=plaintext" not in setup
+    assert "default: encrypted" not in setup
     assert re.search(r"^permissions:\n  contents: read$", setup, flags=re.MULTILINE)
     assert re.search(r"^\s+permissions:\n\s+contents: write$", setup, flags=re.MULTILINE)
     assert "actions: write" not in setup
@@ -392,11 +386,10 @@ def test_setup_workflow_resolves_data_modes():
     assert "keep \\`config.yaml\\` within" in setup
     assert "COLLECTION_APP_PRIVATE_KEY" in setup
     assert "COLLECTION_APP_ID" in setup
-    assert '"use_github_app": os.environ["USE_GITHUB_APP"].lower()' in setup
     assert "docs/reponomics/secure-dashboard-key.md" in setup
     assert '${#DASHBOARD_SECRET_DO_NOT_REPLACE}' not in setup
     assert "Manual GitHub Pages step" in setup
-    assert '[ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]' in setup
+    assert '[ "$PUBLISH_PAGES_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]' in setup
     assert "Collection auth mode" in setup
     assert "Settings -> Pages" in setup
     assert "skip them" in setup
@@ -443,9 +436,13 @@ def test_config_documents_managed_docs_opt_out():
     config_example = Path("template/config.example.yaml").read_text(encoding="utf-8")
     config = Path("template/config.yaml").read_text(encoding="utf-8")
 
+    assert "allow_docs_sync: true" in config_example
+    assert "allow_docs_sync: # true/false" in config
     for text in (config_example, config):
-        assert "allow_docs_sync: true" in text
         assert "docs/reponomics/" in text
+        assert "publish_pages_dashboard" in text
+        assert "publish_readme_dashboard" in text
+        assert "artifact_retention_days" in text
 
 
 def test_template_contract_and_action_metadata_contract():
@@ -629,7 +626,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert "Rotate Reponomics dashboard key" in runbook
     assert "html-dashboard-plaintext" in runbook
     assert "DASHBOARD_NEXT_SECRET" in runbook
-    assert "Review `config.yaml` in the encrypted fresh repo after setup" in runbook
+    assert "Review `config.yaml` in the encrypted fresh repo before setup" in runbook
     assert "Recurring plaintext/history smoke should preserve the existing config" in runbook
     assert "Local Clone Policy" in runbook
     assert "temporary clones under `.tmp/staging-smoke/`" in runbook
@@ -716,6 +713,7 @@ def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     assert "venv/bin/python scripts/staging_smoke/slow_gh.py workflow run setup.yml" in output
     assert "Review encrypted config before collection" in output
     assert "Review plain-history config before first collection" in output
+    assert "before setup and collection" in output
     assert "venv/bin/python scripts/staging_smoke/wait_for_run.py" in output
     assert "--created-after \"$started_at\"" in output
     assert "venv/bin/python scripts/staging_smoke/slow_gh.py workflow run rotate-key.yml" in output
@@ -772,6 +770,9 @@ def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
     assert "workflow run setup.yml --repo 'owner/encrypted-fresh'" in output
     assert "Review encrypted config before collection" in output
     assert "data_mode=encrypted" in output
+    assert "publish_pages_dashboard=true" in output
+    assert "publish_readme_dashboard=true" in output
+    assert "-f data_mode=encrypted" not in output
     assert "workflow run collect-and-publish.yml --repo 'owner/encrypted-fresh'" in output
     assert "workflow run collect-and-publish.yml --repo 'owner/plain-history'" in output
     assert "secret set COLLECTION_TOKEN" not in output

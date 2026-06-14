@@ -18,13 +18,6 @@ concurrency:
   group: reponomics-collect-publish-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  DATA_MODE: "encrypted"
-  RETENTION_DAYS: "90"
-  GENERATE_HTML_DASHBOARD: "false"
-  GENERATE_README: "false"
-  USE_GITHUB_APP: "false"
-
 jobs:
   docs-sync:
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
@@ -139,8 +132,8 @@ jobs:
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}
 
   publish:
     needs: collect
@@ -164,7 +157,7 @@ jobs:
       - name: Publish dashboard outputs
         if: >-
           env.REPONOMICS_SETUP_COMPLETE == 'true' &&
-          (env.GENERATE_HTML_DASHBOARD == 'true' || env.GENERATE_README == 'true')
+          (env.PUBLISH_PAGES_DASHBOARD == 'true' || env.PUBLISH_README_DASHBOARD == 'true')
         uses: reponomics/reponomics-dashboard-action@v0
         with:
           mode: publish
@@ -173,8 +166,8 @@ jobs:
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}
 
   republish:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.skip_collect }}
@@ -197,7 +190,7 @@ jobs:
       - name: Republish dashboard outputs
         if: >-
           env.REPONOMICS_SETUP_COMPLETE == 'true' &&
-          (env.GENERATE_HTML_DASHBOARD == 'true' || env.GENERATE_README == 'true')
+          (env.PUBLISH_PAGES_DASHBOARD == 'true' || env.PUBLISH_README_DASHBOARD == 'true')
         uses: reponomics/reponomics-dashboard-action@v0
         with:
           mode: publish
@@ -206,5 +199,5 @@ jobs:
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}

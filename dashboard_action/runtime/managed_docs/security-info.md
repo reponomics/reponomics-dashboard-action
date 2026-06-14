@@ -3,13 +3,13 @@
 > [!WARNING]
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
-This page explains the security model behind `data-mode: encrypted` and `data-mode: plaintext`.
+This page explains the security model behind `data_mode: encrypted` and `data_mode: plaintext`.
 
 ## Data Modes
 
-`data-mode: encrypted` encrypts retained CSV artifacts and dashboard payloads with `DASHBOARD_SECRET_DO_NOT_REPLACE`. It is the default and the only supported mode for public repositories. The action requires this key to be non-empty, but it does not enforce length, complexity, or entropy.
+`data_mode: encrypted` encrypts retained CSV artifacts and dashboard payloads with `DASHBOARD_SECRET_DO_NOT_REPLACE`. It is the only supported mode for public repositories and the only mode that can publish a Pages dashboard. The action requires this key to be non-empty, but it does not enforce length, complexity, or entropy.
 
-`data-mode: plaintext` stores retained CSV files directly in the `dashboard-data` workflow artifact. It is private-repository only, disables hosted Pages publication, and relies on GitHub repository and Actions artifact access as the privacy boundary.
+`data_mode: plaintext` stores retained CSV files directly in the `dashboard-data` workflow artifact. It is private-repository only, disables hosted Pages publication, and relies on GitHub repository and Actions artifact access as the privacy boundary.
 
 ## Key Strength
 

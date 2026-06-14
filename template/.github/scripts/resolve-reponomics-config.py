@@ -4,28 +4,24 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
 from pathlib import Path
 
 
-DEFAULTS = {
-    "DATA_MODE": "encrypted",
-    "RETENTION_DAYS": "90",
-    "GENERATE_HTML_DASHBOARD": "false",
-    "GENERATE_README": "false",
-    "USE_GITHUB_APP": "false",
-}
-
 CONFIG_KEYS = {
+    "i_have_read_the_readme": "I_HAVE_READ_THE_README",
     "data_mode": "DATA_MODE",
-    "retention_days": "RETENTION_DAYS",
-    "generate_html_dashboard": "GENERATE_HTML_DASHBOARD",
-    "generate_readme": "GENERATE_README",
+    "publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD",
+    "publish_readme_dashboard": "PUBLISH_README_DASHBOARD",
+    "allow_docs_sync": "ALLOW_DOCS_SYNC",
+    "artifact_retention_days": "RETENTION_DAYS",
     "use_github_app": "USE_GITHUB_APP",
 }
 
+REQUIRED_KEYS = tuple(CONFIG_KEYS)
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 
 
@@ -41,6 +37,8 @@ def _summary(*lines: str) -> None:
 
 def _parse_scalar(raw: str) -> str:
     value = raw.strip()
+    if value.startswith("#"):
+        return ""
     if " #" in value:
         value = value.split(" #", 1)[0].rstrip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
@@ -50,7 +48,7 @@ def _parse_scalar(raw: str) -> str:
 
 def _load_top_level_scalars(config_path: Path) -> dict[str, str]:
     if not config_path.exists():
-        return {}
+        raise ValueError(f"{config_path} is required.")
     values: dict[str, str] = {}
     for line in config_path.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith((" ", "\t", "#")):
@@ -59,7 +57,7 @@ def _load_top_level_scalars(config_path: Path) -> dict[str, str]:
         if not match:
             continue
         key, raw = match.groups()
-        if key in CONFIG_KEYS and raw:
+        if key in CONFIG_KEYS:
             values[key] = _parse_scalar(raw)
     return values
 
@@ -73,31 +71,110 @@ def _bool(value: str, *, name: str) -> str:
     raise ValueError(f"{name} must be true or false, got {value!r}.")
 
 
-def _resolve(config_path: Path) -> dict[str, str]:
-    resolved = dict(DEFAULTS)
-    scalars = _load_top_level_scalars(config_path)
+def _repo_is_private() -> bool:
+    for name in ("REPOSITORY_PRIVATE", "GITHUB_EVENT_REPOSITORY_PRIVATE"):
+        value = os.environ.get(name, "").strip().lower()
+        if value:
+            if value == "true":
+                return True
+            if value == "false":
+                return False
+            raise ValueError(f"{name} must be true or false, got {value!r}.")
 
-    if "data_mode" in scalars:
-        data_mode = scalars["data_mode"].strip().lower()
-        if data_mode not in VALID_DATA_MODES:
-            allowed = ", ".join(sorted(VALID_DATA_MODES))
-            raise ValueError(f"data_mode must be one of: {allowed}.")
-        resolved["DATA_MODE"] = data_mode
-
-    if "retention_days" in scalars:
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "").strip()
+    if event_path:
         try:
-            retention_days = int(scalars["retention_days"])
-        except ValueError as exc:
-            raise ValueError("retention_days must be an integer.") from exc
-        if retention_days < 1 or retention_days > 90:
-            raise ValueError("retention_days must be between 1 and 90.")
-        resolved["RETENTION_DAYS"] = str(retention_days)
+            payload = json.loads(Path(event_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise ValueError("Could not determine repository visibility.") from exc
+        private = payload.get("repository", {}).get("private")
+        if isinstance(private, bool):
+            return private
 
-    for key in ("generate_html_dashboard", "generate_readme", "use_github_app"):
-        if key in scalars:
-            resolved[CONFIG_KEYS[key]] = _bool(scalars[key], name=key)
+    raise ValueError("Could not determine repository visibility.")
 
-    return resolved
+
+def _required_scalar(scalars: dict[str, str], key: str) -> str:
+    value = scalars.get(key, "").strip()
+    if not value:
+        raise ValueError(
+            f"{key} must be set in config.yaml before setup can proceed."
+        )
+    return value
+
+
+def _resolve(config_path: Path) -> dict[str, str]:
+    scalars = _load_top_level_scalars(config_path)
+    missing = [key for key in REQUIRED_KEYS if not scalars.get(key, "").strip()]
+    if missing:
+        formatted = ", ".join(missing)
+        raise ValueError(
+            "Complete the required setup fields in config.yaml before running setup: "
+            + formatted
+            + "."
+        )
+
+    read_readme = _bool(
+        _required_scalar(scalars, "i_have_read_the_readme"),
+        name="i_have_read_the_readme",
+    )
+    if read_readme != "true":
+        raise ValueError(
+            "i_have_read_the_readme must be true before setup can proceed."
+        )
+
+    data_mode = _required_scalar(scalars, "data_mode").lower()
+    if data_mode not in VALID_DATA_MODES:
+        allowed = ", ".join(sorted(VALID_DATA_MODES))
+        raise ValueError(f"data_mode must be one of: {allowed}.")
+
+    try:
+        retention_days = int(_required_scalar(scalars, "artifact_retention_days"))
+    except ValueError as exc:
+        raise ValueError("artifact_retention_days must be an integer.") from exc
+    if retention_days < 1 or retention_days > 90:
+        raise ValueError("artifact_retention_days must be between 1 and 90.")
+
+    publish_pages = _bool(
+        _required_scalar(scalars, "publish_pages_dashboard"),
+        name="publish_pages_dashboard",
+    )
+    publish_readme = _bool(
+        _required_scalar(scalars, "publish_readme_dashboard"),
+        name="publish_readme_dashboard",
+    )
+    allow_docs_sync = _bool(
+        _required_scalar(scalars, "allow_docs_sync"),
+        name="allow_docs_sync",
+    )
+    use_github_app = _bool(
+        _required_scalar(scalars, "use_github_app"),
+        name="use_github_app",
+    )
+
+    repo_private = _repo_is_private()
+    if data_mode == "plaintext" and not repo_private:
+        raise ValueError(
+            "data_mode=plaintext is only supported for private repositories."
+        )
+    if publish_pages == "true" and data_mode != "encrypted":
+        raise ValueError("publish_pages_dashboard=true requires data_mode=encrypted.")
+    if publish_readme == "true" and not repo_private:
+        raise ValueError(
+            "publish_readme_dashboard=true is only supported for private repositories."
+        )
+
+    collection_auth_mode = "github_app" if use_github_app == "true" else "pat"
+    return {
+        "I_HAVE_READ_THE_README": read_readme,
+        "DATA_MODE": data_mode,
+        "PUBLISH_PAGES_DASHBOARD": publish_pages,
+        "PUBLISH_README_DASHBOARD": publish_readme,
+        "ALLOW_DOCS_SYNC": allow_docs_sync,
+        "RETENTION_DAYS": str(retention_days),
+        "USE_GITHUB_APP": use_github_app,
+        "COLLECTION_AUTH_MODE": collection_auth_mode,
+    }
 
 
 def _write_env(values: dict[str, str]) -> None:
@@ -123,7 +200,8 @@ def main() -> int:
         _summary(
             "## Reponomics setup required",
             "",
-            "Run **Actions -> Set up Reponomics dashboard** before this workflow does work.",
+            "Fill in `config.yaml`, run **Actions -> Set up Reponomics dashboard**, "
+            + "and commit the generated setup marker before this workflow does work.",
         )
         return 0
 

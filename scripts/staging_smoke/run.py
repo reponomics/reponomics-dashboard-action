@@ -279,18 +279,18 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
             "encrypted fresh",
             "Run encrypted setup",
             _sentence(
-                "Run setup after the fresh codebase reset.",
-                "Repo settings and secrets persist, but setup rewrites the generated",
-                "configuration and setup marker into the fresh tree.",
+                "Before setup, edit and commit config.yaml in the fresh repo with",
+                "i_have_read_the_readme=true, data_mode=encrypted,",
+                "publish_pages_dashboard=true, publish_readme_dashboard=true,",
+                "allow_docs_sync=true, artifact_retention_days=90, and",
+                "use_github_app=false.",
+                "Repo settings and secrets persist, but setup now validates config",
+                "and writes only the setup marker and post-setup README.",
             ),
             (
                 _workflow_run_command(
                     args.encrypted_fresh_repo,
                     "setup.yml",
-                    "data_mode=encrypted",
-                    "generate_html_dashboard=true",
-                    "generate_readme=true",
-                    "use_github_app=false",
                 ),
                 _workflow_list_command(args.encrypted_fresh_repo, "setup.yml"),
             ),
@@ -299,8 +299,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
             "encrypted fresh",
             "Review encrypted config before collection",
             _sentence(
-                "Review config.yaml in the encrypted-fresh repo after setup and before",
-                "collection.",
+                "Review config.yaml in the encrypted-fresh repo before collection.",
                 "If the smoke pass should cover a specific repository set, commit that",
                 "config change to the remote staging repo before collect-and-publish.",
             ),
@@ -367,8 +366,10 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
             _sentence(
                 "Seed from the staging template only if the repo is empty.",
                 "Otherwise preserve commits and existing artifacts.",
-                "Then run setup to write config with data_mode=plaintext,",
-                "generate_html_dashboard=false, and generate_readme=true.",
+                "Then commit config.yaml with i_have_read_the_readme=true,",
+                "data_mode=plaintext, publish_pages_dashboard=false,",
+                "publish_readme_dashboard=true, allow_docs_sync=true,",
+                "artifact_retention_days=90, and use_github_app=false before setup.",
             ),
             (
                 " ".join(
@@ -392,10 +393,6 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
                 _workflow_run_command(
                     args.plain_history_repo,
                     "setup.yml",
-                    "data_mode=plaintext",
-                    "generate_html_dashboard=false",
-                    "generate_readme=true",
-                    "use_github_app=false",
                 ),
                 _workflow_list_command(args.plain_history_repo, "setup.yml"),
             ),
@@ -405,9 +402,10 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
             "plain history",
             "Review plain-history config before first collection",
             _sentence(
-                "During bootstrap, review config.yaml in the plain-history repo after setup",
-                "and before collection.",
-                "Commit any intended repository selection before the first retained-data run.",
+                "During bootstrap, review config.yaml in the plain-history repo before",
+                "setup and collection.",
+                "Commit all setup fields and any intended repository selection before",
+                "the first retained-data run.",
                 "Recurring runs preserve the existing config and history.",
             ),
             smoke_phases=("bootstrap",),

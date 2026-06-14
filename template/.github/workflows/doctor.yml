@@ -11,9 +11,6 @@ on:
 permissions:
   contents: read
 
-env:
-  RETENTION_DAYS: "90"
-
 jobs:
   doctor:
     if: github.ref == 'refs/heads/main'
@@ -141,5 +138,5 @@ jobs:
           comparison-secret: ${{ secrets.COMPARISON_SECRET }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}

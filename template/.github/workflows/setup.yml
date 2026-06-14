@@ -3,35 +3,6 @@ name: Set up Reponomics dashboard
 on:
   # Manual trigger
   workflow_dispatch:
-    inputs:
-      data_mode:
-        description: "Data mode"
-        type: choice
-        required: true
-        default: encrypted
-        options:
-          # Encrypted artifacts and hosted dashboard.
-          - encrypted
-          # Plaintext retained CSV artifacts; private repositories only, no hosted Pages dashboard.
-          - plaintext
-      generate_html_dashboard:
-        description: "Publish hosted HTML dashboard after collection"
-        type: boolean
-        required: true
-        default: false
-      generate_readme:
-        description: "Generate README after collection (private repositories only)"
-        type: boolean
-        required: true
-        default: false
-      use_github_app:
-        description: "Advanced collection auth: use a user-owned GitHub App installation token"
-        type: boolean
-        required: true
-        default: false
-
-env:
-  RETENTION_DAYS: "90"
 
 permissions:
   contents: read
@@ -46,58 +17,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - name: Resolve setup modes
+      - name: Resolve setup configuration
         env:
-          DATA_MODE: ${{ inputs.data_mode }}
-          GENERATE_HTML_DASHBOARD: ${{ inputs.generate_html_dashboard }}
-          GENERATE_README: ${{ inputs.generate_readme }}
-          USE_GITHUB_APP: ${{ inputs.use_github_app }}
           REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
-        run: |
-          set -euo pipefail
-
-          case "$DATA_MODE" in
-            encrypted|plaintext)
-              resolved_data_mode="$DATA_MODE"
-              ;;
-            *)
-              echo "Unsupported data_mode input: $DATA_MODE" >&2
-              exit 1
-              ;;
-          esac
-
-          if [ "$resolved_data_mode" = "plaintext" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
-            {
-              echo "## Setup stopped"
-              echo
-              echo "\`data_mode=plaintext\` is only supported for private repositories."
-              echo "Use \`encrypted\` for public repositories."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-          if [ "$GENERATE_README" = "true" ] && [ "$REPOSITORY_PRIVATE" = "false" ]; then
-            {
-              echo "## Setup stopped"
-              echo
-              echo "README dashboard generation is only supported for private repositories."
-              echo "Disable \`generate_readme\` for public repositories."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-          collection_auth_mode="pat"
-          if [ "$USE_GITHUB_APP" = "true" ]; then
-            collection_auth_mode="github_app"
-          fi
-
-          {
-            echo "DATA_MODE=$resolved_data_mode"
-            echo "GENERATE_HTML_DASHBOARD=$GENERATE_HTML_DASHBOARD"
-            echo "GENERATE_README=$GENERATE_README"
-            echo "USE_GITHUB_APP=$USE_GITHUB_APP"
-            echo "COLLECTION_AUTH_MODE=$collection_auth_mode"
-          } >> "$GITHUB_ENV"
+        run: python .github/scripts/resolve-reponomics-config.py
 
       - name: Validate required secrets
         env:
@@ -187,40 +110,12 @@ jobs:
             fi
           fi
 
-      - name: Write dashboard configuration
+      - name: Write setup marker
         run: |
           set -euo pipefail
 
           mkdir -p .reponomics
           : > .reponomics/setup-complete
-
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          config_path = Path("config.yaml")
-          text = config_path.read_text(encoding="utf-8")
-          values = {
-              "data_mode": os.environ["DATA_MODE"],
-              "retention_days": os.environ["RETENTION_DAYS"],
-              "generate_html_dashboard": os.environ["GENERATE_HTML_DASHBOARD"].lower(),
-              "generate_readme": os.environ["GENERATE_README"].lower(),
-              "use_github_app": os.environ["USE_GITHUB_APP"].lower(),
-          }
-
-          for key, value in values.items():
-              replacement = f"{key}: {value}"
-              pattern = rf"^{re.escape(key)}\s*:.*$"
-              if re.search(pattern, text, flags=re.MULTILINE):
-                  text = re.sub(pattern, replacement, text, count=1, flags=re.MULTILINE)
-              else:
-                  if not text.endswith("\n"):
-                      text += "\n"
-                  text += f"{replacement}\n"
-
-          config_path.write_text(text, encoding="utf-8")
-          PY
 
       - name: Write setup README
         run: |
@@ -255,12 +150,12 @@ jobs:
             echo "- Collection workflow: active after setup"
             echo "- Incident reset workflow: active after setup"
             echo "- Scheduled workflow keepalive: active after setup"
-            echo "- Hosted HTML dashboard generation: \`$GENERATE_HTML_DASHBOARD\`"
+            echo "- Hosted HTML dashboard generation: \`$PUBLISH_PAGES_DASHBOARD\`"
             echo "- Data mode: \`$DATA_MODE\`"
             echo "- Collection auth mode: \`$COLLECTION_AUTH_MODE\`"
-            echo "- README generation: \`$GENERATE_README\`"
+            echo "- README generation: \`$PUBLISH_README_DASHBOARD\`"
             echo "- Artifact retention: \`$RETENTION_DAYS\` day(s)"
-            echo "- Managed docs sync: enabled by default; set \`allow_docs_sync: false\` in \`config.yaml\` to opt out"
+            echo "- Managed docs sync: \`$ALLOW_DOCS_SYNC\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
           {
@@ -279,7 +174,7 @@ jobs:
             echo "the workflows from the Actions tab."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$GENERATE_HTML_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]; then
+          if [ "$PUBLISH_PAGES_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]; then
             {
               echo
               echo "## Manual GitHub Pages step"
@@ -301,6 +196,6 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md README.backup.md config.yaml .reponomics/setup-complete
+          git add README.md README.backup.md .reponomics/setup-complete
           git diff --cached --quiet || git commit -m "chore: set up Reponomics dashboard [skip ci]"
           git push

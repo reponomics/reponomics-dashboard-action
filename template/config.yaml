@@ -1,12 +1,20 @@
-# Reponomics dashboard configuration
-#
-# Setup and output behavior ---------------------------------------------------
+# Reponomics dashboard setup
 
-data_mode: encrypted
-retention_days: 90
-generate_html_dashboard: false
-generate_readme: false
-use_github_app: false
+i_have_read_the_readme: # true/false
+data_mode: # encrypted/plaintext
+publish_pages_dashboard: # true/false
+publish_readme_dashboard: # true/false
+allow_docs_sync: # true/false
+artifact_retention_days: 90 # artifact expiry, not dashboard history length
+use_github_app: false # you may use your own GitHub App installation token if you prefer; this does not refer to a Reponomics Dashboard app
+
+# Reponomics may update docs/reponomics/ before collection when
+# allow_docs_sync is true. Set it to false before editing that directory
+# yourself.
+#
+# artifact_retention_days controls how long each uploaded GitHub Actions
+# artifact remains downloadable if no successor artifact is uploaded. It does
+# not limit how many days the dashboard can keep collecting data.
 
 # Repository selection --------------------------------------------------------
 #
@@ -41,7 +49,3 @@ include_new: false
 # Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
 # them.
 include_private: true
-
-# Reponomics may update docs/reponomics/ before collection after action upgrades.
-# Set to false before editing that directory yourself.
-allow_docs_sync: true

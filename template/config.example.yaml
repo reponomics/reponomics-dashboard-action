@@ -1,21 +1,31 @@
 # Reponomics configuration reference
 #
-# Copy only the settings you want to change into config.yaml. This file is a
-# product-owned example; config.yaml is user-owned.
+# This file shows valid filled values. The generated config.yaml starts with
+# required setup fields that must be completed and committed before setup runs.
 #
 # Compatible action releases may add new optional keys here. If your config.yaml
 # does not mention an optional key, the runtime uses its documented default.
 
 # Setup and output behavior ---------------------------------------------------
 #
-# These keys are written by the setup workflow and may be edited afterward.
 # Public repositories may not use plaintext data mode or README dashboard output.
+# Pages dashboard publication requires encrypted mode.
 
+i_have_read_the_readme: true
 data_mode: encrypted
-retention_days: 90
-generate_html_dashboard: false
-generate_readme: false
+publish_pages_dashboard: true
+publish_readme_dashboard: false
+allow_docs_sync: true
+artifact_retention_days: 90
 use_github_app: false
+
+# Reponomics may update docs/reponomics/ before collection when
+# allow_docs_sync is true.
+#
+# artifact_retention_days controls artifact expiry, not dashboard history
+# length. Retained data can continue accumulating across unbounded collection
+# runs as long as each run uploads a successor dashboard-data artifact before
+# the prior artifact expires.
 
 # Repository selection -------------------------------------------------------
 
@@ -45,12 +55,6 @@ include_new: false
 # Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
 # them.
 include_private: true
-
-# Managed documentation sync -----------------------------------------------
-
-# Reponomics may update docs/reponomics/ before collection after action upgrades.
-# Set this to false before editing that directory yourself.
-allow_docs_sync: true
 
 # No data-family switches are currently supported. The runtime always collects
 # the v1 traffic, referrer, path, and repository growth datasets for the

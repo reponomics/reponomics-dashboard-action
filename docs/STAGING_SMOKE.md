@@ -130,7 +130,7 @@ make staging-smoke-plan STAGING_SMOKE_PHASE=recurring
 
 Recurring mode does not prompt for persistent consumer secrets such as `COLLECTION_TOKEN` or `COMPARISON_SECRET`. It may still prompt for `DASHBOARD_NEXT_SECRET` and the promoted `DASHBOARD_SECRET_DO_NOT_REPLACE` during the key-rotation smoke because changing those secrets is the behavior being tested.
 
-Secret provisioning and setup are separate steps. `gh secret set` writes repository Actions secrets; `setup.yml` consumes workflow inputs and existing secrets to write the generated dashboard config, README/setup marker, and related repository files.
+Secret provisioning and setup are separate steps. `gh secret set` writes repository Actions secrets; `config.yaml` records setup intent and output choices; `setup.yml` validates that config plus the existing secrets, then writes the post-setup README and setup marker.
 
 ## Local Clone Policy
 
@@ -228,7 +228,7 @@ make staging-smoke-reset-fresh CONFIRM_TARGET=reponomics/reponomics-dashboard-st
 
 `staging-smoke-reset-fresh-plan` prepares the fresh tree locally and does not push. `staging-smoke-reset-fresh` force-pushes only when `CONFIRM_TARGET` exactly matches `STAGING_SMOKE_ENCRYPTED_REPO`.
 
-This reset affects the encrypted-fresh repository's git tree/history only. It does not recreate the repository, delete repository settings, or clear Actions secrets. Because the fresh tree no longer contains generated setup files such as `config.yaml` and `.reponomics/setup-complete`, the recurring smoke pass still runs `setup.yml` after the reset.
+This reset affects the encrypted-fresh repository's git tree/history only. It does not recreate the repository, delete repository settings, or clear Actions secrets. Because the fresh tree contains an unfilled generated `config.yaml` and no `.reponomics/setup-complete`, the smoke pass fills and commits `config.yaml`, then runs `setup.yml` after the reset.
 
 The plain-history seed is guarded separately:
 
@@ -283,13 +283,13 @@ Protocol:
 4. Run local gates: make validate-workflows, make verify-workflow-classification, make build-template, make verify-template, make validate-template-action-ref, make template-smoke, make template-consumer-e2e, make publish-template-staging-dry-run. If this is the first empty-repository bootstrap pass and preflight failures match the expected bootstrap checklist, run the local gate driver with `STAGING_SMOKE_ALLOW_BOOTSTRAP=1`.
 5. Confirm or run the staging template publication workflow for the intended source ref.
 6. Reset the encrypted fresh consumer repo codebase from the staging template with `make staging-smoke-reset-fresh CONFIRM_TARGET=<exact encrypted fresh repo>`. This force-pushes the git tree/history only; repository settings and Actions secrets should persist. Do not preserve prior commits as evidence for this profile.
-7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. Run setup after each fresh codebase reset to write the generated repository config with data_mode=encrypted, generate_html_dashboard=true, generate_readme=true, use_github_app=false.
-8. Review `config.yaml` in the encrypted fresh repo after setup. If this smoke pass should cover a specific repository set, commit that config change before running collect-and-publish with skip_collect=false.
+7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. After each fresh codebase reset, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: true`, `allow_docs_sync: true`, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup to validate config and write the setup marker.
+8. Review `config.yaml` in the encrypted fresh repo before setup. If this smoke pass should cover a specific repository set, commit that config change before running collect-and-publish with skip_collect=false.
 9. Validate encrypted fresh outputs: setup marker, docs manifest, README dashboard, dashboard-data artifact, Pages deployment, docs/index.html and assets, collect/publish summaries, no unexpected workflow failures.
 10. Run encrypted key rotation: set DASHBOARD_NEXT_SECRET, dispatch rotate-key with confirm_rotation=true, wait for completion, promote the next key into DASHBOARD_SECRET_DO_NOT_REPLACE, remove DASHBOARD_NEXT_SECRET, then run collect-and-publish again.
 11. Run make staging-smoke-browser-checklist, then browser-test encrypted Pages dashboard with the active dashboard key. Confirm unlock succeeds, charts render, repo selector works, a non-traffic growth metric renders, a traffic metric does not appear clipped, and the collection calendar has expected statuses.
-12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, then run setup to write config with data_mode=plaintext, generate_html_dashboard=false, generate_readme=true, and use_github_app=false.
-13. During bootstrap, review `config.yaml` in the plain history repo after setup and commit any intended repository selection before the first retained-data run. During recurring smoke, preserve the existing config.
+12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: plaintext`, `publish_pages_dashboard: false`, `publish_readme_dashboard: true`, `allow_docs_sync: true`, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup.
+13. During bootstrap, review `config.yaml` in the plain history repo before setup and commit any intended repository selection before the first retained-data run. During recurring smoke, preserve the existing config.
 14. Run collect-and-publish on the plain history repo with skip_collect=false.
 15. Validate plaintext history outputs: README dashboard, dashboard-data artifact containing retained plaintext data, html-dashboard-plaintext artifact, absent Pages configuration, docs manifest, and no unexpected workflow failures.
 16. Download the plaintext html-dashboard-plaintext artifact locally and browser-test it from a temporary local HTTP server. Confirm charts render and the README/dashboard values are coherent with collected data.
@@ -315,14 +315,16 @@ During bootstrap, configure repository secrets:
 - `DASHBOARD_SECRET_DO_NOT_REPLACE`.
 - `COMPARISON_SECRET`, if comparison unlock behavior is part of the pass.
 
-For recurring smoke passes, do not re-enter these persistent secrets unless intentionally rotating or replacing them; preflight should verify that they already exist. Run `Set up Reponomics dashboard` after each fresh codebase reset with:
+For recurring smoke passes, do not re-enter these persistent secrets unless intentionally rotating or replacing them; preflight should verify that they already exist. After each fresh codebase reset, fill and commit `config.yaml` with:
 
 - `data_mode`: `encrypted`
-- `generate_html_dashboard`: `true`
-- `generate_readme`: `true`
+- `publish_pages_dashboard`: `true`
+- `publish_readme_dashboard`: `true`
+- `allow_docs_sync`: `true`
+- `artifact_retention_days`: `90`
 - `use_github_app`: `false`
 
-After setup, review `config.yaml` and commit any intended staging repository selection before collection. The encrypted-fresh codebase is reset every run, so recurring smoke must repeat this review if the desired repository set is not already the setup default.
+Then run `Set up Reponomics dashboard`. Review `config.yaml` before setup and commit any intended staging repository selection before collection. The encrypted-fresh codebase is reset every run, so recurring smoke must repeat this review if the desired repository set is not already the setup default.
 
 Then run `Collect And Publish Reponomics Dashboard` with `skip_collect=false`.
 
@@ -358,14 +360,16 @@ make staging-smoke-seed-plain-history CONFIRM_TARGET=reponomics/reponomics-dashb
 
 The seed helper refuses mismatched confirmation targets, pushes without `--force`, and treats an existing `main` branch as a no-op so the repo can accumulate real retained data across smoke passes.
 
-Run setup with:
+During bootstrap, fill and commit `config.yaml` with:
 
 - `data_mode`: `plaintext`
-- `generate_html_dashboard`: `false`
-- `generate_readme`: `true`
+- `publish_pages_dashboard`: `false`
+- `publish_readme_dashboard`: `true`
+- `allow_docs_sync`: `true`
+- `artifact_retention_days`: `90`
 - `use_github_app`: `false`
 
-During bootstrap, review `config.yaml` and commit the intended staging repository selection before the first retained-data run. Recurring plaintext/history smoke should preserve the existing config unless the test intentionally changes the tracked repository set.
+Then run setup. During bootstrap, review `config.yaml` and commit the intended staging repository selection before the first retained-data run. Recurring plaintext/history smoke should preserve the existing config unless the test intentionally changes the tracked repository set.
 
 Then run `Collect And Publish Reponomics Dashboard` with `skip_collect=false`.
 
@@ -375,7 +379,7 @@ Minimum checks:
 - `dashboard-data` artifact exists and contains retained plaintext files.
 - `html-dashboard-plaintext` artifact exists.
 - Pages configuration must be absent.
-- repeated runs preserve growing retained history within the configured retention window.
+- repeated runs preserve growing retained history as successor `dashboard-data` artifacts are restored and uploaded before artifact expiry.
 - doctor can restore the latest plaintext dashboard artifacts and run successfully.
 
 For browser smoke, download `html-dashboard-plaintext`, serve it locally, and inspect it in a browser. This is deliberately not a hosted Pages check.

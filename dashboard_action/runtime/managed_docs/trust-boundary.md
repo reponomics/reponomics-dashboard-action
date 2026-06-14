@@ -46,7 +46,7 @@ Use an organization repository when you need real separation between:
 
 ## Public Repositories
 
-Public repository Actions artifacts should be treated as publicly accessible. Reponomics therefore requires `data-mode: encrypted` and rejects `data-mode: plaintext` for public repositories.
+Public repository Actions artifacts should be treated as publicly accessible. Reponomics therefore requires `data_mode: encrypted` and rejects `data_mode: plaintext` for public repositories.
 
 Public repositories also reject README dashboard generation because that would commit metrics into public git history. A hosted encrypted Pages dashboard can still disclose metadata such as the existence of the dashboard, update timing, and artifact size even when contents are encrypted.
 

@@ -21,7 +21,7 @@ Your repository owns:
 - the pinned action version
 - retained `dashboard-data` workflow artifacts
 - static post-setup README output
-- optional committed metric README output when `generate_readme` is enabled during setup in a private repository
+- optional committed metric README output when `publish_readme_dashboard` is enabled in a private repository
 - optional Reponomics-managed local documentation under `docs/reponomics/`
 
 Your repository does not store any collected data in git. The dashboard HTML is rendered during `publish`; when hosted dashboard publication is enabled, encrypted dashboards are deployed as GitHub Pages artifacts, and otherwise the rendered dashboard remains a downloadable workflow artifact. The default collect-and-publish run publishes from the fresh `dashboard-data` and `reponomics-collect-provenance` artifacts uploaded by the same workflow run. Manual republish restores the latest retained data and requires collect provenance before rendering. This matters because `overwrite: true` keeps the logical artifact name stable, but each upload still belongs to a specific workflow run.
@@ -38,19 +38,19 @@ For release, dependency, vendored-asset, and generated-artifact verification, se
 
 This template currently supports one collection credential. Fine-grained personal access tokens are scoped to one GitHub resource owner. If one dashboard needs to track repositories under multiple users or organizations, the fine-grained token flow is not the right fit for the current single-token setup. Use a classic PAT with `repo` scope where the relevant organizations allow it. Classic PATs are broader and can access repositories your GitHub account can access.
 
-Advanced option: use a user-owned GitHub App installation token for collection instead of a PAT. Reponomics does not provide or operate a shared collection app; the app, installation scope, and credentials are fully user-owned. In this mode, set workflow/setup input `use_github_app: true`, store `COLLECTION_APP_PRIVATE_KEY` as a repository secret, store `COLLECTION_APP_ID` as a repository variable (or secret), and let the collect workflow mint a short-lived installation token at runtime.
+Advanced option: use a user-owned GitHub App installation token for collection instead of a PAT. Reponomics does not provide or operate a shared collection app; the app, installation scope, and credentials are fully user-owned. In this mode, set `use_github_app: true` in `config.yaml`, store `COLLECTION_APP_PRIVATE_KEY` as a repository secret, store `COLLECTION_APP_ID` as a repository variable (or secret), and let the collect workflow mint a short-lived installation token at runtime.
 
 ## Configuration
 
 `config.yaml` is the active configuration for this repository. It is user-owned: collection and publication runs read it, but do not silently rewrite it.
 
-`config.example.yaml` shows the supported configuration shape. Missing optional keys use runtime defaults; explicit keys in `config.yaml` are treated as your choices.
+`config.example.yaml` shows the supported configuration shape. The setup fields at the top of `config.yaml` are required and explicit keys in `config.yaml` are treated as your choices.
 
-`allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` before collection. The default is `true`. Set `allow_docs_sync: false` before editing that directory yourself. Managed docs sync writes only that namespace, commits with `[skip ci]`, and reports missing write permission without failing collection by default.
+`allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` before collection. Set `allow_docs_sync: false` before editing that directory yourself. Managed docs sync writes only that namespace, commits with `[skip ci]`, and reports missing write permission without failing collection by default.
 
 ## Data Modes
 
-`data-mode` is the disclosure control passed to the action.
+`data_mode` is the disclosure control passed to the action.
 
 | Mode | Retained artifact | Hosted dashboard | Downloadable dashboard artifact | Secret requirement | Intended use |
 | --- | --- | --- | --- | --- | --- |
@@ -76,7 +76,7 @@ The canonical data store is the `dashboard-data` GitHub Actions artifact.
 
 Git history is used for configuration, workflow shells, the static setup README, and optional private-repository metric README output. It is not the analytics database.
 
-The template keeps GitHub Actions artifact retention at the default 90 days, which works across public repositories and default GitHub Actions settings.
+The template starts with `artifact_retention_days: 90`, which can be set from 1 to 90 days. This controls how long each GitHub Actions artifact remains downloadable if no successor artifact is uploaded. It is not the dashboard history window: retained CSV history can continue accumulating across unbounded collection runs as long as each run restores the current `dashboard-data` artifact and uploads the next one before the prior artifact expires.
 
 ## Scheduled Workflow Liveness
 
@@ -84,7 +84,7 @@ GitHub documents that scheduled workflows in public repositories may be disabled
 
 ## Incident Response And Outage Preservation
 
-Ordinary collection outages are handled by artifact retention and active supersession rather than a separate preservation workflow. Collection uploads a successor `dashboard-data` artifact before older superseded artifacts are cleaned up. If collection fails, no successor is uploaded and no cleanup is attempted, so the previous unexpired artifact remains the recovery point.
+Ordinary collection outages are handled by artifact retention and active supersession rather than a separate preservation workflow. Collection uploads a successor `dashboard-data` artifact before older superseded artifacts are cleaned up. If collection fails, no successor is uploaded and no cleanup is attempted, so the previous unexpired artifact remains the recovery point. If scheduled collection stays disabled past artifact expiry, the GitHub-hosted recovery point can expire even though the product does not impose a fixed maximum history length.
 
 `incident-reset` handles suspected dashboard-key exposure. For serious exposure, make the dashboard repository private and disable any published Pages dashboard first. Then set `DASHBOARD_NEXT_SECRET`, run **Actions -> Reset Reponomics dashboard incident history**, and enter the required confirmation strings. The reset restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts it with `DASHBOARD_NEXT_SECRET`, uploads the fresh retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts. The generated workflow has a 30-minute timeout. After the run succeeds, promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`, then delete `DASHBOARD_NEXT_SECRET`.
 
@@ -118,4 +118,4 @@ Normal collection refuses to run while `DASHBOARD_NEXT_SECRET` is set, so rotati
 For a hosted encrypted dashboard, manually configure this repository's **Settings -> Pages** page so **Build and deployment -> Source** is **GitHub Actions**. The Reponomics publish workflow renders the dashboard shell and uploads it as a GitHub Pages artifact only when hosted publication is enabled; retained dashboard data remains in the `dashboard-data` Actions artifact. The action verifies the existing Pages setting during deployment, but it does not enable Pages or change the publishing source. If GitHub suggests workflow templates while you are changing the setting, skip them.
 
 > [!WARNING]
-> Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `data-mode=encrypted` when the hosted dashboard must not disclose metrics to people without the dashboard key.
+> Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `data_mode: encrypted` when the hosted dashboard must not disclose metrics to people without the dashboard key.

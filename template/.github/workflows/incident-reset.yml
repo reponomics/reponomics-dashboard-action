@@ -19,10 +19,6 @@ on:
 permissions:
   contents: read
 
-env:
-  DATA_MODE: "encrypted"
-  RETENTION_DAYS: "90"
-
 jobs:
   reset:
     if: github.ref == 'refs/heads/main'

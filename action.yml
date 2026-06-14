@@ -59,7 +59,7 @@ inputs:
     required: false
     default: "90"
   publish-pages:
-    description: "Set false to render dashboard output without deploying GitHub Pages. Plain mode always disables Pages deployment."
+    description: "Set false to render dashboard output without deploying GitHub Pages. Plaintext mode always disables Pages deployment."
     required: false
     default: "true"
   artifact-run-id:

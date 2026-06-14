@@ -34,3 +34,15 @@ repos:
         entry: make fixtures
         language: system
         pass_filenames: false
+
+      - id: verify-template
+        name: Verify generated template
+        entry: make verify-template
+        language: system
+        pass_filenames: false
+
+      - id: verify-demo
+        name: Verify generated demo
+        entry: make verify-demo
+        language: system
+        pass_filenames: false

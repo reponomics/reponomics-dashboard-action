@@ -59,6 +59,7 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         "CONTRIBUTING.md",
         "SECURITY.md",
         "README.md",
+        "README.backup.md",
         "config.yaml",
         "config.example.yaml",
         ".reponomics/template-provenance.json",
@@ -75,6 +76,8 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
     assert generated_readme == Path("template/README.template.md").read_text(
         encoding="utf-8"
     )
+    generated_backup = (output / "README.backup.md").read_text(encoding="utf-8")
+    assert generated_backup == generated_readme
     assert generated_readme != Path("README.md").read_text(encoding="utf-8")
     assert "This is the setup README for your Reponomics dashboard repository." in (
         generated_readme
@@ -372,16 +375,13 @@ def test_setup_workflow_resolves_data_modes():
     assert "PUBLISH_PAGES_DASHBOARD" in setup
     assert "PUBLISH_README_DASHBOARD" in setup
     assert "README dashboard generation is only supported for private repositories." not in setup
-    assert "cp README.md README.backup.md" in setup
+    assert "cp README.md README.backup.md" not in setup
     assert "cat > README.md <<'MD'" in setup
-    assert setup.index("cp README.md README.backup.md") < setup.index(
-        "cat > README.md <<'MD'"
-    )
     assert "This repository was generated from the [Reponomics Dashboard template repo]" in setup
     assert "allow_docs_sync: false" in setup
     assert "Managed docs sync" in setup
     assert ": > .reponomics/setup-complete" in setup
-    assert "git add README.md README.backup.md .reponomics/setup-complete" in setup
+    assert "git add README.md .reponomics/setup-complete" in setup
     assert '"data_mode": os.environ["DATA_MODE"]' not in setup
     assert '"retention_days": os.environ["RETENTION_DAYS"]' not in setup
     assert "data_mode=plaintext" not in setup

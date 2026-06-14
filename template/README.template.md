@@ -83,4 +83,4 @@ For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics
 
 Reponomics may update managed local documentation under `docs/reponomics/` before future collect runs. It writes only that namespace, commits with `[skip ci]`, and treats missing write permission as advisory. Set `allow_docs_sync: false` before editing `docs/reponomics/` yourself.
 
-During setup, Reponomics saves the original setup README as `README.backup.md` before writing the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs sync.
+The generated repository ships this setup README as `README.backup.md` before setup writes the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs sync.

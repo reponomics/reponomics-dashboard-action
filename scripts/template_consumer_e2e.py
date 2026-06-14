@@ -140,7 +140,7 @@ class ConsumerProfile:
     repo_is_public: bool
     generate_readme: bool
     dashboard_secret: str
-    expected_artifact_mode: str
+    expected_data_mode: str
     expected_publish_pages: bool
     scenario: str = "fixture_baseline"
     expect_error: str = ""
@@ -153,7 +153,7 @@ PROFILES = [
         repo_is_public=False,
         generate_readme=True,
         dashboard_secret="DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789",
-        expected_artifact_mode="encrypted",
+        expected_data_mode="encrypted",
         expected_publish_pages=True,
     ),
     ConsumerProfile(
@@ -162,7 +162,7 @@ PROFILES = [
         repo_is_public=False,
         generate_readme=False,
         dashboard_secret="weak",
-        expected_artifact_mode="encrypted",
+        expected_data_mode="encrypted",
         expected_publish_pages=True,
     ),
     ConsumerProfile(
@@ -171,7 +171,7 @@ PROFILES = [
         repo_is_public=False,
         generate_readme=True,
         dashboard_secret="",
-        expected_artifact_mode="plaintext",
+        expected_data_mode="plaintext",
         expected_publish_pages=False,
     ),
     ConsumerProfile(
@@ -180,7 +180,7 @@ PROFILES = [
         repo_is_public=True,
         generate_readme=False,
         dashboard_secret="",
-        expected_artifact_mode="plaintext",
+        expected_data_mode="plaintext",
         expected_publish_pages=False,
         expect_error="plaintext is only supported for private repositories",
     ),
@@ -395,9 +395,9 @@ def _git_tree(consumer_dir: Path) -> set[str]:
 
 def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> None:
     outputs = _read_github_output(consumer_dir / ".e2e-github-output")
-    if outputs.get("artifact-mode") != profile.expected_artifact_mode:
+    if outputs.get("data-mode") != profile.expected_data_mode:
         raise TemplateConsumerE2EError(
-            f"{profile.name}: artifact-mode={outputs.get('artifact-mode')!r}"
+            f"{profile.name}: data-mode={outputs.get('data-mode')!r}"
         )
     if outputs.get("publish-pages") != str(profile.expected_publish_pages).lower():
         raise TemplateConsumerE2EError(
@@ -408,7 +408,7 @@ def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> 
     if not dashboard_path.is_file():
         raise TemplateConsumerE2EError(f"{profile.name}: dashboard HTML was not rendered")
     dashboard = dashboard_path.read_text(encoding="utf-8")
-    if profile.expected_artifact_mode == "encrypted":
+    if profile.expected_data_mode == "encrypted":
         if "encrypted-dashboard-data" not in dashboard or "export-manifest" not in dashboard:
             raise TemplateConsumerE2EError(f"{profile.name}: encrypted dashboard markers missing")
         if not list((consumer_dir / "docs" / "assets").glob("export-data-*.enc")):

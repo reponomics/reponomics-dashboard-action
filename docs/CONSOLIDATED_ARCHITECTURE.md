@@ -326,7 +326,7 @@ Current controls in `dashboard_action/run_modules/provenance.py`:
 
 - collect writes source repository, source SHA, workflow run ID, action repository, action ref, resolved action SHA, runtime version, data mode, retention settings, Pages setting, and README setting
 - publish can require current runtime/action identity to match collect provenance
-- artifact mode mismatches are rejected
+- data mode mismatches are rejected
 - malformed or cross-repository provenance is rejected
 
 This should remain part of the action runtime, not the template generator. The template only wires the action into user workflows.

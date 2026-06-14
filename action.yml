@@ -90,9 +90,9 @@ outputs:
   collected-at:
     description: Latest manifest update timestamp.
     value: ${{ steps.runtime.outputs.collected-at }}
-  artifact-mode:
-    description: Resolved artifact security mode.
-    value: ${{ steps.runtime.outputs.artifact-mode }}
+  data-mode:
+    description: Resolved data mode.
+    value: ${{ steps.runtime.outputs.data-mode }}
   publish-pages:
     description: Whether this run publishes the rendered dashboard to GitHub Pages.
     value: ${{ steps.runtime.outputs.publish-pages }}
@@ -188,7 +188,7 @@ runs:
         artifact_name: html-dashboard-encrypted
 
     - name: Upload plaintext dashboard artifact
-      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'plaintext' }}
+      if: ${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.data-mode == 'plaintext' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: html-dashboard-plaintext
@@ -197,7 +197,7 @@ runs:
         overwrite: true
 
     - name: Upload encrypted dashboard artifact
-      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.artifact-mode == 'encrypted' }}
+      if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'false' && steps.runtime.outputs.data-mode == 'encrypted' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: html-dashboard-encrypted
@@ -215,7 +215,7 @@ runs:
         overwrite: true
 
     - name: Upload encrypted dashboard data artifact
-      if: ${{ steps.runtime.outputs.artifact-mode == 'encrypted' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
+      if: ${{ steps.runtime.outputs.data-mode == 'encrypted' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data
@@ -224,7 +224,7 @@ runs:
         overwrite: true
 
     - name: Upload dashboard data artifact
-      if: ${{ steps.runtime.outputs.artifact-mode == 'plaintext' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
+      if: ${{ steps.runtime.outputs.data-mode == 'plaintext' && inputs.mode != 'publish' && inputs.mode != 'docs-sync' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data

@@ -51,7 +51,7 @@ def current_source_sha() -> str:
     return _commit_sha(_env("GITHUB_SHA"))
 
 
-def collect_artifact_mode(provenance: CollectProvenance) -> str:
+def collect_data_mode(provenance: CollectProvenance) -> str:
     return provenance.data_mode
 
 
@@ -211,12 +211,12 @@ def validate_collect_provenance(
             raise ActionError(f"Collect provenance {label} is not a commit SHA.")
     if provenance.data_mode not in {"encrypted", "plaintext"}:
         raise ActionError("Collect provenance data mode is invalid.")
-    if collect_artifact_mode(provenance) != config.resolved_artifact_mode:
+    if collect_data_mode(provenance) != config.resolved_data_mode:
         raise ActionError(
-            "Collect provenance artifact mode "
-            + f"{collect_artifact_mode(provenance)} does not match this publish "
-            + f"configuration's artifact mode {config.resolved_artifact_mode}. "
-            + "Run collect again after changing retained artifact data mode."
+            "Collect provenance data mode "
+            + f"{collect_data_mode(provenance)} does not match this publish "
+            + f"configuration's data mode {config.resolved_data_mode}. "
+            + "Run collect again after changing retained data mode."
         )
     try:
         retention_days = int(provenance.retention_days)

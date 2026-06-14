@@ -15,7 +15,6 @@ from dashboard_action import run
 @pytest.fixture(autouse=True)
 def _restore_run_environment() -> Any:
     keys = {
-        "ARTIFACT_SECURITY_MODE",
         "COMPARISON_SECRET",
         "DASHBOARD_ACCESS_MODE",
         "DASHBOARD_KEY",
@@ -604,7 +603,7 @@ def test_publish_rejects_collect_provenance_run_id_mismatch(
         run.run_publish(config)
 
 
-def test_publish_rejects_collect_provenance_artifact_mode_mismatch(
+def test_publish_rejects_collect_provenance_data_mode_mismatch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -637,7 +636,7 @@ def test_publish_rejects_collect_provenance_artifact_mode_mismatch(
     monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
     config = _config_for_run_tests(tmp_path, mode="publish", data_mode="plaintext")
 
-    with pytest.raises(run.ActionError, match="artifact mode encrypted"):
+    with pytest.raises(run.ActionError, match="data mode encrypted"):
         run.run_publish(config)
 
 

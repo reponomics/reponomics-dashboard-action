@@ -636,7 +636,7 @@ def test_input_normalization_from_env(
     assert config.pages_index_path == Path("docs/index.html")
     assert config.data_mode == "encrypted"
     assert config.repo_is_public is expected_repo_is_public
-    assert config.resolved_artifact_mode == "encrypted"
+    assert config.resolved_data_mode == "encrypted"
     assert config.publish_pages is True
     assert config.retention_days == 30
     assert config.generate_readme is False
@@ -712,7 +712,7 @@ def test_use_github_app_input_normalization_from_env(
     (
         "data_mode",
         "publish_pages_requested",
-        "expected_artifact_mode",
+        "expected_data_mode",
         "expected_publish_pages",
     ),
     [
@@ -726,7 +726,7 @@ def test_publish_pages_values_follow_data_mode(
     tmp_path: Path,
     data_mode: str,
     publish_pages_requested: bool,
-    expected_artifact_mode: str,
+    expected_data_mode: str,
     expected_publish_pages: bool,
 ) -> None:
     config = _config(
@@ -736,7 +736,7 @@ def test_publish_pages_values_follow_data_mode(
         dashboard_secret="" if data_mode == "plaintext" else OLD_KEY,
     )
 
-    assert config.resolved_artifact_mode == expected_artifact_mode
+    assert config.resolved_data_mode == expected_data_mode
     assert config.publish_pages is expected_publish_pages
 
 
@@ -921,16 +921,6 @@ def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(run.ActionError):
         run.load_config_from_env()
-
-
-def test_legacy_artifact_security_mode_env_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
-    monkeypatch.setenv("REPONOMICS_ARTIFACT_SECURITY_MODE", "encrypted")
-
-    config = run.load_config_from_env()
-
-    assert config.data_mode == "encrypted"
-    assert config.resolved_artifact_mode == "encrypted"
 
 
 def test_public_plaintext_data_mode_is_rejected(
@@ -1242,7 +1232,7 @@ def test_doctor_dashboard_key_check_rejects_corrupt_chunk_ciphertext(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
     )
 
@@ -1331,7 +1321,7 @@ def test_doctor_treats_empty_encrypted_dashboard_as_semantically_valid(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
     )
 
@@ -1376,7 +1366,7 @@ def test_doctor_treats_empty_plaintext_dashboard_as_semantically_valid(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="plaintext",
+        configured_data_mode="plaintext",
         secrets=[],
     )
 
@@ -1414,7 +1404,7 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
     run.run_doctor(doctor_config)
 
     summary = summary_path.read_text(encoding="utf-8")
-    assert "- Configured artifact mode: `encrypted`" in summary
+    assert "- Configured data mode: `encrypted`" in summary
     assert "- Detected dashboard mode: `encrypted`" in summary
     assert "- Keys cryptographically accepted: `1`" in summary
     assert "| Key cryptographically accepted | `passed` |" in summary
@@ -1439,7 +1429,7 @@ def test_doctor_mode_reports_which_named_secret_decrypts_dashboard(
         f"doctor-report-path={report_path.relative_to(tmp_path).as_posix()}\n"
     )
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert report["configured_artifact_mode"] == "encrypted"
+    assert report["configured_data_mode"] == "encrypted"
     assert report["detected_dashboard_mode"] == "encrypted"
     assert report["key_cryptographically_accepted"] == "passed"
     assert report["export_artifact_valid"] == "passed"
@@ -1469,7 +1459,7 @@ def test_doctor_mode_escapes_warning_workflow_data(
         comparison_secret=NEXT_KEY,
     )
     staged_result = run.doctor_mod.DashboardDoctorResult(
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         detected_dashboard_mode="encrypted",
         dashboard_html_found="passed",
         browser_payload_contract_valid="passed",
@@ -1518,7 +1508,7 @@ def test_doctor_mode_escapes_warning_workflow_data(
     monkeypatch.setattr(
         run.doctor_mod,
         "diagnose_dashboard_artifact",
-        lambda _path, *, configured_artifact_mode, secrets, retained_data_dir: staged_result,
+        lambda _path, *, configured_data_mode, secrets, retained_data_dir: staged_result,
     )
 
     run.run_doctor(config)
@@ -1567,7 +1557,7 @@ def test_doctor_mode_validates_plaintext_dashboard_without_key(
     run.run_doctor(doctor_config)
 
     summary = summary_path.read_text(encoding="utf-8")
-    assert "- Configured artifact mode: `plaintext`" in summary
+    assert "- Configured data mode: `plaintext`" in summary
     assert "- Detected dashboard mode: `plaintext`" in summary
     assert "| Key cryptographically accepted | `skipped` |" in summary
     assert "| Dashboard data semantically consistent | `passed` |" in summary
@@ -1579,7 +1569,7 @@ def test_doctor_mode_validates_plaintext_dashboard_without_key(
             encoding="utf-8"
         )
     )
-    assert report["configured_artifact_mode"] == "plaintext"
+    assert report["configured_data_mode"] == "plaintext"
     assert report["detected_dashboard_mode"] == "plaintext"
     assert report["key_cryptographically_accepted"] == "skipped"
     assert report["retained_data_artifact_decryptable"] == "passed"
@@ -1686,7 +1676,7 @@ def test_doctor_encrypted_browser_contract_rejects_runtime_invalid_envelopes(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
     )
 
@@ -1835,7 +1825,7 @@ def test_doctor_export_diagnostics_detect_ciphertext_tampering(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
     )
 
@@ -1870,7 +1860,7 @@ def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
     )
 
@@ -1904,7 +1894,7 @@ def test_doctor_retained_artifact_decrypts_with_stored_key(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
         retained_data_dir=config.data_dir,
     )
@@ -1942,7 +1932,7 @@ def test_doctor_retained_artifact_reports_wrong_retained_key(
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
         retained_data_dir=config.data_dir,
     )

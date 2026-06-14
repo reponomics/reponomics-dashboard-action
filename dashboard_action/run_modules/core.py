@@ -67,7 +67,7 @@ class RuntimeConfig:
     action_repository: str
 
     @property
-    def resolved_artifact_mode(self) -> str:
+    def resolved_data_mode(self) -> str:
         return self.data_mode
 
     @property

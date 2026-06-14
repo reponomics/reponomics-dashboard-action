@@ -476,7 +476,7 @@ def _doctor_pages_status(stages: list[doctor_mod.DoctorStage]) -> str:
 
 def _doctor_pages_preflight_stages(config: RuntimeConfig) -> list[doctor_mod.DoctorStage]:
     if not config.publish_pages:
-        return _doctor_skipped_pages_stages("publish-pages is disabled for this artifact mode")
+        return _doctor_skipped_pages_stages("publish-pages is disabled for this data mode")
     if not config.github_token:
         return _doctor_skipped_pages_stages("github-token was not provided; Pages API preflight was not run")
 
@@ -603,7 +603,7 @@ def run_doctor(config: RuntimeConfig) -> None:
     ]
     result = doctor_mod.diagnose_dashboard_artifact(
         config.pages_index_path,
-        configured_artifact_mode=config.resolved_artifact_mode,
+        configured_data_mode=config.resolved_data_mode,
         secrets=key_checks,
         retained_data_dir=config.data_dir,
     )
@@ -656,7 +656,7 @@ def run_doctor(config: RuntimeConfig) -> None:
         "",
         f"- Dashboard HTML: `{config.pages_index_path.as_posix()}`",
         f"- JSON report: `{report_path.as_posix()}`",
-        f"- Configured artifact mode: `{result.configured_artifact_mode}`",
+        f"- Configured data mode: `{result.configured_data_mode}`",
         f"- Detected dashboard mode: `{result.detected_dashboard_mode}`",
         f"- Provided keys checked: `{result.provided_secret_count}`",
         f"- Keys cryptographically accepted: `{result.accepted_secret_count}`",
@@ -705,7 +705,7 @@ def run_doctor(config: RuntimeConfig) -> None:
     summaries_mod._write_summary(lines)
 
     encrypted_diagnostics = (
-        result.configured_artifact_mode == "encrypted"
+        result.configured_data_mode == "encrypted"
         or result.detected_dashboard_mode == "encrypted"
     )
     if encrypted_diagnostics and result.provided_secret_count == 0:

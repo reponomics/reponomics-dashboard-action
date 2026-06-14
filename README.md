@@ -106,7 +106,7 @@ The action emits metadata for workflow summaries and later automation:
 
 - `tracked-repos`
 - `collected-at`
-- `artifact-mode`
+- `data-mode`
 - `publish-pages`: `true` when the rendered dashboard is published to GitHub Pages, `false` when it is only uploaded as a workflow artifact
 - `pages-path`: rendered dashboard directory uploaded to Pages or a downloadable dashboard artifact
 - `page-url`

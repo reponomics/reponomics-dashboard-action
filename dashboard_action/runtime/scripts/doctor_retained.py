@@ -17,7 +17,7 @@ import lineage
 import storage
 from doctor_support import (
     EXPECTED_KDF_ITERATIONS,
-    DoctorArtifactMode,
+    DoctorDataMode,
     DoctorSecretResult,
     DoctorStage,
     DoctorStageStatus,
@@ -281,7 +281,7 @@ def _diagnose_plaintext_retained_artifact(data_dir: Path) -> tuple[list[DoctorSt
 def _diagnose_retained_artifact(
     retained_data_dir: Path | None,
     *,
-    configured_mode: DoctorArtifactMode,
+    configured_mode: DoctorDataMode,
     secret_inputs: list[tuple[str, str]],
     secret_results: list[DoctorSecretResult],
 ) -> tuple[list[DoctorStage], DoctorStageStatus]:

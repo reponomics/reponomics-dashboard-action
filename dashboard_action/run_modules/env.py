@@ -146,9 +146,8 @@ def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
     os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
-    os.environ["ARTIFACT_SECURITY_MODE"] = config.resolved_artifact_mode
     os.environ["DASHBOARD_ACCESS_MODE"] = (
-        "public" if config.resolved_artifact_mode == "plaintext" else "encrypted"
+        "public" if config.resolved_data_mode == "plaintext" else "encrypted"
     )
     if config.collection_token:
         os.environ["GH_TOKEN"] = config.collection_token

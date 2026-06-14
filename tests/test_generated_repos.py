@@ -1132,7 +1132,7 @@ def test_template_consumer_e2e_absolutizes_cwd_relative_paths(tmp_path, monkeypa
 
 def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_path):
     (tmp_path / ".e2e-github-output").write_text(
-        "artifact-mode=encrypted\npublish-pages=true\n",
+        "data-mode=encrypted\npublish-pages=true\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "assets").mkdir(parents=True)
@@ -1156,7 +1156,7 @@ def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_pa
         repo_is_public=False,
         generate_readme=False,
         dashboard_secret="DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789",
-        expected_artifact_mode="encrypted",
+        expected_data_mode="encrypted",
         expected_publish_pages=True,
     )
 

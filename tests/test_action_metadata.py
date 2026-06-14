@@ -15,14 +15,14 @@ PAGES_DEPLOYMENT_IF = (
 )
 PLAINTEXT_DASHBOARD_ARTIFACT_IF = (
     "${{ inputs.mode == 'publish' && steps.runtime.outputs.publish-pages == " +
-    "'false' && steps.runtime.outputs.artifact-mode == 'plaintext' }}"
+    "'false' && steps.runtime.outputs.data-mode == 'plaintext' }}"
 )
 ENCRYPTED_DASHBOARD_ARTIFACT_IF = (
     "${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && " +
     "steps.runtime.outputs.publish-pages == 'false' && " +
-    "steps.runtime.outputs.artifact-mode == 'encrypted' }}"
+    "steps.runtime.outputs.data-mode == 'encrypted' }}"
 )
-DATA_ARTIFACT_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
+DATA_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
 
 
 def _action() -> dict:
@@ -312,8 +312,8 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     assert plaintext_dashboard["with"]["name"] == "html-dashboard-plaintext"
     assert encrypted_dashboard["if"] == ENCRYPTED_DASHBOARD_ARTIFACT_IF
     assert encrypted_dashboard["with"]["name"] == "html-dashboard-encrypted"
-    assert DATA_ARTIFACT_MODE_EXCLUSION in encrypted_data["if"]
-    assert DATA_ARTIFACT_MODE_EXCLUSION in plaintext_data["if"]
+    assert DATA_MODE_EXCLUSION in encrypted_data["if"]
+    assert DATA_MODE_EXCLUSION in plaintext_data["if"]
     assert provenance["if"] == "${{ inputs.mode == 'collect' }}"
     assert provenance["with"]["name"] == "reponomics-collect-provenance"
     assert provenance["with"]["path"] == ".reponomics/collect-provenance/collect-provenance.json"

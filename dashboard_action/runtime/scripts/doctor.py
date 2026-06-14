@@ -34,7 +34,7 @@ from doctor_support import (
     DashboardDoctorResult,
     DashboardKeyCheckResult,
     DetectedDashboardMode,
-    DoctorArtifactMode,
+    DoctorDataMode,
     DoctorSecretResult,
     DoctorStage,
     DoctorStageStatus,
@@ -120,26 +120,26 @@ def _parse_dashboard_payload(
     return "unknown", None, stages
 
 
-def _validate_configured_mode(mode: str) -> tuple[DoctorArtifactMode, DoctorStage]:
+def _validate_configured_mode(mode: str) -> tuple[DoctorDataMode, DoctorStage]:
     if mode == "plaintext":
-        return "plaintext", _stage("configured_artifact_mode_recorded", "passed", "configured plaintext mode")
+        return "plaintext", _stage("configured_data_mode_recorded", "passed", "configured plaintext mode")
     if mode == "encrypted":
         return (
             "encrypted",
-            _stage("configured_artifact_mode_recorded", "passed", "configured encrypted mode"),
+            _stage("configured_data_mode_recorded", "passed", "configured encrypted mode"),
         )
     return (
         "encrypted",
         _stage(
-            "configured_artifact_mode_recorded",
+            "configured_data_mode_recorded",
             "failed",
-            f"configured artifact mode {mode!r} is invalid",
+            f"configured data mode {mode!r} is invalid",
         ),
     )
 
 
 def _mode_match_stage(
-    configured_mode: DoctorArtifactMode,
+    configured_mode: DoctorDataMode,
     detected_mode: DetectedDashboardMode,
 ) -> DoctorStage:
     if detected_mode == "unknown":
@@ -929,7 +929,7 @@ def _diagnose_plain_data(data: dict[str, Any]) -> tuple[list[DoctorStage], int, 
 
 def _ui_handoff_stage(
     *,
-    configured_mode: DoctorArtifactMode,
+    configured_mode: DoctorDataMode,
     detected_mode: DetectedDashboardMode,
     stages: list[DoctorStage],
     secret_results: list[DoctorSecretResult],
@@ -937,7 +937,7 @@ def _ui_handoff_stage(
 ) -> DoctorStage:
     prerequisites = {
         "dashboard_html_found",
-        "configured_artifact_mode_recorded",
+        "configured_data_mode_recorded",
         "detected_dashboard_mode_recorded",
         "configured_detected_mode_match",
         "dashboard_script_json_valid",
@@ -1004,13 +1004,13 @@ def _ui_handoff_stage(
 def diagnose_dashboard_artifact(
     dashboard_html_path: Path,
     *,
-    configured_artifact_mode: str = "encrypted",
+    configured_data_mode: str = "encrypted",
     secrets: list[tuple[str, str]] | None = None,
     chunk_limit: int | None = None,
     retained_data_dir: Path | None = None,
 ) -> DashboardDoctorResult:
     """Run staged diagnostics for a rendered dashboard HTML artifact."""
-    configured_mode, configured_stage = _validate_configured_mode(configured_artifact_mode)
+    configured_mode, configured_stage = _validate_configured_mode(configured_data_mode)
     stages: list[DoctorStage] = [configured_stage]
     secret_inputs = secrets or []
     secret_results: list[DoctorSecretResult] = []
@@ -1032,7 +1032,7 @@ def diagnose_dashboard_artifact(
             ]
         )
         return DashboardDoctorResult(
-            configured_artifact_mode=configured_mode,
+            configured_data_mode=configured_mode,
             detected_dashboard_mode="unknown",
             dashboard_html_found="failed",
             browser_payload_contract_valid="skipped",
@@ -1165,7 +1165,7 @@ def diagnose_dashboard_artifact(
     }
     combined_data_stages = stages + data_stages
     return DashboardDoctorResult(
-        configured_artifact_mode=configured_mode,
+        configured_data_mode=configured_mode,
         detected_dashboard_mode=detected_mode,
         dashboard_html_found=_status_from_stages(stages, {"dashboard_html_found"}),
         browser_payload_contract_valid=_status_from_stages(stages, browser_stage_names),
@@ -1216,7 +1216,7 @@ def check_dashboard_key(
     """Check whether a supplied key decrypts an encrypted dashboard HTML artifact."""
     result = diagnose_dashboard_artifact(
         dashboard_html_path,
-        configured_artifact_mode="encrypted",
+        configured_data_mode="encrypted",
         secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", dashboard_key)],
         chunk_limit=chunk_limit,
     )

@@ -9,27 +9,21 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-try:
-    from scripts.repo_paths import find_repo_root
-    from scripts.staging_smoke_preflight import (
-        DEFAULT_ENCRYPTED_FRESH,
-        DEFAULT_OWNER,
-        DEFAULT_PLAIN_HISTORY,
-        DEFAULT_TEMPLATE_STAGING,
-    )
-except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
-    from staging_smoke_preflight import (  # type: ignore[import-not-found,no-redef]
-        DEFAULT_ENCRYPTED_FRESH,
-        DEFAULT_OWNER,
-        DEFAULT_PLAIN_HISTORY,
-        DEFAULT_TEMPLATE_STAGING,
-    )
+if __package__ in {None, ""}:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.repo_paths import find_repo_root
+from scripts.staging_smoke.preflight import (
+    DEFAULT_ENCRYPTED_FRESH,
+    DEFAULT_OWNER,
+    DEFAULT_PLAIN_HISTORY,
+    DEFAULT_TEMPLATE_STAGING,
+)
 
 
 ROOT = find_repo_root(Path(__file__))
-SLOW_GH = "venv/bin/python scripts/slow_gh.py"
-WAIT_RUN = "venv/bin/python scripts/staging_smoke_wait_for_run.py"
+SLOW_GH = "venv/bin/python scripts/staging_smoke/slow_gh.py"
+WAIT_RUN = "venv/bin/python scripts/staging_smoke/wait_for_run.py"
 
 LOCAL_GATES = (
     "make validate-workflows",

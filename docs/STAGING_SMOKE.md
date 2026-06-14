@@ -91,7 +91,7 @@ The command does not print secret values. It only checks whether required secret
 
 Override repository names with `STAGING_SMOKE_TEMPLATE_REPO`, `STAGING_SMOKE_ENCRYPTED_REPO`, and `STAGING_SMOKE_PLAIN_REPO` if the staging fleet uses different names.
 
-The staging helpers deliberately run slowly. `make staging-smoke-preflight`, `make staging-smoke-plan`, and `make staging-smoke-run` default to a one-second delay around GitHub CLI/API work. The smoke plan emits GitHub commands through `scripts/slow_gh.py`, so commands copied from the plan are throttled too. Increase `STAGING_SMOKE_GH_DELAY_SECONDS` if a run is hitting secondary rate limits or if several agents are operating against the same repos:
+The staging helpers deliberately run slowly. `make staging-smoke-preflight`, `make staging-smoke-plan`, and `make staging-smoke-run` default to a one-second delay around GitHub CLI/API work. The smoke plan emits GitHub commands through `scripts/staging_smoke/slow_gh.py`, so commands copied from the plan are throttled too. Increase `STAGING_SMOKE_GH_DELAY_SECONDS` if a run is hitting secondary rate limits or if several agents are operating against the same repos:
 
 ```sh
 make staging-smoke-run STAGING_SMOKE_GH_DELAY_SECONDS=3

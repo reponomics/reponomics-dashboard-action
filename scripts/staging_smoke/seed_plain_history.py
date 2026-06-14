@@ -10,15 +10,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-try:
-    from scripts.repo_paths import find_repo_root
-    from scripts.staging_smoke_preflight import DEFAULT_PLAIN_HISTORY, DEFAULT_TEMPLATE_STAGING
-except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
-    from staging_smoke_preflight import (  # type: ignore[import-not-found,no-redef]
-        DEFAULT_PLAIN_HISTORY,
-        DEFAULT_TEMPLATE_STAGING,
-    )
+if __package__ in {None, ""}:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.repo_paths import find_repo_root
+from scripts.staging_smoke.preflight import DEFAULT_PLAIN_HISTORY, DEFAULT_TEMPLATE_STAGING
 
 
 ROOT = find_repo_root(Path(__file__))

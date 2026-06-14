@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-try:
-    from scripts.repo_paths import find_repo_root
-except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
+if __package__ in {None, ""}:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.repo_paths import find_repo_root
 
 
 ROOT = find_repo_root(Path(__file__))

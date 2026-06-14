@@ -12,18 +12,18 @@ import yaml
 
 from scripts import build_template
 from scripts import publish_generated_repo
-from scripts import staging_smoke_browser_checklist
-from scripts import staging_smoke_evidence
-from scripts import staging_smoke_live_order
-from scripts import staging_smoke_provision
-from scripts import staging_smoke_reset_fresh
-from scripts import staging_smoke_seed_plain_history
-from scripts import staging_smoke_wait_for_run
 from scripts import template_contract
 from scripts import template_consumer_e2e
 from scripts import template_provenance
-from scripts import staging_smoke_run
 from scripts import verify_workflow_classification
+from scripts.staging_smoke import browser_checklist as staging_smoke_browser_checklist
+from scripts.staging_smoke import evidence as staging_smoke_evidence
+from scripts.staging_smoke import live_order as staging_smoke_live_order
+from scripts.staging_smoke import provision as staging_smoke_provision
+from scripts.staging_smoke import reset_fresh as staging_smoke_reset_fresh
+from scripts.staging_smoke import run as staging_smoke_run
+from scripts.staging_smoke import seed_plain_history as staging_smoke_seed_plain_history
+from scripts.staging_smoke import wait_for_run as staging_smoke_wait_for_run
 
 
 ACTION_YML_FIXTURE = """
@@ -587,19 +587,19 @@ def test_action_repo_has_template_publication_targets():
     assert "STAGING_SMOKE_ALLOW_BOOTSTRAP ?= 0" in makefile
     assert "STAGING_SMOKE_REPORT ?= .tmp/staging-smoke/report.md" in makefile
     assert "STAGING_SMOKE_BROWSER_CHECKLIST ?= .tmp/staging-smoke/browser-checklist.md" in makefile
-    assert "scripts/staging_smoke_live_order.py" in makefile
-    assert "scripts/staging_smoke_browser_checklist.py" in makefile
-    assert "scripts/staging_smoke_provision.py" in makefile
-    assert "scripts/staging_smoke_reset_fresh.py" in makefile
-    assert "scripts/staging_smoke_seed_plain_history.py" in makefile
+    assert "scripts/staging_smoke/live_order.py" in makefile
+    assert "scripts/staging_smoke/browser_checklist.py" in makefile
+    assert "scripts/staging_smoke/provision.py" in makefile
+    assert "scripts/staging_smoke/reset_fresh.py" in makefile
+    assert "scripts/staging_smoke/seed_plain_history.py" in makefile
     assert "--command-delay-seconds $(STAGING_SMOKE_GH_DELAY_SECONDS)" in makefile
     assert "--write-report-template $(STAGING_SMOKE_REPORT)" in makefile
     assert '--confirm-target "$(CONFIRM_TARGET)"' in makefile
-    assert "scripts/staging_smoke_preflight.py" in makefile
-    assert "scripts/staging_smoke_evidence.py" in makefile
-    assert "scripts/staging_smoke_run.py" in makefile
-    assert Path("scripts/slow_gh.py").exists()
-    assert Path("scripts/staging_smoke_wait_for_run.py").exists()
+    assert "scripts/staging_smoke/preflight.py" in makefile
+    assert "scripts/staging_smoke/evidence.py" in makefile
+    assert "scripts/staging_smoke/run.py" in makefile
+    assert Path("scripts/staging_smoke/slow_gh.py").exists()
+    assert Path("scripts/staging_smoke/wait_for_run.py").exists()
     assert "scripts/publish_generated_repo.py" in makefile
 
 
@@ -630,7 +630,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert "STAGING_SMOKE_ALLOW_BOOTSTRAP=1" in runbook
     assert "DISPATCH_TEMPLATE_STAGING=1" in runbook
     assert "STAGING_SMOKE_GH_DELAY_SECONDS" in runbook
-    assert "scripts/slow_gh.py" in runbook
+    assert "scripts/staging_smoke/slow_gh.py" in runbook
     assert ".tmp/staging-smoke/report.md" in runbook
     assert "PAT-only" in runbook
     assert "Rotate Reponomics dashboard key" in runbook
@@ -676,7 +676,7 @@ def test_staging_smoke_provision_defaults_to_private_staging_repos():
     ]
     for spec in specs:
         command = staging_smoke_provision._create_command(spec)
-        assert "scripts/slow_gh.py repo create" in command
+        assert "scripts/staging_smoke/slow_gh.py repo create" in command
         assert "--private" in command
         assert "--disable-issues" in command
         assert "--disable-wiki" in command
@@ -689,7 +689,7 @@ def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     result = subprocess.run(
         [
             "venv/bin/python",
-            "scripts/staging_smoke_run.py",
+            "scripts/staging_smoke/run.py",
             "--source-repo",
             "owner/action",
             "--source-ref",
@@ -718,14 +718,14 @@ def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     assert "STAGING_SMOKE_GH_DELAY_SECONDS=2.0" in output
     assert "COLLECTION_TOKEN" in output
     assert "COLLECTION_APP_PRIVATE_KEY" not in output
-    assert "venv/bin/python scripts/slow_gh.py workflow run publish-template-staging.yml" in output
+    assert "venv/bin/python scripts/staging_smoke/slow_gh.py workflow run publish-template-staging.yml" in output
     assert "--workflow publish-template-staging.yml --branch 'main' --created-after \"$started_at\"" in output
-    assert "venv/bin/python scripts/slow_gh.py workflow run setup.yml" in output
+    assert "venv/bin/python scripts/staging_smoke/slow_gh.py workflow run setup.yml" in output
     assert "Review encrypted config before collection" in output
     assert "Review plain-history config before first collection" in output
-    assert "venv/bin/python scripts/staging_smoke_wait_for_run.py" in output
+    assert "venv/bin/python scripts/staging_smoke/wait_for_run.py" in output
     assert "--created-after \"$started_at\"" in output
-    assert "venv/bin/python scripts/slow_gh.py workflow run rotate-key.yml" in output
+    assert "venv/bin/python scripts/staging_smoke/slow_gh.py workflow run rotate-key.yml" in output
     assert "use_github_app=false" in output
     assert "make staging-smoke-reset-fresh-plan" in output
     assert "make staging-smoke-reset-fresh" in output
@@ -733,8 +733,8 @@ def test_staging_smoke_runner_outputs_throttled_commands_and_report(tmp_path):
     assert "make staging-smoke-seed-plain-history" in output
     assert "make staging-smoke-evidence" in output
     assert "make staging-smoke-browser-checklist" in output
-    assert "venv/bin/python scripts/slow_gh.py api repos/owner/encrypted-fresh/pages" in output
-    assert "venv/bin/python scripts/slow_gh.py run download '<plain-collect-run-id>'" in output
+    assert "venv/bin/python scripts/staging_smoke/slow_gh.py api repos/owner/encrypted-fresh/pages" in output
+    assert "venv/bin/python scripts/staging_smoke/slow_gh.py run download '<plain-collect-run-id>'" in output
     assert "--yes" not in output
     assert report.exists()
     report_text = report.read_text(encoding="utf-8")
@@ -752,7 +752,7 @@ def test_staging_smoke_runner_recurring_uses_persistent_secrets(tmp_path):
     result = subprocess.run(
         [
             "venv/bin/python",
-            "scripts/staging_smoke_run.py",
+            "scripts/staging_smoke/run.py",
             "--source-repo",
             "owner/action",
             "--source-ref",

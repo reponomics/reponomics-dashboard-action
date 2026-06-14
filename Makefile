@@ -54,17 +54,17 @@ staging-smoke-instructions: ## Show the manual staging smoke runbook for local C
 	@cat docs/STAGING_SMOKE.md
 
 staging-smoke-live-order: install ## Show the concise live staging smoke command order
-	$(PYTHON) scripts/staging_smoke_live_order.py
+	$(PYTHON) scripts/staging_smoke/live_order.py
 
 staging-smoke-provision-plan: install ## Print one-time staging repo provisioning commands without creating repos
-	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_provision.py \
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/provision.py \
 		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
 		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
 
 staging-smoke-provision: install ## Create missing private staging repos; secrets remain manual
-	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_provision.py \
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/provision.py \
 		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
@@ -72,7 +72,7 @@ staging-smoke-provision: install ## Create missing private staging repos; secret
 		--execute
 
 staging-smoke-plan: install ## Print the guarded staging smoke execution plan
-	$(PYTHON) scripts/staging_smoke_run.py \
+	$(PYTHON) scripts/staging_smoke/run.py \
 		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
 		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
@@ -84,7 +84,7 @@ staging-smoke-plan: install ## Print the guarded staging smoke execution plan
 		--write-report-template $(STAGING_SMOKE_REPORT)
 
 staging-smoke-preflight: install ## Check local/GitHub prerequisites for staging smoke repos
-	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_preflight.py \
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/preflight.py \
 		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
@@ -92,42 +92,42 @@ staging-smoke-preflight: install ## Check local/GitHub prerequisites for staging
 		--collection-mode $(STAGING_SMOKE_COLLECTION_MODE)
 
 staging-smoke-reset-fresh-plan: install ## Build fresh encrypted staging tree without force-pushing
-	$(PYTHON) scripts/staging_smoke_reset_fresh.py \
+	$(PYTHON) scripts/staging_smoke/reset_fresh.py \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO)
 
 staging-smoke-reset-fresh: install ## Force-reset encrypted fresh repo; requires CONFIRM_TARGET exact repo
-	$(PYTHON) scripts/staging_smoke_reset_fresh.py \
+	$(PYTHON) scripts/staging_smoke/reset_fresh.py \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
 		--execute \
 		--confirm-target "$(CONFIRM_TARGET)"
 
 staging-smoke-seed-plain-history-plan: install ## Build seed tree for empty plain history repo without pushing
-	$(PYTHON) scripts/staging_smoke_seed_plain_history.py \
+	$(PYTHON) scripts/staging_smoke/seed_plain_history.py \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
 
 staging-smoke-seed-plain-history: install ## Seed empty plain history repo without force-push; requires CONFIRM_TARGET exact repo
-	$(PYTHON) scripts/staging_smoke_seed_plain_history.py \
+	$(PYTHON) scripts/staging_smoke/seed_plain_history.py \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \
 		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO) \
 		--execute \
 		--confirm-target "$(CONFIRM_TARGET)"
 
 staging-smoke-evidence: install ## Read-only evidence checks for completed staging smoke repos
-	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke_evidence.py \
+	STAGING_SMOKE_GH_DELAY_SECONDS=$(STAGING_SMOKE_GH_DELAY_SECONDS) $(PYTHON) scripts/staging_smoke/evidence.py \
 		--encrypted-fresh-repo $(STAGING_SMOKE_ENCRYPTED_REPO) \
 		--plain-history-repo $(STAGING_SMOKE_PLAIN_REPO)
 
 staging-smoke-browser-checklist: install ## Write the staging browser smoke checklist
-	$(PYTHON) scripts/staging_smoke_browser_checklist.py \
+	$(PYTHON) scripts/staging_smoke/browser_checklist.py \
 		--encrypted-pages-url "$(STAGING_SMOKE_ENCRYPTED_PAGES_URL)" \
 		--plain-local-url "$(STAGING_SMOKE_PLAIN_LOCAL_URL)" \
 		--output $(STAGING_SMOKE_BROWSER_CHECKLIST)
 
 staging-smoke-run: install ## Run local staging smoke gates; set DISPATCH_TEMPLATE_STAGING=1 to dispatch staging publication
-	$(PYTHON) scripts/staging_smoke_run.py \
+	$(PYTHON) scripts/staging_smoke/run.py \
 		--source-repo $(STAGING_SMOKE_SOURCE_REPO) \
 		--source-ref $(STAGING_SMOKE_SOURCE_REF) \
 		--template-staging-repo $(STAGING_SMOKE_TEMPLATE_REPO) \

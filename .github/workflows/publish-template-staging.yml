@@ -61,7 +61,6 @@ jobs:
         run: |
           set -euo pipefail
           make verify-workflow-classification
-          make build-template
           make verify-template
           make validate-template-action-ref
           make template-smoke

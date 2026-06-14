@@ -144,7 +144,7 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "token" not in checkout_step["with"]
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
     assert "make verify-workflow-classification" in commands
-    assert "make build-template" in commands
+    assert "make build-template" not in commands
     assert "make verify-template" in commands
     assert "make validate-template-action-ref" in commands
     assert "make template-smoke" in commands
@@ -201,7 +201,7 @@ def test_publish_template_staging_workflow_targets_staging_repo_only() -> None:
         "Template staging publication is restricted to main or release tags" in workflow_text
     )
     assert "make verify-workflow-classification" in commands
-    assert "make build-template" in commands
+    assert "make build-template" not in commands
     assert "make verify-template" in commands
     assert "make validate-template-action-ref" in commands
     assert "make template-smoke" in commands
@@ -232,6 +232,7 @@ def test_ci_runs_generated_template_gates() -> None:
     commands = [step["run"] for step in steps if "run" in step]
 
     assert "make verify-workflow-classification" in commands
+    assert "make build-and-verify-generated" in commands
     assert "make template-smoke" in commands
     assert "make template-consumer-e2e" in commands
     assert "make publish-template-dry-run" in commands

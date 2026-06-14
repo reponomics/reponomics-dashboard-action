@@ -101,7 +101,6 @@ The demo unlock panel is rendered only when `build_encrypted_html(..., demo_unlo
 Build and verify the demo:
 
 ```sh
-make build-demo
 make verify-demo
 ```
 
@@ -160,4 +159,4 @@ Because the demo will eventually refresh daily, previous target workflow runs wi
 - Keep retained canonical CSV data out of the published git tree.
 - Keep demo unlock behavior out of `action.yml` and the public action input surface.
 - Treat `.github/workflows/seed-and-publish-demo-dashboard.yml` as demo target infrastructure, not as a template workflow users should copy as setup guidance.
-- If renderer APIs change, `make build-demo` and `make verify-demo` should fail before publication.
+- If renderer APIs change, `make verify-demo` should fail before publication.

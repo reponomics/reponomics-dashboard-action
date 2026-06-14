@@ -212,7 +212,6 @@ make verify-workflow-classification
 If a setup change affects real generated-repository behavior, also run:
 
 ```sh
-make build-template
 make verify-template
 make template-smoke
 make template-consumer-e2e
@@ -280,7 +279,7 @@ Protocol:
 1. Inspect git status and confirm the source repo is on the intended branch/ref.
 2. Run make staging-smoke-plan to review the intended smoke sequence and target repositories.
 3. Run make staging-smoke-preflight. If this is the first bootstrap pass, use its failures as a checklist; otherwise resolve required failures before continuing.
-4. Run local gates: make validate-workflows, make verify-workflow-classification, make build-template, make verify-template, make validate-template-action-ref, make template-smoke, make template-consumer-e2e, make publish-template-staging-dry-run. If this is the first empty-repository bootstrap pass and preflight failures match the expected bootstrap checklist, run the local gate driver with `STAGING_SMOKE_ALLOW_BOOTSTRAP=1`.
+4. Run local gates: make validate-workflows, make verify-workflow-classification, make verify-template, make validate-template-action-ref, make template-smoke, make template-consumer-e2e, make publish-template-staging-dry-run. If this is the first empty-repository bootstrap pass and preflight failures match the expected bootstrap checklist, run the local gate driver with `STAGING_SMOKE_ALLOW_BOOTSTRAP=1`.
 5. Confirm or run the staging template publication workflow for the intended source ref.
 6. Reset the encrypted fresh consumer repo codebase from the staging template with `make staging-smoke-reset-fresh CONFIRM_TARGET=<exact encrypted fresh repo>`. This force-pushes the git tree/history only; repository settings and Actions secrets should persist. Do not preserve prior commits as evidence for this profile.
 7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. After each fresh codebase reset, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: true`, `allow_docs_sync: true`, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup to validate config and write the setup marker.

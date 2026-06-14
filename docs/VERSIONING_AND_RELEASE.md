@@ -145,7 +145,6 @@ make validate
 make test
 make coverage
 make verify-workflow-classification
-make build-template
 make verify-template
 make validate-template-action-ref
 make template-smoke
@@ -157,7 +156,6 @@ make publish-template-staging-dry-run
 For demo-affecting changes, also run:
 
 ```sh
-make build-demo
 make verify-demo
 make publish-demo-dry-run
 ```
@@ -180,7 +178,7 @@ The `.github/workflows/publish-demo.yml` workflow supports both manual publicati
 Daily demo refresh must not require human approval. Demo publication has two operator modes:
 
 - manual publication for unusual refs, recovery, or release-time confirmation;
-- scheduled daily refresh from an approved source ref, without required reviewers, with no arbitrary `source_ref` input, and with the demo publication app token minted only after `make build-demo`, `make verify-demo`, and dry-run validation pass.
+- scheduled daily refresh from an approved source ref, without required reviewers, with no arbitrary `source_ref` input, and with the demo publication app token minted only after `make verify-demo` and dry-run validation pass.
 
 The demo publication app is the primary blast-radius control. Keep it installed only on `reponomics-dashboard-demo`, keep its requested permissions limited to the current publication needs, and configure `DEMO_PUBLISH_APP_CLIENT_ID` plus `DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository. With that app installation scope, a separate approval environment is optional ceremony rather than a required security boundary.
 

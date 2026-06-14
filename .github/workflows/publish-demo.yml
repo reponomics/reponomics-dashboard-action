@@ -84,7 +84,6 @@ jobs:
       - name: Build and verify generated demo
         run: |
           set -euo pipefail
-          make build-demo
           make verify-demo
           DEMO_REMOTE="https://github.com/${DEMO_EXPECTED_REPO}.git" make publish-demo-dry-run
 

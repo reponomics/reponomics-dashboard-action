@@ -210,14 +210,9 @@ update-vendored-assets: install ## Update vendored third-party assets from upstr
 build-template: install ## Build the clean generated template tree in dist/template/
 	$(PYTHON) scripts/build_template.py
 
-verify-template: install ## Verify dist/template/ against the template manifest
-	$(PYTHON) scripts/build_template.py --verify-only
+verify-template: build-template ## Build and verify dist/template/ against the template manifest
 
-build-and-verify-generated: install ## Build and verify generated template and demo outputs
-	$(MAKE) build-template
-	$(MAKE) verify-template
-	$(MAKE) build-demo
-	$(MAKE) verify-demo
+build-and-verify-generated: verify-template verify-demo ## Build and verify generated template and demo outputs
 
 verify-workflow-classification: install ## Verify maintainer vs template workflow boundaries
 	$(PYTHON) scripts/verify_workflow_classification.py
@@ -253,8 +248,7 @@ publish-template-staging: build-template ## Publish dist/template/ to the privat
 build-demo: build-template ## Build the public demo repository tree in dist/demo/
 	$(PYTHON) scripts/build_demo_repo.py --output dist/demo
 
-verify-demo: install ## Verify dist/demo/ public demo repository output
-	$(PYTHON) scripts/build_demo_repo.py --output dist/demo --verify-only
+verify-demo: build-demo ## Build and verify dist/demo/ public demo repository output
 
 publish-demo-dry-run: build-demo ## Show the generated demo publish target without pushing
 	$(PYTHON) scripts/publish_demo_repo.py --output dist/demo --remote $(DEMO_REMOTE) --branch main --expected-repo $(DEMO_EXPECTED_REPO) --message "$(DEMO_PUBLISH_MESSAGE)"

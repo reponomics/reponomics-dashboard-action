@@ -28,7 +28,6 @@ WAIT_RUN = "venv/bin/python scripts/staging_smoke/wait_for_run.py"
 LOCAL_GATES = (
     "make validate-workflows",
     "make verify-workflow-classification",
-    "make build-template",
     "make verify-template",
     "make validate-template-action-ref",
     "make template-smoke",

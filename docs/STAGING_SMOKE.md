@@ -180,6 +180,45 @@ Commands that dispatch generated staging workflows also include a local wait ste
 
 Secret-setting commands are deliberately interactive in this first runbook. Do not run those commands in a non-interactive batch unless you have replaced them with an explicit local secret source.
 
+## Maintaining The Protocol
+
+Expect this protocol to change when setup, collection, publication, key rotation, doctor, or repository-auth flows change. The intended update cost should be low: most changes should touch `scripts/staging_smoke/run.py`, the relevant verifier in `scripts/staging_smoke/`, this document, and the staging-smoke tests in `tests/test_generated_repos.py`.
+
+When the generated setup flow changes:
+
+- Update the generated template workflow first, then rebuild and verify the template.
+- Update the matching operation in `scripts/staging_smoke/run.py`; setup input changes usually belong in the "Run encrypted setup" operation, the "Seed or preserve plain-history consumer" operation, or both.
+- Update `scripts/staging_smoke/preflight.py` if the required workflow files, required secrets, variables, or repository prerequisites changed.
+- Update `scripts/staging_smoke/evidence.py` if the success evidence changed, for example new artifacts, renamed artifacts, changed Pages expectations, new setup markers, or changed managed-docs manifest paths.
+- Update `scripts/staging_smoke/browser_checklist.py` if the user-visible dashboard behavior or unlock flow changed.
+- Update `scripts/staging_smoke/live_order.py`, this runbook, and the internal quick runbooks if the operator sequence changed.
+- Add or adjust tests in `tests/test_generated_repos.py` for the changed command sequence and evidence expectations.
+- Run the focused staging-smoke tests before relying on the new protocol.
+
+When a workflow ref, branch, or tag handling rule changes, update `scripts/staging_smoke/wait_for_run.py` rather than duplicating normalization at call sites. When a new remote write is introduced, keep it out of the executable local phase unless there is a deliberate operator confirmation or exact target guard.
+
+The adaptation checklist is:
+
+```sh
+make staging-smoke-plan
+make staging-smoke-plan STAGING_SMOKE_PHASE=bootstrap
+make staging-smoke-browser-checklist
+venv/bin/python -m ruff check scripts/staging_smoke tests/test_generated_repos.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 venv/bin/python -m pytest tests/test_generated_repos.py -k staging_smoke -q
+make validate-workflows
+make verify-workflow-classification
+```
+
+If a setup change affects real generated-repository behavior, also run:
+
+```sh
+make build-template
+make verify-template
+make template-smoke
+make template-consumer-e2e
+make publish-template-staging-dry-run
+```
+
 The encrypted-fresh reset is guarded separately:
 
 ```sh

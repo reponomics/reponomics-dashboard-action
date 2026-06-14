@@ -209,10 +209,15 @@ def _write_env(values: dict[str, str]) -> None:
 
 def _validate_env_assignment(key: str, value: str) -> None:
     if not ENV_KEY_RE.match(key):
-        raise ValueError(f"Internal error: invalid environment key {key!r}.")
+        raise ValueError(
+            f"Configuration validation error: invalid environment key {key!r}."
+        )
+    # The following condition should not be reachable -
+    # Defense in depth for future config values before writing GitHub env files.
     if any(character in value for character in ("\r", "\n")):
         raise ValueError(
-            f"Internal error: environment value for {key} contains a newline."
+            "Configuration validation error: "
+            + f"environment value for {key} contains a newline."
         )
 
 

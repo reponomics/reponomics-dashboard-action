@@ -43,6 +43,11 @@ def _repo_url(repo: str) -> str:
     return f"https://github.com/{repo}.git"
 
 
+def _configure_git_author(repo_dir: Path) -> None:
+    _run(["git", "config", "user.name", "Reponomics Staging Smoke"], cwd=repo_dir)
+    _run(["git", "config", "user.email", "reponomics-staging-smoke@example.invalid"], cwd=repo_dir)
+
+
 def _default_branch(repo: str) -> str | None:
     result = _run(
         ["gh", "repo", "view", repo, "--json", "defaultBranchRef"],
@@ -64,6 +69,7 @@ def build_seed_tree(template_repo: str, work_dir: Path) -> Path:
     _run(["gh", "repo", "clone", template_repo, str(template_dir), "--", "--depth=1"], cwd=ROOT)
     shutil.rmtree(template_dir / ".git")
     _run(["git", "init", "-b", "main"], cwd=template_dir)
+    _configure_git_author(template_dir)
     _run(["git", "add", "-A"], cwd=template_dir)
     _run(["git", "commit", "-m", "chore: seed plain history staging template"], cwd=template_dir)
     return template_dir

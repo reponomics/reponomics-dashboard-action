@@ -53,6 +53,14 @@ def _parse_timestamp(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def _normalize_ref_name(ref: str) -> str:
+    if ref.startswith("refs/heads/"):
+        return ref.removeprefix("refs/heads/")
+    if ref.startswith("refs/tags/"):
+        return ref.removeprefix("refs/tags/")
+    return ref
+
+
 def _run_json(args: list[str]) -> Any:
     result = subprocess.run(
         args,
@@ -133,12 +141,13 @@ def select_run(
 
 def wait_for_run(args: argparse.Namespace) -> dict[str, Any]:
     created_after = _parse_timestamp(args.created_after)
+    branch = _normalize_ref_name(args.branch)
     deadline = time.monotonic() + args.timeout_seconds
     selected_id: int | None = None
     selected_url = ""
 
     while time.monotonic() <= deadline:
-        runs = _list_runs(args.repo, args.workflow, args.branch)
+        runs = _list_runs(args.repo, args.workflow, branch)
         if selected_id is None:
             selected = select_run(runs, created_after=created_after, event=args.event)
             if selected is not None:
@@ -170,7 +179,7 @@ def wait_for_run(args: argparse.Namespace) -> dict[str, Any]:
                 "Timed out waiting for workflow run",
                 f"repo={args.repo!r}",
                 f"workflow={args.workflow!r}",
-                f"branch={args.branch!r}",
+                f"branch={branch!r}",
                 f"created_after={args.created_after!r}",
             ]
         )

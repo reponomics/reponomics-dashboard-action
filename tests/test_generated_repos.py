@@ -869,6 +869,25 @@ def test_staging_smoke_reset_fresh_requires_exact_target_confirmation():
         raise AssertionError("expected reset_fresh to reject mismatched target")
 
 
+def test_staging_smoke_reset_fresh_configures_local_git_author(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run(args, *, cwd):
+        calls.append((args, cwd))
+
+    monkeypatch.setattr(staging_smoke_reset_fresh, "_run", fake_run)
+
+    staging_smoke_reset_fresh._configure_git_author(tmp_path)
+
+    assert calls == [
+        (["git", "config", "user.name", "Reponomics Staging Smoke"], tmp_path),
+        (
+            ["git", "config", "user.email", "reponomics-staging-smoke@example.invalid"],
+            tmp_path,
+        ),
+    ]
+
+
 def test_staging_smoke_seed_plain_history_requires_exact_target_confirmation():
     args = staging_smoke_seed_plain_history.parse_args(
         [
@@ -886,6 +905,25 @@ def test_staging_smoke_seed_plain_history_requires_exact_target_confirmation():
         assert "--confirm-target must exactly match" in str(exc)
     else:
         raise AssertionError("expected seed_plain_history to reject mismatched target")
+
+
+def test_staging_smoke_seed_plain_history_configures_local_git_author(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run(args, *, cwd):
+        calls.append((args, cwd))
+
+    monkeypatch.setattr(staging_smoke_seed_plain_history, "_run", fake_run)
+
+    staging_smoke_seed_plain_history._configure_git_author(tmp_path)
+
+    assert calls == [
+        (["git", "config", "user.name", "Reponomics Staging Smoke"], tmp_path),
+        (
+            ["git", "config", "user.email", "reponomics-staging-smoke@example.invalid"],
+            tmp_path,
+        ),
+    ]
 
 
 def test_staging_smoke_evidence_print_counts_required_failures(capsys):
@@ -961,6 +999,12 @@ def test_staging_smoke_wait_for_run_selects_latest_matching_dispatch():
 
     assert selected is not None
     assert selected["databaseId"] == 3
+
+
+def test_staging_smoke_wait_for_run_normalizes_full_refs():
+    assert staging_smoke_wait_for_run._normalize_ref_name("refs/heads/main") == "main"
+    assert staging_smoke_wait_for_run._normalize_ref_name("refs/tags/v0.23.2") == "v0.23.2"
+    assert staging_smoke_wait_for_run._normalize_ref_name("feature/demo") == "feature/demo"
 
 
 def test_template_consumer_e2e_defaults_to_local_action_repo():

@@ -17,7 +17,6 @@ publish_pages_dashboard: true
 publish_readme_dashboard: false
 allow_docs_sync: true
 artifact_retention_days: 90
-use_github_app: false
 
 # Reponomics may update docs/reponomics/ before collection when
 # allow_docs_sync is true.
@@ -59,3 +58,9 @@ include_private: true
 # No data-family switches are currently supported. The runtime always collects
 # the v1 traffic, referrer, path, and repository growth datasets for the
 # repositories selected above.
+
+# Advanced collection token mode ---------------------------------------------
+
+# Keep false unless you bring your own GitHub App installation token workflow.
+# Reponomics does not provide or operate a shared collection app.
+use_github_app: false

@@ -9,7 +9,7 @@ The Reponomics Dashboard template repo uses a pre-defined set of template workfl
 
 ## Setup
 
-To get started, you must edit the `config.yaml` file according to your preferences and then commit the file changes. Afer that, you must run the `setup` workflow before any other template workflow will run. This workflow reads the `config.yaml`, ensures that it is valid, and then writes a `setup-complete` marker file to `.reponomics/setup-complete`. (The purpose of this gate is to prevent any other workflows from running before you have made your configuration selections.) The other workflows are gated on the existence of this file and also read and validate the config each time. If you decide to change your mind about any of your initial configuration choices, you can simply edit `config.yaml` and commit the changes, and the edits will flow through to the workflows, assuming the new configuration is valid and accepted. The `setup` workflow also over-writes the template's initial root `README.md` - either with a markdown dashboard, if you opt in to this and your repo is private, or with a generic post-setup notice otherwise. The original root `README.md` will be available at `README.backup.md` for future reference, if needed.
+To get started, you must edit the `config.yaml` file according to your preferences and then commit the file changes. After that, you must run the `setup` workflow before any other template workflow will run. This workflow reads the `config.yaml`, ensures that it is valid, and then writes an empty, non-secret `setup-complete` marker file to `.reponomics/setup-complete`. (The purpose of this gate is to prevent any other workflows from running before you have made your configuration selections.) The other workflows are gated on the existence of this file and also read and validate the config each time. If `.reponomics/setup-complete` is deleted, normal workflow work pauses until setup writes the marker again or you deliberately recreate it after completing `config.yaml`; if you intentionally complete `config.yaml` and manage setup manually, recreating the empty marker is acceptable. If you decide to change your mind about any of your initial configuration choices, you can simply edit `config.yaml` and commit the changes, and the edits will flow through to the workflows, assuming the new configuration is valid and accepted. The `setup` workflow also over-writes the template's initial root `README.md` - either with a markdown dashboard, if you opt in to this and your repo is private, or with a generic post-setup notice otherwise. The original root `README.md` will be available at `README.backup.md` for future reference, if needed.
 
 ## Config Options - Reference
 
@@ -22,7 +22,6 @@ publish_pages_dashboard: true
 publish_readme_dashboard: false
 allow_docs_sync: true
 artifact_retention_days: 90
-use_github_app: false
 ```
 
 `publish_pages_dashboard: true` requires `data_mode: encrypted`. Public repositories must use `data_mode: encrypted` and cannot enable `publish_readme_dashboard`.
@@ -35,5 +34,7 @@ Example `config.yaml` opt-out:
 ```yaml
 allow_docs_sync: false
 ```
+
+`use_github_app: false` appears near the bottom of `config.yaml` as an advanced collection-token option. Leave it `false` unless you bring your own GitHub App installation token workflow. Reponomics does not provide or operate a shared collection app.
 
 Repository selection remains caller-owned. Managed docs sync does not mutate `config.yaml`, write retained CSV data to git, or write outside `docs/reponomics/`, or the root `README.md` if `publish-readme-dashboard` is selected.

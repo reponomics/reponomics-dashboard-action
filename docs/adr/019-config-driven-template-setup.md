@@ -25,7 +25,6 @@ publish_pages_dashboard: # true/false
 publish_readme_dashboard: # true/false
 allow_docs_sync: # true/false
 artifact_retention_days: 90 # artifact expiry, not dashboard history length
-use_github_app: false # you may use your own GitHub App installation token if you prefer; this does not refer to a Reponomics Dashboard app
 ```
 
 Setup validates this file before making repository changes. It fails closed when required fields are blank, malformed, or incompatible with repository visibility and privacy rules.
@@ -51,7 +50,7 @@ The setup marker is a repository file, not a tamper-proof capability. A user may
 
 - Keep one setup marker for now. Because setup cannot proceed until the user commits explicit `config.yaml` choices, the marker only needs to represent completed setup, not every individual option.
 - Keep `artifact_retention_days: 90` in the template because it matches GitHub's usual default and is safer than a shorter initial expiry window.
-- Keep `use_github_app: false` as an explicit starting value because it is an advanced collection-token option and should not be confused with a Reponomics-operated app.
+- Keep `use_github_app: false` as an explicit advanced option near the bottom of `config.yaml`, outside the first setup-choice block, because it is only for user-owned GitHub App installation token workflows and should not be confused with a Reponomics-operated app.
 - Do not silently rewrite `config.yaml` during setup. The file is user-owned configuration, and setup should validate it rather than normalize or mutate it.
 - Keep the action's lower-level inputs available for workflow-to-action plumbing. The generated workflows now resolve user intent from `config.yaml` and pass the resulting values into the action.
 

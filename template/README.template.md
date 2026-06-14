@@ -35,7 +35,6 @@ publish_pages_dashboard: true
 publish_readme_dashboard: false
 allow_docs_sync: true
 artifact_retention_days: 90
-use_github_app: false
 
 max_repos: 200
 
@@ -52,8 +51,8 @@ include_others: true
 include_new: false
 include_private: true
 
-# Optional: disable Reponomics-managed local docs updates.
-allow_docs_sync: true
+# Advanced: use only with your own GitHub App installation token workflow.
+use_github_app: false
 ```
 
 If `include_only` is non-empty, Reponomics tracks exactly those repositories and ignores the automatic pool. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).

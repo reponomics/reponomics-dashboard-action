@@ -333,6 +333,8 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "resolve-reponomics-config.py --require-setup" in keepalive
     assert "60 days without repository activity" in keepalive
     assert ".reponomics/setup-complete" in resolver
+    assert "commit the generated setup marker" not in resolver
+    assert "let setup validate the config and write the setup marker" in resolver
     assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
     assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
     assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver

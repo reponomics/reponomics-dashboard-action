@@ -229,7 +229,8 @@ def main() -> int:
             "## Reponomics setup required",
             "",
             "Fill in `config.yaml`, run **Actions -> Set up Reponomics dashboard**, "
-            + "and commit the generated setup marker before this workflow does work.",
+            + "and let setup validate the config and write the setup marker "
+            + "before this workflow does work.",
         )
         return 0
 

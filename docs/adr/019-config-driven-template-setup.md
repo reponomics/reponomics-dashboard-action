@@ -43,6 +43,8 @@ Setup no longer accepts workflow-dispatch inputs for these choices. Once validat
 
 After the marker exists, operational workflows still resolve `config.yaml` at runtime rather than relying on values captured during setup. This preserves a simple rule: committed configuration controls current behavior, while the setup marker records that the repository completed initial validation and enablement.
 
+The setup marker is a repository file, not a tamper-proof capability. A user may bypass the setup workflow by deliberately creating `.reponomics/setup-complete` after filling `config.yaml`, and that is acceptable for manually managed repositories. Therefore setup should stay responsible for the smallest practical bootstrap surface, and operational workflows must not rely on setup-specific side effects beyond the marker's presence.
+
 `artifact_retention_days` remains an artifact-expiry setting only. It does not limit how long the dashboard can collect data; retained dashboard history can continue across unbounded scheduled runs as long as each run restores the current `dashboard-data` artifact and uploads a successor before the prior artifact expires.
 
 ## Decision Points
@@ -58,6 +60,7 @@ After the marker exists, operational workflows still resolve `config.yaml` at ru
 - First setup becomes more auditable: a pull request or commit diff shows the privacy and publication choices before workflows are enabled.
 - Setup failures should be earlier and clearer when a public repository asks for plaintext data or a public README dashboard.
 - Generated workflows must keep a lightweight config-resolution step in each operational job that depends on data mode, publication targets, retention, docs sync, or GitHub App collection.
+- Operational workflows must keep validating `config.yaml` at runtime because the setup marker may be created by the setup workflow or deliberately by the repository owner.
 - Template tests need to cover both generated workflow shape and resolver failure modes because the config file is now part of the action/template contract.
 - Existing copied repositories from pre-public releases may need coordinated migration or reset before beta if their workflows still depend on setup dispatch inputs.
 

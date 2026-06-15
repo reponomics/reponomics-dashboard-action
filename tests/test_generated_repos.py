@@ -13,6 +13,7 @@ import yaml
 from scripts import build_template
 from scripts import publish_generated_repo
 from scripts import template_contract
+from scripts import template_compat_e2e
 from scripts import template_consumer_e2e
 from scripts import template_provenance
 from scripts import verify_workflow_classification
@@ -973,6 +974,59 @@ def test_staging_smoke_wait_for_run_normalizes_full_refs():
 
 def test_template_consumer_e2e_defaults_to_local_action_repo():
     assert template_consumer_e2e.DEFAULT_ACTION_REPO == Path.cwd()
+
+
+def test_template_compat_default_ref_uses_template_contract(tmp_path):
+    contract = tmp_path / "template-contract.yml"
+    contract.write_text(
+        """
+schema_version: 1
+template_version: 0.10.1
+action_repository: reponomics/reponomics-dashboard-action
+default_action_ref: v0
+compatible_action_major: 0
+min_action_version: 0.23.5
+managed_docs_namespace: docs/reponomics
+""",
+        encoding="utf-8",
+    )
+
+    assert template_compat_e2e.default_template_ref(contract) == "reponomics-dashboard-v0.10.1"
+
+
+def test_template_compat_rejects_removed_action_inputs(tmp_path):
+    repo_dir = tmp_path / "repo"
+    workflow_dir = repo_dir / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "collect-and-publish.yml").write_text(
+        """
+name: Collect and Publish
+jobs:
+  dashboard:
+    steps:
+      - uses: reponomics/reponomics-dashboard-action@v0
+        with:
+          mode: publish
+          removed-input: true
+""",
+        encoding="utf-8",
+    )
+    template = template_compat_e2e.GeneratedTemplateRelease(
+        template_ref="reponomics-dashboard-v0.1.0",
+        source_commit="abc123",
+        repo_dir=repo_dir,
+        template_version="0.1.0",
+        compatibility_line="v0",
+    )
+
+    with pytest.raises(
+        template_compat_e2e.TemplateCompatibilityError,
+        match="removed-input",
+    ):
+        template_compat_e2e._assert_template_workflow_inputs_supported(
+            template,
+            action_inputs={"mode"},
+        )
 
 
 def test_template_consumer_e2e_resolves_composite_runtime_env():

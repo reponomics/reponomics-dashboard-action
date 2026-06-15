@@ -26,6 +26,10 @@ After a major consolidation or other release-cadence reset, it is reasonable to 
 
 The project is still on the `v0` action/template compatibility line. Before public beta, intentional breaking changes are still allowed when they simplify the product. Once live beta users exist, treat backwards compatibility within `v0` as a real commitment unless a breaking beta reset is explicitly announced and coordinated.
 
+`template-contract.yml` records the template version used by the current compatibility gate. The gate materializes the matching `reponomics-dashboard-v*` template release tag in a temporary tree and runs the candidate action against that generated output. Older template copies may work, but they are not part of the stated release-gate claim unless explicitly tested with `scripts/template_compat_e2e.py --template-ref`.
+
+Treat the tested template release as binding by default, even before public beta. If an action release intentionally breaks that compatibility target, the release PR should make that break explicit by changing `template-contract.yml` or the compatibility-gate invocation in the same review, with release notes calling out the reset.
+
 Action changes are breaking when they invalidate a previously published template contract within the declared compatible action major. Examples include removing inputs or outputs used by generated workflows, changing mode semantics, changing required secrets without migration behavior, or changing retained-artifact/provenance formats without compatibility handling.
 
 Template changes are breaking when newly copied repositories require different user setup, repository permissions, secrets, Pages behavior, or action capabilities than older template versions required.
@@ -81,9 +85,10 @@ Action releases are managed by `.github/workflows/release-please.yml`. Release P
 Before merging an action release PR:
 
 1. Confirm normal CI is green.
-2. Confirm any intended staging/soak period is complete.
-3. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
-4. Confirm the changelog entry and SemVer bump match the change.
+2. Confirm `make template-compat-e2e` passes for the intended template compatibility target.
+3. Confirm any intended staging/soak period is complete.
+4. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
+5. Confirm the changelog entry and SemVer bump match the change.
 
 After the action release:
 
@@ -149,6 +154,7 @@ make verify-template
 make validate-template-action-ref
 make template-smoke
 make template-consumer-e2e
+make template-compat-e2e
 make publish-template-dry-run
 make publish-template-staging-dry-run
 ```

@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-compat-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -28,6 +28,7 @@ TEMPLATE_STAGING_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-st
 TEMPLATE_STAGING_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging
 TEMPLATE_STAGING_PUBLISH_MESSAGE ?= chore: publish generated template staging
 TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
+TEMPLATE_COMPAT_REF ?=
 DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
 DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
@@ -225,6 +226,9 @@ template-smoke: build-template ## Smoke-test ephemeral template publish and gene
 
 template-consumer-e2e: build-template ## Run generated template consumers against the local action runtime
 	$(PYTHON) scripts/template_consumer_e2e.py --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
+
+template-compat-e2e: install ## Run candidate action against a generated template release ref
+	$(PYTHON) scripts/template_compat_e2e.py $(if $(TEMPLATE_COMPAT_REF),--template-ref $(TEMPLATE_COMPAT_REF),) --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
 
 template-action-boundary-e2e: build-template ## Run the generated-template composite action.yml boundary check
 	$(PYTHON) scripts/template_consumer_e2e.py --composite-boundary --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)

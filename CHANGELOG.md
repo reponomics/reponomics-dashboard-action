@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.4](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.3...v0.23.4) (2026-06-15)
+
+
+### Code Refactoring
+
+* harden config and refactor defaults ([4707adf](https://github.com/reponomics/reponomics-dashboard-action/commit/4707adf30e89bb01039d9b6d1ec23fdbd8a0a943))
+
 ## [0.23.3](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.2...v0.23.3) (2026-06-14)
 
 

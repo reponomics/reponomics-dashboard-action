@@ -55,7 +55,7 @@ inputs:
     required: false
     default: config.yaml
   retention-days:
-    description: GitHub Actions artifact retention period.
+    description: GitHub Actions artifact retention period, from 14 to 90 days.
     required: false
     default: "90"
   publish-pages:

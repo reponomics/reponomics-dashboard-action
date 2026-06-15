@@ -79,7 +79,7 @@ The canonical data store is the `dashboard-data` GitHub Actions artifact.
 
 Git history is used for configuration, workflow shells, the static setup README, and optional private-repository metric README output. It is not the analytics database.
 
-The template starts with `artifact_retention_days: 90`, which can be set from 1 to 90 days. This controls how long each GitHub Actions artifact remains downloadable if no successor artifact is uploaded. It is not the dashboard history window: retained CSV history can continue accumulating across unbounded collection runs as long as each run restores the current `dashboard-data` artifact and uploads the next one before the prior artifact expires.
+The template starts with `artifact_retention_days: 90`, which can be set from 14 to 90 days. This controls how long each GitHub Actions artifact remains downloadable if no successor artifact is uploaded. It is not the dashboard history window: retained CSV history can continue accumulating across unbounded collection runs as long as each run restores the current `dashboard-data` artifact and uploads the next one before the prior artifact expires.
 
 ## Scheduled Workflow Liveness
 

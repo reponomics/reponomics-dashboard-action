@@ -23,6 +23,8 @@ CONFIG_KEYS = {
 
 REQUIRED_KEYS = tuple(CONFIG_KEYS)
 VALID_DATA_MODES = {"encrypted", "plaintext"}
+MIN_RETENTION_DAYS = 14
+MAX_RETENTION_DAYS = 90
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$")
 
@@ -149,8 +151,11 @@ def _resolve(config_path: Path) -> dict[str, str]:
         retention_days = int(_required_scalar(scalars, "artifact_retention_days"))
     except ValueError as exc:
         raise ValueError("artifact_retention_days must be an integer.") from exc
-    if retention_days < 1 or retention_days > 90:
-        raise ValueError("artifact_retention_days must be between 1 and 90.")
+    if retention_days < MIN_RETENTION_DAYS or retention_days > MAX_RETENTION_DAYS:
+        raise ValueError(
+            "artifact_retention_days must be between "
+            f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
+        )
 
     publish_pages = _bool(
         _required_scalar(scalars, "publish_pages_dashboard"),

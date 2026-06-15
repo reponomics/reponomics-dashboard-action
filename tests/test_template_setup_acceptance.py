@@ -248,6 +248,19 @@ def test_setup_config_resolver_rejects_public_plaintext(tmp_path: Path) -> None:
     assert "data_mode=plaintext is only supported for private repositories" in result.stderr
 
 
+def test_setup_config_resolver_rejects_short_artifact_retention(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, artifact_retention_days="13")
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "artifact_retention_days must be between 14 and 90" in result.stderr
+
+
 def test_setup_config_resolver_rejects_control_character_payload(
     tmp_path: Path,
 ) -> None:

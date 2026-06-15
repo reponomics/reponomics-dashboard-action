@@ -153,8 +153,8 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "true")
-    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "0")
-    with pytest.raises(run.ActionError, match="retention-days must be between 1 and 90"):
+    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "13")
+    with pytest.raises(run.ActionError, match="retention-days must be between 14 and 90"):
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "not-an-int")

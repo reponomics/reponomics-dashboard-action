@@ -93,7 +93,7 @@ Advanced users may use a user-owned GitHub App installation token instead of a P
 | `incident-confirm-irreversible` | Destructive `incident-reset` confirmation; must be `IRREVERSIBLE_ACTION_CONFIRMED` when `mode: incident-reset`. | `""` |
 | `data-mode` | Data storage model. Allowed values: `encrypted`, `plaintext`. Public repositories must use `encrypted`; `plaintext` is private-repository only. | `encrypted` |
 | `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
-| `retention-days` | GitHub Actions artifact retention period (1-90 days). | `90` |
+| `retention-days` | GitHub Actions artifact retention period (14-90 days). | `90` |
 | `publish-pages` | Set `false` to keep rendered dashboards as downloadable workflow artifacts instead of deploying GitHub Pages. Plaintext mode always disables Pages deployment. | `true` |
 | `artifact-run-id` | Optional workflow run ID whose `dashboard-data` artifact should be restored. Use this when a downstream publish run must render the artifact produced by a specific collect run. If set, a missing or unreadable artifact fails the run. | Latest available `dashboard-data` artifact. |
 | `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |

@@ -27,6 +27,8 @@ REQUIRED_SETUP_CONFIG_KEYS = (
     "artifact_retention_days",
     "use_github_app",
 )
+MIN_RETENTION_DAYS = 14
+MAX_RETENTION_DAYS = 90
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
@@ -92,8 +94,10 @@ def _parse_retention_days(raw: str) -> int:
         value = int(raw)
     except ValueError as exc:
         raise ActionError(f"retention-days must be an integer, got {raw!r}.") from exc
-    if value < 1 or value > 90:
-        raise ActionError("retention-days must be between 1 and 90.")
+    if value < MIN_RETENTION_DAYS or value > MAX_RETENTION_DAYS:
+        raise ActionError(
+            f"retention-days must be between {MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
+        )
     return value
 
 

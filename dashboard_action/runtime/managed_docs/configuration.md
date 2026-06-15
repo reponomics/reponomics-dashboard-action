@@ -18,7 +18,7 @@ To get started, you must edit the `config.yaml` file according to your preferenc
 
 The setup fields at the top of `config.yaml` represent important user preferences and do not ship with default values.
 
-- `i_have_read_the_readme`: required boolean; set to `true` after you have read the setup README.
+- `i_have_read_the_readme`: required boolean; set to `true` after you have read the root README. (NOTE: This is only meant to emphasize the importance of "reading the manual" - it does not represent any legal agreement, and any legal requirements are summarized in the template repo's LICENSE file)
 
 - `data_mode`: required string; `encrypted` stores retained dashboard data encrypted, while `plaintext` stores it unencrypted and is only supported in private repositories.
 
@@ -28,7 +28,7 @@ The setup fields at the top of `config.yaml` represent important user preference
 
 - `allow_docs_sync`: required boolean; when `true`, allow the action to update managed documentation in `docs/reponomics/`.
 
-- `artifact_retention_days`: integer from `1` to `90`; controls GitHub Actions artifact expiry, not how long the dashboard can keep collecting data.
+- `artifact_retention_days`: integer from `14` to `90`; controls GitHub Actions artifact expiry, not how long the dashboard can keep collecting data.
 
 - `use_github_app`: boolean; when `true`, collection uses a user-owned GitHub App installation token instead of `COLLECTION_TOKEN` as a PAT.
 

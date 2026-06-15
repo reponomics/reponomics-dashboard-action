@@ -74,7 +74,7 @@ The canonical store is the `dashboard-data` Actions artifact.
 - Hosted encrypted dashboard publication is optional and requires GitHub Pages to use GitHub Actions as the deployment source.
 - Plain-mode HTML dashboards are private-repository downloadable artifacts only and are not published to Pages.
 - Metric README dashboard generation is only available in private repositories.
-- `artifact_retention_days` controls GitHub Actions artifact expiry, not the dashboard history length. The dashboard can keep collecting indefinitely as long as scheduled runs continue restoring and replacing the `dashboard-data` artifact before it expires.
+- `artifact_retention_days` controls GitHub Actions artifact expiry, not the dashboard history length, and must be between 14 and 90 days. The dashboard can keep collecting indefinitely as long as scheduled runs continue restoring and replacing the `dashboard-data` artifact before it expires.
 
 For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics/privacy-configuration-matrix.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
 

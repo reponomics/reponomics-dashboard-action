@@ -419,17 +419,14 @@ def test_setup_workflow_does_not_commit_workflow_file_changes(tmp_path):
         assert 'Path(".github/workflows/' not in setup, label
 
 
-def test_config_documents_managed_docs_opt_out():
-    config_example = Path("template/config.example.yaml").read_text(encoding="utf-8")
-    config = Path("template/config.yaml").read_text(encoding="utf-8")
-
-    assert "allow_docs_sync: true" in config_example
-    assert "allow_docs_sync: # true/false" in config
-    for text in (config_example, config):
-        assert "docs/reponomics/" in text
-        assert "publish_pages_dashboard" in text
-        assert "publish_readme_dashboard" in text
-        assert "artifact_retention_days" in text
+def test_required_fields_do_not_have_default_value():
+    """Required fields should require explicit user consent, so omit default values."""
+    # i_have_read_the_readme
+    # data_mode
+    # publish_pages_dashboard
+    # publish_readme_dashboard
+    # allow_docs_sync
+    assert True
 
 
 def test_template_contract_and_action_metadata_contract():

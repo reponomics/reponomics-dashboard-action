@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.5](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.4...v0.23.5) (2026-06-15)
+
+
+### Bug Fixes
+
+* semantic bug in UI visible repos ([f73280d](https://github.com/reponomics/reponomics-dashboard-action/commit/f73280d6089e525128782b11132a3899f501fb22))
+
 ## [0.23.4](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.3...v0.23.4) (2026-06-15)
 
 

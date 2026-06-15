@@ -18,21 +18,39 @@ To get started, you must edit the `config.yaml` file according to your preferenc
 
 The setup fields at the top of `config.yaml` represent important user preferences and do not ship with default values.
 
-- `i_have_read_the_readme`
+- `i_have_read_the_readme`: required boolean; set to `true` after you have read the setup README.
 
-- `data_mode`
+- `data_mode`: required string; `encrypted` stores retained dashboard data encrypted, while `plaintext` stores it unencrypted and is only supported in private repositories.
 
-- `publish_pages_dashboard`
+- `publish_pages_dashboard`: required boolean; when `true`, publish an HTML dashboard through GitHub Pages and require `data_mode: encrypted`.
 
-- `publish_readme_dashboard`
+- `publish_readme_dashboard`: required boolean; when `true`, publish a markdown/SVG metrics dashboard to the repository `README.md`; only supported in private repositories.
 
-- `allow_docs_sync` indicates whether you want the Reponomics Dashboard action to automatically update the documentation inside the diretory `docs/reponomics/`. We recommend that you enable this option, especially if you decide to upgrade the version of the action used in your repo, however since it requires granting the action permission to write to the contents of your repo, we make it easy you to opt out.
+- `allow_docs_sync`: required boolean; when `true`, allow the action to update managed documentation in `docs/reponomics/`.
+
+- `artifact_retention_days`: integer from `1` to `90`; controls GitHub Actions artifact expiry, not how long the dashboard can keep collecting data.
+
+- `use_github_app`: boolean; when `true`, collection uses a user-owned GitHub App installation token instead of `COLLECTION_TOKEN` as a PAT.
+
+- `max_repos`: positive integer; caps how many repositories the dashboard tracks.
+
+- `include_only`: list of `owner/repo` names; when non-empty, track only these repositories and ignore automatic discovery.
+
+- `include`: list of `owner/repo` names; always include these repositories when the collection token can access them.
+
+- `exclude`: list of `owner/repo` names; never include these repositories through automatic selection.
+
+- `include_others`: boolean; when `true`, fill remaining `max_repos` slots from automatically discovered eligible repositories.
+
+- `include_new`: boolean; when `true`, allow repositories created after the initial automatic-selection baseline into the automatic pool.
+
+- `include_private`: boolean; when `true`, allow private repositories into the automatic pool when the collection token can access them.
 
 ## Constraints
 
 There are some configurations that the Dashboard action currently does not support. That's not because we wish to limit your choices, but because they have a strong potential to expose data that we assume most users would prefer to keep private, and we try to design things so that it's really, really hard for users to expose their data without modifying the software. Ideally, if a user prefers one of these options, it won't be too hard for them to modify the software to suit their needs.
 
-In general, we just try to limit options that involve publishing or storing unencrypted data in a publicly accessible way. For public repos, this covers everything, including the workflow logs and artifact storage system. Workflow artifacts in public repositories may be accessed and downloaded by anyone whatsoever, via the API, CLI, or Web UI, including authenticated requests. So, we do not permit `plaintext` data-mode in public repositories. Except for users with a GHES plan, GitHub Pages sites are also accessible to the general public, regardless of the repo's visibility (public or private). So, we don't support publishing Pages dashboards in `encrypted` data-mode, even for private repos.
+In general, we just try to limit options that involve publishing or storing unencrypted data in a publicly accessible way. For public repos, this covers everything, including the workflow logs and artifact storage system. Workflow artifacts in public repositories may be accessed and downloaded by anyone whatsoever, via the API, CLI, or Web UI, including authenticated requests. So, we do not permit `plaintext` data-mode in public repositories. Except for users with a GHES plan, GitHub Pages sites are also accessible to the general public, regardless of the repo's visibility (public or private). So, we don't support publishing Pages dashboards in `plaintext` data-mode, even for private repos.
 
 The following configuration choices are not supported, and the workflows will fail closed if they are found in the `config.yaml`:
 

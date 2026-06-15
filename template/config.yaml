@@ -1,47 +1,79 @@
-# Reponomics dashboard configuration
+###   <<<<<-- reponomics. ( ( ( <<< *|* >>> ) ) ) .configuration -->>>>>>>>   #
+# $#$#$#$#$#$////////////. . .|||||||||||||||. . . \\\\\\\\\\\\$#$#$#$#$#$#   #
+# $#$#$#$#$#$\\\\\\\\\\\\.....REQUIRED FIELDS......////////////$#$#$#$#$#$#   #
+#                                                                             #
+# Set to true if you have read the README.md                                  #
+i_have_read_the_readme: # true/false                                          #
+#                                                                             #
+# If you select `encrypted`, your data will be encrypted with the repository  #
+# secret that *you* have generated - please read DASHBOARD_ESSENTIALS.md      #
+# so that you can make an informed decision.                                  #
+# If you select `plaintext`, your data will be stored in unencrypted form.    #
+# In order to prevent "Compromise through Configuration",                     #
+# this option is only allowed for *private* repositories.                     #
+# This choice does not have any impact on what type of data you collect.      #
+data_mode: # encrypted/plaintext                                              #
+#                                                                             #
+# Set to `true` if you want to publish an HTML dashboard to the repo's        #
+# GitHub Pages site. You must also manually enable GitHub Pages in            #
+# the repository settings. See DASHBOARD_ESSENTIAILS.md for more info.        #
+# This option is only available in combination with encrypted data-mode.      #
+publish_pages_dashboard: # true/false                                         #
+#                                                                             #
+# Set to `true` if you want to publish a markdown + SVG dashboard to          #
+# the repository README. Only available for private repos.                    #
+publish_readme_dashboard: # true/false                                        #
+#                                                                             #
+# Set to `true` if you want to receive automatic updates to the Dashboard     #
+# documentation files in `docs/reponomics/` - updates will be written         #
+# directly to that directory by the action when it runs collection.           #
+allow_docs_sync: # true/false                                                 #
+#                                                                             #
+# $#$#$#$#$#$\\\\\\\\\\\\\\\ ?????????????????? ///////////////$#$#$#$#$#$#   #
+# $#$#$#$#$#$/////////////// ?????????????????? \\\\\\\\\\\\\\\$#$#$#$#$#$#   #
 #
-# Setup and output behavior ---------------------------------------------------
-
-data_mode: encrypted
-retention_days: 90
-generate_html_dashboard: false
-generate_readme: false
+# The number of days that a specific set of dashboard data will be stored in
+# GitHub artifact storage before it is deleted - this pertains to how long
+# backup data will be saved if there is a long-term dashboard outage.
+# Must be between 14 and 90 days.
+# See DASHBOARD_ESSENTIALS.md for more details.
+artifact_retention_days: 90
+#
+# Set to `true` if you prefer to use a GitHub App installation token
+# to query the GitHub API instead of a Personal Access Token (PAT).
+# Reponomics does not offer a public app for the Reponomics Dashboard.
 use_github_app: false
-
-# Repository selection --------------------------------------------------------
+# * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
+# REPOSITORY SELECTION ------------------------------------------------------- *
+# * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
 #
 # By default, Reponomics auto-discovers up to 200 eligible repositories visible
 # to COLLECTION_TOKEN and fills the tracked set from newest to oldest by creation
 # date.
 #
 # Use full owner/repo names for explicit entries.
-
+#
 max_repos: 200
-
-# If non-empty, track exactly these repositories and ignore all other selection
-# settings.
+#
+# If non-empty, ONLY these and NO other repositories will be tracked.
 include_only:
-  # - owner/repo-name
-
+#   - owner/repo-name
+#
 # Repositories that must always be tracked when accessible.
 include:
-  # - owner/important-repo
-
+#  - owner/important-repo
+#
 # Repositories that must never be tracked automatically.
 exclude:
-  # - owner/noisy-repo
-
+#  - owner/noisy-repo
+#
 # Fill remaining slots with other eligible repositories.
 include_others: true
-
+#
 # Allow repositories created after the initial automatic-selection baseline to
 # enter the automatic pool.
 include_new: false
-
+#
 # Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
 # them.
 include_private: true
-
-# Reponomics may update docs/reponomics/ before collection after action upgrades.
-# Set to false before editing that directory yourself.
-allow_docs_sync: true

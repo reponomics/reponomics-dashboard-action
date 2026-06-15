@@ -31,6 +31,11 @@ def _restore_run_environment() -> Any:
         "REPONOMICS_ACTION_REF",
         "REPONOMICS_ACTION_REPOSITORY",
         "REPONOMICS_ACTION_SHA",
+        "REPONOMICS_CONFIG_PATH",
+        "REPONOMICS_DATA_MODE",
+        "REPONOMICS_GENERATE_README",
+        "REPONOMICS_PUBLISH_PAGES",
+        "REPONOMICS_RETENTION_DAYS",
         "REPONOMICS_COMPARISON_SECRET",
         "REPONOMICS_USE_GITHUB_APP",
         "RETENTION_DAYS",
@@ -45,6 +50,29 @@ def _restore_run_environment() -> Any:
             os.environ.pop(key, None)
         else:
             os.environ[key] = value
+
+
+def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
+    values: dict[str, Any] = {
+        "i_have_read_the_readme": True,
+        "data_mode": "encrypted",
+        "publish_pages_dashboard": True,
+        "publish_readme_dashboard": False,
+        "allow_docs_sync": True,
+        "artifact_retention_days": 90,
+        "use_github_app": False,
+    }
+    values.update(overrides)
+
+    def yaml_value(value: Any) -> str:
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
+
+    config_path.write_text(
+        "".join(f"{key}: {yaml_value(value)}\n" for key, value in values.items()),
+        encoding="utf-8",
+    )
 
 
 def test_repo_is_public_reads_event_payload(
@@ -109,8 +137,12 @@ def test_repo_is_public_fails_closed_when_context_is_ambiguous(
 
 def test_load_config_rejects_invalid_boolean_and_retention(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_GENERATE_README", "maybe")
     with pytest.raises(run.ActionError, match="generate-readme must be true or false"):
         run.load_config_from_env()
@@ -121,8 +153,8 @@ def test_load_config_rejects_invalid_boolean_and_retention(
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_PUBLISH_PAGES", "true")
-    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "0")
-    with pytest.raises(run.ActionError, match="retention-days must be between 1 and 90"):
+    monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "13")
+    with pytest.raises(run.ActionError, match="retention-days must be between 14 and 90"):
         run.load_config_from_env()
 
     monkeypatch.setenv("REPONOMICS_RETENTION_DAYS", "not-an-int")
@@ -145,20 +177,28 @@ def test_validate_config_rejects_public_readme_generation(tmp_path: Path) -> Non
 
 def test_load_config_rejects_invalid_artifact_run_id(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, data_mode="plaintext")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_MODE", "publish")
     monkeypatch.setenv("REPONOMICS_DATA_MODE", "plaintext")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("REPONOMICS_ARTIFACT_RUN_ID", "latest")
 
     with pytest.raises(run.ActionError, match="artifact-run-id must be a positive integer"):
         run.load_config_from_env()
 
 
-def test_load_config_defaults_to_encrypted_and_rejects_legacy_data_modes(
+def test_load_config_reads_data_mode_from_config_and_rejects_legacy_data_modes(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "false")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.delenv("REPONOMICS_DATA_MODE", raising=False)
     assert run.load_config_from_env().data_mode == "encrypted"
 
@@ -173,9 +213,13 @@ def test_load_config_defaults_to_encrypted_and_rejects_legacy_data_modes(
 
 def test_load_config_reads_comparison_secret(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path)
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_MODE", "doctor")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("COMPARISON_SECRET", "fallback-comparison")
     assert run.load_config_from_env().comparison_secret == "fallback-comparison"
 
@@ -185,17 +229,18 @@ def test_load_config_reads_comparison_secret(
 
 def test_allow_docs_sync_config_file_errors_and_values(tmp_path: Path) -> None:
     config_path = tmp_path / "config.yaml"
-    assert run._config_allow_docs_sync(config_path) is None
+    with pytest.raises(run.ActionError, match="Required config file is missing"):
+        run._config_allow_docs_sync(config_path)
 
-    config_path.write_text("allow_docs_sync: false\n", encoding="utf-8")
+    _write_runtime_config(config_path, allow_docs_sync=False)
     assert run._config_allow_docs_sync(config_path) is False
 
-    config_path.write_text("allow_docs_sync: not-a-bool\n", encoding="utf-8")
+    _write_runtime_config(config_path, allow_docs_sync="not-a-bool")
     with pytest.raises(run.ActionError, match="allow_docs_sync"):
         run._config_allow_docs_sync(config_path)
 
     config_path.write_text("allow_docs_sync: [", encoding="utf-8")
-    with pytest.raises(run.ActionError, match="Could not read allow_docs_sync"):
+    with pytest.raises(run.ActionError, match="Could not read runtime configuration"):
         run._config_allow_docs_sync(config_path)
 
 

@@ -12,9 +12,6 @@ on:
 permissions:
   contents: read
 
-env:
-  RETENTION_DAYS: "90"
-
 jobs:
   rotate:
     if: github.ref == 'refs/heads/main'
@@ -56,4 +53,5 @@ jobs:
           dashboard-next-secret: ${{ secrets.DASHBOARD_NEXT_SECRET }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}

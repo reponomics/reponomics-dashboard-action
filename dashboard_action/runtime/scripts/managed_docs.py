@@ -89,10 +89,13 @@ def sync_managed_docs(
         manifest_action_version = ""
         docs_updated_at = ""
 
+    current_managed_hashes = {
+        relative: current_hashes.get(relative) for relative in next_hashes
+    }
     if (
         manifest_action_version == action_version
         and manifest_hashes == next_hashes
-        and current_hashes == next_hashes
+        and current_managed_hashes == next_hashes
     ):
         return _result(
             STATE_UNCHANGED,
@@ -102,11 +105,30 @@ def sync_managed_docs(
             namespace,
         )
 
+    directory_collision = _first_directory_collision(namespace, bundle_files)
+    if directory_collision:
+        return _result(
+            STATE_MANIFEST_INCONSISTENT,
+            f"Managed docs target path is a directory: {directory_collision}",
+            manifest_action_version,
+            docs_updated_at,
+            namespace,
+        )
+
+    previous_managed_files = (
+        manifest_hashes
+        if manifest_hashes
+        else {
+            relative: digest
+            for relative, digest in current_hashes.items()
+            if relative in next_hashes
+        }
+    )
     updated_at = _utc_now()
     _write_bundle(
         namespace=namespace,
         bundle_files=bundle_files,
-        previous_files=current_hashes,
+        previous_files=previous_managed_files,
         manifest=_build_manifest(
             namespace=namespace,
             action_repository=action_repository,
@@ -251,6 +273,16 @@ def _first_symlink_in_namespace(namespace: Path) -> str:
     for path in sorted(namespace.rglob("*")):
         if path.is_symlink():
             return path.relative_to(namespace).as_posix()
+    return ""
+
+
+def _first_directory_collision(namespace: Path, bundle_files: dict[str, bytes]) -> str:
+    if not namespace.exists():
+        return ""
+    for relative in sorted(bundle_files):
+        path = namespace / relative
+        if path.exists() and path.is_dir():
+            return relative
     return ""
 
 

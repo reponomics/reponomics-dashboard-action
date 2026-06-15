@@ -92,6 +92,9 @@ jobs:
       - name: Verify workflow classification
         run: make verify-workflow-classification
 
+      - name: Build and verify generated outputs
+        run: make build-and-verify-generated
+
       - name: Smoke generated template
         run: make template-smoke
 

@@ -55,7 +55,7 @@ inputs:
     required: false
     default: config.yaml
   retention-days:
-    description: GitHub Actions artifact retention period.
+    description: GitHub Actions artifact retention period, from 14 to 90 days.
     required: false
     default: "90"
   publish-pages:
@@ -75,7 +75,7 @@ inputs:
     required: false
     default: "false"
   allow-docs-sync:
-    description: Optional override for managed documentation updates in docs/reponomics. Set true or false; blank uses config.yaml, then allows sync.
+    description: Optional managed documentation update setting. Set true or false; blank uses config.yaml.
     required: false
     default: ""
   readme-path:
@@ -248,6 +248,7 @@ runs:
         REPONOMICS_MODE: collect
         REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
         REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
+        REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_COLLECT_RETENTION_CLEANUP_ONLY: "true"
       run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run
@@ -261,6 +262,7 @@ runs:
         REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
         REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
         REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
+        REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}

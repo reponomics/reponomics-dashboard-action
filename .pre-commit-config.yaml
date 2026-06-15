@@ -1,3 +1,6 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: local
     hooks:
@@ -34,3 +37,10 @@ repos:
         entry: make fixtures
         language: system
         pass_filenames: false
+
+      - id: build-and-verify-generated
+        name: Build and verify generated outputs
+        entry: make build-and-verify-generated
+        language: system
+        pass_filenames: false
+        stages: [pre-commit, pre-push]

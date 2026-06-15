@@ -13,20 +13,29 @@ uses: reponomics/reponomics-dashboard-action@v0
 
 ## Get Started
 
-1. Review `config.yaml` and decide which repositories this dashboard should track.
+1. Fill in the required setup fields at the top of `config.yaml`, commit that change, and decide which repositories this dashboard should track.
 2. Create a collection credential and store it as the repository secret `COLLECTION_TOKEN`. Most single-owner dashboards should use a fine-grained personal access token with repository `Administration: read`.
-3. Choose a data mode: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
+3. Choose a data mode in `config.yaml`: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
 4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Secure Dashboard Key Generation](docs/reponomics/secure-dashboard-key.md) for the security tradeoffs.
 5. Run **Actions -> Set up Reponomics dashboard -> Run workflow**.
 6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 
-Setup writes your selected options to `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.
+Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.
+
+The `.reponomics/setup-complete` marker is an empty, non-secret file and does not contain dashboard data. It is a git-tracked switch that tells the generated workflows the repository has completed initial setup. If it is deleted, collect, publish, rotate-key, doctor, incident-reset, docs-sync, and keepalive workflows will treat setup as incomplete and skip their normal work until setup writes the marker again. If you intentionally complete `config.yaml` and choose to manage setup manually, recreating the empty marker is acceptable; normal setup writes it for you.
 
 ## Configuration
 
-`config.yaml` is owned by this repository. Reponomics reads it during workflow runs but does not silently rewrite it.
+`config.yaml` is owned by this repository. Reponomics reads it during setup and workflow runs but does not silently rewrite it. The top setup fields must be filled before setup can proceed:
 
 ```yaml
+i_have_read_the_readme: true
+data_mode: encrypted
+publish_pages_dashboard: true
+publish_readme_dashboard: false
+allow_docs_sync: true
+artifact_retention_days: 90
+
 max_repos: 200
 
 include_only:
@@ -42,8 +51,8 @@ include_others: true
 include_new: false
 include_private: true
 
-# Optional: disable Reponomics-managed local docs updates.
-allow_docs_sync: true
+# Advanced: use only with your own GitHub App installation token workflow.
+use_github_app: false
 ```
 
 If `include_only` is non-empty, Reponomics tracks exactly those repositories and ignores the automatic pool. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).
@@ -65,6 +74,7 @@ The canonical store is the `dashboard-data` Actions artifact.
 - Hosted encrypted dashboard publication is optional and requires GitHub Pages to use GitHub Actions as the deployment source.
 - Plain-mode HTML dashboards are private-repository downloadable artifacts only and are not published to Pages.
 - Metric README dashboard generation is only available in private repositories.
+- `artifact_retention_days` controls GitHub Actions artifact expiry, not the dashboard history length, and must be between 14 and 90 days. The dashboard can keep collecting indefinitely as long as scheduled runs continue restoring and replacing the `dashboard-data` artifact before it expires.
 
 For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics/privacy-configuration-matrix.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
 
@@ -72,4 +82,4 @@ For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics
 
 Reponomics may update managed local documentation under `docs/reponomics/` before future collect runs. It writes only that namespace, commits with `[skip ci]`, and treats missing write permission as advisory. Set `allow_docs_sync: false` before editing `docs/reponomics/` yourself.
 
-During setup, Reponomics saves the original setup README as `README.backup.md` before writing the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs sync.
+The generated repository ships this setup README as `README.backup.md` before setup writes the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs sync.

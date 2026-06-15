@@ -1,3 +1,11 @@
+i_have_read_the_readme: true
+data_mode: plaintext
+publish_pages_dashboard: false
+publish_readme_dashboard: false
+allow_docs_sync: true
+artifact_retention_days: 90
+use_github_app: false
+
 include_only:
   - demo/alpha
   - demo/beta

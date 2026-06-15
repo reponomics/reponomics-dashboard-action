@@ -220,7 +220,9 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     resolve_step = next(step for step in build_job["steps"] if step["name"] == "Resolve publication source")
     assert "DEMO_DAILY_SOURCE_REF" in resolve_step["run"]
     assert "demo-stable" in resolve_step["run"]
-    assert any(step["name"] == "Build and verify generated demo" for step in build_job["steps"])
+    build_step = next(step for step in build_job["steps"] if step["name"] == "Build and verify generated demo")
+    assert "make build-demo" not in build_step["run"]
+    assert "make verify-demo" in build_step["run"]
     assert any(step["name"] == "Upload generated demo artifact" for step in build_job["steps"])
     assert any(step["name"] == "Upload encrypted demo dashboard data seed" for step in build_job["steps"])
 

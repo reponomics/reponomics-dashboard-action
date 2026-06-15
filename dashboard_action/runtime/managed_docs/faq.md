@@ -21,7 +21,7 @@ For the full matrix, see [Privacy Configuration Matrix](privacy-configuration-ma
 
 ## How do I turn on the hosted GitHub Pages dashboard?
 
-For `encrypted`, first run the setup workflow. Then open the dashboard repository on GitHub and go to **Settings -> Pages**. Under **Build and deployment**, set **Source** to **GitHub Actions**. If GitHub suggests workflow templates, skip them; the Reponomics publish workflow already handles the Pages artifact upload and deployment.
+Set `data_mode: encrypted` and `publish_pages_dashboard: true` in `config.yaml`, commit that change, and run the setup workflow. Then open the dashboard repository on GitHub and go to **Settings -> Pages**. Under **Build and deployment**, set **Source** to **GitHub Actions**. If GitHub suggests workflow templates, skip them; the Reponomics publish workflow already handles the Pages artifact upload and deployment.
 
 The action verifies the Pages configuration during publish. It does not enable Pages or change the publishing source for you.
 

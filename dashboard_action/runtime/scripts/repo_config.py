@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 import yaml
@@ -10,6 +11,12 @@ import yaml
 
 CONFIG_PATH = "config.yaml"
 DEFAULT_MAX_REPOS = 200
+MAX_OWNER_LENGTH = 39
+MAX_REPO_NAME_LENGTH = 100
+MAX_FULL_NAME_LENGTH = MAX_OWNER_LENGTH + 1 + MAX_REPO_NAME_LENGTH
+OWNER_RE = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
+REPO_NAME_RE = r"[A-Za-z0-9_.-]{1,100}"
+FULL_REPO_NAME_RE = re.compile(rf"^({OWNER_RE})/({REPO_NAME_RE})$")
 
 
 def load_repo_config(config_path: str = CONFIG_PATH) -> dict[str, Any]:
@@ -87,18 +94,46 @@ def _normalize_repo_list(config_path: str, key: str, value) -> list[str]:
     normalized = []
     seen = set()
     for raw_repo in value:
-        repo = str(raw_repo).strip()
-        if not repo:
-            continue
-        if "/" not in repo:
+        if not isinstance(raw_repo, str):
             raise ValueError(
                 f"invalid repository entry {raw_repo!r} under '{key}' in " +
-                f"{config_path}; use the 'owner/repo' format."
+                f"{config_path}; repository entries must be strings."
             )
+        repo = raw_repo.strip()
+        if not repo:
+            continue
+        _validate_repo_full_name(config_path, key, repo)
         if repo not in seen:
             normalized.append(repo)
             seen.add(repo)
     return normalized
+
+
+def _validate_repo_full_name(config_path: str, key: str, repo: str) -> None:
+    """Validate a GitHub owner/repository full name."""
+    if len(repo) > MAX_FULL_NAME_LENGTH:
+        raise ValueError(
+            f"invalid repository entry {repo!r} under '{key}' in {config_path}; " +
+            f"full names must be at most {MAX_FULL_NAME_LENGTH} characters."
+        )
+    match = FULL_REPO_NAME_RE.fullmatch(repo)
+    if not match:
+        raise ValueError(
+            f"invalid repository entry {repo!r} under '{key}' in {config_path}; " +
+            "use 'owner/repo' with a GitHub owner name and a repository name " +
+            "containing only ASCII letters, digits, '.', '-', or '_'."
+        )
+    _, repo_name = match.groups()
+    if repo_name in {".", ".."}:
+        raise ValueError(
+            f"invalid repository entry {repo!r} under '{key}' in {config_path}; " +
+            "repository name cannot be '.' or '..'."
+        )
+    if repo_name.lower().endswith((".git", ".wiki")):
+        raise ValueError(
+            f"invalid repository entry {repo!r} under '{key}' in {config_path}; " +
+            "repository name cannot end with '.git' or '.wiki'."
+        )
 
 
 def _normalize_bool(config_path: str, key: str, value: Any) -> bool:

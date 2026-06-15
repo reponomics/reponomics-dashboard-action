@@ -10,7 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import quote
 
-from .config import _env, _first_env
+from .config import MAX_RETENTION_DAYS, MIN_RETENTION_DAYS, _env, _first_env
 from .core import (
     COLLECT_PROVENANCE_PATH,
     INCIDENT_API_TIMEOUT_SECONDS,
@@ -222,7 +222,7 @@ def validate_collect_provenance(
         retention_days = int(provenance.retention_days)
     except ValueError as exc:
         raise ActionError("Collect provenance retention days is not an integer.") from exc
-    if retention_days < 1 or retention_days > 90:
+    if retention_days < MIN_RETENTION_DAYS or retention_days > MAX_RETENTION_DAYS:
         raise ActionError("Collect provenance retention days is out of range.")
     for label, value in {
         "publish_pages": provenance.publish_pages,

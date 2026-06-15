@@ -68,6 +68,41 @@ def _read_env_file(path: Path) -> dict[str, str]:
     return values
 
 
+def _write_setup_config(repo: Path, **overrides: str) -> None:
+    values = {
+        "i_have_read_the_readme": "true",
+        "data_mode": "encrypted",
+        "publish_pages_dashboard": "false",
+        "publish_readme_dashboard": "false",
+        "allow_docs_sync": "true",
+        "artifact_retention_days": "90",
+        "use_github_app": "false",
+        **overrides,
+    }
+    config_path = repo / "config.yaml"
+    text = config_path.read_text(encoding="utf-8")
+    replacements = {
+        "i_have_read_the_readme: # true/false": (
+            f"i_have_read_the_readme: {values['i_have_read_the_readme']}"
+        ),
+        "data_mode: # encrypted/plaintext": f"data_mode: {values['data_mode']}",
+        "publish_pages_dashboard: # true/false": (
+            f"publish_pages_dashboard: {values['publish_pages_dashboard']}"
+        ),
+        "publish_readme_dashboard: # true/false": (
+            f"publish_readme_dashboard: {values['publish_readme_dashboard']}"
+        ),
+        "allow_docs_sync: # true/false": f"allow_docs_sync: {values['allow_docs_sync']}",
+        "artifact_retention_days: 90": (
+            f"artifact_retention_days: {values['artifact_retention_days']}"
+        ),
+        "use_github_app: false": f"use_github_app: {values['use_github_app']}",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    config_path.write_text(text, encoding="utf-8")
+
+
 def _initialise_generated_repo(repo: Path, remote: Path) -> None:
     _run(["git", "init", "-b", "main"], repo, os.environ.copy())
     _run(["git", "config", "core.hooksPath", "/dev/null"], repo, os.environ.copy())
@@ -82,18 +117,32 @@ def _initialise_generated_repo(repo: Path, remote: Path) -> None:
     _run(["git", "push", "-u", "origin", "main"], repo, os.environ.copy())
 
 
+def _run_resolver(
+    repo: Path, tmp_path: Path, *, private: bool
+) -> subprocess.CompletedProcess[str]:
+    env_file = tmp_path / "github-env"
+    summary_file = tmp_path / "github-step-summary"
+    return subprocess.run(
+        ["python", ".github/scripts/resolve-reponomics-config.py"],
+        cwd=repo,
+        env={
+            **os.environ,
+            **NONINTERACTIVE_ENV,
+            "GITHUB_ENV": str(env_file),
+            "GITHUB_STEP_SUMMARY": str(summary_file),
+            "REPOSITORY_PRIVATE": str(private).lower(),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=COMMAND_TIMEOUT_SECONDS,
+    )
+
+
 def _setup_step_env(step_name: str, base_env: dict[str, str]) -> dict[str, str]:
     env = base_env.copy()
-    if step_name == "Resolve setup modes":
-        env.update(
-            {
-                "DATA_MODE": "encrypted",
-                "GENERATE_HTML_DASHBOARD": "false",
-                "GENERATE_README": "false",
-                "USE_GITHUB_APP": "true",
-                "REPOSITORY_PRIVATE": "true",
-            }
-        )
+    if step_name == "Resolve setup configuration":
+        env["REPOSITORY_PRIVATE"] = "true"
     elif step_name == "Validate required secrets":
         env.update(
             {
@@ -115,6 +164,7 @@ def test_generated_setup_workflow_runs_with_default_github_app_token_permissions
     repo = tmp_path / "repo"
     remote = tmp_path / "remote.git"
     build_template.build_template(repo)
+    _write_setup_config(repo, use_github_app="true")
     _initialise_generated_repo(repo, remote)
 
     workflow = yaml.safe_load(
@@ -171,3 +221,98 @@ def test_generated_setup_workflow_runs_with_default_github_app_token_permissions
     assert not any(
         path.startswith(".github/workflows/") for path in changed_paths
     ), changed_paths
+
+
+def test_setup_config_resolver_fails_closed_when_required_fields_are_blank(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "Complete the required setup fields in config.yaml" in result.stderr
+    assert "i_have_read_the_readme" in result.stderr
+    assert "publish_pages_dashboard" in result.stderr
+
+
+def test_setup_config_resolver_rejects_public_plaintext(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, data_mode="plaintext")
+
+    result = _run_resolver(repo, tmp_path, private=False)
+
+    assert result.returncode == 1
+    assert "data_mode=plaintext is only supported for private repositories" in result.stderr
+
+
+def test_setup_config_resolver_rejects_short_artifact_retention(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, artifact_retention_days="13")
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "artifact_retention_days must be between 14 and 90" in result.stderr
+
+
+def test_setup_config_resolver_rejects_control_character_payload(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, data_mode="encrypted\x1b[31m")
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "contains unsupported control characters" in result.stderr
+    env = _read_env_file(tmp_path / "github-env")
+    assert "DATA_MODE" not in env
+    assert env == {"REPONOMICS_SETUP_COMPLETE": "false"}
+
+
+def test_setup_config_resolver_rejects_newline_injection_payload(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo)
+    config_path = repo / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "data_mode: encrypted",
+            'data_mode: "encrypted\nEVIL=1"',
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "unterminated quoted value" in result.stderr
+    env = _read_env_file(tmp_path / "github-env")
+    assert "DATA_MODE" not in env
+    assert "EVIL" not in env
+
+
+def test_setup_config_resolver_rejects_duplicate_setup_keys(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo)
+    config_path = repo / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") +
+        "\npublish_pages_dashboard: true\n",
+        encoding="utf-8",
+    )
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "defines publish_pages_dashboard more than once" in result.stderr

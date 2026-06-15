@@ -11,9 +11,6 @@ on:
 permissions:
   contents: read
 
-env:
-  RETENTION_DAYS: "90"
-
 jobs:
   doctor:
     if: github.ref == 'refs/heads/main'
@@ -31,13 +28,31 @@ jobs:
       - name: Resolve Reponomics configuration
         run: python .github/scripts/resolve-reponomics-config.py --require-setup
 
+      - name: Validate artifact run ID
+        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
+        env:
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$ARTIFACT_RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
+            {
+              echo "## Reponomics dashboard doctor stopped"
+              echo
+              echo "\`artifact_run_id\` must be a positive workflow run ID."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          printf '%s=%s\n' ARTIFACT_RUN_ID "$ARTIFACT_RUN_ID" >> "$GITHUB_ENV"
+
       - name: Record diagnostic target
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
         run: |
           {
             echo "## Reponomics dashboard doctor"
             echo
-            echo "Restoring dashboard artifacts from workflow run \`${{ inputs.artifact_run_id }}\`."
+            echo "Restoring dashboard artifacts from workflow run \`$ARTIFACT_RUN_ID\`."
             echo
             echo "If an artifact download step fails, that is a workflow artifact restore problem,"
             echo "not evidence that \`DASHBOARD_SECRET_DO_NOT_REPLACE\` or \`COMPARISON_SECRET\` is wrong."
@@ -50,7 +65,7 @@ jobs:
           name: html-dashboard-encrypted
           path: docs
           github-token: ${{ github.token }}
-          run-id: ${{ inputs.artifact_run_id }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
 
       - name: Restore plaintext dashboard HTML artifact
         if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'plaintext'
@@ -59,7 +74,7 @@ jobs:
           name: html-dashboard-plaintext
           path: docs
           github-token: ${{ github.token }}
-          run-id: ${{ inputs.artifact_run_id }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
 
       - name: Normalize restored dashboard HTML
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
@@ -100,7 +115,7 @@ jobs:
           name: dashboard-data
           path: .dashboard-data-artifact
           github-token: ${{ github.token }}
-          run-id: ${{ inputs.artifact_run_id }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
 
       - name: Restore plaintext retained dashboard-data artifact
         if: env.REPONOMICS_SETUP_COMPLETE == 'true' && env.DATA_MODE == 'plaintext'
@@ -109,7 +124,7 @@ jobs:
           name: dashboard-data
           path: data
           github-token: ${{ github.token }}
-          run-id: ${{ inputs.artifact_run_id }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
 
       - name: Explain artifact restore failure
         if: failure() && env.REPONOMICS_SETUP_COMPLETE == 'true'
@@ -123,7 +138,7 @@ jobs:
             echo
             echo "Inspect the failed restore step above and check:"
             echo
-            echo "- the workflow run ID is \`${{ inputs.artifact_run_id }}\` and belongs to this repository;"
+            echo "- the workflow run ID is \`$ARTIFACT_RUN_ID\` and belongs to this repository;"
             echo "- the producing run completed and uploaded the expected dashboard artifacts;"
             echo "- the artifact has not expired under the configured retention period;"
             echo "- this workflow has \`actions: read\` permission;"
@@ -141,5 +156,5 @@ jobs:
           comparison-secret: ${{ secrets.COMPARISON_SECRET }}
           data-mode: ${{ env.DATA_MODE }}
           retention-days: ${{ env.RETENTION_DAYS }}
-          publish-pages: ${{ env.GENERATE_HTML_DASHBOARD }}
-          generate-readme: ${{ env.GENERATE_README }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}

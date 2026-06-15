@@ -60,6 +60,7 @@ from load_data import (
     collection_quality,
     growth_analytics,
     latest_repo_community_profiles,
+    latest_repo_metadata,
     traffic_reporting_summary,
 )
 
@@ -301,12 +302,14 @@ def _build_payload(
     data_quality,
     traffic_reporting,
     community_profiles,
+    repo_metadata,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
     repos = []
     for row in per_repo:
         series_row = repo_series.get(row["repo"], {})
         community = community_profiles.get(row["repo"], {})
+        metadata = repo_metadata.get(row["repo"], {})
         repos.append(
             {
                 "name": row["repo"],
@@ -315,6 +318,9 @@ def _build_payload(
                 "clones": row["total_clones"],
                 "clone_uniques": row["total_clone_uniques"],
                 "days": len(series_row.get("dates", [])),
+                "created_at": metadata.get("created_at", ""),
+                "pushed_at": metadata.get("pushed_at", ""),
+                "updated_at": metadata.get("updated_at", ""),
                 "community": {
                     "available": bool(community.get("available", False)),
                     "health_percentage": community.get("health_percentage"),
@@ -585,6 +591,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     repo_paths = _latest_snapshot_by_repo(path_rows)
     growth = growth_analytics(daily_rows, metric_rows)
     community_profiles = latest_repo_community_profiles(metric_rows)
+    repo_metadata = latest_repo_metadata(metric_rows)
     traffic_reporting = traffic_reporting_summary(coverage_rows, collection_day_rows)
     reporting_end_date = traffic_reporting.get("latest_collection_date", "")
     dates, series = _pad_metric_series(dates, series, reporting_end_date)
@@ -613,6 +620,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         data_quality,
         traffic_reporting,
         community_profiles,
+        repo_metadata,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

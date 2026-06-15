@@ -38,6 +38,7 @@ from load_data_modules.popular import (
 from load_data_modules.repo_metrics import (
     aggregate_repo_metrics,
     latest_repo_community_profiles,
+    latest_repo_metadata,
     latest_repo_metrics,
     latest_repo_metrics_per_day,
     repo_growth_series,
@@ -85,6 +86,7 @@ __all__ = [
     "compute_momentum",
     "growth_analytics",
     "latest_repo_community_profiles",
+    "latest_repo_metadata",
     "latest_repo_metrics",
     "latest_repo_metrics_per_day",
     "load_collection_status",

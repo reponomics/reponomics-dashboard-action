@@ -2319,6 +2319,8 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     assert "function buildGrowthDeltaSeries(series)" in dashboard
     assert "stars_delta: deltaFor('stargazers')" in dashboard
     assert "SERIES_METRIC_KEYS" in dashboard
+    assert "function compareRepoFreshness(a, b)" in dashboard
+    assert "repoFreshnessTimestamp(a)" in dashboard
     assert '"total_subscribers":2' not in dashboard
     assert '"total_forks_delta":0' not in dashboard
 

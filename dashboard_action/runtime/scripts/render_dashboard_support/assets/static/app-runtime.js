@@ -1236,6 +1236,9 @@
         uniques: hasSeries ? sum(series.uniques) : Number(baseRepo.uniques || 0),
         clones: hasSeries ? sum(series.clones) : Number(baseRepo.clones || 0),
         clone_uniques: hasSeries ? sum(series.clone_uniques) : Number(baseRepo.clone_uniques || 0),
+        created_at: String(baseRepo.created_at || ''),
+        pushed_at: String(baseRepo.pushed_at || ''),
+        updated_at: String(baseRepo.updated_at || ''),
         stars_delta: starsDelta,
         subscribers_delta: subscribersDelta,
         forks_delta: forksDelta,
@@ -1262,10 +1265,23 @@
       };
     }
 
+    function repoFreshnessTimestamp(repo) {
+      return String(repo.updated_at || repo.pushed_at || repo.created_at || '');
+    }
+
+    function compareRepoFreshness(a, b) {
+      const av = repoFreshnessTimestamp(a);
+      const bv = repoFreshnessTimestamp(b);
+      if (av && bv && av !== bv) return bv.localeCompare(av);
+      if (av && !bv) return -1;
+      if (!av && bv) return 1;
+      return 0;
+    }
+
     function getAllRepoMetrics() {
       return (dashboardData()?.getRepos() || [])
         .map((repo) => buildRepoMetrics(repo.name))
-        .sort((a, b) => (b.views - a.views) || (b.clones - a.clones) || a.name.localeCompare(b.name));
+        .sort((a, b) => compareRepoFreshness(a, b) || a.name.localeCompare(b.name));
     }
 
     function getSelectableRepos() {

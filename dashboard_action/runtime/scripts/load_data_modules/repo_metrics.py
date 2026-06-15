@@ -21,6 +21,25 @@ def latest_repo_metrics(metric_rows: Rows) -> dict[str, Result]:
     return latest
 
 
+def latest_repo_metadata(metric_rows: Rows) -> dict[str, Result]:
+    """Return latest repository metadata keyed by repo."""
+    latest: dict[str, Result] = {}
+    for row in metric_rows:
+        repo = row.get("repo", "")
+        captured_at = row.get("captured_at", "")
+        if not repo:
+            continue
+        existing = latest.get(repo)
+        if existing is None or captured_at >= existing.get("captured_at", ""):
+            latest[repo] = {
+                "captured_at": captured_at,
+                "created_at": row.get("created_at", "") or "",
+                "pushed_at": row.get("pushed_at", "") or "",
+                "updated_at": row.get("updated_at", "") or "",
+            }
+    return latest
+
+
 def _repo_metric_snapshot(row: Row) -> Result:
     """Normalize a repo-metrics row to the counter fields used downstream."""
     return {

@@ -171,6 +171,36 @@ def test_latest_repo_metrics_and_aggregate_totals_use_latest_capture() -> None:
     }
 
 
+def test_latest_repo_metadata_uses_latest_capture() -> None:
+    rows = [
+        {
+            **_metric_row("demo/app", "2026-05-01", 8, 2, 1, "2026-05-01T09:00:00Z"),
+            "created_at": "2026-01-01T00:00:00Z",
+            "pushed_at": "2026-05-01T08:00:00Z",
+            "updated_at": "2026-05-01T08:30:00Z",
+        },
+        {
+            **_metric_row("demo/app", "2026-05-01", 10, 3, 2, "2026-05-01T18:00:00Z"),
+            "created_at": "2026-01-01T00:00:00Z",
+            "pushed_at": "2026-05-01T17:00:00Z",
+            "updated_at": "2026-05-01T17:30:00Z",
+        },
+        {
+            **_metric_row("", "2026-05-01", 99, 99, 99, "2026-05-01T12:00:00Z"),
+            "updated_at": "2026-05-01T12:00:00Z",
+        },
+    ]
+
+    assert load_data.latest_repo_metadata(rows) == {
+        "demo/app": {
+            "captured_at": "2026-05-01T18:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z",
+            "pushed_at": "2026-05-01T17:00:00Z",
+            "updated_at": "2026-05-01T17:30:00Z",
+        }
+    }
+
+
 def test_repo_growth_series_projects_normalized_daily_counters() -> None:
     rows = [
         _metric_row("demo/app", "2026-05-02", 10, 3, 2),

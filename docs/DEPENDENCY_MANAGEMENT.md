@@ -32,7 +32,9 @@ This document describes how dependencies are declared, locked, checked, and upda
 make install
 ```
 
-The `make install` target is stamp-based and depends on `pyproject.toml`. If only `requirements-runtime.txt` changes, the local `venv` may still contain an older resolved package until the environment is refreshed. CI starts from a fresh runner and resolves from `pyproject.toml`.
+The `make install` target is stamp-based and depends on both `pyproject.toml` and `requirements-runtime.txt`. When either file changes, `make install` refreshes the local `venv` with an eager upgrade from `pyproject.toml`, so local source/development checks are less likely to run against stale package versions. CI starts from a fresh runner and resolves from `pyproject.toml`.
+
+The local `venv` is still not the action runtime environment. The composite action runtime is checked separately from `requirements-runtime.txt` through `make validate-runtime-lock` and `make audit-runtime-lock`.
 
 Use `pyproject.toml` when changing the supported dependency range for the package. If a lower bound is raised for security or compatibility reasons, update `pyproject.toml` and regenerate the runtime lock.
 

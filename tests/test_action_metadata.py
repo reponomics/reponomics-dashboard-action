@@ -148,7 +148,8 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "make verify-template" in commands
     assert "make validate-template-action-ref" in commands
     assert "make template-smoke" in commands
-    assert "make template-consumer-e2e" in commands
+    assert "make template-public-action-e2e" in commands
+    assert "make template-consumer-e2e" not in commands
     assert "make publish-template-dry-run" in commands
     assert "make package-template-release" in workflow_text
     assert "gh release upload" not in workflow_text

@@ -114,7 +114,7 @@ reponomics-dashboard-v<template_version>
 
 If `template-contract.yml` contains `template_version: X.Y.Z`, the release tag must be `reponomics-dashboard-vX.Y.Z`.
 
-The `.github/workflows/publish-template.yml` workflow listens for published releases with that tag shape. It checks that the tag matches `template-contract.yml`, rebuilds `dist/template`, verifies the generated template, validates the public action ref used by generated workflows, runs template smoke and consumer e2e checks, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, and only then mints the template publication app token and force-pushes the generated tree to `reponomics/reponomics-dashboard`.
+The `.github/workflows/publish-template.yml` workflow listens for published releases with that tag shape. It checks that the tag matches `template-contract.yml`, rebuilds `dist/template`, verifies the generated template, validates the public action ref used by generated workflows, runs template smoke and generated-template e2e checks against that resolved public action ref, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, and only then mints the template publication app token and force-pushes the generated tree to `reponomics/reponomics-dashboard`.
 
 The workflow intentionally does not upload assets to an already-published GitHub Release. Release evidence is carried as workflow artifacts and artifact attestations.
 

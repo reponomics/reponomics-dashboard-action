@@ -93,7 +93,7 @@ jobs:
           make verify-template
           make validate-template-action-ref
           make template-smoke
-          make template-consumer-e2e
+          make template-public-action-e2e
           TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make publish-template-dry-run
 
       - name: Build template release artifacts

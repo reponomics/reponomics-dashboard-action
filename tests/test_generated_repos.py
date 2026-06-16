@@ -15,7 +15,9 @@ from scripts import publish_generated_repo
 from scripts import template_contract
 from scripts import template_compat_e2e
 from scripts import template_consumer_e2e
+from scripts import template_public_action_e2e
 from scripts import template_provenance
+from scripts import validate_template_action_ref
 from scripts import verify_workflow_classification
 from scripts.staging_smoke import browser_checklist as staging_smoke_browser_checklist
 from scripts.staging_smoke import evidence as staging_smoke_evidence
@@ -560,6 +562,7 @@ def test_action_repo_has_template_publication_targets():
     assert "verify-template:" in makefile
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
+    assert "template-public-action-e2e:" in makefile
     assert "publish-template:" in makefile
     assert "publish-template-staging-dry-run:" in makefile
     assert "publish-template-staging:" in makefile
@@ -569,6 +572,90 @@ def test_action_repo_has_template_publication_targets():
         in makefile
     )
     assert "scripts/publish_generated_repo.py" in makefile
+
+
+def test_template_public_action_e2e_uses_resolved_public_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    contract = template_contract.TemplateContract(
+        template_version="0.10.0",
+        action_repository=template_contract.ACTION_REPOSITORY,
+        default_action_ref="v0",
+        compatible_action_major=0,
+        minimum_compatible_template_version="0.10.0",
+        protected_template_refs=(
+            template_contract.ProtectedTemplateRef(
+                ref="reponomics-dashboard-v0.10.0",
+                template_version="0.10.0",
+                source_commit="a" * 40,
+            ),
+        ),
+        managed_docs_namespace=Path("docs/reponomics"),
+    )
+    resolved = validate_template_action_ref.ResolvedActionRef(
+        ref="v0",
+        sha="b" * 40,
+        remote_ref="refs/tags/v0^{}",
+    )
+    calls: dict[str, Path | str] = {}
+
+    monkeypatch.setattr(
+        template_public_action_e2e.template_contract,
+        "load_contract",
+        lambda _root: contract,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e.validate_template_action_ref,
+        "validate_public_action_ref",
+        lambda root: resolved,
+    )
+
+    def fake_checkout_public_action(
+        *,
+        contract: template_contract.TemplateContract,
+        resolved: validate_template_action_ref.ResolvedActionRef,
+        destination: Path,
+    ) -> Path:
+        calls["checkout_repo"] = contract.action_repository
+        calls["checkout_ref"] = resolved.sha
+        destination.mkdir(parents=True)
+        return destination
+
+    def fake_run_e2e(
+        *,
+        template_dir: Path,
+        action_repo: Path,
+        action_python: Path,
+        keep_temp: bool,
+    ) -> None:
+        calls["template_dir"] = template_dir
+        calls["action_repo_name"] = action_repo.name
+        calls["action_python"] = action_python
+        calls["keep_temp"] = str(keep_temp)
+
+    monkeypatch.setattr(
+        template_public_action_e2e,
+        "checkout_public_action",
+        fake_checkout_public_action,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e.template_consumer_e2e,
+        "run_e2e",
+        fake_run_e2e,
+    )
+
+    template_public_action_e2e.run_public_action_e2e(
+        template_dir=tmp_path / "template",
+        action_python=tmp_path / "python",
+    )
+
+    assert calls["checkout_repo"] == template_contract.ACTION_REPOSITORY
+    assert calls["checkout_ref"] == "b" * 40
+    assert calls["template_dir"] == tmp_path / "template"
+    assert calls["action_repo_name"] == "action"
+    assert calls["action_python"] == tmp_path / "python"
+    assert calls["keep_temp"] == "False"
 
 
 @pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)

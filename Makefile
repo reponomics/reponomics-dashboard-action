@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
-.PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
+.PHONY: test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
@@ -168,7 +168,10 @@ complexity: install ## Run complexity metrics
 security-audit: install ## Audit Python dependencies for known vulnerabilities
 	$(PIP_AUDIT) --local --skip-editable --progress-spinner off
 
-security: security-audit validate-runtime-lock validate-vendored-assets ## Run open-source security checks
+audit-runtime-lock: install ## Audit hash-pinned runtime dependency lock
+	$(PIP_AUDIT) --requirement $(RUNTIME_LOCK) --no-deps --progress-spinner off
+
+security: security-audit audit-runtime-lock validate-runtime-lock validate-vendored-assets ## Run open-source security checks
 
 lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml

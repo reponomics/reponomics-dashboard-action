@@ -23,6 +23,7 @@ Important documentation locations:
 
 - `dashboard_action/runtime/managed_docs/`: user-facing managed docs bundled with each action release.
 - `docs/`: action maintainer docs, action architecture notes, security/provenance notes, and action ADRs.
+- `docs/DEPENDENCY_MANAGEMENT.md`: action maintainer dependency surfaces, ownership, and update workflow.
 - `docs/FAQ.md` and `docs/PROVENANCE.md`: action-repo pointers to the corresponding managed docs, not the canonical user copies.
 - `.github/ISSUE_TEMPLATE/`: action repository issue templates.
 - `.github/workflows/README.md`: action repository workflow inventory.

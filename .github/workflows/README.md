@@ -6,7 +6,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`ci.yml`](ci.yml) is the aggregate pull request and main-branch quality gate. It calls the reusable validation workflows, runs linting, type checking, action/workflow parsing, tests across supported Python versions, and uploads coverage as a short-lived artifact.
 
-- [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
+- [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment and the hash-pinned runtime dependency lock. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
 
 - [`osv-scanner.yml`](osv-scanner.yml) runs OSV-Scanner recursively and uploads SARIF to GitHub code scanning. The workflow inlines the scanner, reporter, artifact upload, and SARIF upload steps so this repository's full-SHA action-pinning policy applies to every imported action.
 

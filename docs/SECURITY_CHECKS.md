@@ -64,6 +64,18 @@ make security-audit
 
 CI runs this check through `.github/workflows/open-source-security.yml` on pull requests, pushes to `main`, a weekly schedule, and manual dispatch. This is intentionally separate from the GitHub-native Dependabot signal: Dependabot opens update PRs, while `pip-audit` gives an open-source dependency vulnerability gate on the resolved CI environment.
 
+## Runtime Lock Audit
+
+`make audit-runtime-lock` runs `pip-audit` against `requirements-runtime.txt`, the hash-pinned dependency set installed by the composite action in user workflows.
+
+Run it locally with:
+
+```bash
+make audit-runtime-lock
+```
+
+CI runs this check through `.github/workflows/open-source-security.yml` alongside the installed-environment audit. This keeps the source/development dependency surface and the action runtime lock visible as separate audit claims.
+
 ## Runtime Dependency Lock
 
 `requirements-runtime.txt` is the hash-pinned runtime dependency lock generated from `pyproject.toml` with `make lock-runtime`. The composite action installs this lock with `python -m pip install --require-hashes -r "$GITHUB_ACTION_PATH/requirements-runtime.txt"` before running the bundled runtime script, so the action no longer resolves third-party Python dependency ranges at runtime.

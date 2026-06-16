@@ -29,7 +29,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-runtime.txt
 
       - name: Audit installed Python dependencies
         run: make security-audit
+
+      - name: Audit runtime dependency lock
+        run: make audit-runtime-lock

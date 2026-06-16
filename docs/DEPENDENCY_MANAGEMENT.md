@@ -18,7 +18,7 @@ This document describes how dependencies are declared, locked, checked, and upda
 | Surface | Source files | Runtime use | Update entry point | Automated checks |
 | --- | --- | --- | --- | --- |
 | Python package and dev environment | `pyproject.toml` | Local `venv`, lint, type check, tests, `pip-audit` environment audit | Edit `pyproject.toml`, then run `make install` or recreate `venv` when needed | `ci.yml`, `open-source-security.yml`, `make security-audit` |
-| Composite action runtime lock | `requirements-runtime.txt` | Installed by `action.yml` with `python -m pip install --require-hashes` | Run `make lock-runtime` after dependency-range changes or runtime-lock alerts | `validate-runtime-lock.yml`, `make validate-runtime-lock`, Dependabot pip alerts |
+| Composite action runtime lock | `requirements-runtime.txt` | Installed by `action.yml` with `python -m pip install --require-hashes` | Run `make lock-runtime` after dependency-range changes or runtime-lock alerts | `validate-runtime-lock.yml`, `open-source-security.yml`, `make validate-runtime-lock`, `make audit-runtime-lock`, Dependabot pip alerts |
 | GitHub Actions used by this source repo | `.github/workflows/*.yml`, `action.yml` | CI, release, publishing, validation, repository security signals | Update action refs by full commit SHA with nearby version comments | Dependabot `github-actions`, workflow validation, repository policy, Scorecard/PolicyChecks visibility |
 | Generated template workflow actions | `template/.github/workflows/*.yml` | Workflows in generated dashboard repositories | Update template workflow sources and run template gates | Template and generated-output tests; not the root source-repo action pinning policy alone |
 | Vendored browser assets | `vendor/*/manifest.json`, vendored asset files | Inlined or copied into generated dashboard outputs | Run `make update-vendored-assets` | `validate-vendored-assets.yml`, `update-vendored-assets.yml`, OSV checks inside `scripts/validate_vendored_assets.py` |
@@ -61,12 +61,15 @@ This check proves the lock is synchronized with the declared dependency ranges a
 
 ## Security Checks
 
-`make security-audit` runs `pip-audit` against the installed local environment with editable project packages skipped. It checks the resolved environment, not the runtime lock file itself.
+`make security-audit` runs `pip-audit` against the installed local environment with editable project packages skipped. It checks the resolved source/development environment.
+
+`make audit-runtime-lock` runs `pip-audit` against `requirements-runtime.txt`. It checks the hash-pinned dependency set installed by the composite action in user workflows.
 
 `make security` currently runs:
 
 ```bash
 make security-audit
+make audit-runtime-lock
 make validate-runtime-lock
 make validate-vendored-assets
 ```
@@ -128,7 +131,7 @@ For Python dependency alerts or planned upgrades:
 2. Decide whether `pyproject.toml` needs a new lower bound or only the runtime lock needs regeneration.
 3. Run `make lock-runtime` when `requirements-runtime.txt` should change.
 4. Run `make validate-runtime-lock`.
-5. Run `make security` for the aggregate local security checks.
+5. Run `make audit-runtime-lock` for a focused runtime-lock vulnerability check, or `make security` for the aggregate local security checks.
 6. Run focused tests when the dependency touches runtime behavior, encryption, artifact handling, workflow execution, or generated outputs.
 
 For GitHub Actions updates:
@@ -151,4 +154,4 @@ For vendored assets:
 - Dependabot, OSV, and upstream advisory metadata can disagree temporarily. Prefer the concrete manifest path, resolver output, and current upstream release notes when deciding the patch.
 - Template workflow dependencies are part of the generated repository surface. Treat them as product-facing changes, not only source-repository CI maintenance.
 
-ADR 021 proposes a small follow-up process: add a runtime-lock vulnerability audit target and explicitly review direct dependency lower bounds during Python security updates.
+ADR 021 records the adopted split between runtime-lock consistency checks, runtime-lock vulnerability audits, and direct dependency lower-bound review.

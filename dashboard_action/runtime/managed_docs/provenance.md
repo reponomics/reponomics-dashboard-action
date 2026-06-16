@@ -10,6 +10,7 @@ Most users should follow the setup guide and use the recommended action version.
 ## Short Version
 
 - The highest-assurance way to consume the runtime is by full commit SHA: `uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>`. With a full SHA, the action code GitHub runs is the repository tree at that immutable commit. Version tags are more convenient, but they trade some strict pinning assurance for easier updates.
+- If your organization requires full-SHA pins, the latest action release known to this managed-docs bundle is `v{{ACTION_VERSION}}`. Resolve that tag to its commit SHA before pinning, then plan to update it yourself when you want later compatible fixes.
 - The generated template repository is intentionally thin. It delegates collection, encryption, rendering, CSV export, and key rotation to `reponomics-dashboard-action`.
 - Chart.js and dashboard fonts are vendored by the action, not loaded from CDNs. The action repository records exact npm package versions, tarball integrity values, local SHA-256 digests, and license digests.
 - Runtime Python dependencies are installed from the action's committed `requirements-runtime.txt` file in hash-required mode.

@@ -18,9 +18,11 @@ The release rule is simple: release the action when existing users should receiv
 
 Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboard-v*` tags for action releases.
 
-`template-contract.yml` is the source of truth for the current template version and minimum action version. Increase `min_action_version` only when the generated template requires newer action behavior, not merely because a newer compatible action release exists.
+`template-contract.yml` is the source of truth for the generated template version, generated action ref, and action/template compatibility line. Generated templates ship against the current compatible action channel. Action releases must continue to pass against both the current generated template and the minimum compatible template version.
 
-After a major consolidation or other release-cadence reset, it is reasonable to bump `template_version` and rebaseline `min_action_version` once. Do that in `template-contract.yml`, not by recording the concrete version values here.
+ADR 020 records the compatibility-gate rationale and the contract-field cleanup for the minimum compatible template version.
+
+After a major consolidation or other release-cadence reset, it is reasonable to bump `template_version` and, only for an explicit compatibility reset, move `minimum_compatible_template_version` forward. Do that in `template-contract.yml`, not by recording the concrete version values here.
 
 ## Compatibility Policy
 
@@ -46,7 +48,7 @@ Recommended staging flow:
 6. Refresh the demo from `main` if the public demo is intentionally allowed to show staging behavior.
 7. Cut the action release only after the soak period has not exposed release-blocking regressions.
 
-There is one hard boundary: do not publish an official generated template that requires unreleased action behavior through `default_action_ref: v0`. If a candidate template needs a newer action, test it with candidate-source bridge tests or temporary testing repositories until the action release has moved `v0`. After that, set `template-contract.yml` `min_action_version` to the released action version and publish the template.
+There is one hard boundary: do not publish an official generated template that requires unreleased action behavior through `default_action_ref: v0`. If a candidate template needs newer action behavior, test it with candidate-source bridge tests or temporary testing repositories until the action release has moved `v0`. After that, publish the template against the current released compatible action channel.
 
 The public demo can either follow staging `main` or follow a promoted stable ref. During pre-release, following `main` is acceptable if the demo is deliberately acting as a public smoke surface. At beta or wider public release, prefer setting `vars.DEMO_DAILY_SOURCE_REF` to a promoted ref such as `demo-stable` or a release tag, then move that ref only after staging checks pass.
 
@@ -81,9 +83,11 @@ Action releases are managed by `.github/workflows/release-please.yml`. Release P
 Before merging an action release PR:
 
 1. Confirm normal CI is green.
-2. Confirm any intended staging/soak period is complete.
-3. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
-4. Confirm the changelog entry and SemVer bump match the change.
+2. Confirm the candidate action passes against the current/latest generated template.
+3. Confirm the candidate action passes against the minimum compatible template version recorded by `template-contract.yml`.
+4. Confirm any intended staging/soak period is complete.
+5. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
+6. Confirm the changelog entry and SemVer bump match the change.
 
 After the action release:
 
@@ -94,9 +98,11 @@ After the action release:
 
 ## When To Release The Template
 
-Cut a template release when newly copied dashboard repositories should receive a changed generated starting point. This includes generated workflows, setup surface, config defaults, template README content, managed-docs initial snapshots, template provenance, repository policy files, or a new required minimum action version.
+Cut a template release when newly copied dashboard repositories should receive a changed generated starting point. This includes generated workflows, setup surface, config defaults, template README content, managed-docs initial snapshots, template provenance, repository policy files, or assumptions that depend on current released action behavior.
 
 Do not cut a template release for a compatible action-only fix. Existing generated repositories consume compatible fixes through the floating action channel, and new copies will use the current compatible action ref as long as the generated template still points to `default_action_ref: v0`.
+
+If a user or organization requires SHA-pinned Actions, the generated template documentation should point them to the latest released action tag/SHA known at template publication time. SHA-pinning is an opt-in policy choice; users who pin own the update cadence that the default floating compatible ref normally handles.
 
 The template version is `template-contract.yml` `template_version`. Normal template publication requires a source-repository GitHub Release whose tag is exactly:
 
@@ -106,7 +112,7 @@ reponomics-dashboard-v<template_version>
 
 If `template-contract.yml` contains `template_version: X.Y.Z`, the release tag must be `reponomics-dashboard-vX.Y.Z`.
 
-The `.github/workflows/publish-template.yml` workflow listens for published releases with that tag shape. It checks that the tag matches `template-contract.yml`, rebuilds `dist/template`, verifies the generated template, validates the public action ref against `min_action_version`, runs template smoke and consumer e2e checks, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, and only then mints the template publication app token and force-pushes the generated tree to `reponomics/reponomics-dashboard`.
+The `.github/workflows/publish-template.yml` workflow listens for published releases with that tag shape. It checks that the tag matches `template-contract.yml`, rebuilds `dist/template`, verifies the generated template, validates the public action ref used by generated workflows, runs template smoke and consumer e2e checks, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, and only then mints the template publication app token and force-pushes the generated tree to `reponomics/reponomics-dashboard`.
 
 The workflow intentionally does not upload assets to an already-published GitHub Release. Release evidence is carried as workflow artifacts and artifact attestations.
 
@@ -127,10 +133,9 @@ For a template-only release:
 For a coupled action/template release where the template requires new action behavior:
 
 1. Land the runtime and template changes on `main`.
-2. Cut the action release first, so `default_action_ref: v0` resolves to an action version satisfying the intended `min_action_version`.
-3. Update or confirm `template-contract.yml` `min_action_version`.
-4. Cut the template release with a `reponomics-dashboard-vX.Y.Z` tag.
-5. Refresh the demo from the released source ref.
+2. Cut the action release first, so `default_action_ref: v0` resolves to the intended released action behavior.
+3. Cut the template release with a `reponomics-dashboard-vX.Y.Z` tag.
+4. Refresh the demo from the released source ref.
 
 The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an operator escape hatch for recovery. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use a matching `reponomics-dashboard-v*` release tag.
 

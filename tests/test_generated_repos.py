@@ -13,6 +13,7 @@ import yaml
 from scripts import build_template
 from scripts import publish_generated_repo
 from scripts import template_contract
+from scripts import template_compat_e2e
 from scripts import template_consumer_e2e
 from scripts import template_provenance
 from scripts import verify_workflow_classification
@@ -431,13 +432,26 @@ def test_required_fields_do_not_have_default_value():
 
 def test_template_contract_and_action_metadata_contract():
     contract = template_contract.validate_local_contract()
+    contract_text = Path("template-contract.yml").read_text(encoding="utf-8")
 
     assert contract.action_repository == template_contract.ACTION_REPOSITORY
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.action_version)
     assert contract.template_version != contract.action_version
     assert contract.default_action_ref == f"v{contract.compatible_action_major}"
-    assert contract.min_action_version <= contract.action_version
+    assert "min_action_version" not in contract_text
+    assert re.fullmatch(
+        r"[0-9]+\.[0-9]+\.[0-9]+",
+        contract.minimum_compatible_template_version,
+    )
+    assert _version_tuple(
+        contract.minimum_compatible_template_version
+    ) <= _version_tuple(contract.template_version)
+    assert any(
+        protected.template_version == contract.minimum_compatible_template_version
+        and protected.status == "required"
+        for protected in contract.protected_template_refs
+    )
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
 
 
@@ -451,7 +465,11 @@ def test_template_includes_verifiable_provenance(tmp_path):
     assert provenance["schema_version"] == 1
     assert provenance["source"]["commit"]
     assert provenance["template"]["version"] == template_contract.load_contract().template_version
+    assert provenance["template"]["minimum_compatible_template_version"] == (
+        template_contract.load_contract().minimum_compatible_template_version
+    )
     assert provenance["action"]["default_ref"] == "v0"
+    assert "min_version" not in provenance["action"]
     assert provenance["payload"]["tree_manifest_format"] == "reponomics-template-tree-v1"
     assert provenance["payload"]["digest_algorithm"] == "sha256"
     assert provenance["payload"]["digest"] == digest.digest
@@ -1087,6 +1105,49 @@ def test_template_contract_verify_accepts_expected_action_ref(tmp_path):
     )
 
     template_contract.verify_template_refs(tmp_path)
+
+
+def test_template_compat_rejects_workflow_inputs_removed_from_action(tmp_path):
+    repo_dir = tmp_path / "template"
+    workflow_dir = repo_dir / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "collect.yml").write_text(
+        "\n".join(
+            [
+                "name: Collect",
+                "on: workflow_dispatch",
+                "jobs:",
+                "  collect:",
+                "    runs-on: ubuntu-24.04",
+                "    steps:",
+                "      - uses: reponomics/reponomics-dashboard-action@v0",
+                "        with:",
+                "          removed-input: value",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    generated_template = template_compat_e2e.GeneratedTemplate(
+        name="test-template",
+        repo_dir=repo_dir,
+        template_version="0.10.0",
+        source_commit="a" * 40,
+    )
+
+    with pytest.raises(
+        template_compat_e2e.TemplateCompatibilityError,
+        match="removed-input",
+    ):
+        template_compat_e2e._assert_template_workflow_inputs_supported(
+            generated_template,
+            action_inputs={"mode"},
+        )
+
+
+def _version_tuple(version: str) -> tuple[int, int, int]:
+    major, minor, patch = version.split(".")
+    return int(major), int(minor), int(patch)
 
 
 def test_workflow_classification_contract():

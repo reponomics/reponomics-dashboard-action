@@ -11,6 +11,8 @@ The dashboard collects GitHub traffic and growth data, stores retained state in 
 uses: reponomics/reponomics-dashboard-action@v0
 ```
 
+If your organization requires full-SHA-pinned Actions, use the latest action release recorded in `.reponomics/template-provenance.json` as `action.local_version`, resolve `v<that version>` to its commit SHA, and pin the generated workflows to that SHA. SHA-pinned repositories own their own action update cadence.
+
 ## Get Started
 
 1. Fill in the required setup fields at the top of `config.yaml`, commit that change, and decide which repositories this dashboard should track.

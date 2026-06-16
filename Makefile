@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -33,6 +33,7 @@ DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
+TEMPLATE_COMPAT_EXTRA_ARGS ?=
 STAGING_SMOKE_SOURCE_REPO ?= reponomics/reponomics-dashboard-action
 STAGING_SMOKE_SOURCE_REF ?= main
 STAGING_SMOKE_TEMPLATE_REPO ?= reponomics/reponomics-dashboard-staging
@@ -228,6 +229,9 @@ template-consumer-e2e: build-template ## Run generated template consumers agains
 
 template-action-boundary-e2e: build-template ## Run the generated-template composite action.yml boundary check
 	$(PYTHON) scripts/template_consumer_e2e.py --composite-boundary --template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON)
+
+template-compat-e2e: build-template ## Run candidate action against current and minimum compatible templates
+	$(PYTHON) scripts/template_compat_e2e.py --current-template-dir dist/template --action-repo $(ACTION_REPO) --action-python $(ACTION_PYTHON) $(TEMPLATE_COMPAT_EXTRA_ARGS)
 
 package-template-release: build-template ## Build deterministic generated-template release artifacts
 	rm -rf $(TEMPLATE_RELEASE_ARTIFACTS_DIR)

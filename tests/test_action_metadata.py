@@ -254,7 +254,7 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "make verify-workflow-classification" in commands
     assert "make validate-template-action-ref" in commands
     assert "make template-smoke" in commands
-    assert "make template-consumer-e2e" in commands
+    assert "make template-compat-e2e" in commands
     assert "make publish-template-dry-run" in commands
     assert "scripts/publish_generated_repo.py" not in workflow_text
     assert "--push" not in workflow_text
@@ -277,10 +277,19 @@ def test_runtime_steps_execute_dashboard_action_as_module() -> None:
 
 
 def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
-    workflow = Path(".github/workflows/release-please.yml").read_text(encoding="utf-8")
+    workflow_text = Path(".github/workflows/release-please.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    steps = workflow["jobs"]["release"]["steps"]
+    step_names = [step["name"] for step in steps]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
 
-    assert "reponomics-dashboard-dev" not in workflow
-    assert "repository_dispatch" not in workflow
+    assert "reponomics-dashboard-dev" not in workflow_text
+    assert "repository_dispatch" not in workflow_text
+    assert workflow["permissions"] == {"contents": "read"}
+    assert "make template-compat-e2e" in commands
+    assert step_names.index("Verify action compatibility with generated templates") < (
+        step_names.index("Create release PR or GitHub release")
+    )
 
 
 def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:

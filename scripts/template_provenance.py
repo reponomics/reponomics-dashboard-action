@@ -167,12 +167,12 @@ def build_provenance(
         },
         "template": {
             "version": contract.template_version,
+            "minimum_compatible_template_version": contract.minimum_compatible_template_version,
         },
         "action": {
             "repository": contract.action_repository,
             "default_ref": contract.default_action_ref,
             "compatible_major": contract.compatible_action_major,
-            "min_version": contract.min_action_version,
             "local_version": contract.action_version,
         },
         "generated_at": _source_timestamp(),

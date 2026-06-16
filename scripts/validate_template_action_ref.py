@@ -1,4 +1,4 @@
-"""Validate that the public template action ref satisfies the template contract."""
+"""Validate that the public template action ref is on the compatible action line."""
 
 from __future__ import annotations
 
@@ -138,13 +138,6 @@ def _validate_action_version(
             + f"resolves to version {action_version}, which is not compatible "
             + f"with major {contract.compatible_action_major}"
         )
-    if _version_tuple(action_version) < _version_tuple(contract.min_action_version):
-        raise TemplateActionRefError(
-            f"Public action ref {contract.action_repository}@{resolved.ref} "
-            + f"resolves to version {action_version}, below template minimum "
-            + f"{contract.min_action_version}"
-        )
-
 
 def _parse_ls_remote(output: str) -> dict[str, str]:
     matches: dict[str, str] = {}

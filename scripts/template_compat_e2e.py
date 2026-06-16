@@ -1,0 +1,385 @@
+"""Run candidate action checks against current and minimum compatible templates."""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+try:
+    from scripts.repo_paths import find_repo_root
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
+
+
+ROOT = find_repo_root(Path(__file__))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import template_consumer_e2e  # noqa: E402
+from scripts import template_contract  # noqa: E402
+from scripts import template_provenance  # noqa: E402
+
+
+DEFAULT_ACTION_REPO = ROOT
+DEFAULT_ACTION_PYTHON = DEFAULT_ACTION_REPO / "venv" / "bin" / "python"
+DEFAULT_CURRENT_TEMPLATE = ROOT / "dist" / "template"
+ACTION_REPOSITORY = template_contract.ACTION_REPOSITORY
+
+
+class TemplateCompatibilityError(RuntimeError):
+    """Raised when a generated template release is incompatible with the candidate action."""
+
+
+@dataclass(frozen=True)
+class GeneratedTemplate:
+    name: str
+    repo_dir: Path
+    template_version: str
+    source_commit: str
+
+
+def _load_mapping(path: Path) -> dict[str, Any]:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        raise TemplateCompatibilityError(f"{path} must contain a YAML mapping")
+    return payload
+
+
+def _git_output(args: list[str], *, cwd: Path = ROOT) -> str:
+    try:
+        return subprocess.check_output(
+            args,
+            cwd=cwd,
+            stderr=subprocess.STDOUT,
+            text=True,
+        ).strip()
+    except subprocess.CalledProcessError as exc:
+        output = exc.output.strip()
+        details = f": {output}" if output else ""
+        raise TemplateCompatibilityError(f"Command failed: {' '.join(args)}{details}") from exc
+
+
+def _source_commit() -> str:
+    return _git_output(["git", "rev-parse", "HEAD"])
+
+
+def _ensure_git_ref(template_ref: str) -> str:
+    rev_parse_args = ["git", "rev-parse", "--verify", f"{template_ref}^{{commit}}"]
+    try:
+        return _git_output(rev_parse_args)
+    except TemplateCompatibilityError:
+        _git_output(["git", "fetch", "--tags", "origin"])
+        return _git_output(rev_parse_args)
+
+
+def _checkout_ref(template_ref: str, destination: Path) -> str:
+    source_commit = _ensure_git_ref(template_ref)
+    _git_output(
+        [
+            "git",
+            "worktree",
+            "add",
+            "--detach",
+            destination.as_posix(),
+            template_ref,
+        ]
+    )
+    return source_commit
+
+
+def _remove_worktree(path: Path) -> None:
+    if not path.exists():
+        return
+    subprocess.run(
+        ["git", "-C", ROOT.as_posix(), "worktree", "remove", path.as_posix()],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _current_template(
+    template_dir: Path,
+    *,
+    contract: template_contract.TemplateContract,
+) -> GeneratedTemplate:
+    if not template_dir.exists():
+        raise TemplateCompatibilityError(
+            f"Current generated template does not exist: {template_dir}"
+        )
+    provenance = template_provenance.verify_template_provenance(
+        template_dir,
+        contract=contract,
+    )
+    template_version = str(provenance.get("template", {}).get("version") or "")
+    if template_version != contract.template_version:
+        raise TemplateCompatibilityError(
+            "current generated template provenance does not match template-contract.yml"
+        )
+    return GeneratedTemplate(
+        name=f"current template {contract.template_version}",
+        repo_dir=template_dir,
+        template_version=contract.template_version,
+        source_commit=_source_commit(),
+    )
+
+
+def _build_template_from_ref(
+    protected_ref: template_contract.ProtectedTemplateRef,
+    *,
+    action_python: Path,
+    work_root: Path,
+) -> GeneratedTemplate:
+    source_dir = work_root / "source"
+    output_dir = work_root / "generated-template"
+    source_commit = _checkout_ref(protected_ref.ref, source_dir)
+    if source_commit != protected_ref.source_commit:
+        raise TemplateCompatibilityError(
+            (
+                f"{protected_ref.ref}: expected source commit "
+                + f"{protected_ref.source_commit}, got {source_commit}"
+            )
+        )
+
+    source_contract = _load_mapping(source_dir / "template-contract.yml")
+    source_version = str(source_contract.get("template_version") or "")
+    if source_version != protected_ref.template_version:
+        raise TemplateCompatibilityError(
+            (
+                f"{protected_ref.ref}: contract version {source_version!r} does not "
+                + f"match protected version {protected_ref.template_version}"
+            )
+        )
+
+    _git_output(
+        [
+            action_python.as_posix(),
+            (source_dir / "scripts" / "build_template.py").as_posix(),
+            "--output",
+            output_dir.as_posix(),
+        ],
+        cwd=source_dir,
+    )
+    provenance = _load_mapping(output_dir / ".reponomics" / "template-provenance.json")
+    provenance_template_version = str(provenance.get("template", {}).get("version") or "")
+    if provenance_template_version != protected_ref.template_version:
+        raise TemplateCompatibilityError(
+            f"{protected_ref.ref}: generated provenance does not match template version"
+        )
+    if str(provenance.get("source", {}).get("commit") or "") != protected_ref.source_commit:
+        raise TemplateCompatibilityError(
+            f"{protected_ref.ref}: generated provenance does not match source commit"
+        )
+
+    return GeneratedTemplate(
+        name=protected_ref.ref,
+        repo_dir=output_dir,
+        template_version=protected_ref.template_version,
+        source_commit=protected_ref.source_commit,
+    )
+
+
+def _current_action_inputs(action_repo: Path) -> set[str]:
+    action_path = action_repo / "action.yml"
+    action = _load_mapping(action_path)
+    inputs = action.get("inputs")
+    if not isinstance(inputs, dict):
+        raise TemplateCompatibilityError(f"{action_path} must declare action inputs")
+    return {str(name) for name in inputs}
+
+
+def _workflow_documents(repo_dir: Path) -> list[tuple[Path, dict[str, Any]]]:
+    workflow_dir = repo_dir / ".github" / "workflows"
+    if not workflow_dir.is_dir():
+        raise TemplateCompatibilityError(f"{repo_dir}: missing .github/workflows")
+    documents: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(workflow_dir.glob("*.yml")) + sorted(workflow_dir.glob("*.yaml")):
+        payload = _load_mapping(path)
+        documents.append((path, payload))
+    return documents
+
+
+def _iter_steps(value: Any) -> list[dict[str, Any]]:
+    steps: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        if isinstance(value.get("steps"), list):
+            steps.extend(step for step in value["steps"] if isinstance(step, dict))
+        for child in value.values():
+            steps.extend(_iter_steps(child))
+    elif isinstance(value, list):
+        for child in value:
+            steps.extend(_iter_steps(child))
+    return steps
+
+
+def _assert_template_workflow_inputs_supported(
+    generated_template: GeneratedTemplate,
+    *,
+    action_inputs: set[str],
+) -> None:
+    missing: dict[str, set[str]] = {}
+    seen_reponomics_step = False
+    for path, workflow in _workflow_documents(generated_template.repo_dir):
+        for step in _iter_steps(workflow):
+            uses = str(step.get("uses") or "")
+            if not uses.startswith(f"{ACTION_REPOSITORY}@"):
+                continue
+            seen_reponomics_step = True
+            with_payload = step.get("with") or {}
+            if not isinstance(with_payload, dict):
+                continue
+            unsupported = {
+                str(name) for name in with_payload if str(name) not in action_inputs
+            }
+            if unsupported:
+                missing[path.relative_to(generated_template.repo_dir).as_posix()] = unsupported
+    if not seen_reponomics_step:
+        raise TemplateCompatibilityError(
+            f"{generated_template.name}: no generated workflow invokes {ACTION_REPOSITORY}"
+        )
+    if missing:
+        details = "; ".join(
+            f"{path}: {', '.join(sorted(inputs))}" for path, inputs in sorted(missing.items())
+        )
+        raise TemplateCompatibilityError(
+            (
+                f"{generated_template.name}: generated workflows pass inputs no longer "
+                + f"declared by action.yml: {details}"
+            )
+        )
+
+
+def _run_generated_template(
+    generated_template: GeneratedTemplate,
+    *,
+    action_repo: Path,
+    action_python: Path,
+    action_inputs: set[str],
+    keep_temp: bool,
+) -> None:
+    print(
+        "Checking template compatibility: "
+        + f"{generated_template.name} "
+        + f"({generated_template.template_version}, {generated_template.source_commit[:7]})"
+    )
+    _assert_template_workflow_inputs_supported(
+        generated_template,
+        action_inputs=action_inputs,
+    )
+    template_consumer_e2e.run_e2e(
+        template_dir=generated_template.repo_dir,
+        action_repo=action_repo,
+        action_python=action_python,
+        keep_temp=keep_temp,
+    )
+
+
+def run_compatibility_checks(
+    *,
+    current_template_dir: Path,
+    action_repo: Path,
+    action_python: Path,
+    extra_template_refs: list[str] | None = None,
+    keep_temp: bool = False,
+) -> None:
+    contract = template_contract.validate_local_contract(ROOT)
+    action_repo = action_repo.resolve()
+    action_python = action_python.resolve()
+    action_inputs = _current_action_inputs(action_repo)
+    failures: list[str] = []
+    checked = 0
+
+    try:
+        _run_generated_template(
+            _current_template(current_template_dir.resolve(), contract=contract),
+            action_repo=action_repo,
+            action_python=action_python,
+            action_inputs=action_inputs,
+            keep_temp=keep_temp,
+        )
+        checked += 1
+    except Exception as exc:
+        failures.append(f"current template: {exc}")
+
+    protected_refs = list(contract.protected_template_refs)
+    for extra_ref in extra_template_refs or []:
+        protected_refs.append(
+            template_contract.ProtectedTemplateRef(
+                ref=extra_ref,
+                template_version=extra_ref.removeprefix("reponomics-dashboard-v"),
+                source_commit=_ensure_git_ref(extra_ref),
+                status="required",
+            )
+        )
+
+    for protected_ref in protected_refs:
+        work_root = Path(tempfile.mkdtemp(prefix="reponomics-template-compat-"))
+        try:
+            generated_template = _build_template_from_ref(
+                protected_ref,
+                action_python=action_python,
+                work_root=work_root,
+            )
+            _run_generated_template(
+                generated_template,
+                action_repo=action_repo,
+                action_python=action_python,
+                action_inputs=action_inputs,
+                keep_temp=keep_temp,
+            )
+            checked += 1
+            if keep_temp:
+                print(f"Kept compatibility work tree: {work_root}")
+        except Exception as exc:
+            failures.append(f"{protected_ref.ref}: {exc}")
+        finally:
+            if not keep_temp:
+                _remove_worktree(work_root / "source")
+                shutil.rmtree(work_root, ignore_errors=True)
+
+    if failures:
+        raise TemplateCompatibilityError("\n".join(failures))
+    print(f"Template compatibility checks passed: {checked} template(s)")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--current-template-dir",
+        type=Path,
+        default=DEFAULT_CURRENT_TEMPLATE,
+        help="Current generated template directory, usually dist/template.",
+    )
+    parser.add_argument(
+        "--template-ref",
+        action="append",
+        dest="template_refs",
+        help="Additional template release ref to test; may be passed multiple times.",
+    )
+    parser.add_argument("--action-repo", type=Path, default=DEFAULT_ACTION_REPO)
+    parser.add_argument("--action-python", type=Path, default=DEFAULT_ACTION_PYTHON)
+    parser.add_argument("--keep-temp", action="store_true")
+    args = parser.parse_args()
+    run_compatibility_checks(
+        current_template_dir=args.current_template_dir,
+        action_repo=args.action_repo,
+        action_python=args.action_python,
+        extra_template_refs=args.template_refs,
+        keep_temp=args.keep_temp,
+    )
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except TemplateCompatibilityError as exc:
+        print(f"Template compatibility failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc

@@ -62,7 +62,7 @@ Run it locally with:
 make security-audit
 ```
 
-CI runs this check through `.github/workflows/open-source-security.yml` on pull requests, pushes to `main`, a weekly schedule, and manual dispatch. This is intentionally separate from the GitHub-native Dependabot signal: Dependabot opens update PRs, while `pip-audit` gives an open-source dependency vulnerability gate on the resolved CI environment.
+CI runs this check through `.github/workflows/open-source-security.yml` on pull requests, pushes to `main`, a weekly schedule, and manual dispatch. This is intentionally separate from the GitHub-native Dependabot signal: Dependabot opens update PRs, while `pip-audit` gives an open-source dependency vulnerability gate for the resolved CI environment.
 
 ## Runtime Lock Audit
 
@@ -74,7 +74,7 @@ Run it locally with:
 make audit-runtime-lock
 ```
 
-CI runs this check through `.github/workflows/open-source-security.yml` alongside the installed-environment audit. This keeps the source/development dependency surface and the action runtime lock visible as separate audit claims.
+CI runs this check through `.github/workflows/open-source-security.yml` alongside the installed-environment audit. Together, those checks keep the source/development dependency surface and the action runtime lock visible as separate audit claims.
 
 ## Runtime Dependency Lock
 

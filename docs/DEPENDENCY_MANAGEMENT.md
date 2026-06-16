@@ -65,7 +65,7 @@ This check proves the lock is synchronized with the declared dependency ranges a
 
 `make audit-runtime-lock` runs `pip-audit` against `requirements-runtime.txt`. It checks the hash-pinned dependency set installed by the composite action in user workflows.
 
-`make security` currently runs:
+`make security` runs:
 
 ```bash
 make security-audit
@@ -79,7 +79,7 @@ make validate-vendored-assets
 When investigating a vulnerability, use all three signals deliberately:
 
 - Dependabot: authoritative for GitHub's dependency graph alert surface and specific manifest path.
-- `pip-audit`: independent audit of the resolved Python environment or a requirements file when run manually.
+- `pip-audit`: independent audit of the resolved Python environment and the runtime requirements lock.
 - OSV-Scanner: repository-level OSV signal for supported manifests and locks.
 
 ## Dependabot
@@ -99,7 +99,7 @@ Use the alert's manifest path to decide the remediation:
 
 ## GitHub Actions And Runners
 
-Source-repository workflows currently run on `ubuntu-24.04`, except for Scorecard on `ubuntu-latest`. Generated template workflows use `ubuntu-latest`. The action setup step installs Python 3.11.
+Source-repository workflows run on `ubuntu-24.04`, except for Scorecard on `ubuntu-latest`. Generated template workflows use `ubuntu-latest`. The action setup step installs Python 3.11.
 
 Evaluate runtime dependency compatibility primarily against Linux and Python 3.11, while keeping the package test matrix compatible with the Python versions in `ci.yml`.
 

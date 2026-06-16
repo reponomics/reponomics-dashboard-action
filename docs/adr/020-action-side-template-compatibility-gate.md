@@ -50,7 +50,7 @@ candidate action release
   and must pass minimum-compatible-template checks
 ```
 
-Generated template documentation should also include a low-friction notice for users whose organization requires SHA-pinned Actions. The default template should keep using the compatible floating action ref, but the notice should point such users to the latest released action tag/SHA available at template publication time and warn that SHA-pinned users own their own update cadence.
+Generated template documentation should also include a low-friction notice for users whose organization requires SHA-pinned Actions. The default template should keep using the compatible floating action ref, but the notice should point such users to `docs/reponomics/.manifest.json` for the action repository and action version associated with the template snapshot and warn that SHA-pinned users own their own update cadence.
 
 ## Consequences
 

@@ -6,7 +6,7 @@
 > [!WARNING]
 > This directory is the default location for Reponomics managed documentation. If `allow_docs_sync` is `true`, local edits in `docs/reponomics/` may be overwritten automatically when docs sync runs. Set `allow_docs_sync: false` before editing if you want to own this directory manually.
 
-Generated for Reponomics Dashboard Action {{ACTION_VERSION}}.
+The manifest at `docs/reponomics/.manifest.json` records the action version for this managed-docs snapshot.
 
 Start here:
 
@@ -19,7 +19,7 @@ Start here:
 - [Privacy and artifacts](privacy-and-artifacts.md)
 - [Repository access and trust boundary](trust-boundary.md)
 - [FAQ](faq.md)
-- [Provenance and supply chain verification](provenance.md)
+- [Provenance and verification materials](provenance.md)
 - [Security guidance](security.md)
 - [Support guidance](support.md)
 

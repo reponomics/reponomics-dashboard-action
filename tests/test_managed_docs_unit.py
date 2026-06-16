@@ -43,7 +43,7 @@ def _sync(
 def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     result = _sync(
         tmp_path,
-        files={"README.md": "Action {{ACTION_VERSION}}\n"},
+        files={"README.md": "Managed docs\n"},
     )
 
     namespace = result.namespace
@@ -51,7 +51,7 @@ def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
 
     assert result.state == managed_docs.STATE_WRITTEN
     assert result.changed is True
-    assert (namespace / "README.md").read_text(encoding="utf-8") == "Action 0.0.0-test\n"
+    assert (namespace / "README.md").read_text(encoding="utf-8") == "Managed docs\n"
     assert manifest["managed_namespace"] == namespace.as_posix()
     assert manifest["action_version"] == "0.0.0-test"
     assert manifest["updated_at"] == result.docs_updated_at

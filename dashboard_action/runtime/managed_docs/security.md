@@ -7,4 +7,4 @@ This is a placeholder security document for repositories generated from the Repo
 
 Until Reponomics publishes authoritative security guidance, do not treat this file as a reporting channel.
 
-Do not publish secrets, dashboard keys, retained artifact contents, or exploit details in public issues. General background is available in [Secure Dashboard Key Generation](secure-dashboard-key.md), [Repository Access And Trust Boundary](trust-boundary.md), and [Provenance And Supply Chain Verification](provenance.md).
+Do not publish secrets, dashboard keys, retained artifact contents, or exploit details in public issues. General background is available in [Secure Dashboard Key Generation](secure-dashboard-key.md), [Repository Access And Trust Boundary](trust-boundary.md), and [Provenance And Verification Materials](provenance.md).

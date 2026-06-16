@@ -139,8 +139,13 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     readme = (docs_root / "README.md").read_text(encoding="utf-8")
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
 
-    assert "{{ACTION_VERSION}}" not in readme
-    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
+    rendered_docs = {
+        path.relative_to(docs_root).as_posix(): path.read_text(encoding="utf-8")
+        for path in docs_root.rglob("*")
+        if path.is_file()
+    }
+    assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
+    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
@@ -469,6 +474,7 @@ def test_template_includes_verifiable_provenance(tmp_path):
         template_contract.load_contract().minimum_compatible_template_version
     )
     assert provenance["action"]["default_ref"] == "v0"
+    assert "local_version" not in provenance["action"]
     assert "min_version" not in provenance["action"]
     assert provenance["payload"]["tree_manifest_format"] == "reponomics-template-tree-v1"
     assert provenance["payload"]["digest_algorithm"] == "sha256"
@@ -1057,8 +1063,13 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
 
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
     readme = (docs_root / "README.md").read_text(encoding="utf-8")
-    assert "{{ACTION_VERSION}}" not in readme
-    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
+    rendered_docs = {
+        path.relative_to(docs_root).as_posix(): path.read_text(encoding="utf-8")
+        for path in docs_root.rglob("*")
+        if path.is_file()
+    }
+    assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
+    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version

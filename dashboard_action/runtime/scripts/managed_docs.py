@@ -63,10 +63,7 @@ def sync_managed_docs(
             namespace,
         )
 
-    bundle_files = _load_bundle(
-        bundle_dir,
-        action_version=action_version,
-    )
+    bundle_files = _load_bundle(bundle_dir)
     next_hashes = {path: _sha_bytes(content) for path, content in bundle_files.items()}
     manifest_path = namespace / MANIFEST_NAME
     current_hashes = _current_file_hashes(namespace)
@@ -166,11 +163,7 @@ def _result(
     )
 
 
-def _load_bundle(
-    bundle_dir: Path,
-    *,
-    action_version: str,
-) -> dict[str, bytes]:
+def _load_bundle(bundle_dir: Path) -> dict[str, bytes]:
     bundle_dir = Path(bundle_dir)
     if not bundle_dir.is_dir():
         raise ManagedDocsError(f"managed docs bundle directory is missing: {bundle_dir}")
@@ -181,9 +174,7 @@ def _load_bundle(
             continue
         relative = path.relative_to(bundle_dir).as_posix()
         _validate_relative_path(relative)
-        text = path.read_text(encoding="utf-8")
-        text = text.replace("{{ACTION_VERSION}}", action_version)
-        files[relative] = text.encode("utf-8")
+        files[relative] = path.read_bytes()
 
     if not files:
         raise ManagedDocsError("managed docs bundle is empty.")

@@ -102,7 +102,7 @@ Cut a template release when newly copied dashboard repositories should receive a
 
 Do not cut a template release for a compatible action-only fix. Existing generated repositories consume compatible fixes through the floating action channel, and new copies will use the current compatible action ref as long as the generated template still points to `default_action_ref: v0`.
 
-If a user or organization requires SHA-pinned Actions, the generated template documentation should point them to the latest released action tag/SHA known at template publication time. SHA-pinning is an opt-in policy choice; users who pin own the update cadence that the default floating compatible ref normally handles.
+If a user or organization requires SHA-pinned Actions, the generated template documentation should point them to `docs/reponomics/.manifest.json` for the action repository and action version associated with that template snapshot. SHA-pinning is an opt-in policy choice; users who pin own the update cadence that the default floating compatible ref normally handles.
 
 The template version is `template-contract.yml` `template_version`. Normal template publication requires a source-repository GitHub Release whose tag is exactly:
 

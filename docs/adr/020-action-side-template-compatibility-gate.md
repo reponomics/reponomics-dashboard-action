@@ -35,6 +35,8 @@ The contract records:
 
 Do not keep `min_action_version` as a compatibility contract field. If template publication needs evidence that the current `v0` action channel was already released and tested, that evidence belongs in release provenance or release workflow output, not in a standing compatibility range.
 
+Every public action release should publish a corresponding template release. The template release records the action version current at publication time in `docs/reponomics/.manifest.json`.
+
 The action release gate must materialize both:
 
 - the current/latest generated template for the release candidate; and

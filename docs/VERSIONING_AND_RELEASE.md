@@ -20,6 +20,8 @@ Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboar
 
 `template-contract.yml` is the source of truth for the generated template version, generated action ref, and action/template compatibility line. Generated templates ship against the current compatible action channel. Action releases must continue to pass against both the current generated template and the minimum compatible template version.
 
+Every public action release should publish a corresponding template release. The template release records the action version current at publication time in `docs/reponomics/.manifest.json`.
+
 ADR 020 records the compatibility-gate rationale and the contract-field cleanup for the minimum compatible template version.
 
 After a major consolidation or other release-cadence reset, it is reasonable to bump `template_version` and, only for an explicit compatibility reset, move `minimum_compatible_template_version` forward. Do that in `template-contract.yml`, not by recording the concrete version values here.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -53,7 +54,14 @@ def _load_mapping(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _git_output(args: list[str], *, cwd: Path = ROOT) -> str:
+def _absolute_path(path: Path) -> Path:
+    """Make a path cwd-relative without resolving virtualenv symlinks."""
+    if path.is_absolute():
+        return path
+    return Path.cwd() / path
+
+
+def _command_output(args: list[str], *, cwd: Path = ROOT) -> str:
     try:
         return subprocess.check_output(
             args,
@@ -65,6 +73,34 @@ def _git_output(args: list[str], *, cwd: Path = ROOT) -> str:
         output = exc.output.strip()
         details = f": {output}" if output else ""
         raise TemplateCompatibilityError(f"Command failed: {' '.join(args)}{details}") from exc
+
+
+def _git_output(args: list[str], *, cwd: Path = ROOT) -> str:
+    return _command_output(args, cwd=cwd)
+
+
+def _venv_python(venv_dir: Path) -> Path:
+    if os.name == "nt":  # pragma: no cover - Windows compatibility path
+        return venv_dir / "Scripts" / "python.exe"
+    return venv_dir / "bin" / "python"
+
+
+def _install_isolated_python_env(
+    *,
+    source_dir: Path,
+    venv_dir: Path,
+    base_python: Path,
+    label: str,
+) -> Path:
+    print(f"Creating isolated {label} environment: {venv_dir}")
+    _command_output([base_python.as_posix(), "-m", "venv", venv_dir.as_posix()])
+    python = _venv_python(venv_dir)
+    _command_output([python.as_posix(), "-m", "pip", "install", "--upgrade", "pip"])
+    _command_output(
+        [python.as_posix(), "-m", "pip", "install", "-e", source_dir.as_posix()],
+        cwd=source_dir,
+    )
+    return python
 
 
 def _source_commit() -> str:
@@ -135,7 +171,7 @@ def _current_template(
 def _build_template_from_ref(
     protected_ref: template_contract.ProtectedTemplateRef,
     *,
-    action_python: Path,
+    base_python: Path,
     work_root: Path,
 ) -> GeneratedTemplate:
     source_dir = work_root / "source"
@@ -159,9 +195,15 @@ def _build_template_from_ref(
             )
         )
 
+    build_python = _install_isolated_python_env(
+        source_dir=source_dir,
+        venv_dir=work_root / "template-build-runtime",
+        base_python=base_python,
+        label=f"{protected_ref.ref} template build",
+    )
     _git_output(
         [
-            action_python.as_posix(),
+            build_python.as_posix(),
             (source_dir / "scripts" / "build_template.py").as_posix(),
             "--output",
             output_dir.as_posix(),
@@ -291,63 +333,81 @@ def run_compatibility_checks(
     keep_temp: bool = False,
 ) -> None:
     contract = template_contract.validate_local_contract(ROOT)
-    action_repo = action_repo.resolve()
-    action_python = action_python.resolve()
+    action_repo = _absolute_path(action_repo).resolve()
+    base_python = _absolute_path(action_python)
     action_inputs = _current_action_inputs(action_repo)
     failures: list[str] = []
     checked = 0
+    compat_root = Path(tempfile.mkdtemp(prefix="reponomics-template-compat-run-"))
 
     try:
-        _run_generated_template(
-            _current_template(current_template_dir.resolve(), contract=contract),
-            action_repo=action_repo,
-            action_python=action_python,
-            action_inputs=action_inputs,
-            keep_temp=keep_temp,
-        )
-        checked += 1
-    except Exception as exc:
-        failures.append(f"current template: {exc}")
-
-    protected_refs = list(contract.protected_template_refs)
-    for extra_ref in extra_template_refs or []:
-        protected_refs.append(
-            template_contract.ProtectedTemplateRef(
-                ref=extra_ref,
-                template_version=extra_ref.removeprefix("reponomics-dashboard-v"),
-                source_commit=_ensure_git_ref(extra_ref),
-                status="required",
-            )
-        )
-
-    for protected_ref in protected_refs:
-        work_root = Path(tempfile.mkdtemp(prefix="reponomics-template-compat-"))
+        isolated_action_python: Path | None = None
         try:
-            generated_template = _build_template_from_ref(
-                protected_ref,
-                action_python=action_python,
-                work_root=work_root,
+            isolated_action_python = _install_isolated_python_env(
+                source_dir=action_repo,
+                venv_dir=compat_root / "candidate-action-runtime",
+                base_python=base_python,
+                label="candidate action runtime",
             )
             _run_generated_template(
-                generated_template,
+                _current_template(current_template_dir.resolve(), contract=contract),
                 action_repo=action_repo,
-                action_python=action_python,
+                action_python=isolated_action_python,
                 action_inputs=action_inputs,
                 keep_temp=keep_temp,
             )
             checked += 1
-            if keep_temp:
-                print(f"Kept compatibility work tree: {work_root}")
         except Exception as exc:
-            failures.append(f"{protected_ref.ref}: {exc}")
-        finally:
-            if not keep_temp:
-                _remove_worktree(work_root / "source")
-                shutil.rmtree(work_root, ignore_errors=True)
+            failures.append(f"current template: {exc}")
 
-    if failures:
-        raise TemplateCompatibilityError("\n".join(failures))
-    print(f"Template compatibility checks passed: {checked} template(s)")
+        protected_refs = list(contract.protected_template_refs)
+        for extra_ref in extra_template_refs or []:
+            protected_refs.append(
+                template_contract.ProtectedTemplateRef(
+                    ref=extra_ref,
+                    template_version=extra_ref.removeprefix("reponomics-dashboard-v"),
+                    source_commit=_ensure_git_ref(extra_ref),
+                    status="required",
+                )
+            )
+
+        for protected_ref in protected_refs:
+            work_root = Path(tempfile.mkdtemp(prefix="template-", dir=compat_root))
+            try:
+                generated_template = _build_template_from_ref(
+                    protected_ref,
+                    base_python=base_python,
+                    work_root=work_root,
+                )
+                if isolated_action_python is None:
+                    raise TemplateCompatibilityError(
+                        "candidate action runtime environment was not created"
+                    )
+                _run_generated_template(
+                    generated_template,
+                    action_repo=action_repo,
+                    action_python=isolated_action_python,
+                    action_inputs=action_inputs,
+                    keep_temp=keep_temp,
+                )
+                checked += 1
+                if keep_temp:
+                    print(f"Kept compatibility work tree: {work_root}")
+            except Exception as exc:
+                failures.append(f"{protected_ref.ref}: {exc}")
+            finally:
+                if not keep_temp:
+                    _remove_worktree(work_root / "source")
+                    shutil.rmtree(work_root, ignore_errors=True)
+
+        if failures:
+            raise TemplateCompatibilityError("\n".join(failures))
+        print(f"Template compatibility checks passed: {checked} template(s)")
+    finally:
+        if keep_temp:
+            print(f"Kept compatibility temp root: {compat_root}")
+        else:
+            shutil.rmtree(compat_root, ignore_errors=True)
 
 
 def main() -> None:

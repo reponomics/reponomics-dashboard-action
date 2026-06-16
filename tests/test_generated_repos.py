@@ -1260,6 +1260,64 @@ def test_template_consumer_e2e_absolutizes_cwd_relative_paths(tmp_path, monkeypa
     assert template_consumer_e2e._absolute_path(action_python) == tmp_path / action_python
 
 
+def test_template_compat_e2e_absolutizes_without_resolving_python_symlink(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    action_python = Path("venv/bin/python")
+
+    assert template_compat_e2e._absolute_path(action_python) == tmp_path / action_python
+
+
+def test_template_compat_e2e_installs_isolated_python_env(tmp_path, monkeypatch):
+    source_dir = tmp_path / "source"
+    venv_dir = tmp_path / "runtime-venv"
+    base_python = tmp_path / "venv" / "bin" / "python"
+    source_dir.mkdir()
+    calls: list[tuple[list[str], Path]] = []
+
+    def fake_command_output(args, *, cwd=template_compat_e2e.ROOT):
+        calls.append((args, cwd))
+        return ""
+
+    monkeypatch.setattr(template_compat_e2e, "_command_output", fake_command_output)
+
+    isolated_python = template_compat_e2e._install_isolated_python_env(
+        source_dir=source_dir,
+        venv_dir=venv_dir,
+        base_python=base_python,
+        label="test runtime",
+    )
+
+    assert isolated_python == venv_dir / "bin" / "python"
+    assert calls == [
+        ([base_python.as_posix(), "-m", "venv", venv_dir.as_posix()], template_compat_e2e.ROOT),
+        (
+            [
+                isolated_python.as_posix(),
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "pip",
+            ],
+            template_compat_e2e.ROOT,
+        ),
+        (
+            [
+                isolated_python.as_posix(),
+                "-m",
+                "pip",
+                "install",
+                "-e",
+                source_dir.as_posix(),
+            ],
+            source_dir,
+        ),
+    ]
+
+
 def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_path):
     (tmp_path / ".e2e-github-output").write_text(
         "data-mode=encrypted\npublish-pages=true\n",

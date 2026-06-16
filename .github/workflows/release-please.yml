@@ -12,6 +12,9 @@ concurrency:
   group: release-please-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  PYTHON_VERSION: "3.11"
+
 jobs:
   release:
     name: Release
@@ -28,6 +31,18 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Verify action compatibility with generated templates
+        run: |
+          set -euo pipefail
+          make template-compat-e2e
 
       - name: Create release PR or GitHub release
         id: release

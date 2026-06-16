@@ -48,10 +48,10 @@ jobs:
           make validate-template-action-ref
           make template-smoke
 
-      - name: Run generated template consumers against candidate action
+      - name: Run generated template compatibility against candidate action
         run: |
           set -euo pipefail
-          make template-consumer-e2e
+          make template-compat-e2e
 
       - name: Dry-run generated template publication
         run: |

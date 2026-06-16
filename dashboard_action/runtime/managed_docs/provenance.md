@@ -1,132 +1,63 @@
-# Provenance And Supply Chain Verification
+# Provenance And Verification Materials
 
 > [!WARNING]
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
-This document explains how a dashboard repository user can inspect the evidence behind the Reponomics action, generated template, vendored browser assets, release materials, and generated dashboard artifacts. It is intentionally conservative: a claim belongs here only if it is backed by repository files, CI, GitHub metadata, or a command a user can run.
+This page lists the provenance and verification material Reponomics publishes or writes into generated repositories.
 
-Most users should follow the setup guide and use the recommended action version. This document is for users, researchers, maintainers, or reviewers who want a higher-assurance review path.
+## In This Dashboard Repository
 
-## Short Version
+| Evidence | Location | Contains |
+| --- | --- | --- |
+| Managed-docs manifest | `docs/reponomics/.manifest.json` | action repository, action version, managed namespace, generation timestamp, managed-doc file hashes |
+| Template provenance | `.reponomics/template-provenance.json` | source repository and commit, template version, action repository/default ref/compatible major, template compatibility line, generated payload digest metadata |
+| Workflow action refs | `.github/workflows/*.yml` | Reponomics action refs used by generated workflows |
+| Collect provenance artifact | `reponomics-collect-provenance` workflow artifact, path `.reponomics/collect-provenance/collect-provenance.json` | source repository SHA, workflow run ID/attempt, action repository/ref/resolved SHA, runtime version, data mode, retention and publication settings |
+| Retained dashboard data artifact | `dashboard-data` workflow artifact | retained encrypted or plaintext dashboard data, depending on `data_mode` |
+| Rendered dashboard outputs | Pages artifact or downloadable dashboard artifact | generated dashboard HTML and assets from the repository workflow run |
 
-- The highest-assurance way to consume the runtime is by full commit SHA: `uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>`. With a full SHA, the action code GitHub runs is the repository tree at that immutable commit. Version tags are more convenient, but they trade some strict pinning assurance for easier updates.
-- The generated template repository is intentionally thin. It delegates collection, encryption, rendering, CSV export, and key rotation to `reponomics-dashboard-action`.
-- Chart.js and dashboard fonts are vendored by the action, not loaded from CDNs. The action repository records exact npm package versions, tarball integrity values, local SHA-256 digests, and license digests.
-- Runtime Python dependencies are installed from the action's committed `requirements-runtime.txt` file in hash-required mode.
-- The action repository CI validates imported action SHA pins, vendored browser assets, runtime dependency locks, tests, type checks, CodeQL, OSV scanning, Scorecard, and release notice fixtures.
-- GitHub immutable releases are enabled for action releases. You can inspect release immutability, target commit, and release attestations with GitHub CLI.
-- No release attestation from the action repository covers every dashboard artifact generated inside your own repository. Generated artifacts inherit your repository's workflow identity, permissions, secrets, action ref, artifact retention, and Pages settings.
+## Generated Template Publication
 
-## What To Verify In Your Dashboard Repository
+| Evidence | Location | Contains |
+| --- | --- | --- |
+| Published template commit | `reponomics/reponomics-dashboard` `main` branch | generated template tree |
+| Publication commit trailer | generated template commit message `Source-Commit` | source repository commit used for publication |
+| Template provenance file | `.reponomics/template-provenance.json` in the generated template tree | source commit, template version, action ref metadata, canonical payload digest |
+| Managed-docs manifest | `docs/reponomics/.manifest.json` in the generated template tree | action version and managed-doc hashes for the shipped docs snapshot |
+| Template release artifacts | `publish-template.yml` workflow artifact named `reponomics-dashboard-template-release-<template-release-tag>` | deterministic template archive, canonical tree manifest, `SHA256SUMS` |
+| Template artifact attestations | GitHub artifact attestations from `publish-template.yml` | attestations for the template archive, tree manifest, and checksum file |
 
-Start with the workflow files in your dashboard repository:
+Template release artifact names are derived from `template-contract.yml` and the `reponomics-dashboard-v<template_version>` release tag. The canonical tree manifest excludes `.reponomics/template-provenance.json`; the provenance file records that exclusion.
 
-- `.github/workflows/collect-and-publish.yml`
-- `.github/workflows/rotate-key.yml`
-- `.github/workflows/incident-reset.yml`
-- `.github/workflows/keepalive.yml`
+## Action Releases
 
-Check which action ref each workflow uses:
+| Evidence | Location | Contains |
+| --- | --- | --- |
+| Action release tag | `reponomics/reponomics-dashboard-action` Git tags and GitHub Releases | released action source ref |
+| Floating action tags | action repository tags such as `v<major>` and `v<major>.<minor>` | compatible action channel refs moved by release automation |
+| Release source archive | `sbom-provenance.yml` workflow artifact `reponomics-release-provenance` | Git archive of the release source tree |
+| Release SBOM | `sbom-provenance.yml` workflow artifact `reponomics-release-provenance` | SPDX JSON SBOM for the release source tree |
+| Release attestations | GitHub artifact attestations from `sbom-provenance.yml` | attestations for the release source archive and release SBOM |
+| Runtime dependency lock | `requirements-runtime.txt` at the action ref | hash-pinned Python runtime dependencies |
+| Vendored browser asset manifests | `vendor/*/manifest.json` at the action ref | upstream package metadata, local asset hashes, license hashes |
 
-```bash
-grep -R "reponomics/reponomics-dashboard-action@" .github/workflows
-```
+## Demo Publication
 
-If the workflow uses a tag such as `v0.13.1` or `v0.13`, resolve that tag in the action repository:
+| Evidence | Location | Contains |
+| --- | --- | --- |
+| Demo provenance | `reponomics/reponomics-dashboard-demo` `.reponomics/demo-provenance.json` | source repository/commit, template version, dataset revision, synthetic-data marker, generated payload digest, retained-data seed metadata |
+| Demo publication commit trailer | generated demo commit message `Source-Commit` | source repository commit used for publication |
+| Demo publication workflow artifacts | `publish-demo.yml` workflow artifacts `generated-demo-repo` and `generated-demo-dashboard-data` | generated demo tree archive, source commit file, encrypted demo seed data |
 
-```bash
-gh api repos/reponomics/reponomics-dashboard-action/git/ref/tags/v0.13.1 --jq '.object.sha'
-```
+## Local Verification Commands
 
-If you want the strongest pinning posture, replace the tag with the 40-character commit SHA after reviewing that exact source tree:
-
-```yaml
-uses: reponomics/reponomics-dashboard-action@<40-character-commit-sha>
-```
-
-That makes updates explicit. You will need to update the SHA yourself when you want compatible fixes or new features.
-
-## How To Verify The Action Source
-
-Inspect the exact source tree GitHub Actions will run:
-
-```text
-https://github.com/reponomics/reponomics-dashboard-action/tree/<ref-or-commit-sha>
-```
-
-For a focused review, inspect:
-
-- `action.yml`
-- `dashboard_action/run.py`
-- `dashboard_action/runtime/scripts/render_dashboard.py`
-- `dashboard_action/runtime/scripts/render_readme.py`
-- `dashboard_action/runtime/scripts/crypto_artifact.py`
-- `requirements-runtime.txt`
-- `vendor/*/manifest.json`
-
-The action itself pins imported GitHub Actions by full commit SHA. The action repository validates those pins in CI.
-
-## How To Verify Vendored Browser Assets
-
-The hosted dashboard loads Chart.js from a same-origin generated asset, not from a CDN. The action renderer copies that file from the action repository's vendored `vendor/chart.js/chart.umd.min.js` file. Dashboard fonts are also vendored by the action and embedded into generated CSS.
-
-To inspect vendored asset metadata without cloning, replace `REF` with the action ref or commit SHA you are evaluating:
+Run these from a checkout of `reponomics/reponomics-dashboard-action` at the action ref being evaluated.
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/reponomics/reponomics-dashboard-action/REF/vendor/chart.js/manifest.json"
-curl -fsSL "https://raw.githubusercontent.com/reponomics/reponomics-dashboard-action/REF/vendor/chart.js/chart.umd.min.js" | shasum -a 256
-```
-
-The expected digest is the `sha256` value in the corresponding manifest at the same ref.
-
-For a fuller local check:
-
-```bash
-git clone https://github.com/reponomics/reponomics-dashboard-action.git
-cd reponomics-dashboard-action
-git checkout <ref-or-commit-sha>
 make validate-vendored-assets
+make validate-runtime-lock
+venv/bin/python scripts/template_provenance.py verify --root dist/template
+venv/bin/python scripts/template_provenance.py manifest --root dist/template --output /tmp/template.tree.jsonl
 ```
 
-That validator downloads the recorded npm package tarballs, verifies tarball integrity, extracts the recorded upstream files, hashes them, and compares those hashes to the committed manifests and local vendored files.
-
-## How To Verify A Release
-
-Check whether an action release is immutable and what commit it targets:
-
-```bash
-gh release view TAG --repo reponomics/reponomics-dashboard-action --json isImmutable,targetCommitish,url
-```
-
-Verify GitHub's release attestation:
-
-```bash
-gh release verify TAG --repo reponomics/reponomics-dashboard-action --format json
-```
-
-Compare the release target or attested subject against the action ref used by your workflow. If they do not identify the same source tree, they are evidence for different things.
-
-The action's SBOM/provenance workflow creates SPDX SBOMs and GitHub artifact attestations for release source archives. Because the action is consumed by Git ref rather than through a package registry, that attestation covers the release source archive, not a registry package install.
-
-## How To Think About Generated Dashboard Artifacts
-
-Dashboard HTML, Pages artifacts, README output, and private plaintext dashboard artifacts are generated inside your dashboard repository's workflow run. They inherit your repository's:
-
-- workflow files and action refs
-- repository secrets and permissions
-- branch protections and rulesets
-- GitHub Pages settings
-- artifact retention settings
-- collaborator and organization access model
-
-The Reponomics project can provide tests, release evidence, and documented expectations for generated artifacts. It cannot globally attest every artifact generated inside every user's repository.
-
-Generated dashboard HTML uses a summary plus per-repository chunk model so the browser can load repository detail data only as repositories are selected. For encrypted dashboards, the generated HTML includes an encrypted dashboard data object with an encrypted summary and per-repository encrypted chunks, plus an encrypted CSV export manifest. For plaintext dashboard artifacts, the same summary/chunk boundary is used without encryption. CSV export downloads a separate encrypted asset on demand, verifies ciphertext size and SHA-256, decrypts locally in the browser, verifies the decrypted ZIP SHA-256, and only then triggers the download.
-
-## Verification Limits
-
-No scanner can prove absence of vulnerabilities. `pip-audit`, OSV, CodeQL, Dependabot, Scorecard, release attestations, vendored asset validation, and SHA pinning are layered evidence and hardening controls, not absolute guarantees.
-
-Reponomics also cannot protect against every consumer-side choice. A dashboard repository can weaken its posture by changing workflow permissions, using a weak dashboard key, giving collaborators broad control, changing action refs without review, disabling security workflows, or running on compromised infrastructure.
-
-For repository access implications, see [Repository Access And Trust Boundary](trust-boundary.md).
+For a copied dashboard repository, inspect the local files and workflow artifacts listed above. For source-repository release materials, inspect the named GitHub Actions workflow run and its artifacts/attestations.

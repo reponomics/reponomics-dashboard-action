@@ -9,14 +9,21 @@ from scripts import validate_template_action_ref
 def _contract(
     *,
     compatible_action_major: int = 0,
-    min_action_version: str = "0.22.1",
+    minimum_compatible_template_version: str = "0.9.1",
 ) -> template_contract.TemplateContract:
     return template_contract.TemplateContract(
         template_version="0.9.1",
         action_repository=template_contract.ACTION_REPOSITORY,
         default_action_ref=f"v{compatible_action_major}",
         compatible_action_major=compatible_action_major,
-        min_action_version=min_action_version,
+        minimum_compatible_template_version=minimum_compatible_template_version,
+        protected_template_refs=(
+            template_contract.ProtectedTemplateRef(
+                ref=f"reponomics-dashboard-v{minimum_compatible_template_version}",
+                template_version=minimum_compatible_template_version,
+                source_commit="a" * 40,
+            ),
+        ),
         managed_docs_namespace=Path("docs/reponomics"),
     )
 
@@ -81,17 +88,6 @@ def test_validate_public_action_ref_rejects_wrong_major(tmp_path):
         )
 
 
-def test_validate_public_action_ref_rejects_version_below_minimum(tmp_path):
-    root = _write_contract(tmp_path, _contract(min_action_version="0.22.1"))
-
-    with pytest.raises(validate_template_action_ref.TemplateActionRefError, match="below template minimum"):
-        validate_template_action_ref.validate_public_action_ref(
-            root=root,
-            resolver=lambda contract: _resolved(contract.default_action_ref),
-            version_reader=lambda _contract, _resolved_ref: "0.22.0",
-        )
-
-
 def test_parse_remote_action_version_requires_matching_metadata():
     with pytest.raises(validate_template_action_ref.TemplateActionRefError, match="mismatched"):
         _check_remote_metadata_versions("0.22.1", "0.22.2")
@@ -123,7 +119,18 @@ def _write_contract(
                 f"action_repository: {contract.action_repository}",
                 f"default_action_ref: {contract.default_action_ref}",
                 f"compatible_action_major: {contract.compatible_action_major}",
-                f"min_action_version: {contract.min_action_version}",
+                (
+                    "minimum_compatible_template_version: "
+                    + f"{contract.minimum_compatible_template_version}"
+                ),
+                "protected_template_refs:",
+                f"  - ref: reponomics-dashboard-v{contract.minimum_compatible_template_version}",
+                (
+                    "    template_version: "
+                    + f"{contract.minimum_compatible_template_version}"
+                ),
+                "    source_commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "    status: required",
                 f"managed_docs_namespace: {contract.managed_docs_namespace.as_posix()}",
                 "",
             ]

@@ -13,8 +13,11 @@ import yaml
 from scripts import build_template
 from scripts import publish_generated_repo
 from scripts import template_contract
+from scripts import template_compat_e2e
 from scripts import template_consumer_e2e
+from scripts import template_public_action_e2e
 from scripts import template_provenance
+from scripts import validate_template_action_ref
 from scripts import verify_workflow_classification
 from scripts.staging_smoke import browser_checklist as staging_smoke_browser_checklist
 from scripts.staging_smoke import evidence as staging_smoke_evidence
@@ -138,8 +141,13 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     readme = (docs_root / "README.md").read_text(encoding="utf-8")
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
 
-    assert "{{ACTION_VERSION}}" not in readme
-    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
+    rendered_docs = {
+        path.relative_to(docs_root).as_posix(): path.read_text(encoding="utf-8")
+        for path in docs_root.rglob("*")
+        if path.is_file()
+    }
+    assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
+    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
@@ -431,13 +439,26 @@ def test_required_fields_do_not_have_default_value():
 
 def test_template_contract_and_action_metadata_contract():
     contract = template_contract.validate_local_contract()
+    contract_text = Path("template-contract.yml").read_text(encoding="utf-8")
 
     assert contract.action_repository == template_contract.ACTION_REPOSITORY
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.action_version)
     assert contract.template_version != contract.action_version
     assert contract.default_action_ref == f"v{contract.compatible_action_major}"
-    assert contract.min_action_version <= contract.action_version
+    assert "min_action_version" not in contract_text
+    assert re.fullmatch(
+        r"[0-9]+\.[0-9]+\.[0-9]+",
+        contract.minimum_compatible_template_version,
+    )
+    assert _version_tuple(
+        contract.minimum_compatible_template_version
+    ) <= _version_tuple(contract.template_version)
+    assert any(
+        protected.template_version == contract.minimum_compatible_template_version
+        and protected.status == "required"
+        for protected in contract.protected_template_refs
+    )
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
 
 
@@ -451,7 +472,12 @@ def test_template_includes_verifiable_provenance(tmp_path):
     assert provenance["schema_version"] == 1
     assert provenance["source"]["commit"]
     assert provenance["template"]["version"] == template_contract.load_contract().template_version
+    assert provenance["template"]["minimum_compatible_template_version"] == (
+        template_contract.load_contract().minimum_compatible_template_version
+    )
     assert provenance["action"]["default_ref"] == "v0"
+    assert "local_version" not in provenance["action"]
+    assert "min_version" not in provenance["action"]
     assert provenance["payload"]["tree_manifest_format"] == "reponomics-template-tree-v1"
     assert provenance["payload"]["digest_algorithm"] == "sha256"
     assert provenance["payload"]["digest"] == digest.digest
@@ -536,6 +562,7 @@ def test_action_repo_has_template_publication_targets():
     assert "verify-template:" in makefile
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
+    assert "template-public-action-e2e:" in makefile
     assert "publish-template:" in makefile
     assert "publish-template-staging-dry-run:" in makefile
     assert "publish-template-staging:" in makefile
@@ -545,6 +572,90 @@ def test_action_repo_has_template_publication_targets():
         in makefile
     )
     assert "scripts/publish_generated_repo.py" in makefile
+
+
+def test_template_public_action_e2e_uses_resolved_public_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    contract = template_contract.TemplateContract(
+        template_version="0.10.0",
+        action_repository=template_contract.ACTION_REPOSITORY,
+        default_action_ref="v0",
+        compatible_action_major=0,
+        minimum_compatible_template_version="0.10.0",
+        protected_template_refs=(
+            template_contract.ProtectedTemplateRef(
+                ref="reponomics-dashboard-v0.10.0",
+                template_version="0.10.0",
+                source_commit="a" * 40,
+            ),
+        ),
+        managed_docs_namespace=Path("docs/reponomics"),
+    )
+    resolved = validate_template_action_ref.ResolvedActionRef(
+        ref="v0",
+        sha="b" * 40,
+        remote_ref="refs/tags/v0^{}",
+    )
+    calls: dict[str, Path | str] = {}
+
+    monkeypatch.setattr(
+        template_public_action_e2e.template_contract,
+        "load_contract",
+        lambda _root: contract,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e.validate_template_action_ref,
+        "validate_public_action_ref",
+        lambda root: resolved,
+    )
+
+    def fake_checkout_public_action(
+        *,
+        contract: template_contract.TemplateContract,
+        resolved: validate_template_action_ref.ResolvedActionRef,
+        destination: Path,
+    ) -> Path:
+        calls["checkout_repo"] = contract.action_repository
+        calls["checkout_ref"] = resolved.sha
+        destination.mkdir(parents=True)
+        return destination
+
+    def fake_run_e2e(
+        *,
+        template_dir: Path,
+        action_repo: Path,
+        action_python: Path,
+        keep_temp: bool,
+    ) -> None:
+        calls["template_dir"] = template_dir
+        calls["action_repo_name"] = action_repo.name
+        calls["action_python"] = action_python
+        calls["keep_temp"] = str(keep_temp)
+
+    monkeypatch.setattr(
+        template_public_action_e2e,
+        "checkout_public_action",
+        fake_checkout_public_action,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e.template_consumer_e2e,
+        "run_e2e",
+        fake_run_e2e,
+    )
+
+    template_public_action_e2e.run_public_action_e2e(
+        template_dir=tmp_path / "template",
+        action_python=tmp_path / "python",
+    )
+
+    assert calls["checkout_repo"] == template_contract.ACTION_REPOSITORY
+    assert calls["checkout_ref"] == "b" * 40
+    assert calls["template_dir"] == tmp_path / "template"
+    assert calls["action_repo_name"] == "action"
+    assert calls["action_python"] == tmp_path / "python"
+    assert calls["keep_temp"] == "False"
 
 
 @pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)
@@ -1039,8 +1150,13 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
 
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
     readme = (docs_root / "README.md").read_text(encoding="utf-8")
-    assert "{{ACTION_VERSION}}" not in readme
-    assert f"Generated for Reponomics Dashboard Action {contract.action_version}." in readme
+    rendered_docs = {
+        path.relative_to(docs_root).as_posix(): path.read_text(encoding="utf-8")
+        for path in docs_root.rglob("*")
+        if path.is_file()
+    }
+    assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
+    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
@@ -1087,6 +1203,49 @@ def test_template_contract_verify_accepts_expected_action_ref(tmp_path):
     )
 
     template_contract.verify_template_refs(tmp_path)
+
+
+def test_template_compat_rejects_workflow_inputs_removed_from_action(tmp_path):
+    repo_dir = tmp_path / "template"
+    workflow_dir = repo_dir / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    (workflow_dir / "collect.yml").write_text(
+        "\n".join(
+            [
+                "name: Collect",
+                "on: workflow_dispatch",
+                "jobs:",
+                "  collect:",
+                "    runs-on: ubuntu-24.04",
+                "    steps:",
+                "      - uses: reponomics/reponomics-dashboard-action@v0",
+                "        with:",
+                "          removed-input: value",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    generated_template = template_compat_e2e.GeneratedTemplate(
+        name="test-template",
+        repo_dir=repo_dir,
+        template_version="0.10.0",
+        source_commit="a" * 40,
+    )
+
+    with pytest.raises(
+        template_compat_e2e.TemplateCompatibilityError,
+        match="removed-input",
+    ):
+        template_compat_e2e._assert_template_workflow_inputs_supported(
+            generated_template,
+            action_inputs={"mode"},
+        )
+
+
+def _version_tuple(version: str) -> tuple[int, int, int]:
+    major, minor, patch = version.split(".")
+    return int(major), int(minor), int(patch)
 
 
 def test_workflow_classification_contract():

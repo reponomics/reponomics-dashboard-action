@@ -84,12 +84,10 @@ def build_status_payload(
 
     payload: dict[str, Any] = {
         "current_version": current_version,
-        "current_url": _status_url("", _release_tag(current_version)),
+        "current_url": _status_url(_release_tag(current_version)),
         "action_ref": action_ref,
         "update_available": False,
-        "url": _status_url(
-            latest["html_url"] if latest else "", latest["tag_name"] if latest else ""
-        ),
+        "url": _status_url(latest["tag_name"] if latest else ""),
     }
     if latest:
         tag = latest["tag_name"]
@@ -185,10 +183,9 @@ def _clean_title(value: Any) -> str:
     return text[:MAX_TITLE_CHARS].strip()
 
 
-def _status_url(value: str, tag: str) -> str:
+def _status_url(tag: str) -> str:
     if tag:
-        expected = f"{RELEASES_PAGE_URL}/tag/{tag}"
-        return value if value == expected else expected
+        return f"{RELEASES_PAGE_URL}/tag/{tag}"
     return RELEASES_PAGE_URL
 
 

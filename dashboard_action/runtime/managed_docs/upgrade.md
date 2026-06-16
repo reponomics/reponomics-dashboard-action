@@ -3,7 +3,7 @@
 > [!WARNING]
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
-This dashboard last received managed docs from Reponomics Dashboard Action {{ACTION_VERSION}}.
+The manifest at `docs/reponomics/.manifest.json` records the action version that last refreshed these managed docs.
 
 If your workflow pins an exact action version such as `reponomics/reponomics-dashboard-action@v1.2.3`, you choose when to upgrade. If your workflow uses a floating major or minor ref such as `@v1`, a compatible Reponomics release can run in your repository without a workflow edit. Managed docs sync records that the newer action ran and that current local guidance is available.
 

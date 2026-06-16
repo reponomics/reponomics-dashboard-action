@@ -121,6 +121,17 @@ def test_build_status_payload_api_failure_keeps_local_status(
     }
 
 
+def test_status_url_returns_canonical_release_urls() -> None:
+    assert (
+        version_status._status_url("v0.3.0")
+        == "https://github.com/reponomics/reponomics-dashboard-action/releases/tag/v0.3.0"
+    )
+    assert (
+        version_status._status_url("")
+        == "https://github.com/reponomics/reponomics-dashboard-action/releases"
+    )
+
+
 def test_fetch_releases_sends_expected_request_and_keeps_list_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

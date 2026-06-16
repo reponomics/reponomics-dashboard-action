@@ -82,7 +82,7 @@ No. It protects export payload integrity within the client-side model. It does n
 
 ## How can I verify the action release and supply chain?
 
-See [Provenance And Supply Chain Verification](provenance.md). It explains how to inspect the action ref your workflows use, verify vendored browser assets, check action release immutability and attestations, and understand which claims apply to generated artifacts in your own repository.
+See [Provenance And Verification Materials](provenance.md) for the manifest files, workflow artifacts, release artifacts, and attestations available for inspection.
 
 ## Does the action enforce key strength?
 

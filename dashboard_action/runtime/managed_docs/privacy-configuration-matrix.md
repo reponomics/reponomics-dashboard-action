@@ -3,7 +3,7 @@
 > [!WARNING]
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
-Status: current for action `{{ACTION_VERSION}}`.
+Status: see `docs/reponomics/.manifest.json` for the action version associated with this snapshot.
 
 Repository visibility and Reponomics data mode are separate concepts. Repository visibility controls who can read the repository. `data_mode` controls how retained artifacts and hosted dashboard output are stored.
 

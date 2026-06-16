@@ -21,7 +21,7 @@ This split is necessary because copied GitHub template repositories cannot be up
 That creates an asymmetric compatibility rule:
 
 - New compatible action releases must continue to work with previously published template versions.
-- New template releases may require newer action behavior through `template-contract.yml`.
+- New template releases are published against the current compatible action channel.
 - Old templates are not expected to learn new template structure unless their owners choose to recopy or manually migrate.
 
 ## Repository Topology
@@ -365,7 +365,7 @@ Release Please may still help as process tooling if configured narrowly, for exa
 1. Make template-affecting changes in this source repository.
 2. Update `template-contract.yml` manually:
    - bump `template_version`
-   - adjust `min_action_version` if the template depends on newer action behavior
+   - adjust `minimum_compatible_template_version` and protected template refs only for an explicit action/template compatibility reset
    - adjust `compatible_action_major` only when intentionally moving to a new action compatibility line
 3. Run local gates:
    - `make build-template`
@@ -391,7 +391,7 @@ Publishing `dist/template` to `reponomics-dashboard` is a product decision, not 
 
 ### Template Contract
 
-`template-contract.yml` is the human-owned compatibility contract between this source repository, the generated template repository, and the public action channel that generated workflows invoke. It is intentionally small: it should answer which template is being published, which Reponomics action line the template uses by default, the oldest compatible action version the template requires, and where generated managed docs belong.
+`template-contract.yml` is the human-owned compatibility contract between this source repository, the generated template repository, and the public action channel that generated workflows invoke. It is intentionally small: it should answer which template is being published, which Reponomics action line the template uses by default, the minimum compatible template version that action releases must continue to support, which published template refs prove that claim, and where generated managed docs belong.
 
 The current fields have these meanings:
 
@@ -400,10 +400,11 @@ The current fields have these meanings:
 - `action_repository`: the GitHub repository that generated workflows invoke. For this product line it must remain `reponomics/reponomics-dashboard-action`.
 - `default_action_ref`: the default ref written into executable generated workflows. During the `v0` beta line this should remain the compatible floating major ref `v0`, not a full SHA.
 - `compatible_action_major`: the action major line the template is allowed to use. It must match `default_action_ref`, so `compatible_action_major: 0` implies `default_action_ref: v0`.
-- `min_action_version`: the oldest action version that contains the behavior this template requires. Increase it when generated workflows, setup behavior, managed docs, provenance, or runtime assumptions depend on newer action behavior.
+- `minimum_compatible_template_version`: the oldest published template version that action releases must continue to support.
+- `protected_template_refs`: the source-repository template release refs that prove the minimum compatible template version and any additional compatibility-relevant published template releases.
 - `managed_docs_namespace`: the generated repository path that receives the managed Reponomics docs snapshot. It is currently fixed at `docs/reponomics`.
 
-The contract is validated in three layers. Local validation proves the checked-out action version matches `compatible_action_major`, is greater than or equal to `min_action_version`, and still exposes action metadata required by generated workflows. Generated-template validation proves `dist/template` contains the expected managed-docs snapshot and executable workflow refs matching `action_repository@default_action_ref`. Release/publication validation should additionally prove that the public default action ref, such as `v0`, has already moved to an action version satisfying `min_action_version`.
+The contract is validated in three layers. Local validation proves the checked-out action version matches `compatible_action_major` and still exposes action metadata required by generated workflows. Generated-template validation proves `dist/template` contains the expected managed-docs snapshot and executable workflow refs matching `action_repository@default_action_ref`. Action-release validation proves the candidate action still works against both the current generated template and the minimum compatible template version recorded by `template-contract.yml`.
 
 ### Coordinated Releases
 
@@ -417,8 +418,7 @@ Some changes legitimately require both products:
 For these changes, release order should be:
 
 1. Release the action first if the new template requires new action behavior.
-2. Set the template `min_action_version` to that action release.
-3. Release the template after validating it against the released or candidate action.
+2. Release the template after validating it against the released or candidate action.
 
 For action-only fixes that remain compatible with old templates, no template release is required. For docs-only managed-doc updates bundled in the action, no template release is required unless the initial copied docs need to change for new users before they run the action.
 
@@ -473,7 +473,7 @@ files changed.
 
 The direct generated-template consumer e2e and the composite action boundary e2e are separate bridge checks. The direct runtime e2e proves that generated consumer repositories still work against the local runtime under realistic template data/config conditions. The composite boundary e2e proves that `action.yml` maps generated workflow inputs into the expected `REPONOMICS_*` environment and executes the runtime command through the composite action surface. They do not both need to run routinely for every PR: run the direct bridge as the regular generated-template behavior gate, and run the composite boundary gate when `action.yml`, generated workflow `with:` blocks, action input names/defaults, or runtime env-loading changes. Product release candidates may run both as an explicit pre-release confidence check.
 
-When changing the action input schema, update the full boundary, not just `action.yml`. The usual checklist is: update `action.yml` input metadata and the composite runtime-step env mapping; update `dashboard_action/run_modules/config.py` and `RuntimeConfig` if the runtime consumes a new or renamed `REPONOMICS_*` variable; update generated workflow `with:` blocks under `template/.github/workflows/`; update `template-contract.yml`'s `min_action_version` if generated templates now require behavior from a newer action; update managed docs and template README/config examples when user-facing setup changes; update `scripts/template_consumer_e2e.py`'s required composite env contract and generated-repo tests when the boundary intentionally changes. Run `make template-action-boundary-e2e` for any action input/default/env-loading change. Run `make template-consumer-e2e` when the change affects runtime behavior in generated consumer repositories. Run both for release candidates or changes that alter both the action boundary and runtime/template behavior.
+When changing the action input schema, update the full boundary, not just `action.yml`. The usual checklist is: update `action.yml` input metadata and the composite runtime-step env mapping; update `dashboard_action/run_modules/config.py` and `RuntimeConfig` if the runtime consumes a new or renamed `REPONOMICS_*` variable; update generated workflow `with:` blocks under `template/.github/workflows/`; update managed docs and template README/config examples when user-facing setup changes; update `scripts/template_consumer_e2e.py`'s required composite env contract and generated-repo tests when the boundary intentionally changes. Run `make template-action-boundary-e2e` for any action input/default/env-loading change. Run `make template-consumer-e2e` when the change affects runtime behavior in generated consumer repositories. Run `make template-compat-e2e` for release candidates and for changes that might affect copied template compatibility. If an action release intentionally stops supporting older published templates, update `template-contract.yml`'s `minimum_compatible_template_version` and protected template refs in the same review and make the compatibility reset explicit in release notes.
 
 Compatibility fixtures should be phased by release maturity:
 

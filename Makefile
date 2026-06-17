@@ -17,6 +17,7 @@ PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
+PIP_INSTALL_FLAGS := --upgrade --upgrade-strategy eager
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
@@ -144,10 +145,10 @@ staging-smoke-run: install ## Run local staging smoke gates; set DISPATCH_TEMPLA
 
 install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
-$(INSTALL_STAMP): pyproject.toml
+$(INSTALL_STAMP): pyproject.toml $(RUNTIME_LOCK) Makefile
 	python3 -m venv $(VENV)
 	$(PYTHON) -m pip install --upgrade pip
-	$(PIP) install -e '.[dev]'
+	$(PIP) install $(PIP_INSTALL_FLAGS) -e '.[dev]'
 	touch $(INSTALL_STAMP)
 
 pre-commit-install: install ## Install local pre-commit hooks

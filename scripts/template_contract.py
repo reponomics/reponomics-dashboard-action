@@ -31,6 +31,24 @@ MANAGED_DOCS_MANIFEST_NAME = ".manifest.json"
 MANAGED_DOCS_MANIFEST_SCHEMA_VERSION = 1
 REQUIRED_ACTION_INPUTS = {"allow-docs-sync"}
 REQUIRED_ACTION_OUTPUTS = {"docs-sync-state", "docs-action-version", "docs-updated-at"}
+REQUIRED_TEMPLATE_WRAPPER_INPUTS = {
+    "artifact-run-id",
+    "collection-token",
+    "comparison-secret",
+    "dashboard-next-secret",
+    "dashboard-secret",
+    "data-mode",
+    "generate-readme",
+    "github-token",
+    "incident-confirm-irreversible",
+    "incident-confirm-mode",
+    "incident-confirm-purge",
+    "mode",
+    "publish-pages",
+    "require-collect-provenance",
+    "retention-days",
+    "use-github-app",
+}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
 INPUT_EXPR_RE = re.compile(r"\$\{\{\s*inputs\.([A-Za-z0-9_-]+)\s*\}\}")
@@ -432,6 +450,12 @@ def _validate_template_action_wrapper(
         error_prefix="template action wrapper",
     )
     wrapper_inputs = _declared_inputs(wrapper, path=TEMPLATE_ACTION_WRAPPER_PATH)
+    missing_required_inputs = REQUIRED_TEMPLATE_WRAPPER_INPUTS - wrapper_inputs
+    if missing_required_inputs:
+        raise TemplateContractError(
+            "template action wrapper is missing required input(s): "
+            + ", ".join(sorted(missing_required_inputs))
+        )
     expected_ref = f"{contract.action_repository}@{contract.default_action_ref}"
     remote_refs: list[tuple[dict[object, object], str]] = []
     for step in _iter_yaml_steps(wrapper):
@@ -458,6 +482,7 @@ def _validate_template_action_wrapper(
         )
 
     workflow_input_errors: dict[str, set[str]] = {}
+    workflow_inputs: set[str] = set()
     seen_wrapper_step = False
     for path in _template_workflow_files(root):
         workflow = _load_yaml_mapping(path, error_prefix="template workflow")
@@ -468,6 +493,7 @@ def _validate_template_action_wrapper(
             with_payload = workflow_step.get("with") or {}
             if not isinstance(with_payload, dict):
                 continue
+            workflow_inputs.update(str(name) for name in with_payload)
             undeclared_inputs = {
                 str(name) for name in with_payload if str(name) not in wrapper_inputs
             }
@@ -485,6 +511,12 @@ def _validate_template_action_wrapper(
         raise TemplateContractError(
             "generated workflows pass inputs not declared by the template action wrapper: "
             + details
+        )
+    unused_wrapper_inputs = wrapper_inputs - workflow_inputs
+    if unused_wrapper_inputs:
+        raise TemplateContractError(
+            "template action wrapper declares input(s) not consumed by generated workflows: "
+            + ", ".join(sorted(unused_wrapper_inputs))
         )
 
 

@@ -256,6 +256,13 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     remote_steps = [
         step for step in wrapper_steps if step.get("uses") == action_ref
     ]
+    workflow_inputs = {
+        str(input_name)
+        for workflow in workflow_documents
+        for step in _iter_steps(workflow)
+        for input_name in (step.get("with") or {})
+        if step.get("uses") == template_contract.LOCAL_REPONOMICS_ACTION
+    }
     assert "skip_collect:" in collect_publish
     assert "docs-sync:" in collect_publish
     assert "resolve-reponomics-config.py --require-setup" in collect_publish
@@ -276,13 +283,8 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         for input_name in (step.get("with") or {})
         if step.get("uses") == action_ref
     )
-    assert all(
-        str(input_name) in wrapper_inputs
-        for workflow in workflow_documents
-        for step in _iter_steps(workflow)
-        for input_name in (step.get("with") or {})
-        if step.get("uses") == template_contract.LOCAL_REPONOMICS_ACTION
-    )
+    assert template_contract.REQUIRED_TEMPLATE_WRAPPER_INPUTS <= wrapper_inputs
+    assert wrapper_inputs == workflow_inputs
     assert 'REPONOMICS_ACTION_REF: "' not in collect_publish
     assert 'REPONOMICS_ACTION_SHA: "' not in collect_publish
     assert 'GENERATE_HTML_DASHBOARD: "false"' not in collect_publish
@@ -389,6 +391,38 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
     assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
     assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
+
+
+def test_template_contract_rejects_missing_required_wrapper_input(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
+    contract = template_contract.load_contract()
+    wrapper_path = output / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = yaml.safe_load(wrapper_path.read_text(encoding="utf-8"))
+    del wrapper["inputs"]["comparison-secret"]
+    wrapper_path.write_text(yaml.safe_dump(wrapper, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(
+        template_contract.TemplateContractError,
+        match="missing required input",
+    ):
+        template_contract.verify_template_refs(output, contract=contract)
+
+
+def test_template_contract_rejects_unused_wrapper_input(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
+    contract = template_contract.load_contract()
+    wrapper_path = output / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = yaml.safe_load(wrapper_path.read_text(encoding="utf-8"))
+    wrapper["inputs"]["unused-input"] = {"required": False, "default": ""}
+    wrapper_path.write_text(yaml.safe_dump(wrapper, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(
+        template_contract.TemplateContractError,
+        match="not consumed by generated workflows",
+    ):
+        template_contract.verify_template_refs(output, contract=contract)
 
 
 def test_generated_workflow_run_steps_do_not_interpolate_untrusted_contexts():
@@ -1353,107 +1387,21 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     ],
 )
 def test_template_contract_verify_rejects_unexpected_action_refs(tmp_path, action_ref):
+    output = tmp_path / "template"
+    build_template.build_template(output)
     contract = template_contract.load_contract()
-    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
-    (tmp_path / "template-contract.yml").write_text(
-        Path("template-contract.yml").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
-    wrapper_dir = tmp_path / template_contract.TEMPLATE_ACTION_WRAPPER_PATH.parent
-    wrapper_dir.mkdir(parents=True)
-    (wrapper_dir / "action.yml").write_text(
-        "\n".join(
-            [
-                "name: Reponomics Dashboard",
-                "inputs:",
-                "  mode:",
-                "    required: true",
-                "runs:",
-                "  using: composite",
-                "  steps:",
-                "    - id: reponomics",
-                f"      uses: {contract.action_repository}@{contract.default_action_ref}",
-                "      with:",
-                "        mode: ${{ inputs.mode }}",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    workflow_dir = tmp_path / ".github" / "workflows"
-    workflow_dir.mkdir(parents=True)
-    (workflow_dir / "collect.yml").write_text(
-        "\n".join(
-            [
-                "name: Collect",
-                "on: workflow_dispatch",
-                "jobs:",
-                "  collect:",
-                "    runs-on: ubuntu-24.04",
-                "    steps:",
-                f"      - uses: {template_contract.LOCAL_REPONOMICS_ACTION}",
-                "        with:",
-                "          mode: collect",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    (tmp_path / "README.md").write_text(f"uses: {action_ref}\n", encoding="utf-8")
+    (output / "README.md").write_text(f"uses: {action_ref}\n", encoding="utf-8")
 
     with pytest.raises(template_contract.TemplateContractError, match="Stale template action"):
-        template_contract.verify_template_refs(tmp_path)
+        template_contract.verify_template_refs(output, contract=contract)
 
 
-def test_template_contract_verify_accepts_expected_action_ref(tmp_path):
+def test_template_contract_verify_accepts_expected_wrapper_action_ref(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
     contract = template_contract.load_contract()
-    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
-    (tmp_path / "template-contract.yml").write_text(
-        Path("template-contract.yml").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
-    wrapper_dir = tmp_path / template_contract.TEMPLATE_ACTION_WRAPPER_PATH.parent
-    wrapper_dir.mkdir(parents=True)
-    (wrapper_dir / "action.yml").write_text(
-        "\n".join(
-            [
-                "name: Reponomics Dashboard",
-                "inputs:",
-                "  mode:",
-                "    required: true",
-                "runs:",
-                "  using: composite",
-                "  steps:",
-                "    - id: reponomics",
-                f"      uses: {contract.action_repository}@{contract.default_action_ref}",
-                "      with:",
-                "        mode: ${{ inputs.mode }}",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    workflow_dir = tmp_path / ".github" / "workflows"
-    workflow_dir.mkdir(parents=True)
-    (workflow_dir / "collect.yml").write_text(
-        "\n".join(
-            [
-                "name: Collect",
-                "on: workflow_dispatch",
-                "jobs:",
-                "  collect:",
-                "    runs-on: ubuntu-24.04",
-                "    steps:",
-                f"      - uses: {template_contract.LOCAL_REPONOMICS_ACTION}",
-                "        with:",
-                "          mode: collect",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
 
-    template_contract.verify_template_refs(tmp_path)
+    template_contract.verify_template_refs(output, contract=contract)
 
 
 def test_template_compat_rejects_workflow_inputs_removed_from_action(tmp_path):

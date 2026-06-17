@@ -1,0 +1,101 @@
+name: Template Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - template-contract.yml
+      - template-manifest.yml
+      - template/**
+      - dashboard_action/runtime/managed_docs/**
+      - scripts/build_template.py
+      - scripts/template_contract.py
+      - scripts/template_provenance.py
+      - scripts/validate_template_action_ref.py
+      - scripts/template_public_action_e2e.py
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git ref to release from"
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: template-release-source-${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.sha }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  release-template:
+    name: Create template release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Prepare template release metadata
+        id: metadata
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp
+          venv/bin/python scripts/template_release_notes.py \
+            --github-output "$GITHUB_OUTPUT" \
+            --release-notes .tmp/template-release-notes.md
+
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Check template release status
+        id: release-status
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "${TEMPLATE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Template release ${TEMPLATE_TAG} already exists."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate template release gates
+        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        run: |
+          set -euo pipefail
+          make template-release-gates
+
+      - name: Create template release
+        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+          TEMPLATE_VERSION: ${{ steps.metadata.outputs.template_version }}
+        run: |
+          set -euo pipefail
+          gh release create "${TEMPLATE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "$(git rev-parse HEAD)" \
+            --title "reponomics-dashboard v${TEMPLATE_VERSION}" \
+            --notes-file .tmp/template-release-notes.md

@@ -20,7 +20,7 @@ Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboar
 
 `template-contract.yml` is the source of truth for the generated template version, generated action ref, accepted action release metadata, and action/template compatibility line. Generated templates ship against the current compatible action channel. Action releases must continue to pass against both the current generated template and the minimum compatible template version.
 
-Every public action release publishes a corresponding template acceptance release. The acceptance commit records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
+Every public action release publishes a corresponding template acceptance release. The acceptance PR records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; merging that PR is the maintainer approval for the template release. Generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
 
 ADR 020 records the compatibility-gate rationale and the contract-field cleanup for the minimum compatible template version. ADR 022 records the action-release template acceptance model.
 
@@ -95,10 +95,11 @@ After the action release:
 
 1. Confirm the exact `vX.Y.Z` tag exists.
 2. Confirm floating `vX` and `vX.Y` point to the release SHA.
-3. Confirm the template acceptance commit was created or was already current.
-4. Confirm the matching `reponomics-dashboard-vX.Y.Z` template release was created with the template version from `template-contract.yml`.
-5. Confirm the release provenance/SBOM workflow completed or failed for an understood reason.
-6. If the release changes the public dashboard experience, refresh the demo.
+3. Confirm the template acceptance PR was created or was already current.
+4. Review and merge the template acceptance PR as the effective template release approval.
+5. Confirm the matching `reponomics-dashboard-vX.Y.Z` template release was created with the template version from `template-contract.yml`.
+6. Confirm the release provenance/SBOM workflow completed or failed for an understood reason.
+7. If the release changes the public dashboard experience, refresh the demo.
 
 ## When To Release The Template
 
@@ -124,24 +125,26 @@ The workflow intentionally does not upload assets to an already-published GitHub
 
 For a template-only release:
 
-1. Land the template change on `main`.
-2. Bump `template-contract.yml` `template_version` according to the template impact.
+1. Open a PR with the template-source changes.
+2. Bump `template-contract.yml` `template_version` in that PR according to the template impact.
 3. Confirm CI is green.
-4. Run `.github/workflows/pre-release-validation.yml` on `main` or the candidate release ref.
-5. Create and publish a source-repository GitHub Release tagged `reponomics-dashboard-vX.Y.Z`, where `X.Y.Z` equals `template-contract.yml`.
-6. Watch `.github/workflows/publish-template.yml`.
-7. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
-8. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
-9. Refresh the demo if the public showcase should reflect the new template.
+4. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
+5. Review and merge the PR as the effective template release approval.
+6. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching release already exists; otherwise it runs `make template-release-gates` and creates `reponomics-dashboard-vX.Y.Z`, where `X.Y.Z` equals `template-contract.yml`.
+7. Watch `.github/workflows/publish-template.yml`.
+8. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
+9. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
+10. Refresh the demo if the public showcase should reflect the new template.
 
 For a coupled action/template release where the template requires new action behavior:
 
 1. Land the runtime and template changes on `main`.
 2. Cut the action release first, so `default_action_ref: v0` resolves to the intended released action behavior.
-3. Let `.github/workflows/release-please.yml` create the template acceptance commit. That commit class-locks the template SemVer bump to the action release class: action patch implies template patch, and action minor implies template minor.
-4. Let the workflow create the matching `reponomics-dashboard-vX.Y.Z` template release from the acceptance commit.
-5. Watch `.github/workflows/publish-template.yml`.
-6. Refresh the demo from the released template ref if the public showcase should reflect the new release.
+3. Let `.github/workflows/release-please.yml` open or update the template acceptance PR. That PR class-locks the template SemVer bump to the action release class: action patch implies template patch, and action minor implies template minor.
+4. Review and merge the template acceptance PR as the effective template release approval.
+5. Let `.github/workflows/template-release.yml` create the matching `reponomics-dashboard-vX.Y.Z` release from the merged acceptance commit.
+6. Watch `.github/workflows/publish-template.yml`.
+7. Refresh the demo from the released template ref if the public showcase should reflect the new release.
 
 The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an operator escape hatch for recovery. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use a matching `reponomics-dashboard-v*` release tag.
 

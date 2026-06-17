@@ -27,6 +27,7 @@ jobs:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -87,33 +88,46 @@ jobs:
             --release-notes .tmp/template-release-notes.md
           make validate-template-accepted-action
 
-      - name: Commit template acceptance
+      - name: Open template acceptance PR
         if: ${{ steps.release.outputs.release_created && steps.template-acceptance.outputs.changed == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          action_tag="${{ steps.template-acceptance.outputs.action_tag }}"
-          git add template-contract.yml
-          git commit -m "chore: accept ${action_tag} for template release"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-
-      - name: Create template release
-        if: ${{ steps.release.outputs.release_created }}
         shell: bash
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 
+          action_tag="${{ steps.template-acceptance.outputs.action_tag }}"
           template_tag="${{ steps.template-acceptance.outputs.template_tag }}"
-          template_version="${{ steps.template-acceptance.outputs.template_version }}"
-          if gh release view "${template_tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "Template release ${template_tag} already exists."
-            exit 0
+          branch="automation/template-accept-${action_tag}"
+          title="chore: accept ${action_tag} for template release"
+          body_file=".tmp/template-acceptance-pr.md"
+
+          git add template-contract.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git commit -m "${title}"
+          git fetch origin "refs/heads/${branch}:refs/remotes/origin/${branch}" || true
+          git push --force-with-lease origin "HEAD:${branch}"
+
+          {
+            echo "Template acceptance for ${action_tag}."
+            echo
+            echo "Merging this PR is the template release approval step. After it lands on main, the Template Release workflow will run the release gates and create ${template_tag} from the merged commit."
+            echo
+            cat .tmp/template-release-notes.md
+          } > "${body_file}"
+
+          if gh pr view "${branch}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh pr edit "${branch}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --body-file "${body_file}"
+          else
+            gh pr create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --head "${branch}" \
+              --base "${GITHUB_REF_NAME}" \
+              --title "${title}" \
+              --body-file "${body_file}"
           fi
-          gh release create "${template_tag}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --target "$(git rev-parse HEAD)" \
-            --title "reponomics-dashboard v${template_version}" \
-            --notes-file .tmp/template-release-notes.md

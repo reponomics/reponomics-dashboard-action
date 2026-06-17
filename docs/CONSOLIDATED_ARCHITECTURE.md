@@ -349,7 +349,7 @@ Do not collapse these versions. They answer different questions:
 
 Release Please can continue to automate action release PRs. For the template, prefer human-owned version classification for now. The template has cross-path inputs, compatibility implications, and user setup consequences that are easy for path-based automation to misclassify.
 
-Release Please may still help as process tooling if configured narrowly, for example by drafting notes or reminding maintainers about release files. It should not be the authority that decides template SemVer. After an action release is published, release automation may still create the template acceptance commit and template release tag using the already-decided SemVer class.
+Release Please may still help as process tooling if configured narrowly, for example by drafting notes or reminding maintainers about release files. It should not be the authority that decides template SemVer. After an action release is published, release automation may still open or update the template acceptance PR using the already-decided SemVer class.
 
 ### Suggested Action Release Flow
 
@@ -358,10 +358,11 @@ Release Please may still help as process tooling if configured narrowly, for exa
 3. Before merging the release PR, run pre-release validation for the candidate ref when action/template behavior is touched.
 4. Publish the action release `vX.Y.Z`.
 5. Move floating `vX` and `vX.Y` tags.
-6. Create a follow-up template acceptance commit that records the released action version, tag, immutable SHA, and default compatible ref in `template-contract.yml`.
-7. Run the template release gates against the accepted action release.
-8. Create the matching `reponomics-dashboard-vX.Y.Z` template release so `publish-template.yml` can publish the accepted template projection.
-9. Once historical compatibility fixtures exist, confirm they pass against the released action major.
+6. Open or update a follow-up template acceptance PR that records the released action version, tag, immutable SHA, and default compatible ref in `template-contract.yml`.
+7. Review and merge the template acceptance PR as the effective template release approval.
+8. Let `template-release.yml` run the template release gates from the merged commit and create the matching `reponomics-dashboard-vX.Y.Z` release.
+9. Let `publish-template.yml` publish the accepted template projection.
+10. Once historical compatibility fixtures exist, confirm they pass against the released action major.
 
 ### Suggested Template Release Flow
 
@@ -381,7 +382,7 @@ Release Please may still help as process tooling if configured narrowly, for exa
    - `make publish-template-staging-dry-run`
 4. Run pre-release validation on the candidate ref.
 5. Publish to `reponomics-dashboard-staging` and smoke-test a copied staging template when the change has user-visible setup or workflow impact.
-6. Create `reponomics-dashboard-vX.Y.Z`.
+6. Let `template-release.yml` create `reponomics-dashboard-vX.Y.Z` from the merged `main` commit.
 7. Let `publish-template.yml` publish the generated output to `reponomics-dashboard`.
 8. Add or update compatibility fixtures for this template release.
 
@@ -425,8 +426,9 @@ Some changes legitimately require both products:
 For these changes, release order should be:
 
 1. Release the action first if the new template requires new action behavior.
-2. Accept the released action in `template-contract.yml` with its exact tag and SHA.
-3. Release the template after validating it against the accepted action release.
+2. Accept the released action in `template-contract.yml` with its exact tag and SHA through a template acceptance PR.
+3. Merge the acceptance PR after review.
+4. Release the template after validating it against the accepted action release.
 
 For action-only fixes that remain compatible with old templates, publish a template acceptance release even if the generated first-copy surface is otherwise unchanged. For docs-only managed-doc updates bundled in the action, publish a template acceptance release for the public action release; use the normal template SemVer classification to decide whether that acceptance is a patch or minor template release.
 

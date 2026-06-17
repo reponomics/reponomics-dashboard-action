@@ -283,10 +283,16 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert workflow["permissions"] == {"contents": "read"}
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
     assert app_token_step["with"]["permission-contents"] == "write"
+    assert app_token_step["with"]["permission-pull-requests"] == "write"
     assert "make template-compat-e2e" in commands
     assert "scripts/accept_action_release.py" in workflow_text
     assert "make validate-template-accepted-action" in commands
-    assert "gh release create" in commands
+    assert "gh release create" not in commands
+    assert "gh pr create" in commands
+    assert "gh pr edit" in commands
+    assert "automation/template-accept-${action_tag}" in commands
+    assert 'git push origin "HEAD:${GITHUB_REF_NAME}"' not in commands
+    assert 'git push --force-with-lease origin "HEAD:${branch}"' in commands
     assert "template_tag=" in workflow_text
     assert step_names.index("Verify action compatibility with generated templates") < (
         step_names.index("Create release PR or GitHub release")
@@ -298,10 +304,39 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
         step_names.index("Accept action release for template")
     )
     assert step_names.index("Accept action release for template") < (
-        step_names.index("Commit template acceptance")
+        step_names.index("Open template acceptance PR")
     )
-    assert step_names.index("Commit template acceptance") < (
-        step_names.index("Create template release")
+
+
+def test_template_release_workflow_cuts_template_releases_after_main_acceptance() -> None:
+    workflow_text = Path(".github/workflows/template-release.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.safe_load(workflow_text)
+    job = workflow["jobs"]["release-template"]
+    steps = job["steps"]
+    step_names = [step["name"] for step in steps]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
+    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+
+    assert workflow["permissions"] == {"contents": "read"}
+    assert "template-contract.yml" in workflow_text
+    assert "template/**" in workflow_text
+    assert "dashboard_action/runtime/managed_docs/**" in workflow_text
+    assert "scripts/template_release_notes.py" in workflow_text
+    assert "make template-release-gates" in commands
+    assert "gh release view" in commands
+    assert "gh release create" in commands
+    assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
+    assert app_token_step["with"]["permission-contents"] == "write"
+    assert step_names.index("Prepare template release metadata") < step_names.index(
+        "Check template release status"
+    )
+    assert step_names.index("Check template release status") < step_names.index(
+        "Validate template release gates"
+    )
+    assert step_names.index("Validate template release gates") < step_names.index(
+        "Create template release"
     )
 
 

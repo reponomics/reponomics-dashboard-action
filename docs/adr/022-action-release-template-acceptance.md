@@ -24,16 +24,16 @@ The current release model cannot honestly record the final action release SHA in
 Use a two-step coupled release model for action-triggered template releases.
 
 1. Release the action first.
-2. After the action release exists and floating refs have moved, create a follow-up template acceptance commit.
-3. In that acceptance commit, record the accepted action release metadata:
+2. After the action release exists and floating refs have moved, open or update a follow-up template acceptance PR.
+3. In that acceptance PR and its eventual merge commit, record the accepted action release metadata:
    - action repository;
    - action version;
    - action release tag;
    - resolved action commit SHA;
    - default compatible action ref, such as `v0`.
-4. Publish the generated template release from the template acceptance commit.
+4. After maintainer approval and merge, publish the generated template release from the merged template acceptance commit.
 
-The template acceptance commit is the auditable statement that the project accepts the released action as the recommended base for the generated template. The generated template should carry that accepted action metadata in provenance or an equivalent generated metadata file.
+The merged template acceptance PR is the auditable statement that the project accepts the released action as the recommended base for the generated template. The generated template should carry that accepted action metadata in provenance or an equivalent generated metadata file.
 
 Action and template releases are class-locked but not version-number-locked:
 
@@ -50,7 +50,7 @@ Before the action release, the action candidate must pass against:
 - the current generated template; and
 - the minimum compatible protected template recorded in `template-contract.yml`.
 
-Before the template publication, the template acceptance commit must prove that:
+Before the template publication, the merged template acceptance commit must prove that:
 
 - the recorded action tag resolves to the recorded SHA;
 - the default compatible action ref resolves to the accepted action release or an explicitly compatible newer release;
@@ -63,8 +63,9 @@ Before the template publication, the template acceptance commit must prove that:
 - The generated template can record concrete action release evidence without pretending the release SHA was known before release automation ran.
 - The source commit used to publish a template acceptance release will usually differ from the action release commit.
 - Users who pin actions by SHA get a clear metadata trail from template version to accepted action version/tag/SHA.
-- A failed template acceptance step does not invalidate the action release, but it leaves the release train incomplete until the acceptance commit and template publication succeed.
-- Release automation should create or update the template acceptance commit automatically so maintainers do not hand-edit the contract after every action release.
+- A failed template acceptance step does not invalidate the action release, but it leaves the release train incomplete until the acceptance PR and template publication succeed.
+- Release automation should create or update the template acceptance PR automatically so maintainers do not hand-edit the contract after every action release.
+- Branch protection remains the approval boundary: automation proposes the acceptance, but the source-repository template release is created only after the acceptance PR lands on `main`.
 
 ## Non-Goals
 

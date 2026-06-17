@@ -654,10 +654,26 @@ def test_template_public_action_e2e_uses_resolved_public_checkout(
         calls["action_python"] = action_python
         calls["keep_temp"] = str(keep_temp)
 
+    def fake_install_public_action_runtime(
+        *,
+        action_repo: Path,
+        venv_dir: Path,
+        base_python: Path,
+    ) -> Path:
+        calls["runtime_action_repo"] = action_repo.name
+        calls["runtime_venv"] = venv_dir.name
+        calls["runtime_base_python"] = base_python
+        return venv_dir / "bin" / "python"
+
     monkeypatch.setattr(
         template_public_action_e2e,
         "checkout_public_action",
         fake_checkout_public_action,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e,
+        "install_public_action_runtime",
+        fake_install_public_action_runtime,
     )
     monkeypatch.setattr(
         template_public_action_e2e.template_consumer_e2e,
@@ -674,7 +690,11 @@ def test_template_public_action_e2e_uses_resolved_public_checkout(
     assert calls["checkout_ref"] == "b" * 40
     assert calls["template_dir"] == tmp_path / "template"
     assert calls["action_repo_name"] == "action"
-    assert calls["action_python"] == tmp_path / "python"
+    assert calls["runtime_action_repo"] == "action"
+    assert calls["runtime_venv"] == "public-action-runtime"
+    assert calls["runtime_base_python"] == tmp_path / "python"
+    assert calls["action_python"] != tmp_path / "python"
+    assert str(calls["action_python"]).endswith("/public-action-runtime/bin/python")
     assert calls["keep_temp"] == "False"
 
 
@@ -731,9 +751,15 @@ def test_template_public_action_e2e_can_use_accepted_action_release(
         "checkout_public_action",
         lambda **kwargs: tmp_path / "action",
     )
+    monkeypatch.setattr(
+        template_public_action_e2e,
+        "install_public_action_runtime",
+        lambda **kwargs: tmp_path / "isolated-action" / "bin" / "python",
+    )
 
     def fake_run_e2e(**kwargs: object) -> None:
         calls["action_repo"] = str(kwargs["action_repo"])
+        calls["action_python"] = str(kwargs["action_python"])
 
     monkeypatch.setattr(
         template_public_action_e2e.template_consumer_e2e,
@@ -748,6 +774,7 @@ def test_template_public_action_e2e_can_use_accepted_action_release(
     )
 
     assert calls["action_repo"].endswith("/action")
+    assert calls["action_python"].endswith("/isolated-action/bin/python")
 
 
 @pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)

@@ -114,6 +114,102 @@ def test_parse_ls_remote_prefers_peeled_tag():
     }
 
 
+def test_validate_accepted_action_release_accepts_matching_refs(tmp_path):
+    root = _write_contract(tmp_path, _contract())
+
+    accepted, default = validate_template_action_ref.validate_accepted_action_release(
+        root=root,
+        resolver=lambda contract, ref: validate_template_action_ref.ResolvedActionRef(
+            ref=ref,
+            sha=contract.accepted_action.sha,
+            remote_ref=f"refs/tags/{ref}",
+        ),
+        version_reader=lambda contract, _resolved_ref: contract.accepted_action.version,
+    )
+
+    assert accepted.ref == "v0.22.1"
+    assert default.ref == "v0"
+
+
+def test_validate_accepted_action_release_rejects_tag_sha_mismatch(tmp_path):
+    root = _write_contract(tmp_path, _contract())
+
+    with pytest.raises(validate_template_action_ref.TemplateActionRefError, match="expected"):
+        validate_template_action_ref.validate_accepted_action_release(
+            root=root,
+            resolver=lambda _contract, ref: validate_template_action_ref.ResolvedActionRef(
+                ref=ref,
+                sha="c" * 40,
+                remote_ref=f"refs/tags/{ref}",
+            ),
+            version_reader=lambda contract, _resolved_ref: contract.accepted_action.version,
+        )
+
+
+def test_validate_accepted_action_release_rejects_version_mismatch(tmp_path):
+    root = _write_contract(tmp_path, _contract())
+
+    with pytest.raises(validate_template_action_ref.TemplateActionRefError, match="reports version"):
+        validate_template_action_ref.validate_accepted_action_release(
+            root=root,
+            resolver=lambda contract, ref: validate_template_action_ref.ResolvedActionRef(
+                ref=ref,
+                sha=contract.accepted_action.sha,
+                remote_ref=f"refs/tags/{ref}",
+            ),
+            version_reader=lambda _contract, _resolved_ref: "0.22.2",
+        )
+
+
+def test_validate_accepted_action_release_requires_default_ref_to_match_by_default(tmp_path):
+    root = _write_contract(tmp_path, _contract())
+
+    def resolver(
+        contract: template_contract.TemplateContract,
+        ref: str,
+    ) -> validate_template_action_ref.ResolvedActionRef:
+        sha = contract.accepted_action.sha if ref == contract.accepted_action.tag else "c" * 40
+        return validate_template_action_ref.ResolvedActionRef(
+            ref=ref,
+            sha=sha,
+            remote_ref=f"refs/tags/{ref}",
+        )
+
+    with pytest.raises(validate_template_action_ref.TemplateActionRefError, match="Default action ref"):
+        validate_template_action_ref.validate_accepted_action_release(
+            root=root,
+            resolver=resolver,
+            version_reader=lambda contract, _resolved_ref: contract.accepted_action.version,
+        )
+
+
+def test_validate_accepted_action_release_can_allow_newer_default_ref(tmp_path):
+    root = _write_contract(tmp_path, _contract())
+
+    def resolver(
+        contract: template_contract.TemplateContract,
+        ref: str,
+    ) -> validate_template_action_ref.ResolvedActionRef:
+        sha = contract.accepted_action.sha if ref == contract.accepted_action.tag else "c" * 40
+        return validate_template_action_ref.ResolvedActionRef(
+            ref=ref,
+            sha=sha,
+            remote_ref=f"refs/tags/{ref}",
+        )
+
+    accepted, default = validate_template_action_ref.validate_accepted_action_release(
+        root=root,
+        resolver=resolver,
+        version_reader=lambda _contract, resolved: (
+            "0.23.0" if resolved.ref == "v0" else "0.22.1"
+        ),
+        allow_newer_default_ref=True,
+    )
+
+    assert accepted.sha == "b" * 40
+    assert default.sha == "c" * 40
+
+
 def _write_contract(
     root: Path,
     contract: template_contract.TemplateContract,

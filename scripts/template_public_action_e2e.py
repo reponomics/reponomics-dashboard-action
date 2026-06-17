@@ -72,10 +72,16 @@ def run_public_action_e2e(
     *,
     template_dir: Path,
     action_python: Path,
+    accepted_action: bool = False,
     keep_temp: bool = False,
 ) -> None:
     contract = template_contract.load_contract(ROOT)
-    resolved = validate_template_action_ref.validate_public_action_ref(root=ROOT)
+    if accepted_action:
+        resolved, _default = validate_template_action_ref.validate_accepted_action_release(
+            root=ROOT,
+        )
+    else:
+        resolved = validate_template_action_ref.validate_public_action_ref(root=ROOT)
     temp_root = Path(tempfile.mkdtemp(prefix="template-public-action-e2e-"))
     action_repo = temp_root / "action"
     try:
@@ -105,11 +111,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template-dir", type=Path, default=DEFAULT_TEMPLATE)
     parser.add_argument("--action-python", type=Path, default=DEFAULT_ACTION_PYTHON)
+    parser.add_argument(
+        "--accepted-action",
+        action="store_true",
+        help="Use accepted_action.tag/SHA metadata instead of default_action_ref.",
+    )
     parser.add_argument("--keep-temp", action="store_true")
     args = parser.parse_args()
     run_public_action_e2e(
         template_dir=args.template_dir,
         action_python=args.action_python,
+        accepted_action=args.accepted_action,
         keep_temp=args.keep_temp,
     )
 

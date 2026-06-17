@@ -143,24 +143,18 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "Manual template publication is restricted to main or reponomics-dashboard-v* tags" in workflow_text
     assert "token" not in checkout_step["with"]
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
-    assert "make verify-workflow-classification" in commands
+    assert "make template-release-gates" in commands
     assert "make build-template" not in commands
-    assert "make verify-template" in commands
-    assert "make validate-template-action-ref" in commands
-    assert "make template-smoke" in commands
-    assert "make template-public-action-e2e" in commands
+    assert "make validate-template-accepted-action" not in commands
     assert "make template-consumer-e2e" not in commands
-    assert "make publish-template-dry-run" in commands
-    assert "make package-template-release" in workflow_text
+    assert "make publish-template-dry-run" not in commands
+    assert "make template-release-gates" in workflow_text
     assert "gh release upload" not in workflow_text
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
     assert "reponomics-dashboard-template-release-${{ github.event.release.tag_name }}" in workflow_text
     assert "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26" in workflow_text
     assert "dist/template-release/SHA256SUMS" in workflow_text
     assert step_names.index("Validate generated template release gates") < step_names.index(
-        "Build template release artifacts"
-    )
-    assert step_names.index("Build template release artifacts") < step_names.index(
         "Upload template release artifacts"
     )
     assert step_names.index("Upload template release artifacts") < step_names.index(
@@ -287,9 +281,27 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "reponomics-dashboard-dev" not in workflow_text
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
+    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+    assert app_token_step["with"]["permission-contents"] == "write"
     assert "make template-compat-e2e" in commands
+    assert "scripts/accept_action_release.py" in workflow_text
+    assert "make validate-template-accepted-action" in commands
+    assert "gh release create" in commands
+    assert "template_tag=" in workflow_text
     assert step_names.index("Verify action compatibility with generated templates") < (
         step_names.index("Create release PR or GitHub release")
+    )
+    assert step_names.index("Create release PR or GitHub release") < (
+        step_names.index("Move floating action tags")
+    )
+    assert step_names.index("Move floating action tags") < (
+        step_names.index("Accept action release for template")
+    )
+    assert step_names.index("Accept action release for template") < (
+        step_names.index("Commit template acceptance")
+    )
+    assert step_names.index("Commit template acceptance") < (
+        step_names.index("Create template release")
     )
 
 

@@ -570,6 +570,12 @@ def test_action_repo_has_template_publication_targets():
     assert "template-smoke:" in makefile
     assert "template-consumer-e2e:" in makefile
     assert "template-public-action-e2e:" in makefile
+    assert "validate-template-accepted-action:" in makefile
+    assert "template-accepted-action-e2e:" in makefile
+    assert "template-release-gates:" in makefile
+    assert "validate-template-accepted-action" in makefile
+    assert "template-accepted-action-e2e" in makefile
+    assert "package-template-release" in makefile
     assert "publish-template:" in makefile
     assert "publish-template-staging-dry-run:" in makefile
     assert "publish-template-staging:" in makefile
@@ -670,6 +676,78 @@ def test_template_public_action_e2e_uses_resolved_public_checkout(
     assert calls["action_repo_name"] == "action"
     assert calls["action_python"] == tmp_path / "python"
     assert calls["keep_temp"] == "False"
+
+
+def test_template_public_action_e2e_can_use_accepted_action_release(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    contract = template_contract.TemplateContract(
+        template_version="0.10.0",
+        action_repository=template_contract.ACTION_REPOSITORY,
+        default_action_ref="v0",
+        compatible_action_major=0,
+        accepted_action=template_contract.AcceptedActionRelease(
+            repository=template_contract.ACTION_REPOSITORY,
+            version="0.23.6",
+            tag="v0.23.6",
+            sha="b" * 40,
+            default_ref="v0",
+        ),
+        minimum_compatible_template_version="0.10.0",
+        protected_template_refs=(
+            template_contract.ProtectedTemplateRef(
+                ref="reponomics-dashboard-v0.10.0",
+                template_version="0.10.0",
+                source_commit="a" * 40,
+            ),
+        ),
+        managed_docs_namespace=Path("docs/reponomics"),
+    )
+    accepted = validate_template_action_ref.ResolvedActionRef(
+        ref="v0.23.6",
+        sha="b" * 40,
+        remote_ref="refs/tags/v0.23.6",
+    )
+    default = validate_template_action_ref.ResolvedActionRef(
+        ref="v0",
+        sha="b" * 40,
+        remote_ref="refs/tags/v0",
+    )
+    calls: dict[str, str] = {}
+
+    monkeypatch.setattr(
+        template_public_action_e2e.template_contract,
+        "load_contract",
+        lambda _root: contract,
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e.validate_template_action_ref,
+        "validate_accepted_action_release",
+        lambda root: (accepted, default),
+    )
+    monkeypatch.setattr(
+        template_public_action_e2e,
+        "checkout_public_action",
+        lambda **kwargs: tmp_path / "action",
+    )
+
+    def fake_run_e2e(**kwargs: object) -> None:
+        calls["action_repo"] = str(kwargs["action_repo"])
+
+    monkeypatch.setattr(
+        template_public_action_e2e.template_consumer_e2e,
+        "run_e2e",
+        fake_run_e2e,
+    )
+
+    template_public_action_e2e.run_public_action_e2e(
+        template_dir=tmp_path / "template",
+        action_python=tmp_path / "python",
+        accepted_action=True,
+    )
+
+    assert calls["action_repo"].endswith("/action")
 
 
 @pytest.mark.skip(reason=STAGING_SMOKE_PAUSED_REASON)

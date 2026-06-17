@@ -136,12 +136,23 @@ Public note: not required unless users could copy the stale/broken generated rep
 
 Impact: users may copy a bad template.
 
+This should not happen after a successful normal publication run. `publish-template.yml`
+runs `make template-release-gates` before minting the publication app token, and
+`scripts/publish_generated_repo.py --push` fetches the published branch after the
+push and verifies its `.reponomics/template-provenance.json` payload digest against
+the generated source tree. If this incident occurs anyway, treat it as one of:
+
+- a bug in the publication verifier or provenance generator;
+- use of an operator bypass path outside the normal release workflow;
+- mutation of `reponomics/reponomics-dashboard` after a successful publication.
+
 Response:
 
 - Stop further releases.
-- Determine whether the source-repo template release artifact was correct.
-- If source release was correct but publication was wrong, republish generated repo from the same release tag if doing so restores the exact intended payload.
-- If the source release itself was wrong, publish a corrective template patch release.
+- Confirm whether the failed or suspect `publish-template.yml` run reached the post-push verification step.
+- Determine whether the source-repo template release artifact and recorded source commit were correct.
+- If the source release was correct but the generated repo was mutated or publication verification had a bug, fix the verifier if needed, then republish from the same release tag only if doing so restores the exact approved payload.
+- If the approved source release itself was wrong, publish a corrective template patch release.
 - Do not silently mutate the source-repo release notes to hide the incident.
 - Add a release note explaining the corrected payload if users could have copied the bad version.
 

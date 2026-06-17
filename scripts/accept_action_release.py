@@ -132,28 +132,12 @@ def _write_outputs(path: Path, payload: dict, *, changed: bool) -> None:
 
 
 def _write_release_notes(path: Path, payload: dict) -> None:
-    template_version = str(payload["template_version"])
     accepted_action = payload["accepted_action"]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "\n".join(
-            [
-                f"# reponomics-dashboard v{template_version}",
-                "",
-                "Template acceptance release for "
-                + f"reponomics-dashboard-action {accepted_action['tag']}.",
-                "",
-                "This release records the accepted action metadata for generated "
-                + "dashboard repositories and SHA-pinning workflows:",
-                "",
-                f"- Action repository: `{accepted_action['repository']}`",
-                f"- Action version: `{accepted_action['version']}`",
-                f"- Action tag: `{accepted_action['tag']}`",
-                f"- Action SHA: `{accepted_action['sha']}`",
-                f"- Default compatible ref: `{accepted_action['default_ref']}`",
-                "",
-            ]
-        ),
+        "Updated "
+        + f"`{accepted_action['repository']}` to `{accepted_action['tag']}` "
+        + f"(`{accepted_action['sha'][:7]}`).\n",
         encoding="utf-8",
     )
 

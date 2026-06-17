@@ -290,6 +290,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "gh release create" not in commands
     assert "gh pr create" in commands
     assert "gh pr edit" in commands
+    assert "## Template release notes" in commands
     assert "automation/template-accept-${action_tag}" in commands
     assert 'git push origin "HEAD:${GITHUB_REF_NAME}"' not in commands
     assert 'git push --force-with-lease origin "HEAD:${branch}"' in commands
@@ -319,11 +320,16 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     commands = "\n".join(step["run"] for step in steps if "run" in step)
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
 
-    assert workflow["permissions"] == {"contents": "read"}
+    assert "workflow_dispatch" not in workflow_text
+    assert "source_ref:" not in workflow_text
+    assert "release_notes:" not in workflow_text
+    assert workflow["permissions"] == {"contents": "read", "pull-requests": "read"}
     assert "template-contract.yml" in workflow_text
     assert "template/**" in workflow_text
     assert "dashboard_action/runtime/managed_docs/**" in workflow_text
     assert "scripts/template_release_notes.py" in workflow_text
+    assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
+    assert "--pr-body .tmp/template-release-pr-body.md" in workflow_text
     assert "make template-release-gates" in commands
     assert "gh release view" in commands
     assert "gh release create" in commands

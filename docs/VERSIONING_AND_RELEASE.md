@@ -127,21 +127,22 @@ For a template-only release:
 
 1. Open a PR with the template-source changes.
 2. Bump `template-contract.yml` `template_version` in that PR according to the template impact.
-3. Confirm CI is green.
-4. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
-5. Review and merge the PR as the effective template release approval.
-6. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching release already exists; otherwise it runs `make template-release-gates` and creates `reponomics-dashboard-vX.Y.Z`, where `X.Y.Z` equals `template-contract.yml`.
-7. Watch `.github/workflows/publish-template.yml`.
-8. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
-9. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
-10. Refresh the demo if the public showcase should reflect the new template.
+3. Add a `## Template release notes` section to the PR body with the release notes to publish.
+4. Confirm CI is green.
+5. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
+6. Review and merge the PR as the effective template release approval.
+7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching release already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, and creates `reponomics-dashboard-vX.Y.Z`, where `X.Y.Z` equals `template-contract.yml`.
+8. Watch `.github/workflows/publish-template.yml`.
+9. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
+10. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
+11. Refresh the demo if the public showcase should reflect the new template.
 
 For a coupled action/template release where the template requires new action behavior:
 
 1. Land the runtime and template changes on `main`.
 2. Cut the action release first, so `default_action_ref: v0` resolves to the intended released action behavior.
 3. Let `.github/workflows/release-please.yml` open or update the template acceptance PR. That PR class-locks the template SemVer bump to the action release class: action patch implies template patch, and action minor implies template minor.
-4. Review and merge the template acceptance PR as the effective template release approval.
+4. Review and merge the template acceptance PR as the effective template release approval. The generated PR body includes a `## Template release notes` section with a terse `Updated action to ...` note; edit that section before merging if the template release needs fuller notes.
 5. Let `.github/workflows/template-release.yml` create the matching `reponomics-dashboard-vX.Y.Z` release from the merged acceptance commit.
 6. Watch `.github/workflows/publish-template.yml`.
 7. Refresh the demo from the released template ref if the public showcase should reflect the new release.

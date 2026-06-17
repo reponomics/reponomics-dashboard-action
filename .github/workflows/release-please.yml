@@ -115,6 +115,8 @@ jobs:
             echo
             echo "Merging this PR is the template release approval step. After it lands on main, the Template Release workflow will run the release gates and create ${template_tag} from the merged commit."
             echo
+            echo "## Template release notes"
+            echo
             cat .tmp/template-release-notes.md
           } > "${body_file}"
 

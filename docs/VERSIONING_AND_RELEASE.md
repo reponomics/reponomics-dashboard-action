@@ -6,7 +6,7 @@ This repository publishes two versioned products and one generated public demo:
 - `reponomics-dashboard`: the generated template repository users copy.
 - `reponomics-dashboard-demo`: the public generated showcase repository. It is not a SemVer product.
 
-The release rule is simple: release the action when existing users should receive new runtime behavior through the compatible action channel, publish a corresponding template acceptance release for every public action release, release the template independently when newly copied repositories should receive a changed generated starting point, and refresh the demo whenever the public showcase should move forward.
+The release rule is simple: release the action when existing users should receive new runtime behavior through the compatible action channel, publish a corresponding template acceptance release for every public action release, release the template when template features or fixes should be published for newly copied repositories, and refresh the demo every day so the public synthetic data window stays current.
 
 ## Version Sources
 
@@ -103,7 +103,7 @@ After the action release:
 
 ## When To Release The Template
 
-Cut a template release independently when newly copied dashboard repositories should receive a changed generated starting point. This includes generated workflows, setup surface, config defaults, template README content, managed-docs initial snapshots, template provenance, repository policy files, or assumptions that depend on current released action behavior.
+Cut a template release independently when template features or fixes should be published for newly copied dashboard repositories. This includes generated workflows, setup surface, config defaults, template README content, managed-docs initial snapshots, template provenance, repository policy files, or assumptions that depend on current released action behavior.
 
 Every public action release also creates a template acceptance release, even for compatible action-only fixes. Existing generated repositories consume compatible fixes through the floating action channel; the corresponding template release records the accepted action version/tag/SHA for new copies and for users who choose SHA-pinned workflows.
 
@@ -135,7 +135,7 @@ For a template-only release:
 8. Watch `.github/workflows/publish-template.yml`.
 9. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
 10. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
-11. Refresh the demo if the public showcase should reflect the new template.
+11. Refresh the demo if the public showcase should reflect the new template before the next scheduled daily refresh.
 
 For a coupled action/template release where the template requires new action behavior:
 
@@ -145,7 +145,7 @@ For a coupled action/template release where the template requires new action beh
 4. Review and merge the template acceptance PR as the effective template release approval. The generated PR body includes a `## Template release notes` section with a terse `Updated action to ...` note; edit that section before merging if the template release needs fuller notes.
 5. Let `.github/workflows/template-release.yml` create the matching `reponomics-dashboard-vX.Y.Z` release from the merged acceptance commit.
 6. Watch `.github/workflows/publish-template.yml`.
-7. Refresh the demo from the released template ref if the public showcase should reflect the new release.
+7. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.
 
 The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an operator escape hatch for recovery. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use a matching `reponomics-dashboard-v*` release tag.
 
@@ -182,20 +182,21 @@ The workflows rerun the publication-critical gates; local gates are for catching
 
 ## Demo Publication
 
-The demo has no independent version. It is a generated public surface that should show the current intended product experience.
+The demo has no independent version and is not a formal release surface. It is a generated public showcase that should refresh daily so its synthetic data remains current.
 
-Refresh the demo when:
+Refresh the demo:
 
-- an action release changes dashboard rendering, setup behavior, managed docs, artifact behavior, or any visible user experience;
-- a template release changes generated repository setup or docs;
-- `demo/dataset.yml` changes;
-- the relative synthetic data window needs to move forward.
+- every day from the approved demo source ref;
+- when an action release changes dashboard rendering, setup behavior, managed docs, artifact behavior, or any visible user experience;
+- when a template release changes generated repository setup or docs;
+- when `demo/dataset.yml` changes;
+- when the relative synthetic data window needs to move forward.
 
 The `.github/workflows/publish-demo.yml` workflow supports both manual publication and scheduled daily refresh. It builds and verifies the demo, uploads the generated demo tree and encrypted retained-data seed as source workflow artifacts, force-pushes `reponomics-dashboard-demo`, and dispatches the generated target workflow that imports the seed as the demo repository's `dashboard-data` artifact and deploys the committed Pages dashboard shell.
 
 Daily demo refresh must not require human approval. Demo publication has two operator modes:
 
-- manual publication for unusual refs, recovery, or release-time confirmation;
+- manual publication for unusual refs, recovery, or action/template release-time confirmation;
 - scheduled daily refresh from an approved source ref, without required reviewers, with no arbitrary `source_ref` input, and with the demo publication app token minted only after `make verify-demo` and dry-run validation pass.
 
 The demo publication app is the primary blast-radius control. Keep it installed only on `reponomics-dashboard-demo`, keep its requested permissions limited to the current publication needs, and configure `DEMO_PUBLISH_APP_CLIENT_ID` plus `DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository. With that app installation scope, a separate approval environment is optional ceremony rather than a required security boundary.
@@ -207,9 +208,9 @@ A scheduled demo refresh is not an action release and not a template release. It
 ## Recommended Cadence
 
 - Action release: whenever existing users should receive a compatible runtime fix or feature.
-- Template release: whenever new users should receive a changed generated starting point.
-- Demo release-time refresh: after any action or template release that changes the public experience.
+- Template release: whenever template features or fixes should be published for newly copied repositories.
 - Demo daily refresh: run every day to keep the 90-day synthetic window current.
+- Demo event-driven refresh: after any action/template release or demo-data change that should be visible before the next scheduled refresh.
 - Security or urgent bug fix: action release first if existing users are affected; template release only if new copied repositories need changed files or setup defaults.
 
 ## Verification After Publication

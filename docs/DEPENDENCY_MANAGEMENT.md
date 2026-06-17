@@ -105,7 +105,7 @@ Source-repository workflows run on `ubuntu-24.04`, except for Scorecard on `ubun
 
 Evaluate runtime dependency compatibility primarily against Linux and Python 3.11, while keeping the package test matrix compatible with the Python versions in `ci.yml`.
 
-Third-party actions in source-repository workflows should be pinned by full commit SHA with a nearby version comment. Generated dashboard template workflows intentionally use the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, so users receive compatible fixes without manually chasing every action release.
+Third-party actions in source-repository workflows should be pinned by full commit SHA with a nearby version comment. Generated dashboard template workflows invoke the local wrapper at `.github/actions/reponomics/action.yml`; that wrapper intentionally uses the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, so users receive compatible fixes without manually chasing every action release.
 
 ## Vendored Assets
 

@@ -148,7 +148,7 @@ jobs:
 
       - name: Run dashboard doctor
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: doctor
           github-token: ${{ github.token }}

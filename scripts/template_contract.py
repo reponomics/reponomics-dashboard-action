@@ -25,12 +25,15 @@ if str(ROOT) not in sys.path:
 
 from dashboard_action.run_modules.core import MANAGED_DOCS_BUNDLE_DIR, VERSION  # noqa: E402
 ACTION_REPOSITORY = "reponomics/reponomics-dashboard-action"
+LOCAL_REPONOMICS_ACTION = "./.github/actions/reponomics"
+TEMPLATE_ACTION_WRAPPER_PATH = Path(".github/actions/reponomics/action.yml")
 MANAGED_DOCS_MANIFEST_NAME = ".manifest.json"
 MANAGED_DOCS_MANIFEST_SCHEMA_VERSION = 1
 REQUIRED_ACTION_INPUTS = {"allow-docs-sync"}
 REQUIRED_ACTION_OUTPUTS = {"docs-sync-state", "docs-action-version", "docs-updated-at"}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
+INPUT_EXPR_RE = re.compile(r"\$\{\{\s*inputs\.([A-Za-z0-9_-]+)\s*\}\}")
 GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TEMPLATE_RELEASE_REF_RE = re.compile(
     r"^reponomics-dashboard-v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
@@ -397,6 +400,7 @@ def verify_template_refs(
     contract: TemplateContract | None = None,
 ) -> None:
     contract = contract or validate_local_contract(root)
+    _validate_template_action_wrapper(root, contract=contract)
     expected_ref = f"{contract.action_repository}@{contract.default_action_ref}"
     stale: list[str] = []
     for path in _iter_text_files(root):
@@ -407,11 +411,128 @@ def verify_template_refs(
         if not text:
             continue
         for action_ref_match in ACTION_REF_RE.finditer(text):
-            if action_ref_match.group(0) != expected_ref:
+            if (
+                relative != TEMPLATE_ACTION_WRAPPER_PATH
+                or action_ref_match.group(0) != expected_ref
+            ):
                 stale.append(f"{relative}: {action_ref_match.group(0)}")
     if stale:
         formatted = "\n".join(f"  - {entry}" for entry in stale)
         raise TemplateContractError(f"Stale template action references found:\n{formatted}")
+
+
+def _validate_template_action_wrapper(
+    root: Path,
+    *,
+    contract: TemplateContract,
+) -> None:
+    wrapper_path = root / TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = _load_yaml_mapping(
+        wrapper_path,
+        error_prefix="template action wrapper",
+    )
+    wrapper_inputs = _declared_inputs(wrapper, path=TEMPLATE_ACTION_WRAPPER_PATH)
+    expected_ref = f"{contract.action_repository}@{contract.default_action_ref}"
+    remote_refs: list[tuple[dict[object, object], str]] = []
+    for step in _iter_yaml_steps(wrapper):
+        uses = str(step.get("uses") or "")
+        if ACTION_REF_RE.fullmatch(uses):
+            remote_refs.append((step, uses))
+    if [uses for _, uses in remote_refs] != [expected_ref]:
+        found = ", ".join(uses for _, uses in remote_refs) or "none"
+        raise TemplateContractError(
+            "template action wrapper must contain exactly one Reponomics action ref "
+            + f"matching {expected_ref}; found {found}"
+        )
+    step = remote_refs[0][0]
+    if str(step.get("id") or "") != "reponomics":
+        raise TemplateContractError(
+            "template action wrapper Reponomics step must use id: reponomics"
+        )
+    forwarded_inputs = _forwarded_wrapper_inputs(step)
+    undeclared = forwarded_inputs - wrapper_inputs
+    if undeclared:
+        raise TemplateContractError(
+            "template action wrapper forwards undeclared input(s): "
+            + ", ".join(sorted(undeclared))
+        )
+
+    workflow_input_errors: dict[str, set[str]] = {}
+    seen_wrapper_step = False
+    for path in _template_workflow_files(root):
+        workflow = _load_yaml_mapping(path, error_prefix="template workflow")
+        for workflow_step in _iter_yaml_steps(workflow):
+            if str(workflow_step.get("uses") or "") != LOCAL_REPONOMICS_ACTION:
+                continue
+            seen_wrapper_step = True
+            with_payload = workflow_step.get("with") or {}
+            if not isinstance(with_payload, dict):
+                continue
+            undeclared_inputs = {
+                str(name) for name in with_payload if str(name) not in wrapper_inputs
+            }
+            if undeclared_inputs:
+                workflow_input_errors[path.relative_to(root).as_posix()] = undeclared_inputs
+    if not seen_wrapper_step:
+        raise TemplateContractError(
+            f"generated workflows must invoke {LOCAL_REPONOMICS_ACTION}"
+        )
+    if workflow_input_errors:
+        details = "; ".join(
+            f"{path}: {', '.join(sorted(inputs))}"
+            for path, inputs in sorted(workflow_input_errors.items())
+        )
+        raise TemplateContractError(
+            "generated workflows pass inputs not declared by the template action wrapper: "
+            + details
+        )
+
+
+def _load_yaml_mapping(path: Path, *, error_prefix: str) -> dict[object, object]:
+    if not path.is_file():
+        raise TemplateContractError(f"missing {error_prefix}: {path}")
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        raise TemplateContractError(f"{path} must parse as a YAML object")
+    return payload
+
+
+def _declared_inputs(payload: dict[object, object], *, path: Path) -> set[str]:
+    raw_inputs = payload.get("inputs")
+    if not isinstance(raw_inputs, dict):
+        raise TemplateContractError(f"{path} must declare inputs")
+    return {str(name) for name in raw_inputs}
+
+
+def _forwarded_wrapper_inputs(step: dict[object, object]) -> set[str]:
+    with_payload = step.get("with") or {}
+    if not isinstance(with_payload, dict):
+        return set()
+    forwarded: set[str] = set()
+    for value in with_payload.values():
+        forwarded.update(INPUT_EXPR_RE.findall(str(value)))
+    return forwarded
+
+
+def _template_workflow_files(root: Path) -> list[Path]:
+    workflow_dir = root / ".github" / "workflows"
+    if not workflow_dir.is_dir():
+        raise TemplateContractError(f"missing template workflow directory: {workflow_dir}")
+    return sorted(workflow_dir.glob("*.yml")) + sorted(workflow_dir.glob("*.yaml"))
+
+
+def _iter_yaml_steps(value: object) -> list[dict[object, object]]:
+    steps: list[dict[object, object]] = []
+    if isinstance(value, dict):
+        raw_steps = value.get("steps")
+        if isinstance(raw_steps, list):
+            steps.extend(step for step in raw_steps if isinstance(step, dict))
+        for child in value.values():
+            steps.extend(_iter_yaml_steps(child))
+    elif isinstance(value, list):
+        for child in value:
+            steps.extend(_iter_yaml_steps(child))
+    return steps
 
 
 def _managed_docs_snapshot_files(namespace: Path) -> dict[str, str]:

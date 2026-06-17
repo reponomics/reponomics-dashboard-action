@@ -173,6 +173,13 @@ def build_provenance(
             "repository": contract.action_repository,
             "default_ref": contract.default_action_ref,
             "compatible_major": contract.compatible_action_major,
+            "accepted_release": {
+                "repository": contract.accepted_action.repository,
+                "version": contract.accepted_action.version,
+                "tag": contract.accepted_action.tag,
+                "sha": contract.accepted_action.sha,
+                "default_ref": contract.accepted_action.default_ref,
+            },
         },
         "generated_at": _source_timestamp(),
         "payload": {

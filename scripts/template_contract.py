@@ -50,11 +50,21 @@ class ProtectedTemplateRef:
 
 
 @dataclass(frozen=True)
+class AcceptedActionRelease:
+    repository: str
+    version: str
+    tag: str
+    sha: str
+    default_ref: str
+
+
+@dataclass(frozen=True)
 class TemplateContract:
     template_version: str
     action_repository: str
     default_action_ref: str
     compatible_action_major: int
+    accepted_action: AcceptedActionRelease
     minimum_compatible_template_version: str
     protected_template_refs: tuple[ProtectedTemplateRef, ...]
     managed_docs_namespace: Path
@@ -88,6 +98,10 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
     default_action_ref = str(payload.get("default_action_ref") or "")
     managed_docs_namespace = Path(str(payload.get("managed_docs_namespace") or ""))
     compatible_action_major = payload.get("compatible_action_major")
+    accepted_action = _parse_accepted_action_release(
+        payload.get("accepted_action"),
+        path=path,
+    )
     protected_template_refs = _parse_protected_template_refs(
         payload.get("protected_template_refs"),
         path=path,
@@ -119,6 +133,12 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
                 + f"(expected v{compatible_action_major}, got {default_action_ref!r})"
             )
         )
+    _validate_accepted_action_release(
+        accepted_action,
+        action_repository=action_repository,
+        default_action_ref=default_action_ref,
+        compatible_action_major=compatible_action_major,
+    )
     if managed_docs_namespace.as_posix() != "docs/reponomics":
         raise TemplateContractError("managed_docs_namespace must be docs/reponomics")
     _validate_protected_template_refs(
@@ -131,6 +151,7 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
         action_repository=action_repository,
         default_action_ref=default_action_ref,
         compatible_action_major=compatible_action_major,
+        accepted_action=accepted_action,
         minimum_compatible_template_version=minimum_compatible_template_version,
         protected_template_refs=tuple(protected_template_refs),
         managed_docs_namespace=managed_docs_namespace,
@@ -224,6 +245,53 @@ def _parse_protected_template_refs(
             )
         )
     return protected
+
+
+def _parse_accepted_action_release(
+    raw_action: object,
+    *,
+    path: Path,
+) -> AcceptedActionRelease:
+    if not isinstance(raw_action, dict):
+        raise TemplateContractError(f"{path} must declare accepted_action")
+
+    repository = str(raw_action.get("repository") or "")
+    version = str(raw_action.get("version") or "")
+    tag = str(raw_action.get("tag") or "")
+    sha = str(raw_action.get("sha") or "")
+    default_ref = str(raw_action.get("default_ref") or "")
+    return AcceptedActionRelease(
+        repository=repository,
+        version=version,
+        tag=tag,
+        sha=sha,
+        default_ref=default_ref,
+    )
+
+
+def _validate_accepted_action_release(
+    accepted_action: AcceptedActionRelease,
+    *,
+    action_repository: str,
+    default_action_ref: str,
+    compatible_action_major: int,
+) -> None:
+    if accepted_action.repository != action_repository:
+        raise TemplateContractError("accepted_action.repository must match action_repository")
+    if accepted_action.default_ref != default_action_ref:
+        raise TemplateContractError("accepted_action.default_ref must match default_action_ref")
+    if not SEMVER_RE.fullmatch(accepted_action.version):
+        raise TemplateContractError(
+            f"accepted_action.version must be SemVer, got {accepted_action.version!r}"
+        )
+    if accepted_action.tag != f"v{accepted_action.version}":
+        raise TemplateContractError("accepted_action.tag must be v<accepted_action.version>")
+    if _major(accepted_action.version) != compatible_action_major:
+        raise TemplateContractError(
+            "accepted_action.version must match compatible_action_major"
+        )
+    if not GIT_SHA_RE.fullmatch(accepted_action.sha):
+        raise TemplateContractError("accepted_action.sha must be a 40-character commit SHA")
 
 
 def _validate_protected_template_refs(

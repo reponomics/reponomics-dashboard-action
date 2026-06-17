@@ -476,6 +476,13 @@ def test_template_includes_verifiable_provenance(tmp_path):
         template_contract.load_contract().minimum_compatible_template_version
     )
     assert provenance["action"]["default_ref"] == "v0"
+    assert provenance["action"]["accepted_release"] == {
+        "repository": template_contract.load_contract().accepted_action.repository,
+        "version": template_contract.load_contract().accepted_action.version,
+        "tag": template_contract.load_contract().accepted_action.tag,
+        "sha": template_contract.load_contract().accepted_action.sha,
+        "default_ref": template_contract.load_contract().accepted_action.default_ref,
+    }
     assert "local_version" not in provenance["action"]
     assert "min_version" not in provenance["action"]
     assert provenance["payload"]["tree_manifest_format"] == "reponomics-template-tree-v1"
@@ -583,6 +590,13 @@ def test_template_public_action_e2e_uses_resolved_public_checkout(
         action_repository=template_contract.ACTION_REPOSITORY,
         default_action_ref="v0",
         compatible_action_major=0,
+        accepted_action=template_contract.AcceptedActionRelease(
+            repository=template_contract.ACTION_REPOSITORY,
+            version="0.23.6",
+            tag="v0.23.6",
+            sha="b" * 40,
+            default_ref="v0",
+        ),
         minimum_compatible_template_version="0.10.0",
         protected_template_refs=(
             template_contract.ProtectedTemplateRef(

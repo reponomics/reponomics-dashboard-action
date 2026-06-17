@@ -16,6 +16,13 @@ def _contract(
         action_repository=template_contract.ACTION_REPOSITORY,
         default_action_ref=f"v{compatible_action_major}",
         compatible_action_major=compatible_action_major,
+        accepted_action=template_contract.AcceptedActionRelease(
+            repository=template_contract.ACTION_REPOSITORY,
+            version="0.22.1",
+            tag="v0.22.1",
+            sha="b" * 40,
+            default_ref=f"v{compatible_action_major}",
+        ),
         minimum_compatible_template_version=minimum_compatible_template_version,
         protected_template_refs=(
             template_contract.ProtectedTemplateRef(
@@ -119,6 +126,12 @@ def _write_contract(
                 f"action_repository: {contract.action_repository}",
                 f"default_action_ref: {contract.default_action_ref}",
                 f"compatible_action_major: {contract.compatible_action_major}",
+                "accepted_action:",
+                f"  repository: {contract.accepted_action.repository}",
+                f"  version: {contract.accepted_action.version}",
+                f"  tag: {contract.accepted_action.tag}",
+                f"  sha: {contract.accepted_action.sha}",
+                f"  default_ref: {contract.accepted_action.default_ref}",
                 (
                     "minimum_compatible_template_version: "
                     + f"{contract.minimum_compatible_template_version}"

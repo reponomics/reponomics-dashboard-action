@@ -282,8 +282,9 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
-    assert app_token_step["with"]["permission-contents"] == "write"
-    assert app_token_step["with"]["permission-pull-requests"] == "write"
+    assert not any(
+        key.startswith("permission-") for key in app_token_step["with"]
+    )
     assert "make template-compat-e2e" in commands
     assert "scripts/accept_action_release.py" in workflow_text
     assert "make validate-template-accepted-action" in commands
@@ -334,7 +335,9 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "gh release view" in commands
     assert "gh release create" in commands
     assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
-    assert app_token_step["with"]["permission-contents"] == "write"
+    assert not any(
+        key.startswith("permission-") for key in app_token_step["with"]
+    )
     assert step_names.index("Prepare template release metadata") < step_names.index(
         "Check template release status"
     )

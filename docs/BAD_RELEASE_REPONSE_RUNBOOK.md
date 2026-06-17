@@ -252,3 +252,27 @@ Then verify:
 - source-repo template release tag
 - generated repo `Source-Commit`
 - `.reponomics/template-provenance.json`
+
+## Appendix: Tabletop Exercise Protocol
+
+Run a release recovery tabletop before public beta and periodically after major release-process changes. The goal is to verify that maintainers can identify the failed layer, choose the correct recovery path, and name the release history that must remain immutable.
+
+Use one or more scenarios:
+
+1. Action release exists, but the template acceptance PR failed.
+2. Template acceptance PR merged, but `template-release.yml` failed.
+3. Template release exists, but `publish-template.yml` failed before generated publication.
+4. Generated template publication completed with wrong provenance.
+5. Action patch release breaks the minimum compatible protected template.
+6. Template release gives new copied repositories broken setup.
+
+For each scenario, record:
+
+- the first command or workflow to inspect;
+- the tag, SHA, PR, and workflow run identifiers needed for triage;
+- whether the source is correct and the workflow should be rerun;
+- whether a corrective action or template patch release is required;
+- which exact tags/releases must not be moved or edited;
+- any missing runbook step, permission, artifact, or provenance evidence.
+
+Prefer tabletop review first. Use staging drills when the exercise needs to prove app permissions, generated publication, or copied-template smoke behavior. Do not create artificial production breakage for practice.

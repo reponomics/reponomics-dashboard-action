@@ -22,15 +22,8 @@ Use this operational runbook before and after public launch. Do not defer recove
 - `make template-compat-e2e` gates action releases against current and minimum compatible templates.
 - `make template-release-gates` gates template publication against the accepted action release.
 - Template release notes state compatibility resets explicitly.
-- Maintainers know which GitHub Apps own each release operation.
+- Required release and publication workflow credentials are configured.
 - Branch protection prevents direct pushes to `main`.
-
-## Automation Ownership
-
-- The release app owns action release automation, Release Please PRs, template acceptance PRs, and source-repo template release creation.
-- The template publication app owns generated repository publication to `reponomics/reponomics-dashboard`.
-- The staging publication app owns generated template staging publication.
-- Workflows mint short-lived installation tokens from those apps.
 
 ## Immutable Release Rules
 
@@ -169,7 +162,7 @@ Response:
 - Confirm failure with `make template-compat-e2e`.
 - If the exact action release is bad, publish an action patch release restoring compatibility.
 - Move floating refs `vX` and `vX.Y` to the corrective action patch only after it passes compatibility gates.
-- Keep the bad exact tag immutable; mark the release notes as superseded if needed.
+- Keep the bad exact tag immutable; identify it as superseded in the corrective release notes if needed.
 - Create a template acceptance PR for the corrective action release.
 - Do not move `minimum_compatible_template_version` forward retroactively to avoid the failure.
 

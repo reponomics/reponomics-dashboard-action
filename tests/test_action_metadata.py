@@ -282,9 +282,13 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+    app_user_step = next(step for step in steps if step["name"] == "Get release app bot user ID")
     assert not any(
         key.startswith("permission-") for key in app_token_step["with"]
     )
+    assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
+    assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
+    assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
     assert "make template-compat-e2e" in commands
     assert "scripts/accept_action_release.py" in workflow_text
     assert "make validate-template-accepted-action" in commands
@@ -295,6 +299,12 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "automation/template-accept-${action_tag}" in commands
     assert 'git push origin "HEAD:${GITHUB_REF_NAME}"' not in commands
     assert 'git push --force-with-lease origin "HEAD:${branch}"' in commands
+    assert 'git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"' in commands
+    assert (
+        'git config user.email "${{ steps.app-user.outputs.user-id }}+${{ '
+        + 'steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"'
+        in commands
+    )
     assert "template_tag=" in workflow_text
     assert step_names.index("Verify action compatibility with generated templates") < (
         step_names.index("Create release PR or GitHub release")

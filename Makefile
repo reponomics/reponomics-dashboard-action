@@ -4,7 +4,7 @@
 .PHONY: test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -225,6 +225,9 @@ verify-workflow-classification: install ## Verify maintainer vs template workflo
 validate-template-action-ref: install ## Verify the public template action ref satisfies the template contract
 	$(PYTHON) scripts/validate_template_action_ref.py
 
+validate-template-accepted-action: install ## Verify accepted action release metadata resolves publicly
+	$(PYTHON) scripts/validate_template_action_ref.py --require-accepted-action-release
+
 template-smoke: build-template ## Smoke-test ephemeral template publish and generated workflows
 	$(PYTHON) scripts/smoke_template_release.py --output dist/template
 
@@ -239,6 +242,11 @@ template-compat-e2e: build-template ## Run candidate action against current and 
 
 template-public-action-e2e: build-template ## Run generated template against the resolved public action ref
 	$(PYTHON) scripts/template_public_action_e2e.py --template-dir dist/template --action-python $(ACTION_PYTHON)
+
+template-accepted-action-e2e: build-template ## Run generated template against accepted action release metadata
+	$(PYTHON) scripts/template_public_action_e2e.py --template-dir dist/template --action-python $(ACTION_PYTHON) --accepted-action
+
+template-release-gates: verify-workflow-classification verify-template validate-template-action-ref validate-template-accepted-action template-smoke template-accepted-action-e2e publish-template-dry-run package-template-release ## Run release gates for generated template publication
 
 package-template-release: build-template ## Build deterministic generated-template release artifacts
 	rm -rf $(TEMPLATE_RELEASE_ARTIFACTS_DIR)

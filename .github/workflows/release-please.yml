@@ -23,9 +23,21 @@ jobs:
       - name: Create release app token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        # Compatibility note: this preserves the prior release-app token behavior.
+        # If this becomes explicit, include every permission Release Please needs.
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Get release app bot user ID
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -68,3 +80,66 @@ jobs:
           git tag --force "${major_tag}" "${release_sha}"
           git tag --force "${minor_tag}" "${release_sha}"
           git push --force origin "refs/tags/${major_tag}" "refs/tags/${minor_tag}"
+
+      - name: Accept action release for template
+        id: template-acceptance
+        if: ${{ steps.release.outputs.release_created }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          action_version="${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}"
+          action_sha="${{ steps.release.outputs.sha }}"
+          mkdir -p .tmp
+          venv/bin/python scripts/accept_action_release.py \
+            --action-version "${action_version}" \
+            --action-sha "${action_sha}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --release-notes .tmp/template-release-notes.md
+          make validate-template-accepted-action
+
+      - name: Open template acceptance PR
+        if: ${{ steps.release.outputs.release_created && steps.template-acceptance.outputs.changed == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          action_tag="${{ steps.template-acceptance.outputs.action_tag }}"
+          template_tag="${{ steps.template-acceptance.outputs.template_tag }}"
+          branch="automation/template-accept-${action_tag}"
+          title="chore: accept ${action_tag} for template release"
+          body_file=".tmp/template-acceptance-pr.md"
+
+          git add template-contract.yml
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git commit -m "${title}"
+          git fetch origin "refs/heads/${branch}:refs/remotes/origin/${branch}" || true
+          git push --force-with-lease origin "HEAD:${branch}"
+
+          {
+            echo "Template acceptance for ${action_tag}."
+            echo
+            echo "Merging this PR is the template release approval step. After it lands on main, the Template Release workflow will run the release gates and create ${template_tag} from the merged commit."
+            echo
+            echo "## Template release notes"
+            echo
+            cat .tmp/template-release-notes.md
+          } > "${body_file}"
+
+          if gh pr view "${branch}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh pr edit "${branch}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --body-file "${body_file}"
+          else
+            gh pr create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --head "${branch}" \
+              --base "${GITHUB_REF_NAME}" \
+              --title "${title}" \
+              --body-file "${body_file}"
+          fi

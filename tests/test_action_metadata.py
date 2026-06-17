@@ -54,6 +54,22 @@ def _step_index(name: str) -> int:
     raise AssertionError(f"missing action step named {name}")
 
 
+def _assert_release_app_token_permissions_are_implicit(step: dict) -> None:
+    explicit_permissions = sorted(
+        key for key in step.get("with", {}) if str(key).startswith("permission-")
+    )
+    message = (
+        "release app token permissions are intentionally implicit right now so the "
+        + "token inherits the app installation's configured scopes, including any "
+        + "Release Please permissions such as issues. If the policy changes to "
+        + "explicit token permissions, update this test with the complete required "
+        + f"permission list. Found explicit permission inputs: {explicit_permissions}"
+    )
+    assert explicit_permissions == [], (
+        message
+    )
+
+
 def _description_fields(value: object, path: str = "action.yml") -> list[tuple[str, str]]:
     descriptions: list[tuple[str, str]] = []
     if isinstance(value, dict):
@@ -143,24 +159,18 @@ def test_publish_template_workflow_requires_release_tag_or_manual_confirmation()
     assert "Manual template publication is restricted to main or reponomics-dashboard-v* tags" in workflow_text
     assert "token" not in checkout_step["with"]
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
-    assert "make verify-workflow-classification" in commands
+    assert "make template-release-gates" in commands
     assert "make build-template" not in commands
-    assert "make verify-template" in commands
-    assert "make validate-template-action-ref" in commands
-    assert "make template-smoke" in commands
-    assert "make template-public-action-e2e" in commands
+    assert "make validate-template-accepted-action" not in commands
     assert "make template-consumer-e2e" not in commands
-    assert "make publish-template-dry-run" in commands
-    assert "make package-template-release" in workflow_text
+    assert "make publish-template-dry-run" not in commands
+    assert "make template-release-gates" in workflow_text
     assert "gh release upload" not in workflow_text
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
     assert "reponomics-dashboard-template-release-${{ github.event.release.tag_name }}" in workflow_text
     assert "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26" in workflow_text
     assert "dist/template-release/SHA256SUMS" in workflow_text
     assert step_names.index("Validate generated template release gates") < step_names.index(
-        "Build template release artifacts"
-    )
-    assert step_names.index("Build template release artifacts") < step_names.index(
         "Upload template release artifacts"
     )
     assert step_names.index("Upload template release artifacts") < step_names.index(
@@ -287,9 +297,77 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "reponomics-dashboard-dev" not in workflow_text
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
+    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+    app_user_step = next(step for step in steps if step["name"] == "Get release app bot user ID")
+    _assert_release_app_token_permissions_are_implicit(app_token_step)
+    assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
+    assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
+    assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
     assert "make template-compat-e2e" in commands
+    assert "scripts/accept_action_release.py" in workflow_text
+    assert "make validate-template-accepted-action" in commands
+    assert "gh release create" not in commands
+    assert "gh pr create" in commands
+    assert "gh pr edit" in commands
+    assert "## Template release notes" in commands
+    assert "automation/template-accept-${action_tag}" in commands
+    assert 'git push origin "HEAD:${GITHUB_REF_NAME}"' not in commands
+    assert 'git push --force-with-lease origin "HEAD:${branch}"' in commands
+    assert 'git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"' in commands
+    assert (
+        'git config user.email "${{ steps.app-user.outputs.user-id }}+${{ '
+        + 'steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"'
+        in commands
+    )
+    assert "template_tag=" in workflow_text
     assert step_names.index("Verify action compatibility with generated templates") < (
         step_names.index("Create release PR or GitHub release")
+    )
+    assert step_names.index("Create release PR or GitHub release") < (
+        step_names.index("Move floating action tags")
+    )
+    assert step_names.index("Move floating action tags") < (
+        step_names.index("Accept action release for template")
+    )
+    assert step_names.index("Accept action release for template") < (
+        step_names.index("Open template acceptance PR")
+    )
+
+
+def test_template_release_workflow_cuts_template_releases_after_main_acceptance() -> None:
+    workflow_text = Path(".github/workflows/template-release.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.safe_load(workflow_text)
+    job = workflow["jobs"]["release-template"]
+    steps = job["steps"]
+    step_names = [step["name"] for step in steps]
+    commands = "\n".join(step["run"] for step in steps if "run" in step)
+    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+
+    assert "workflow_dispatch" not in workflow_text
+    assert "source_ref:" not in workflow_text
+    assert "release_notes:" not in workflow_text
+    assert workflow["permissions"] == {"contents": "read", "pull-requests": "read"}
+    assert "template-contract.yml" in workflow_text
+    assert "template/**" in workflow_text
+    assert "dashboard_action/runtime/managed_docs/**" in workflow_text
+    assert "scripts/template_release_notes.py" in workflow_text
+    assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
+    assert "--pr-body .tmp/template-release-pr-body.md" in workflow_text
+    assert "make template-release-gates" in commands
+    assert "gh release view" in commands
+    assert "gh release create" in commands
+    assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
+    _assert_release_app_token_permissions_are_implicit(app_token_step)
+    assert step_names.index("Prepare template release metadata") < step_names.index(
+        "Check template release status"
+    )
+    assert step_names.index("Check template release status") < step_names.index(
+        "Validate template release gates"
+    )
+    assert step_names.index("Validate template release gates") < step_names.index(
+        "Create template release"
     )
 
 

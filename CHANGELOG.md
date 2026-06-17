@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.6](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.5...v0.23.6) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deps:** update crypto dep due to vuln ([1bfc259](https://github.com/reponomics/reponomics-dashboard-action/commit/1bfc259641973df6b9a8950038ccb422a5df1698))
+
 ## [0.23.5](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.4...v0.23.5) (2026-06-15)
 
 

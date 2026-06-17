@@ -1793,7 +1793,7 @@ def test_publish_verifies_published_template_digest(tmp_path):
         )
 
 
-def test_publish_rejects_payload_files_ignored_by_git(tmp_path):
+def test_publish_dry_run_rejects_payload_files_ignored_by_git(tmp_path):
     output = tmp_path / "template"
     remote = tmp_path / "remote.git"
     build_template.build_template(output)
@@ -1801,7 +1801,6 @@ def test_publish_rejects_payload_files_ignored_by_git(tmp_path):
     ignored.parent.mkdir()
     ignored.write_bytes(b"cache")
     template_provenance.write_template_provenance(output)
-    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
 
     with pytest.raises(
         publish_generated_repo.PublishError,
@@ -1812,5 +1811,5 @@ def test_publish_rejects_payload_files_ignored_by_git(tmp_path):
             remote.as_posix(),
             "main",
             "chore: publish generated template",
-            push=True,
+            push=False,
         )

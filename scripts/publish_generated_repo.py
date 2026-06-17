@@ -148,6 +148,15 @@ def _verify_payload_tracked(worktree: Path) -> None:
         )
 
 
+def _verify_output_publishable(output_dir: Path, branch: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="generated-repo-check-") as tmp:
+        worktree = Path(tmp) / "repo"
+        shutil.copytree(output_dir, worktree)
+        _run(["git", "init", "-b", branch], worktree)
+        _run(["git", "add", "-A"], worktree)
+        _verify_payload_tracked(worktree)
+
+
 def _verify_published_digest(output_dir: Path, remote_url: str, branch: str) -> str:
     expected = template_provenance.verify_template_provenance(output_dir)["payload"]["digest"]
     with tempfile.TemporaryDirectory(prefix="published-template-") as tmp:
@@ -198,6 +207,7 @@ def publish(
     if source_commit:
         print(f"Source commit: {source_commit}")
     print(f"Template payload digest: {provenance['payload']['digest']}")
+    _verify_output_publishable(output_dir, branch)
 
     if not push:
         print("Dry run only. Re-run with --push to publish.")
@@ -218,7 +228,6 @@ def publish(
             worktree,
         )
         _run(["git", "add", "-A"], worktree)
-        _verify_payload_tracked(worktree)
         _run(
             [
                 "git",

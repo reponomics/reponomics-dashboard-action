@@ -66,6 +66,8 @@ jobs:
       - name: Create release app token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        # Compatibility note: this preserves the prior release-app token behavior.
+        # If this becomes explicit, include every permission release creation needs.
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

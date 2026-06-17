@@ -54,6 +54,22 @@ def _step_index(name: str) -> int:
     raise AssertionError(f"missing action step named {name}")
 
 
+def _assert_release_app_token_permissions_are_implicit(step: dict) -> None:
+    explicit_permissions = sorted(
+        key for key in step.get("with", {}) if str(key).startswith("permission-")
+    )
+    message = (
+        "release app token permissions are intentionally implicit right now so the "
+        + "token inherits the app installation's configured scopes, including any "
+        + "Release Please permissions such as issues. If the policy changes to "
+        + "explicit token permissions, update this test with the complete required "
+        + f"permission list. Found explicit permission inputs: {explicit_permissions}"
+    )
+    assert explicit_permissions == [], (
+        message
+    )
+
+
 def _description_fields(value: object, path: str = "action.yml") -> list[tuple[str, str]]:
     descriptions: list[tuple[str, str]] = []
     if isinstance(value, dict):
@@ -283,9 +299,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert workflow["permissions"] == {"contents": "read"}
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
     app_user_step = next(step for step in steps if step["name"] == "Get release app bot user ID")
-    assert not any(
-        key.startswith("permission-") for key in app_token_step["with"]
-    )
+    _assert_release_app_token_permissions_are_implicit(app_token_step)
     assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
     assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
     assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
@@ -345,9 +359,7 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "gh release view" in commands
     assert "gh release create" in commands
     assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
-    assert not any(
-        key.startswith("permission-") for key in app_token_step["with"]
-    )
+    _assert_release_app_token_permissions_are_implicit(app_token_step)
     assert step_names.index("Prepare template release metadata") < step_names.index(
         "Check template release status"
     )

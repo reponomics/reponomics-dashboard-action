@@ -62,10 +62,9 @@ If a generated workflow later consumes a Reponomics action output, the wrapper m
 - Keep `actions/checkout` before every generated workflow step that invokes the local action. Local actions are loaded from the checked-out repository workspace.
 - Replace all generated workflow calls to `reponomics/reponomics-dashboard-action@...` with `uses: ./.github/actions/reponomics`.
 - Add the wrapper under `template/.github/actions/reponomics/action.yml` so `scripts/build_template.py` copies it into the generated template.
-- Give the nested action step a stable `id` only if wrapper outputs are introduced. Without wrapper outputs, a simple forwarding step is enough.
+- Give the nested action step a stable `id` so future wrapper outputs can be added without renaming the forwarding step.
 - Keep the nested remote action ref generated from the template contract. The wrapper is the only generated file a SHA-pinning user should need to edit for the Reponomics action ref.
 - Do not move job permissions, workflow triggers, concurrency settings, token minting, artifact restore steps, or mode-specific preflight shell logic into the wrapper.
-- Do not support branch refs such as `main` as a documented generated-template runtime channel. Released major/minor/exact tags and full SHAs for released action commits remain the supported forms.
 
 ## Blast Radius
 
@@ -89,10 +88,12 @@ Implementation should not touch:
 
 ## Verification
 
+The implementation should prefer tests that protect useful invariants rather than tests that merely restate the implementation shape. Tests should make future refactors safer by checking contracts that can drift across files.
+
 The implementation should prove:
 
 - generated workflows invoke only `./.github/actions/reponomics` for Reponomics runtime calls;
-- the wrapper invokes exactly one `reponomics/reponomics-dashboard-action@...` nested action;
+- the generated template has a single maintained Reponomics action ref surface in the local wrapper;
 - every `with:` key passed by generated workflows is declared by the wrapper;
 - every forwarded wrapper input is declared by the real action metadata;
 - the generated template builds and verifies;

@@ -22,6 +22,8 @@ Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboar
 
 Every public action release publishes a corresponding template acceptance release. The acceptance PR records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; merging that PR is the maintainer approval for the template release. Generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
 
+Generated dashboard repositories are supported on released action refs: floating major/minor release refs, exact release tags, or full commit SHAs for released action commits. Branch refs such as `main` are not a supported generated-template runtime channel because they can run unreleased action behavior outside the accepted template contract.
+
 ADR 020 records the compatibility-gate rationale and the contract-field cleanup for the minimum compatible template version. ADR 022 records the action-release template acceptance model.
 
 After a major consolidation or other release-cadence reset, it is reasonable to bump `template_version` and, only for an explicit compatibility reset, move `minimum_compatible_template_version` forward. Do that in `template-contract.yml`, not by recording the concrete version values here. Do not move `minimum_compatible_template_version` for ordinary action acceptance releases.

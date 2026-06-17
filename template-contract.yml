@@ -1,5 +1,5 @@
 schema_version: 1
-template_version: 0.10.0
+template_version: 0.10.1
 action_repository: reponomics/reponomics-dashboard-action
 default_action_ref: v0
 compatible_action_major: 0

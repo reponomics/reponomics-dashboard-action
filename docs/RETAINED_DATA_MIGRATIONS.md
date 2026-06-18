@@ -173,3 +173,27 @@ CSV/manifest I/O. Migration policy should move to a separate runtime module once
 migrations become versioned, computational, or large enough to make the storage
 module hard to scan. As a practical context-management signal, migration code
 growing the file beyond roughly 500-600 lines is enough reason to split it.
+
+## Open Work
+
+This checklist records known implementation gaps in the current migration
+system. Remove or revise items as they are completed.
+
+1. Extract migration policy from `storage.py` into a dedicated runtime migration
+   module before adding substantive new migration behavior.
+2. Add a versioned migration registry with an explicit current schema and
+   minimum supported schema floor.
+3. Support ordered computational migrations for deterministic retained-data
+   backfills, such as adding `score_v2` while preserving legacy `score`.
+4. Add tests that prove a retained packet can migrate directly from every
+   supported schema fixture to the current runtime schema.
+5. Extend template compatibility CI so the current runtime is tested against
+   retained artifacts produced by the minimum compatible template's original
+   accepted action/schema.
+6. Add or update release gates so a release that raises the retained schema
+   floor or removes an upgrade path is classified as breaking.
+7. Improve runtime failure messages for unsupported old schemas so users get a
+   clear bridge-release upgrade path when one exists.
+8. Maintain a small fixture inventory that records which retained packet schema
+   each compatibility fixture represents and which template/action pairing
+   produced it.

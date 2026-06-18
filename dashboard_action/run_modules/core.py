@@ -13,6 +13,7 @@ SCRIPTS_DIR = ROOT / "runtime" / "scripts"
 MIN_MASK_LENGTH = 3
 INCIDENT_CONFIRM_MODE = "INCIDENT_RESET_CONFIRMED"
 INCIDENT_CONFIRM_PURGE = "PURGE_OLD_HISTORY_CONFIRMED"
+INCIDENT_CONFIRM_NEXT_SECRET = "NEXT_SECRET_CONFIRMED"
 INCIDENT_CONFIRM_IRREVERSIBLE = "IRREVERSIBLE_ACTION_CONFIRMED"
 INCIDENT_API_TIMEOUT_SECONDS = 20
 INCIDENT_API_MAX_RETRIES = 6
@@ -62,6 +63,7 @@ class RuntimeConfig:
     readme_path: Path
     incident_confirm_mode: str
     incident_confirm_purge: str
+    incident_confirm_next_secret: str
     incident_confirm_irreversible: str
     action_ref: str
     action_repository: str

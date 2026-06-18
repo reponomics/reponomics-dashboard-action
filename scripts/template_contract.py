@@ -42,6 +42,7 @@ REQUIRED_TEMPLATE_WRAPPER_INPUTS = {
     "github-token",
     "incident-confirm-irreversible",
     "incident-confirm-mode",
+    "incident-confirm-next-secret",
     "incident-confirm-purge",
     "mode",
     "publish-pages",

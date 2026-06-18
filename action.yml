@@ -42,6 +42,10 @@ inputs:
     description: Destructive incident-reset confirmation. Must be PURGE_OLD_HISTORY_CONFIRMED for incident-reset mode.
     required: false
     default: ""
+  incident-confirm-next-secret:
+    description: Destructive incident-reset confirmation. Must be NEXT_SECRET_CONFIRMED for incident-reset mode.
+    required: false
+    default: ""
   incident-confirm-irreversible:
     description: Destructive incident-reset confirmation. Must be IRREVERSIBLE_ACTION_CONFIRMED for incident-reset mode.
     required: false
@@ -161,6 +165,7 @@ runs:
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET: ${{ inputs.incident-confirm-next-secret }}
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
         REPONOMICS_ACTION_REF: ${{ github.action_ref }}
         REPONOMICS_ACTION_REPOSITORY: ${{ github.action_repository }}
@@ -266,6 +271,7 @@ runs:
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
         REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET: ${{ inputs.incident-confirm-next-secret }}
         REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
         REPONOMICS_INCIDENT_RESET_PURGE_ONLY: "true"
       run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run

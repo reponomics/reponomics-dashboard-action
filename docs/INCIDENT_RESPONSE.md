@@ -14,7 +14,7 @@ Before running the workflow:
 2. Disable or close the GitHub Pages site if an encrypted dashboard was
    published with the exposed key.
 3. Set `DASHBOARD_NEXT_SECRET` to a new dashboard key.
-4. Run `incident-reset` with all three confirmation inputs.
+4. Run `incident-reset` with all required confirmation inputs.
 
 `incident-reset` intentionally performs recovery before cleanup:
 

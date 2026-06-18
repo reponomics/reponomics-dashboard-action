@@ -360,6 +360,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: incident-reset" in incident_reset
     assert "incident-confirm-mode: ${{ inputs.confirm_mode }}" in incident_reset
     assert "incident-confirm-purge: ${{ inputs.confirm_purge }}" in incident_reset
+    assert "incident-confirm-next-secret: ${{ inputs.confirm_next_secret }}" in incident_reset
     assert "incident-confirm-irreversible: ${{ inputs.confirm_irreversible }}" in incident_reset
     assert "incident-purge-max-runs" not in incident_reset
     assert "timeout-minutes: 30" in incident_reset

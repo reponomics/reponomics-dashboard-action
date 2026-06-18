@@ -37,6 +37,10 @@ inputs:
     description: Destructive incident-reset confirmation for old history purge.
     required: false
     default: ""
+  incident-confirm-next-secret:
+    description: Destructive incident-reset confirmation for the replacement dashboard secret.
+    required: false
+    default: ""
   incident-confirm-irreversible:
     description: Destructive incident-reset irreversible-action confirmation.
     required: false
@@ -82,6 +86,7 @@ runs:
         comparison-secret: ${{ inputs.comparison-secret }}
         incident-confirm-mode: ${{ inputs.incident-confirm-mode }}
         incident-confirm-purge: ${{ inputs.incident-confirm-purge }}
+        incident-confirm-next-secret: ${{ inputs.incident-confirm-next-secret }}
         incident-confirm-irreversible: ${{ inputs.incident-confirm-irreversible }}
         data-mode: ${{ inputs.data-mode }}
         retention-days: ${{ inputs.retention-days }}

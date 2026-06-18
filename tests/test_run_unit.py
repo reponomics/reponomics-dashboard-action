@@ -1185,6 +1185,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
+        "incident_confirm_next_secret": "",
         "incident_confirm_irreversible": "",
         "action_ref": "v0.2.0",
         "action_repository": "reponomics/reponomics-dashboard-action",

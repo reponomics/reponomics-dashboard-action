@@ -11,6 +11,13 @@ on:
         description: "Type PURGE_OLD_HISTORY_CONFIRMED"
         type: string
         required: true
+      confirm_next_secret:
+        description: >
+          Before you begin, ensure that you have saved a new encryption key as \`DASHBOARD_NEXT_SECRET\`,
+          and that you have not directly modified or deleted \`DASHBOARD_SECRET_DO_NOT_REPLACE\`.
+          Type NEXT_SECRET_CONFIRMED to confirm.
+        type: string
+        required: true
       confirm_irreversible:
         description: "Type IRREVERSIBLE_ACTION_CONFIRMED"
         type: string
@@ -64,4 +71,5 @@ jobs:
           retention-days: ${{ env.RETENTION_DAYS }}
           incident-confirm-mode: ${{ inputs.confirm_mode }}
           incident-confirm-purge: ${{ inputs.confirm_purge }}
+          incident-confirm-next-secret: ${{ inputs.confirm_next_secret }}
           incident-confirm-irreversible: ${{ inputs.confirm_irreversible }}

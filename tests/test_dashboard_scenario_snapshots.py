@@ -156,6 +156,7 @@ def _render_production_outputs(
         readme_path=workdir / "README.md",
         incident_confirm_mode="",
         incident_confirm_purge="",
+        incident_confirm_next_secret="",
         incident_confirm_irreversible="",
         action_ref="v0.13.0",
         action_repository="reponomics/reponomics-dashboard-action",

@@ -40,6 +40,7 @@ The wrapper must declare and forward every input currently passed by generated w
 - `github-token`
 - `incident-confirm-irreversible`
 - `incident-confirm-mode`
+- `incident-confirm-next-secret`
 - `incident-confirm-purge`
 - `mode`
 - `publish-pages`

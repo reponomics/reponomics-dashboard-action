@@ -340,6 +340,7 @@ def load_config_from_env() -> RuntimeConfig:
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),
         incident_confirm_purge=_env("REPONOMICS_INCIDENT_CONFIRM_PURGE"),
+        incident_confirm_next_secret=_env("REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET"),
         incident_confirm_irreversible=_env("REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE"),
         action_ref=_env("REPONOMICS_ACTION_REF"),
         action_repository=_env("REPONOMICS_ACTION_REPOSITORY"),

@@ -5,6 +5,7 @@ from __future__ import annotations
 from .core import (
     INCIDENT_CONFIRM_IRREVERSIBLE,
     INCIDENT_CONFIRM_MODE,
+    INCIDENT_CONFIRM_NEXT_SECRET,
     INCIDENT_CONFIRM_PURGE,
     ActionError,
     RuntimeConfig,
@@ -89,6 +90,11 @@ def _validate_incident_confirmations(config: RuntimeConfig) -> None:
         raise ActionError(
             "incident-confirm-purge must be set to "
             + f"{INCIDENT_CONFIRM_PURGE!r} for incident-reset mode."
+        )
+    if config.incident_confirm_next_secret != INCIDENT_CONFIRM_NEXT_SECRET:
+        raise ActionError(
+            "incident-confirm-next-secret must be set to "
+            + f"{INCIDENT_CONFIRM_NEXT_SECRET!r} for incident-reset mode."
         )
     if config.incident_confirm_irreversible != INCIDENT_CONFIRM_IRREVERSIBLE:
         raise ActionError(

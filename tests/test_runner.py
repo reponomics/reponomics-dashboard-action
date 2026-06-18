@@ -188,6 +188,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
+        "incident_confirm_next_secret": "",
         "incident_confirm_irreversible": "",
         "action_ref": "v0.1.0",
         "action_repository": "reponomics/reponomics-dashboard-action",
@@ -1118,6 +1119,20 @@ def test_incident_reset_requires_confirmations(tmp_path: Path) -> None:
         run.validate_config(config)
 
 
+def test_incident_reset_requires_next_secret_confirmation(tmp_path: Path) -> None:
+    config = _config(
+        tmp_path,
+        mode="incident-reset",
+        dashboard_next_secret=NEXT_KEY,
+        incident_confirm_mode=run.INCIDENT_CONFIRM_MODE,
+        incident_confirm_purge=run.INCIDENT_CONFIRM_PURGE,
+        incident_confirm_irreversible=run.INCIDENT_CONFIRM_IRREVERSIBLE,
+    )
+
+    with pytest.raises(run.ActionError, match="incident-confirm-next-secret"):
+        run.validate_config(config)
+
+
 def test_incident_reset_validation_accepts_confirmed_inputs(tmp_path: Path) -> None:
     config = _config(
         tmp_path,
@@ -1125,6 +1140,7 @@ def test_incident_reset_validation_accepts_confirmed_inputs(tmp_path: Path) -> N
         dashboard_next_secret=NEXT_KEY,
         incident_confirm_mode=run.INCIDENT_CONFIRM_MODE,
         incident_confirm_purge=run.INCIDENT_CONFIRM_PURGE,
+        incident_confirm_next_secret=run.INCIDENT_CONFIRM_NEXT_SECRET,
         incident_confirm_irreversible=run.INCIDENT_CONFIRM_IRREVERSIBLE,
     )
 
@@ -3076,6 +3092,7 @@ def test_incident_reset_reencrypts_without_rendering_outputs(
         dashboard_next_secret=NEXT_KEY,
         incident_confirm_mode=run.INCIDENT_CONFIRM_MODE,
         incident_confirm_purge=run.INCIDENT_CONFIRM_PURGE,
+        incident_confirm_next_secret=run.INCIDENT_CONFIRM_NEXT_SECRET,
         incident_confirm_irreversible=run.INCIDENT_CONFIRM_IRREVERSIBLE,
     )
     purge_called = False

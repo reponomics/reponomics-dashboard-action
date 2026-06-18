@@ -95,9 +95,10 @@ Before merging an action release PR:
 1. Confirm normal CI is green.
 2. Confirm the candidate action passes against the current/latest generated template.
 3. Confirm the candidate action passes against the minimum compatible template version recorded by `template-contract.yml`.
-4. Confirm any intended staging/soak period is complete.
-5. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
-6. Confirm the changelog entry and SemVer bump match the change.
+4. Confirm retained artifacts produced by the minimum compatible template's original accepted action/schema migrate to the candidate runtime's current retained packet schema.
+5. Confirm any intended staging/soak period is complete.
+6. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
+7. Confirm the changelog entry and SemVer bump match the change.
 
 After the action release:
 

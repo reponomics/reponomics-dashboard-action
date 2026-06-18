@@ -54,6 +54,25 @@ The template version may still change for workflow, setup, permissions, docs, or
 generated-file reasons, but retained-data compatibility should not become a
 second template-versus-runtime matrix.
 
+## Template Compatibility Tests
+
+Template compatibility end-to-end tests must also prove retained packet
+compatibility. When CI checks the current runtime against the current template
+and the minimum compatible template, it should include retained artifact
+fixtures produced by the action/schema that originally shipped with those
+template snapshots.
+
+Those tests do not create a second compatibility floor. They are evidence for
+the same retained schema floor: a supported historical template/action pairing
+must have a migration path from its original retained packet schema to the
+current runtime schema.
+
+The useful assertion is:
+
+> The current runtime can restore a retained packet produced by the supported
+> template floor, migrate it to the current schema, and complete publish,
+> collect, and encrypted maintenance flows without losing retained rows.
+
 ## Migration Types
 
 Structural migrations normalize packet shape without computing new semantics.
@@ -142,8 +161,10 @@ For retained data changes:
 4. Preserve row identity or explicitly migrate it.
 5. Add or update compatibility fixtures for `publish`, `collect`, and encrypted
    `rotate-key` when encryption applies.
-6. Verify old supported fixtures migrate directly to the current runtime.
-7. Treat any raised schema floor or missing upgrade path as a breaking release.
+6. Include template-floor retained artifacts in template compatibility CI so
+   pinned-template users have a proven direct upgrade path.
+7. Verify old supported fixtures migrate directly to the current runtime.
+8. Treat any raised schema floor or missing upgrade path as a breaking release.
 
 ## Implementation Hygiene
 

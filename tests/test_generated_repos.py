@@ -541,8 +541,14 @@ def test_required_fields_do_not_have_default_value():
         for key in resolver_config_keys
         if key in template_payload and template_payload[key] is None
     )
+    expected_defaulted_keys = tuple(
+        key
+        for key in resolver_config_keys
+        if key in template_payload and template_payload[key] is not None
+    )
 
     assert expected_required_keys == runtime_config.REQUIRED_SETUP_CONFIG_KEYS
+    assert expected_defaulted_keys == runtime_config.DEFAULTED_CONFIG_KEYS
     assert expected_required_keys == resolver_required_keys
     assert template_payload["artifact_retention_days"] == 90
     assert template_payload["use_github_app"] is False

@@ -25,6 +25,10 @@ REQUIRED_SETUP_CONFIG_KEYS = (
     "publish_readme_dashboard",
     "allow_docs_sync",
 )
+DEFAULTED_CONFIG_KEYS = (
+    "artifact_retention_days",
+    "use_github_app",
+)
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
 
@@ -153,6 +157,13 @@ def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str
     if missing:
         raise ActionError(
             "config.yaml is missing required setup field(s): " + ", ".join(missing)
+        )
+    missing_defaulted = [key for key in DEFAULTED_CONFIG_KEYS if key not in payload]
+    if missing_defaulted:
+        raise ActionError(
+            "config.yaml is missing defaulted field(s): "
+            + ", ".join(missing_defaulted)
+            + ". Restore them from docs/reponomics/config.example.yaml or set explicit values."
         )
 
     read_readme = _config_bool(payload, "i_have_read_the_readme")

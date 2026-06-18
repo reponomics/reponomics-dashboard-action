@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.24.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.7...v0.24.0) (2026-06-18)
+
+
+### Features
+
+* migrate retained data without collect provenance ([#139](https://github.com/reponomics/reponomics-dashboard-action/issues/139)) ([143f668](https://github.com/reponomics/reponomics-dashboard-action/commit/143f6683687f086d0f0fcc09bdd35b4639004b59))
+
+
+### Miscellaneous Chores
+
+* shorten generated workflow names ([#141](https://github.com/reponomics/reponomics-dashboard-action/issues/141)) ([a8da755](https://github.com/reponomics/reponomics-dashboard-action/commit/a8da7554d5ca624b66fbd17e1a5dcc8650705cb3))
+* update required inputs ([#137](https://github.com/reponomics/reponomics-dashboard-action/issues/137)) ([3d4a6ef](https://github.com/reponomics/reponomics-dashboard-action/commit/3d4a6ef528deff6eb21f4282b3ad451f3577dc9c))
+
 ## [0.23.7](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.6...v0.23.7) (2026-06-18)
 
 

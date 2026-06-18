@@ -2,6 +2,8 @@
 
 This is a placeholder document.
 
-For information about the security policies and practices of the Reponomics Dashboard project please visit the development repository at [`reponomics/reponomics-dashboard-action`](https://github.com/reponomics-dashboard-action) for more information.
+If you are reading this document in the official `reponomics/reponomics-dashboard` template repository:
 
-If you are reading this document somewhere other than `reponomics/reponomics-dashboard`, anything written here should not be attributed to the Reponomics organization, and is up to the discretion of the repository's owner.
+For information about the security policies and practices of the Reponomics Dashboard project please visit the development repository at [`reponomics/reponomics-dashboard-action`](https://github.com/reponomics/reponomics-dashboard-action) for more information.
+
+If you are reading this document anywhere _besides_ the `reponomics-dashboard` template repository, then it belongs to the owner who copied the repo template. None of the statements should be attributed to the Reponomics organization, and the owner may replace this document with whatever they deem fit.

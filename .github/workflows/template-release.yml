@@ -21,7 +21,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: template-release-source-${{ github.sha }}
+  group: generated-template-publication-reponomics-dashboard
   cancel-in-progress: false
 
 env:
@@ -74,26 +74,69 @@ jobs:
             --release-notes .tmp/template-release-notes.md \
             --pr-body .tmp/template-release-pr-body.md
 
+      - name: Create generated template read token
+        id: read-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard
+          permission-contents: read
+
+      - name: Validate template release gates
+        run: |
+          set -euo pipefail
+          TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make template-release-gates
+
       - name: Check generated template release status
         id: release-status
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.read-token.outputs.token }}
           TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
           TEMPLATE_EXPECTED_REPO: ${{ env.TEMPLATE_EXPECTED_REPO }}
         run: |
           set -euo pipefail
-          if gh release view "${TEMPLATE_TAG}" --repo "${TEMPLATE_EXPECTED_REPO}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Generated template release ${TEMPLATE_TAG} already exists."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          api_url="${GITHUB_API_URL}/repos/${TEMPLATE_EXPECTED_REPO}/releases/tags/${TEMPLATE_TAG}"
+          http_status="$(
+            curl -sS -L \
+              -o .tmp/generated-template-release.json \
+              -w "%{http_code}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${api_url}"
+          )"
 
-      - name: Validate template release gates
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+          case "${http_status}" in
+            200)
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "Generated template release ${TEMPLATE_TAG} already exists."
+              ;;
+            404)
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Generated template release lookup failed with HTTP ${http_status}." >&2
+              cat .tmp/generated-template-release.json >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Verify existing generated template release
+        if: ${{ steps.release-status.outputs.exists == 'true' }}
+        env:
+          READ_TOKEN: ${{ steps.read-token.outputs.token }}
+          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+          TEMPLATE_EXPECTED_REPO: ${{ env.TEMPLATE_EXPECTED_REPO }}
         run: |
           set -euo pipefail
-          TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make template-release-gates
+          target_url="https://x-access-token:${READ_TOKEN}@github.com/${TEMPLATE_EXPECTED_REPO}.git"
+          venv/bin/python scripts/publish_generated_repo.py \
+            --output dist/template \
+            --remote "${target_url}" \
+            --expected-repo "${TEMPLATE_EXPECTED_REPO}" \
+            --verify-ref "refs/tags/${TEMPLATE_TAG}"
 
       - name: Upload template release artifacts
         if: ${{ steps.release-status.outputs.exists != 'true' }}
@@ -138,7 +181,7 @@ jobs:
           git -c tag.gpgSign=false tag "${TEMPLATE_TAG}" "${current}"
           git push origin "refs/tags/${TEMPLATE_TAG}"
 
-      - name: Create release app token
+      - name: Create publication app token
         id: app-token
         if: ${{ steps.release-status.outputs.exists != 'true' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -188,15 +231,25 @@ jobs:
         run: |
           set -euo pipefail
           {
+            echo "## Template publication"
+            echo
+            echo "- Template version: \`reponomics-dashboard v${TEMPLATE_VERSION}\`"
+            echo "- Template tag: \`${TEMPLATE_TAG}\`"
+            echo "- Generated commit: \`${PUBLISHED_COMMIT}\`"
+            echo
+            echo "## New-copy template changes"
+            echo
             cat .tmp/template-release-notes.md
+            echo
+            echo "## Accepted action metadata"
+            echo
+            echo "- Accepted action version: \`${ACCEPTED_ACTION_VERSION}\`"
+            echo "- Accepted action tag: \`${ACCEPTED_ACTION_TAG}\`"
+            echo "- Accepted action SHA: \`${ACCEPTED_ACTION_SHA}\`"
             echo
             echo "## Provenance"
             echo
-            echo "- Template version: \`${TEMPLATE_VERSION}\`"
-            echo "- Template tag: \`${TEMPLATE_TAG}\`"
             echo "- Source commit: \`${SOURCE_COMMIT}\`"
-            echo "- Generated commit: \`${PUBLISHED_COMMIT}\`"
-            echo "- Accepted action: \`${ACCEPTED_ACTION_TAG}\` (\`${ACCEPTED_ACTION_SHA}\`)"
             echo "- Source workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "- Template provenance: \`.reponomics/template-provenance.json\`"
           } > .tmp/generated-template-release-notes.md
@@ -213,6 +266,6 @@ jobs:
           set -euo pipefail
           gh release create "${TEMPLATE_TAG}" \
             --repo "${TEMPLATE_EXPECTED_REPO}" \
-            --target "${PUBLISHED_COMMIT}" \
+            --verify-tag \
             --title "reponomics-dashboard v${TEMPLATE_VERSION}" \
             --notes-file .tmp/generated-template-release-notes.md

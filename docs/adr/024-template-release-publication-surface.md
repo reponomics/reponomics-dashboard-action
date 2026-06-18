@@ -27,7 +27,7 @@ The current implementation represents that approval by creating a
 source-repository GitHub Release with a `reponomics-dashboard-vX.Y.Z` tag. The
 production template publication workflow listens for that release, runs the
 template release gates, packages deterministic release artifacts, creates
-attestations, and force-publishes the generated template repository.
+attestations, and publishes the generated template repository.
 
 That model preserves release evidence, but it creates an awkward public product
 surface:
@@ -82,7 +82,9 @@ an auditable approval and evidence chain:
 3. Run the template release gates from the merged source commit.
 4. Build deterministic template release artifacts and attest them from the
    source repository workflow.
-5. Publish the generated tree to `reponomics/reponomics-dashboard`.
+5. Publish the generated tree to `reponomics/reponomics-dashboard` as an
+   append-only generated publication commit on top of the current generated
+   `main`.
 6. Create an immutable generated-repository tag and GitHub Release that points
    to the generated template commit.
 7. Include links from the generated-repository release notes back to the source
@@ -94,21 +96,18 @@ changes from action acceptance metadata. A template acceptance release that has
 no generated template surface changes should say so explicitly rather than
 duplicating the action changelog.
 
-Because production template publication force-pushes the generated repository's
-default branch, publication should also protect direct recoverability of prior
-template snapshots. Before replacing the generated repository's `main`, the
-workflow should verify that the current generated commit is already reachable
-from an immutable generated-template release tag. If it is not, the workflow
-should either create a recovery tag from the current generated commit using the
-template version recorded in `.reponomics/template-provenance.json`, or stop and
-require operator recovery.
+The generated repository should not be treated as normal development history:
+each commit is still mechanically manufactured from source. It should instead
+be an append-only generated publication ledger. The publication workflow starts
+from the current generated `main`, replaces the worktree with `dist/template`,
+commits the generated snapshot with provenance trailers, and fast-forward pushes
+`main` plus the generated release tag. If the target branch moved unexpectedly,
+the push fails instead of rewriting public history.
 
-Release-named branches can serve as an emergency compatibility bridge if tags
-cannot yet be created in the generated repository, but they should not be the
-preferred archive shape. Branches are mutable working refs and can be confused
-with supported template lines. Immutable generated-repository tags and GitHub
-Releases better match GitHub's release model and the project's provenance
-claims.
+Generated release tags remain the version boundary users and maintainers should
+cite. The append-only history is the maintainer and auditor recovery surface:
+prior template snapshots remain reachable by ordinary Git ancestry as well as by
+their release tags.
 
 ## Release Notes Shape
 
@@ -160,8 +159,8 @@ The source repository remains the authority for:
 - producing deterministic template release artifacts;
 - creating artifact attestations before publication credentials are minted;
 - recording source commit and accepted action metadata in generated provenance.
-- verifying that the generated repository's previous public template snapshot
-  remains reachable before force-pushing a new generated `main`.
+- fast-forward publishing the generated repository so previous public template
+  snapshots remain reachable through generated `main` history.
 
 The generated repository release is the public release announcement for the
 template artifact, not the authority that decides or builds the artifact.
@@ -193,15 +192,16 @@ generated-repository release.
 - The generated template repository carries the release history for the artifact
   users actually copy.
 - Previously published generated template snapshots become directly recoverable
-  from generated-repository tags instead of requiring regeneration from the
-  source repository.
+  from generated-repository tags and generated `main` history instead of
+  requiring regeneration from the source repository.
 - Template-only releases have a public home that matches their distribution
   surface.
 - Coupled action/template release trains become easier to explain: action
   release in the Action repo, template publication in the Template repo, linked
   by source provenance and accepted action metadata.
-- The publication workflow becomes more complex because it must create a release
-  in the generated repository after force-publishing the generated tree.
+- The publication workflow becomes more complex because it must create or verify
+  a generated tag, fast-forward publish the generated tree, and create a release
+  in the generated repository.
 - Release recovery documentation must distinguish source acceptance evidence
   from generated-repository public release state.
 - Source-repository tags may still be useful as immutable source anchors, but
@@ -216,10 +216,10 @@ If accepted, implementation should proceed conservatively:
    and verified.
 2. Preserve current template release gates, deterministic artifact packaging,
    and attestations in the source repository.
-3. Before force-pushing the generated repository's `main`, verify that the
-   current target commit is already reachable from a generated-template release
-   tag. If not, create a recovery tag from the current target commit or stop
-   before overwriting it.
+3. Change production generated publication from force-push snapshots to
+   append-only generated commits: fetch current generated `main`, replace the
+   worktree with `dist/template`, commit with provenance trailers, create or
+   verify the generated release tag, and push `main` plus the tag atomically.
 4. Change the normal trigger from a source-repository published GitHub Release
    to a source tag, merged acceptance commit, workflow run, or other auditable
    source event.
@@ -237,18 +237,22 @@ If accepted, implementation should proceed conservatively:
 - A matching source-repository tag points to the accepted source commit so
   compatibility gates and source provenance still have an immutable source
   anchor.
-- Missing generated-repository archive refs are backfilled as tags, not
-  branches.
+- Generated repository history is append-only publication history. It is not
+  normal hand-maintained development history, but it preserves prior generated
+  snapshots by ancestry instead of relying on archive tags before overwrite.
 - Generated-repository publication and release creation happen in
   `.github/workflows/template-release.yml` after the acceptance merge. The
-  emergency `publish-template.yml` workflow remains available only for operator
-  recovery and does not create the public generated-template release.
+  previous manual production `publish-template.yml` workflow is removed so
+  production generated publication has a single protected mutator.
+- Existing generated releases are not blindly skipped. The workflow verifies
+  that the generated tag for an existing release matches the generated payload
+  expected from the accepted source commit.
 - Generated-repository release notes include source commit, generated commit,
   accepted action metadata, source workflow run, and
   `.reponomics/template-provenance.json` references.
 - Failed generated-repository release creation after a correct generated push is
-  recovered by rerunning from the same accepted source when possible, or by
-  using the emergency publication path only from an already-approved source.
+  recovered by rerunning from the same accepted source when possible. Operator
+  repair should be explicit and separate from the normal production workflow.
 
 ## Non-Goals
 

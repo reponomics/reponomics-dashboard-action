@@ -31,8 +31,8 @@ Use this operational runbook before and after public launch. Do not defer recove
 - Source template tags and generated template release tags are immutable.
 - Published GitHub Releases are not edited as a recovery mechanism.
 - Floating action refs may move to corrective releases after validation.
-- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source commit.
-- Before generated `main` is replaced, the previous generated template snapshot should remain reachable from its generated-template release tag.
+- Generated template repo `main` should advance through append-only generated publication commits from the protected publication workflow.
+- Previous generated template snapshots should remain reachable through generated `main` history and generated-template release tags.
 - Recovery uses reruns from the same approved source when the source is correct, or corrective patch releases when the source is wrong.
 
 ## Public Readiness And Versioning
@@ -239,11 +239,11 @@ Compatibility reset: this release raises the minimum compatible template version
 - Source template tags and generated template release tags are immutable.
 - Published GitHub Releases are not edited as a recovery mechanism.
 - Floating action refs may move to corrective releases.
-- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source commit.
+- Generated template repo `main` should advance through append-only generated publication commits from the protected publication workflow.
 - If a bad generated template may have been copied, publish a corrective template patch release.
 - If a bad action may affect existing users through floating refs, publish a corrective action patch release and move the floating refs.
 - Do not move `minimum_compatible_template_version` in response to a bad release. Move it only for an intentional compatibility reset.
-- Do not use manual publication as normal rollback. Use it only to recover publication from an already-approved release source.
+- Do not use manual publication as normal rollback. Operator repair should be explicit and scoped to the incident.
 
 ## Minimum Maintainer Checklist During Incident
 

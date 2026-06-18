@@ -1773,12 +1773,24 @@ def test_publish_remote_safety_rejects_wrong_repo():
 
 
 def test_publish_commit_message_records_source_commit():
+    provenance = {
+        "template": {"version": "0.10.0"},
+        "payload": {"digest": "sha256:abc"},
+        "action": {"accepted_release": {"tag": "v0.24.0", "sha": "def456"}},
+    }
     message = publish_generated_repo._commit_message(
         "chore: publish generated template",
         "abc123",
+        provenance,
     )
 
-    assert message == "chore: publish generated template\n\nSource-Commit: abc123"
+    assert message == (
+        "chore: publish generated template\n\n"
+        "Source-Commit: abc123\n"
+        "Template-Version: 0.10.0\n"
+        "Payload-Digest: sha256:abc\n"
+        "Accepted-Action: v0.24.0 (def456)"
+    )
 
 
 def _create_generated_remote_main(remote: Path, source: Path, tmp_path: Path, version: str) -> str:
@@ -1851,7 +1863,7 @@ def test_publish_verifies_published_template_digest(tmp_path):
         )
 
 
-def test_publish_archives_existing_generated_main_before_release_push(tmp_path):
+def test_publish_appends_generated_main_and_tags_release_commit(tmp_path):
     previous = tmp_path / "previous-template"
     next_output = tmp_path / "next-template"
     remote = tmp_path / "remote.git"
@@ -1871,20 +1883,25 @@ def test_publish_archives_existing_generated_main_before_release_push(tmp_path):
         github_output=github_output,
     )
 
-    archived = subprocess.check_output(
-        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/tags/reponomics-dashboard-v0.9.9"],
+    tagged = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/tags/reponomics-dashboard-v0.10.0"],
         text=True,
     ).strip()
     current = subprocess.check_output(
         ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main"],
         text=True,
     ).strip()
+    parent = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main^"],
+        text=True,
+    ).strip()
     output_values = dict(
         line.split("=", 1)
         for line in github_output.read_text(encoding="utf-8").splitlines()
     )
-    assert archived == previous_commit
+    assert tagged == published
     assert current == published
+    assert parent == previous_commit
     assert output_values["published_commit"] == published
     assert output_values["payload_digest"] == template_provenance.verify_template_provenance(
         next_output
@@ -1892,7 +1909,7 @@ def test_publish_archives_existing_generated_main_before_release_push(tmp_path):
     assert output_values["target_branch"] == "main"
 
 
-def test_publish_rejects_conflicting_generated_archive_tag(tmp_path):
+def test_publish_rejects_conflicting_generated_release_tag(tmp_path):
     previous = tmp_path / "previous-template"
     next_output = tmp_path / "next-template"
     remote = tmp_path / "remote.git"
@@ -1917,17 +1934,17 @@ def test_publish_rejects_conflicting_generated_archive_tag(tmp_path):
         check=True,
     )
     subprocess.run(
-        ["git", "-c", "tag.gpgSign=false", "tag", "reponomics-dashboard-v0.9.9"],
+        ["git", "-c", "tag.gpgSign=false", "tag", "reponomics-dashboard-v0.10.0"],
         cwd=other,
         check=True,
     )
     subprocess.run(
-        ["git", "push", "--force", "origin", "refs/tags/reponomics-dashboard-v0.9.9"],
+        ["git", "push", "--force", "origin", "refs/tags/reponomics-dashboard-v0.10.0"],
         cwd=other,
         check=True,
     )
 
-    with pytest.raises(publish_generated_repo.PublishError, match="archive tag"):
+    with pytest.raises(publish_generated_repo.PublishError, match="release tag"):
         publish_generated_repo.publish(
             next_output,
             remote.as_posix(),
@@ -1938,16 +1955,16 @@ def test_publish_rejects_conflicting_generated_archive_tag(tmp_path):
         )
 
 
-def test_manual_publish_does_not_create_generated_archive_tag(tmp_path):
+def test_publish_without_release_tag_appends_without_creating_release_tag(tmp_path):
     previous = tmp_path / "previous-template"
     next_output = tmp_path / "next-template"
     remote = tmp_path / "remote.git"
     build_template.build_template(previous)
     build_template.build_template(next_output)
     subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
-    _create_generated_remote_main(remote, previous, tmp_path, "0.9.9")
+    previous_commit = _create_generated_remote_main(remote, previous, tmp_path, "0.9.9")
 
-    publish_generated_repo.publish(
+    published = publish_generated_repo.publish(
         next_output,
         remote.as_posix(),
         "main",
@@ -1955,6 +1972,10 @@ def test_manual_publish_does_not_create_generated_archive_tag(tmp_path):
         push=True,
     )
 
+    parent = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main^"],
+        text=True,
+    ).strip()
     tag_lookup = subprocess.run(
         [
             "git",
@@ -1968,6 +1989,8 @@ def test_manual_publish_does_not_create_generated_archive_tag(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    assert parent == previous_commit
+    assert published
     assert tag_lookup.returncode != 0
 
 

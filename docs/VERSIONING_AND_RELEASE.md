@@ -66,7 +66,7 @@ Status: staging publication and copied-repository smoke work is paused and is no
 
 When resumed, `reponomics-dashboard-staging` should be provisioned as a private generated-output repository. It should mirror the production generated-template repository closely enough to support realistic copy/smoke testing, but it is not the canonical user template and should not be advertised.
 
-Staging publication is handled by `.github/workflows/publish-template-staging.yml`. It is manual, restricted to `main` or release tags, runs the generated-template gates, dry-runs the staging target, then force-pushes `dist/template` to `reponomics-dashboard-staging`.
+Staging publication is handled by `.github/workflows/publish-template-staging.yml`. It is manual, restricted to `main` or release tags, runs the generated-template gates, dry-runs the staging target, then publishes `dist/template` to `reponomics-dashboard-staging`.
 
 Use a dedicated staging publication GitHub App installed only on `reponomics-dashboard-staging`. Configure `vars.TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID` and `secrets.TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository. The app needs `contents: write` and `workflows: write` on the staging repository.
 
@@ -80,7 +80,7 @@ Staging setup checklist:
 6. Run `.github/workflows/publish-template-staging.yml` from `main` with confirmation enabled.
 7. Run the private consumer staging smoke protocol in `docs/STAGING_SMOKE.md` when the change warrants it.
 
-Do not use `publish-template.yml` for routine staging. That workflow is an emergency-only operator recovery escape hatch for generated-template publication. Normal public template releases use `.github/workflows/template-release.yml`; routine private staging should use `publish-template-staging.yml`.
+Normal public template releases use `.github/workflows/template-release.yml`; routine private staging should use `publish-template-staging.yml`. There is no manual production template publication workflow.
 
 ## When To Release The Action
 
@@ -127,7 +127,7 @@ reponomics-dashboard-v<template_version>
 
 If `template-contract.yml` contains `template_version: X.Y.Z`, the source tag and generated repository release tag must be `reponomics-dashboard-vX.Y.Z`.
 
-The `.github/workflows/template-release.yml` workflow runs after an accepted template PR lands on `main`. It reads the merged PR release notes, checks whether the generated repository release already exists, runs `make template-release-gates`, validates the public action ref used by generated workflows, validates the accepted action tag/version/SHA metadata, runs template smoke and generated-template e2e checks against the accepted action release, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, creates the immutable source tag, and only then mints the template publication app token. It force-pushes the generated tree to `reponomics/reponomics-dashboard`, preserving the previous generated `main` behind its own generated-template tag when needed, then creates the public generated-repository release.
+The `.github/workflows/template-release.yml` workflow runs after an accepted template PR lands on `main`. It reads the merged PR release notes, runs `make template-release-gates`, validates the public action ref used by generated workflows, validates the accepted action tag/version/SHA metadata, runs template smoke and generated-template e2e checks against the accepted action release, dry-runs publication, packages deterministic template release artifacts, checks whether the generated repository release already exists with fail-closed HTTP status handling, verifies any existing generated release tag against the expected generated payload, uploads artifacts as workflow artifacts, creates GitHub artifact attestations, creates the immutable source tag, and only then mints the template publication app token. It appends a generated publication commit to `reponomics/reponomics-dashboard`, creates or verifies the generated release tag, pushes `main` and the tag atomically, then creates the public generated-repository release with `--verify-tag`.
 
 The workflow intentionally does not upload assets to a GitHub Release after publication. Release evidence is carried as source workflow artifacts, artifact attestations, generated `.reponomics/template-provenance.json`, and the generated repository release body.
 
@@ -141,9 +141,9 @@ For a template-only release:
 4. Confirm CI is green.
 5. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
 6. Review and merge the PR as the effective template release approval.
-7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching generated repository release already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.
-8. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
-9. Confirm the previous generated `main` commit remains reachable through its generated-template release tag when applicable.
+7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It verifies the matching generated repository release if it already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.
+8. Confirm `reponomics-dashboard` `main` has a new generated publication commit containing the expected `Source-Commit`, `Template-Version`, `Payload-Digest`, and `Accepted-Action` trailers.
+9. Confirm the generated release tag points to that generated commit.
 10. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
 11. Refresh the demo if the public showcase should reflect the new template before the next scheduled daily refresh.
 
@@ -156,7 +156,7 @@ For a coupled action/template release where the template requires new action beh
 5. Let `.github/workflows/template-release.yml` create the source tag, publish the generated template, and create the matching `reponomics-dashboard-vX.Y.Z` release in `reponomics/reponomics-dashboard` from the merged acceptance commit.
 6. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.
 
-The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an emergency-only operator escape hatch for recovery. It is not a normal release path and does not create a public generated-template release. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use `.github/workflows/template-release.yml`.
+Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use `.github/workflows/template-release.yml`. Production generated-template publication has no manual workflow-dispatch mutator; operator repair should be handled explicitly for the incident at hand.
 
 ## Local Release Gates
 
@@ -225,6 +225,6 @@ A scheduled demo refresh is not an action release and not a template release. It
 
 After action release, verify the GitHub Release, exact tag, floating tags, and release provenance/SBOM workflow.
 
-After template publication, verify the source tag, generated repository release/tag, generated repository commit, `Source-Commit`, `.reponomics/template-provenance.json`, package artifacts, checksums, attestations, and previous-template archive tag when applicable.
+After template publication, verify the source tag, generated repository release/tag, generated repository publication commit, `Source-Commit`, `Template-Version`, `Payload-Digest`, `Accepted-Action`, `.reponomics/template-provenance.json`, package artifacts, checksums, and attestations.
 
 After demo publication, verify the demo repository commit, `.reponomics/demo-provenance.json`, absence of `data/` and `dist/` in git, presence of the target `dashboard-data` artifact, and the live Pages dashboard at `https://reponomics.github.io/reponomics-dashboard-demo/`.

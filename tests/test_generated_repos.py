@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from dashboard_action.run_modules import config as runtime_config
 from scripts import build_template
 from scripts import publish_generated_repo
 from scripts import template_contract
@@ -84,10 +85,10 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         "README.md",
         "README.backup.md",
         "config.yaml",
-        "config.example.yaml",
         ".reponomics/template-provenance.json",
         "docs/reponomics/.manifest.json",
         "docs/reponomics/README.md",
+        "docs/reponomics/config.example.yaml",
         "docs/reponomics/configuration.md",
         "docs/reponomics/privacy-and-artifacts.md",
         "docs/reponomics/upgrade.md",
@@ -167,6 +168,9 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
     assert "`docs/reponomics/.manifest.json` records the action version" in readme
+    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == Path(
+        "template/config.yaml"
+    ).read_text(encoding="utf-8")
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
@@ -519,12 +523,27 @@ def test_setup_workflow_does_not_commit_workflow_file_changes(tmp_path):
 
 def test_required_fields_do_not_have_default_value():
     """Required fields should require explicit user consent, so omit default values."""
-    # i_have_read_the_readme
-    # data_mode
-    # publish_pages_dashboard
-    # publish_readme_dashboard
-    # allow_docs_sync
-    assert True
+    template_payload = yaml.safe_load(Path("template/config.yaml").read_text(encoding="utf-8"))
+    resolver = Path("template/.github/scripts/resolve-reponomics-config.py").read_text(
+        encoding="utf-8"
+    )
+    resolver_globals: dict[str, object] = {"__name__": "resolve_reponomics_config_test"}
+    exec(compile(resolver, "resolve-reponomics-config.py", "exec"), resolver_globals)
+    resolver_config_keys = resolver_globals["CONFIG_KEYS"]
+    resolver_required_keys = tuple(resolver_globals["REQUIRED_KEYS"])
+
+    expected_required_keys = tuple(
+        key
+        for key in resolver_config_keys
+        if key in template_payload and template_payload[key] is None
+    )
+
+    assert expected_required_keys == runtime_config.REQUIRED_SETUP_CONFIG_KEYS
+    assert expected_required_keys == resolver_required_keys
+    assert template_payload["artifact_retention_days"] == 90
+    assert template_payload["use_github_app"] is False
+    assert "artifact_retention_days" not in expected_required_keys
+    assert "use_github_app" not in expected_required_keys
 
 
 def test_template_contract_and_action_metadata_contract():
@@ -1366,11 +1385,15 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
     assert "`docs/reponomics/.manifest.json` records the action version" in readme
+    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == Path(
+        "template/config.yaml"
+    ).read_text(encoding="utf-8")
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
     assert manifest["updated_at"] == "2026-05-31T05:19:33Z"
     assert "README.md" in manifest["files"]
+    assert "config.example.yaml" in manifest["files"]
 
     template_contract.verify_managed_docs_snapshot(docs_root, contract=contract)
     (docs_root / "README.md").write_text("stale\n", encoding="utf-8")

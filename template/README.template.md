@@ -28,7 +28,7 @@ The `.reponomics/setup-complete` marker is an empty, non-secret file and does no
 
 ## Configuration
 
-`config.yaml` is owned by this repository. Reponomics reads it during setup and workflow runs but does not silently rewrite it. The top setup fields must be filled before setup can proceed:
+`config.yaml` is owned by this repository. Reponomics reads it during setup and workflow runs but does not silently rewrite it. The setup fields without defaults must be filled before setup can proceed:
 
 ```yaml
 i_have_read_the_readme: true
@@ -56,6 +56,8 @@ include_private: true
 # Advanced: use only with your own GitHub App installation token workflow.
 use_github_app: false
 ```
+
+The template starts with `artifact_retention_days: 90` and `use_github_app: false`; both are validated by setup and workflow runs.
 
 If `include_only` is non-empty, Reponomics tracks exactly those repositories and ignores the automatic pool. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).
 

@@ -21,7 +21,13 @@ CONFIG_KEYS = {
     "use_github_app": "USE_GITHUB_APP",
 }
 
-REQUIRED_KEYS = tuple(CONFIG_KEYS)
+REQUIRED_KEYS = (
+    "i_have_read_the_readme",
+    "data_mode",
+    "publish_pages_dashboard",
+    "publish_readme_dashboard",
+    "allow_docs_sync",
+)
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90

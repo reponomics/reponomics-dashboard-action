@@ -55,6 +55,8 @@ from .run_modules.core import (
     INCIDENT_CONFIRM_NEXT_SECRET,
     INCIDENT_CONFIRM_PURGE,
     MANAGED_DOCS_BUNDLE_DIR,
+    MANAGED_DOCS_CONFIG_EXAMPLE_SOURCE,
+    MANAGED_DOCS_CONFIG_EXAMPLE_TARGET,
     MANAGED_DOCS_DASHBOARD_LINK_ENV,
     MANAGED_DOCS_NAMESPACE,
     MANAGED_DOCS_README_LINK_ENV,
@@ -403,6 +405,9 @@ def run_docs_sync(config: RuntimeConfig) -> None:
         result = managed_docs.sync_managed_docs(
             namespace=MANAGED_DOCS_NAMESPACE,
             bundle_dir=MANAGED_DOCS_BUNDLE_DIR,
+            reference_files={
+                MANAGED_DOCS_CONFIG_EXAMPLE_TARGET: MANAGED_DOCS_CONFIG_EXAMPLE_SOURCE,
+            },
             action_repository=config.action_repository or version_status.ACTION_REPOSITORY,
             action_version=VERSION,
             allowed=config.allow_docs_sync,

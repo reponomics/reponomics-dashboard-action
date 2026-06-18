@@ -24,8 +24,6 @@ REQUIRED_SETUP_CONFIG_KEYS = (
     "publish_pages_dashboard",
     "publish_readme_dashboard",
     "allow_docs_sync",
-    "artifact_retention_days",
-    "use_github_app",
 )
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90

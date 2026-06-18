@@ -23,7 +23,12 @@ ROOT = find_repo_root(Path(__file__))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dashboard_action.run_modules.core import MANAGED_DOCS_BUNDLE_DIR, VERSION  # noqa: E402
+from dashboard_action.run_modules.core import (  # noqa: E402
+    MANAGED_DOCS_BUNDLE_DIR,
+    MANAGED_DOCS_CONFIG_EXAMPLE_SOURCE,
+    MANAGED_DOCS_CONFIG_EXAMPLE_TARGET,
+    VERSION,
+)
 ACTION_REPOSITORY = "reponomics/reponomics-dashboard-action"
 LOCAL_REPONOMICS_ACTION = "./.github/actions/reponomics"
 TEMPLATE_ACTION_WRAPPER_PATH = Path(".github/actions/reponomics/action.yml")
@@ -347,6 +352,10 @@ def render_managed_docs_snapshot(
         relative = path.relative_to(MANAGED_DOCS_BUNDLE_DIR).as_posix()
         _validate_managed_docs_relative_path(relative)
         rendered[relative] = path.read_text(encoding="utf-8")
+    _validate_managed_docs_relative_path(MANAGED_DOCS_CONFIG_EXAMPLE_TARGET)
+    rendered[MANAGED_DOCS_CONFIG_EXAMPLE_TARGET] = MANAGED_DOCS_CONFIG_EXAMPLE_SOURCE.read_text(
+        encoding="utf-8"
+    )
 
     if not rendered:
         raise TemplateContractError("managed docs bundle is empty")

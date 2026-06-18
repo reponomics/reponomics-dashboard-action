@@ -301,12 +301,17 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
         encoding="utf-8"
     )
     workflow = yaml.safe_load(workflow_text)
+    trigger_paths = set(workflow[True]["push"]["paths"])
     job = workflow["jobs"]["release-template"]
     steps = job["steps"]
     step_names = [step["name"] for step in steps]
     commands = "\n".join(step["run"] for step in steps if "run" in step)
+    source_tag_step = next(step for step in steps if step["name"] == "Check source template tag status")
     read_token_step = next(
         step for step in steps if step["name"] == "Create generated template read token"
+    )
+    stop_other_source_step = next(
+        step for step in steps if step["name"] == "Stop if source tag belongs to another commit"
     )
     app_token_step = next(step for step in steps if step["name"] == "Create publication app token")
 
@@ -325,13 +330,18 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
         "pull-requests": "read",
     }
     assert job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
-    assert "template-contract.yml" in workflow_text
-    assert "template/**" in workflow_text
-    assert "dashboard_action/runtime/managed_docs/**" in workflow_text
-    assert "scripts/publish_generated_repo.py" in workflow_text
-    assert "scripts/template_release_notes.py" in workflow_text
+    assert "template-contract.yml" in trigger_paths
+    assert "template/**" in trigger_paths
+    assert "dashboard_action/runtime/managed_docs/**" in trigger_paths
+    assert "scripts/publish_generated_repo.py" not in trigger_paths
+    assert "scripts/template_release_notes.py" in trigger_paths
     assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
     assert "--pr-body .tmp/template-release-pr-body.md" in workflow_text
+    assert 'echo "status=other" >> "$GITHUB_OUTPUT"' in source_tag_step["run"]
+    assert "Generated-template publication will continue only if" in source_tag_step["run"]
+    assert "Rerun or repair publication from the source-tag commit" in stop_other_source_step["run"]
+    assert stop_other_source_step["if"] == "${{ steps.source-tag.outputs.status == 'other' }}"
+    assert "git fetch --quiet --no-tags origin" in source_tag_step["run"]
     assert "make template-release-gates" in commands
     assert "curl -sS -L" in commands
     assert "Generated template release lookup failed with HTTP ${http_status}." in commands
@@ -349,21 +359,43 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "## Accepted action metadata" in workflow_text
     assert "Source workflow run:" in workflow_text
     assert "Template provenance:" in workflow_text
+    assert "if" not in read_token_step
     assert read_token_step["with"]["repositories"] == "reponomics-dashboard"
     assert read_token_step["with"]["permission-contents"] == "read"
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
     assert app_token_step["with"]["permission-contents"] == "write"
     assert app_token_step["with"]["permission-workflows"] == "write"
+    guarded_steps = [
+        "Validate template release gates",
+        "Verify existing generated template release",
+        "Upload template release artifacts",
+        "Attest template release artifacts",
+        "Create source template tag",
+        "Create publication app token",
+        "Configure template remote",
+        "Publish generated template repository",
+        "Write generated template release notes",
+        "Create generated template release",
+    ]
+    for step in steps:
+        if step["name"] in guarded_steps:
+            assert "steps.source-tag.outputs.status != 'other'" in step["if"]
     assert step_names.index("Prepare template release metadata") < step_names.index(
+        "Check source template tag status"
+    )
+    assert step_names.index("Check source template tag status") < step_names.index(
         "Create generated template read token"
     )
     assert step_names.index("Create generated template read token") < step_names.index(
-        "Validate template release gates"
-    )
-    assert step_names.index("Validate template release gates") < step_names.index(
         "Check generated template release status"
     )
     assert step_names.index("Check generated template release status") < step_names.index(
+        "Stop if source tag belongs to another commit"
+    )
+    assert step_names.index("Stop if source tag belongs to another commit") < step_names.index(
+        "Validate template release gates"
+    )
+    assert step_names.index("Validate template release gates") < step_names.index(
         "Verify existing generated template release"
     )
     assert step_names.index("Verify existing generated template release") < step_names.index(

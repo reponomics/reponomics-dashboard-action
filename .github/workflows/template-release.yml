@@ -9,7 +9,6 @@ on:
       - template/**
       - dashboard_action/runtime/managed_docs/**
       - scripts/build_template.py
-      - scripts/publish_generated_repo.py
       - scripts/template_contract.py
       - scripts/template_provenance.py
       - scripts/template_release_notes.py
@@ -75,6 +74,38 @@ jobs:
             --release-notes .tmp/template-release-notes.md \
             --pr-body .tmp/template-release-pr-body.md
 
+      - name: Check source template tag status
+        id: source-tag
+        env:
+          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+        run: |
+          set -euo pipefail
+
+          git fetch --quiet --no-tags origin "refs/tags/${TEMPLATE_TAG}:refs/tags/${TEMPLATE_TAG}" || true
+          existing="$(git rev-parse -q --verify "refs/tags/${TEMPLATE_TAG}^{commit}" || true)"
+          current="$(git rev-parse HEAD)"
+
+          if [ -z "${existing}" ]; then
+            echo "status=absent" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "commit=${existing}" >> "$GITHUB_OUTPUT"
+          if [ "${existing}" = "${current}" ]; then
+            echo "status=current" >> "$GITHUB_OUTPUT"
+            echo "Source template tag ${TEMPLATE_TAG} already points to ${current}."
+            exit 0
+          fi
+
+          echo "status=other" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Source template tag already exists"
+            echo
+            echo "Source template tag \`${TEMPLATE_TAG}\` already points to \`${existing}\`, not this source commit \`${current}\`."
+            echo "Generated-template publication will continue only if the generated repository release already exists."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Source template tag ${TEMPLATE_TAG} already points to ${existing}; checking generated release before deciding whether to skip."
+
       - name: Create generated template read token
         id: read-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -84,11 +115,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: reponomics-dashboard
           permission-contents: read
-
-      - name: Validate template release gates
-        run: |
-          set -euo pipefail
-          TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make template-release-gates
 
       - name: Check generated template release status
         id: release-status
@@ -124,8 +150,41 @@ jobs:
               ;;
           esac
 
+      - name: Stop if source tag belongs to another commit
+        if: ${{ steps.source-tag.outputs.status == 'other' }}
+        env:
+          GENERATED_RELEASE_EXISTS: ${{ steps.release-status.outputs.exists }}
+          SOURCE_TAG_COMMIT: ${{ steps.source-tag.outputs.commit }}
+          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+        run: |
+          set -euo pipefail
+
+          if [ "${GENERATED_RELEASE_EXISTS}" = "true" ]; then
+            {
+              echo
+              echo "Generated repository release \`${TEMPLATE_TAG}\` already exists, so no publication is needed from this source commit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Generated template release ${TEMPLATE_TAG} already exists; skipping this source commit."
+            exit 0
+          fi
+
+          {
+            echo
+            echo "Generated repository release \`${TEMPLATE_TAG}\` is missing."
+            echo "Rerun or repair publication from the source-tag commit \`${SOURCE_TAG_COMMIT}\`, not from this later source commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Source template tag ${TEMPLATE_TAG} belongs to ${SOURCE_TAG_COMMIT}, but the generated repository release is missing." >&2
+          echo "Rerun or repair publication from the tagged source commit." >&2
+          exit 1
+
+      - name: Validate template release gates
+        if: ${{ steps.source-tag.outputs.status != 'other' }}
+        run: |
+          set -euo pipefail
+          TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make template-release-gates
+
       - name: Verify existing generated template release
-        if: ${{ steps.release-status.outputs.exists == 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists == 'true' }}
         env:
           READ_TOKEN: ${{ steps.read-token.outputs.token }}
           TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
@@ -140,7 +199,7 @@ jobs:
             --verify-ref "refs/tags/${TEMPLATE_TAG}"
 
       - name: Upload template release artifacts
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: reponomics-dashboard-template-release-${{ steps.metadata.outputs.template_tag }}
@@ -149,7 +208,7 @@ jobs:
           retention-days: 90
 
       - name: Attest template release artifacts
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -158,13 +217,13 @@ jobs:
             dist/template-release/SHA256SUMS
 
       - name: Create source template tag
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
         run: |
           set -euo pipefail
 
-          git fetch origin "refs/tags/${TEMPLATE_TAG}:refs/tags/${TEMPLATE_TAG}" || true
+          git fetch --quiet --no-tags origin "refs/tags/${TEMPLATE_TAG}:refs/tags/${TEMPLATE_TAG}" || true
           existing="$(git rev-parse -q --verify "refs/tags/${TEMPLATE_TAG}^{commit}" || true)"
           current="$(git rev-parse HEAD)"
 
@@ -184,7 +243,7 @@ jobs:
 
       - name: Create publication app token
         id: app-token
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -195,7 +254,7 @@ jobs:
           permission-workflows: write
 
       - name: Configure template remote
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -204,7 +263,7 @@ jobs:
 
       - name: Publish generated template repository
         id: publish
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
         run: |
@@ -220,7 +279,7 @@ jobs:
             --push
 
       - name: Write generated template release notes
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           ACCEPTED_ACTION_TAG: ${{ steps.metadata.outputs.accepted_action_tag }}
           ACCEPTED_ACTION_SHA: ${{ steps.metadata.outputs.accepted_action_sha }}
@@ -256,7 +315,7 @@ jobs:
           } > .tmp/generated-template-release-notes.md
 
       - name: Create generated template release
-        if: ${{ steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}

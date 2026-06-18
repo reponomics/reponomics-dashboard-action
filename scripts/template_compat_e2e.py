@@ -33,6 +33,177 @@ DEFAULT_ACTION_REPO = ROOT
 DEFAULT_ACTION_PYTHON = DEFAULT_ACTION_REPO / "venv" / "bin" / "python"
 DEFAULT_CURRENT_TEMPLATE = ROOT / "dist" / "template"
 ACTION_REPOSITORY = template_contract.ACTION_REPOSITORY
+RETAINED_MIGRATION_FIXTURE = ROOT / "tests" / "fixtures" / "compat_v2"
+
+RETAINED_MIGRATION_HELPER = r"""
+from __future__ import annotations
+
+import csv
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+action_repo = Path(os.environ["E2E_ACTION_REPO"]).resolve()
+work_root = Path(os.environ["E2E_WORK_ROOT"]).resolve()
+template_name = os.environ["E2E_TEMPLATE_NAME"]
+template_version = os.environ["E2E_TEMPLATE_VERSION"]
+fixture_source = Path(os.environ["E2E_RETAINED_FIXTURE"]).resolve()
+
+sys.path.insert(0, action_repo.as_posix())
+
+from dashboard_action import run  # noqa: E402
+
+OLD_KEY = "DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789"
+NEXT_KEY = "DASHBOARD_NEXT_SECRET_DO_NOT_REPLACE_9876543210"
+
+
+def copy_fixture(label: str) -> Path:
+    target = work_root / label
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(fixture_source, target)
+    return target
+
+
+def config_for(root: Path, fixture: Path, mode: str, *, next_secret: str = ""):
+    return run.RuntimeConfig(
+        mode=mode,
+        collection_token="ghp_collection",
+        use_github_app=False,
+        github_token="ghp_runtime",
+        dashboard_secret=OLD_KEY,
+        dashboard_next_secret=next_secret,
+        comparison_secret="",
+        data_mode="encrypted",
+        repo_is_public=False,
+        config_path=fixture / "config.yaml",
+        data_dir=fixture / "data",
+        retention_days=90,
+        artifact_run_id="",
+        publish_pages_requested=True,
+        generate_readme=False,
+        allow_docs_sync=True,
+        pages_index_path=root / "docs" / mode / "index.html",
+        readme_path=root / f"README-{mode}.md",
+        incident_confirm_mode="",
+        incident_confirm_purge="",
+        incident_confirm_next_secret="",
+        incident_confirm_irreversible="",
+        action_ref=f"template-compat-{template_version}",
+        action_repository="reponomics/reponomics-dashboard-action",
+    )
+
+
+def assert_current_schema(data_dir: Path) -> None:
+    manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != run.storage.SCHEMA_VERSION:
+        raise AssertionError(
+            f"{template_name}: retained fixture did not migrate to schema "
+            + run.storage.SCHEMA_VERSION
+        )
+    with (data_dir / "repo-metrics.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if not any(row.get("repo") == "demo/reponomics" for row in rows):
+        raise AssertionError(f"{template_name}: retained repo-metrics row was lost")
+    if rows[0].get("repo_id", None) != "":
+        raise AssertionError(f"{template_name}: repo-metrics header was not canonicalized")
+
+
+def run_publish_fixture() -> None:
+    fixture = copy_fixture("publish")
+    root = work_root / "publish-run"
+    root.mkdir(parents=True, exist_ok=True)
+    config = config_for(root, fixture, "publish")
+    before_config = config.config_path.read_text(encoding="utf-8")
+    previous_cwd = Path.cwd()
+    os.chdir(root)
+    try:
+        run.validate_config(config)
+        run.run_publish(config, restore_artifact=False)
+    finally:
+        os.chdir(previous_cwd)
+    if config.config_path.read_text(encoding="utf-8") != before_config:
+        raise AssertionError(f"{template_name}: publish rewrote config.yaml")
+    if not config.pages_index_path.is_file():
+        raise AssertionError(f"{template_name}: publish did not render dashboard")
+    assert_current_schema(config.data_dir)
+
+
+def run_collect_fixture() -> None:
+    fixture = copy_fixture("collect")
+    root = work_root / "collect-run"
+    root.mkdir(parents=True, exist_ok=True)
+    config = config_for(root, fixture, "collect")
+    before_config = config.config_path.read_text(encoding="utf-8")
+    previous_cwd = Path.cwd()
+    os.chdir(root)
+    try:
+        run.validate_config(config)
+        run.run_collect(config, restore_artifact=False, execute_collect=False)
+    finally:
+        os.chdir(previous_cwd)
+    if config.config_path.read_text(encoding="utf-8") != before_config:
+        raise AssertionError(f"{template_name}: collect rewrote config.yaml")
+    if not (root / ".dashboard-data-artifact" / "dashboard-data.enc").is_file():
+        raise AssertionError(f"{template_name}: collect did not write encrypted artifact")
+    assert_current_schema(config.data_dir)
+
+
+def run_rotate_key_fixture() -> None:
+    fixture = copy_fixture("rotate")
+    root = work_root / "rotate-run"
+    root.mkdir(parents=True, exist_ok=True)
+    seed_config = config_for(root, fixture, "rotate-key", next_secret=NEXT_KEY)
+    before_config = seed_config.config_path.read_text(encoding="utf-8")
+
+    previous_cwd = Path.cwd()
+    os.chdir(root)
+    try:
+        run._patch_runtime_paths(seed_config)  # noqa: SLF001
+        run._set_runtime_env(seed_config)  # noqa: SLF001
+        encrypted_path = root / ".dashboard-data-artifact" / "dashboard-data.enc"
+        run.crypto_artifact.encrypt(seed_config.data_dir, encrypted_path, "DASHBOARD_SECRET_DO_NOT_REPLACE")
+        for path in seed_config.data_dir.iterdir():
+            path.unlink()
+        (seed_config.data_dir / "dashboard-data.enc").write_text(
+            encrypted_path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
+        rotated = config_for(root, fixture, "rotate-key", next_secret=NEXT_KEY)
+        run.validate_config(rotated)
+        run.run_rotate_key(rotated, restore_artifact=False)
+        if rotated.config_path.read_text(encoding="utf-8") != before_config:
+            raise AssertionError(f"{template_name}: rotate-key rewrote config.yaml")
+
+        for path in rotated.data_dir.iterdir():
+            path.unlink()
+        (rotated.data_dir / "dashboard-data.enc").write_text(
+            encrypted_path.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        os.environ["DASHBOARD_SECRET_DO_NOT_REPLACE"] = NEXT_KEY
+        run.crypto_artifact.decrypt(
+            rotated.data_dir / "dashboard-data.enc",
+            rotated.data_dir,
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
+        )
+        assert_current_schema(rotated.data_dir)
+    finally:
+        os.chdir(previous_cwd)
+
+
+run.version_status._fetch_releases = lambda: []
+work_root.mkdir(parents=True, exist_ok=True)
+os.environ["GITHUB_OUTPUT"] = (work_root / ".github-output").as_posix()
+
+run_publish_fixture()
+run_collect_fixture()
+run_rotate_key_fixture()
+print(f"Retained migration fixture passed: {template_name} ({template_version})")
+"""
 
 
 class TemplateCompatibilityError(RuntimeError):
@@ -61,11 +232,17 @@ def _absolute_path(path: Path) -> Path:
     return Path.cwd() / path
 
 
-def _command_output(args: list[str], *, cwd: Path = ROOT) -> str:
+def _command_output(
+    args: list[str],
+    *,
+    cwd: Path = ROOT,
+    env: dict[str, str] | None = None,
+) -> str:
     try:
         return subprocess.check_output(
             args,
             cwd=cwd,
+            env=env,
             stderr=subprocess.STDOUT,
             text=True,
         ).strip()
@@ -345,6 +522,7 @@ def _run_generated_template(
     action_repo: Path,
     action_python: Path,
     action_inputs: set[str],
+    compat_root: Path,
     keep_temp: bool,
 ) -> None:
     print(
@@ -362,6 +540,53 @@ def _run_generated_template(
         action_python=action_python,
         keep_temp=keep_temp,
     )
+    _run_retained_migration_fixture(
+        generated_template,
+        action_repo=action_repo,
+        action_python=action_python,
+        compat_root=compat_root,
+        keep_temp=keep_temp,
+    )
+
+
+def _run_retained_migration_fixture(
+    generated_template: GeneratedTemplate,
+    *,
+    action_repo: Path,
+    action_python: Path,
+    compat_root: Path,
+    keep_temp: bool,
+) -> None:
+    if not RETAINED_MIGRATION_FIXTURE.is_dir():
+        raise TemplateCompatibilityError(
+            f"Retained migration fixture is missing: {RETAINED_MIGRATION_FIXTURE}"
+        )
+    work_root = Path(tempfile.mkdtemp(prefix="retained-", dir=compat_root))
+    helper = work_root / "run_retained_migration_fixture.py"
+    helper.write_text(RETAINED_MIGRATION_HELPER, encoding="utf-8")
+    env = os.environ.copy()
+    env.update(
+        {
+            "E2E_ACTION_REPO": action_repo.as_posix(),
+            "E2E_WORK_ROOT": (work_root / "work").as_posix(),
+            "E2E_TEMPLATE_NAME": generated_template.name,
+            "E2E_TEMPLATE_VERSION": generated_template.template_version,
+            "E2E_RETAINED_FIXTURE": RETAINED_MIGRATION_FIXTURE.as_posix(),
+        }
+    )
+    try:
+        output = _command_output(
+            [action_python.as_posix(), helper.as_posix()],
+            cwd=action_repo,
+            env=env,
+        )
+        if output:
+            print(output)
+        if keep_temp:
+            print(f"Kept retained migration fixture work tree: {work_root}")
+    finally:
+        if not keep_temp:
+            shutil.rmtree(work_root, ignore_errors=True)
 
 
 def run_compatibility_checks(
@@ -394,6 +619,7 @@ def run_compatibility_checks(
                 action_repo=action_repo,
                 action_python=isolated_action_python,
                 action_inputs=action_inputs,
+                compat_root=compat_root,
                 keep_temp=keep_temp,
             )
             checked += 1
@@ -428,6 +654,7 @@ def run_compatibility_checks(
                     action_repo=action_repo,
                     action_python=isolated_action_python,
                     action_inputs=action_inputs,
+                    compat_root=compat_root,
                     keep_temp=keep_temp,
                 )
                 checked += 1

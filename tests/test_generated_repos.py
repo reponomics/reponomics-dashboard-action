@@ -1572,7 +1572,7 @@ def test_template_compat_e2e_installs_isolated_python_env(tmp_path, monkeypatch)
     source_dir.mkdir()
     calls: list[tuple[list[str], Path]] = []
 
-    def fake_command_output(args, *, cwd=template_compat_e2e.ROOT):
+    def fake_command_output(args, *, cwd=template_compat_e2e.ROOT, env=None):
         calls.append((args, cwd))
         return ""
 
@@ -1611,6 +1611,48 @@ def test_template_compat_e2e_installs_isolated_python_env(tmp_path, monkeypatch)
             source_dir,
         ),
     ]
+
+
+def test_template_compat_runs_retained_migration_fixture(tmp_path, monkeypatch):
+    generated_template = template_compat_e2e.GeneratedTemplate(
+        name="template-floor",
+        repo_dir=tmp_path / "template",
+        template_version="0.10.0",
+        source_commit="a" * 40,
+    )
+    action_repo = tmp_path / "action"
+    action_repo.mkdir()
+    action_python = tmp_path / "venv" / "bin" / "python"
+    compat_root = tmp_path / "compat"
+    compat_root.mkdir()
+    fixture = tmp_path / "fixture"
+    fixture.mkdir()
+    calls: list[tuple[list[str], Path, dict[str, str] | None]] = []
+
+    def fake_command_output(args, *, cwd=template_compat_e2e.ROOT, env=None):
+        calls.append((args, cwd, env))
+        return "fixture ok"
+
+    monkeypatch.setattr(template_compat_e2e, "RETAINED_MIGRATION_FIXTURE", fixture)
+    monkeypatch.setattr(template_compat_e2e, "_command_output", fake_command_output)
+
+    template_compat_e2e._run_retained_migration_fixture(
+        generated_template,
+        action_repo=action_repo,
+        action_python=action_python,
+        compat_root=compat_root,
+        keep_temp=False,
+    )
+
+    assert len(calls) == 1
+    args, cwd, env = calls[0]
+    assert args[0] == action_python.as_posix()
+    assert cwd == action_repo
+    assert env is not None
+    assert env["E2E_ACTION_REPO"] == action_repo.as_posix()
+    assert env["E2E_TEMPLATE_NAME"] == "template-floor"
+    assert env["E2E_TEMPLATE_VERSION"] == "0.10.0"
+    assert env["E2E_RETAINED_FIXTURE"] == fixture.as_posix()
 
 
 def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_path):

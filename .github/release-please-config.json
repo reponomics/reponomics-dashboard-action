@@ -10,7 +10,9 @@
       "changelog-path": "CHANGELOG.md",
       "exclude-paths": [
         ".github/workflows/template-release.yml",
+        ".github/workflows/prepare-template-release.yml",
         "scripts/build_template.py",
+        "scripts/prepare_template_release.py",
         "scripts/publish_generated_repo.py",
         "scripts/smoke_template_release.py",
         "scripts/template_consumer_e2e.py",

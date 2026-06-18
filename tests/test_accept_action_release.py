@@ -3,11 +3,13 @@ from pathlib import Path
 import yaml
 
 from scripts import accept_action_release
+from scripts import prepare_template_release
 from scripts import template_contract
 from scripts import template_release_notes
 
 
 def _write_root(tmp_path: Path, *, template_version: str = "0.10.0") -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     (tmp_path / "action.yml").write_text(
         Path("action.yml").read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -119,6 +121,64 @@ def test_accept_action_release_writes_workflow_outputs_and_notes(tmp_path):
         "Updated `reponomics/reponomics-dashboard-action` to `v0.23.6` (`bbbbbbb`)."
         in notes.read_text(encoding="utf-8")
     )
+
+
+def test_prepare_template_release_bumps_template_patch_only(tmp_path):
+    root = _write_root(tmp_path)
+
+    payload, previous, current = prepare_template_release.prepare_template_release(
+        root=root,
+        release_type="patch",
+    )
+
+    assert previous == "0.10.0"
+    assert current == "0.10.1"
+    assert payload["template_version"] == "0.10.1"
+    assert payload["accepted_action"]["version"] == "0.23.5"
+    assert _contract_payload(root)["template_version"] == "0.10.1"
+
+
+def test_prepare_template_release_bumps_minor_and_major(tmp_path):
+    minor_root = _write_root(tmp_path / "minor", template_version="0.10.9")
+    major_root = _write_root(tmp_path / "major", template_version="0.10.9")
+
+    _minor_payload, _minor_previous, minor_current = (
+        prepare_template_release.prepare_template_release(
+            root=minor_root,
+            release_type="minor",
+        )
+    )
+    _major_payload, _major_previous, major_current = (
+        prepare_template_release.prepare_template_release(
+            root=major_root,
+            release_type="major",
+        )
+    )
+
+    assert minor_current == "0.11.0"
+    assert major_current == "1.0.0"
+
+
+def test_prepare_template_release_writes_pr_outputs(tmp_path):
+    output = tmp_path / "github-output.txt"
+
+    prepare_template_release._write_outputs(
+        output,
+        previous_version="0.10.0",
+        next_version="0.10.1",
+        release_type="patch",
+        release_notes="Clarified template setup docs.",
+    )
+
+    output_text = output.read_text(encoding="utf-8")
+    assert "previous_version=0.10.0" in output_text
+    assert "template_version=0.10.1" in output_text
+    assert "template_tag=reponomics-dashboard-v0.10.1" in output_text
+    assert "branch=automation/template-release-reponomics-dashboard-v0.10.1" in output_text
+    assert "title=chore: prepare template release reponomics-dashboard-v0.10.1" in output_text
+    assert "body<<" in output_text
+    assert "## Template release notes" in output_text
+    assert "Clarified template setup docs." in output_text
 
 
 def test_template_release_notes_writes_contract_metadata(tmp_path):

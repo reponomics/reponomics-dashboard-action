@@ -1,4 +1,4 @@
-name: Reset Reponomics dashboard incident history
+name: INCIDENT - Reset
 
 on:
   workflow_dispatch:

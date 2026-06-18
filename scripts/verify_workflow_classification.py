@@ -21,19 +21,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import build_template  # noqa: E402
+from scripts.template_workflows import (  # noqa: E402
+    TEMPLATE_WORKFLOW_NAMES,
+    TEMPLATE_WORKFLOW_OUTPUTS,
+)
 
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 TEMPLATE_WORKFLOW_DIR = ROOT / "template" / ".github" / "workflows"
 MANIFEST_PATH = ROOT / "template-manifest.yml"
-
-TEMPLATE_WORKFLOW_OUTPUTS = {
-    "template/.github/workflows/collect-and-publish.yml": ".github/workflows/collect-and-publish.yml",
-    "template/.github/workflows/doctor.yml": ".github/workflows/doctor.yml",
-    "template/.github/workflows/incident-reset.yml": ".github/workflows/incident-reset.yml",
-    "template/.github/workflows/keepalive.yml": ".github/workflows/keepalive.yml",
-    "template/.github/workflows/rotate-key.yml": ".github/workflows/rotate-key.yml",
-    "template/.github/workflows/setup.yml": ".github/workflows/setup.yml",
-}
 DEV_WORKFLOW_GLOB = ".github/workflows/dev-*.yml"
 
 
@@ -78,6 +73,22 @@ def _verify_template_workflow_sources(template_workflow_files: list[str]) -> Non
         )
 
 
+def _verify_template_workflow_names(template_workflow_files: list[str]) -> None:
+    mismatches: list[str] = []
+    for source in template_workflow_files:
+        expected = TEMPLATE_WORKFLOW_NAMES[source]
+        payload = yaml.safe_load((ROOT / source).read_text(encoding="utf-8")) or {}
+        actual = payload.get("name")
+        if actual != expected:
+            mismatches.append(f"  - {source}: expected {expected!r}, got {actual!r}")
+
+    if mismatches:
+        raise WorkflowClassificationError(
+            "Template workflow display names must match the canonical command "
+            "surface.\n" + "\n".join(mismatches)
+        )
+
+
 def _verify_manifest_includes(manifest: dict[str, Any]) -> None:
     workflow_entries: dict[str, str] = {}
     for source, target in build_template.iter_include_file_entries(manifest):
@@ -118,6 +129,7 @@ def verify() -> None:
     template_workflow_files = _iter_template_workflow_files()
     manifest = _load_manifest()
     _verify_template_workflow_sources(template_workflow_files)
+    _verify_template_workflow_names(template_workflow_files)
     _verify_manifest_includes(manifest)
     _verify_manifest_forbidden(manifest)
     print(

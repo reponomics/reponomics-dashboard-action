@@ -18,6 +18,7 @@ from scripts import template_compat_e2e
 from scripts import template_consumer_e2e
 from scripts import template_public_action_e2e
 from scripts import template_provenance
+from scripts import template_workflows
 from scripts import validate_template_action_ref
 from scripts import verify_workflow_classification
 from scripts.staging_smoke import browser_checklist as staging_smoke_browser_checklist
@@ -447,6 +448,13 @@ def test_generated_workflow_run_steps_do_not_interpolate_untrusted_contexts():
                         f"{workflow_path}:{job_name}:{step.get('name')} "
                         + f"interpolates {pattern} directly into a run block"
                     )
+
+
+def test_generated_template_workflow_names_are_command_labels():
+    for source, expected_name in template_workflows.TEMPLATE_WORKFLOW_NAMES.items():
+        workflow = yaml.safe_load(Path(source).read_text(encoding="utf-8"))
+
+        assert workflow["name"] == expected_name
 
 
 def test_setup_workflow_resolves_data_modes():
@@ -927,7 +935,7 @@ def test_staging_smoke_runbook_documents_required_profiles():
     assert "scripts/staging_smoke/slow_gh.py" in runbook
     assert ".tmp/staging-smoke/report.md" in runbook
     assert "PAT-only" in runbook
-    assert "Rotate Reponomics dashboard key" in runbook
+    assert "Rotate Key" in runbook
     assert "html-dashboard-plaintext" in runbook
     assert "DASHBOARD_NEXT_SECRET" in runbook
     assert "Review `config.yaml` in the encrypted fresh repo before setup" in runbook

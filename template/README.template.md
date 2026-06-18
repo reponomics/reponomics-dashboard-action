@@ -19,7 +19,7 @@ If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.man
 2. Create a collection credential and store it as the repository secret `COLLECTION_TOKEN`. Most single-owner dashboards should use a fine-grained personal access token with repository `Administration: read`.
 3. Choose a data mode in `config.yaml`: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
 4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Secure Dashboard Key Generation](docs/reponomics/secure-dashboard-key.md) for the security tradeoffs.
-5. Run **Actions -> Set up Reponomics dashboard -> Run workflow**.
+5. Run **Actions -> Setup -> Run workflow**.
 6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 
 Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.

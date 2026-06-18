@@ -1,4 +1,4 @@
-name: Collect And Publish Reponomics Dashboard
+name: Collect and Publish
 
 on:
   schedule:

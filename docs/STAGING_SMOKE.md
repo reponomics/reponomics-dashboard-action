@@ -326,9 +326,9 @@ For recurring smoke passes, do not re-enter these persistent secrets unless inte
 - `artifact_retention_days`: `90`
 - `use_github_app`: `false`
 
-Then run `Set up Reponomics dashboard`. Review `config.yaml` before setup and commit any intended staging repository selection before collection. The encrypted-fresh codebase is reset every run, so recurring smoke must repeat this review if the desired repository set is not already the setup default.
+Then run `Setup`. Review `config.yaml` before setup and commit any intended staging repository selection before collection. The encrypted-fresh codebase is reset every run, so recurring smoke must repeat this review if the desired repository set is not already the setup default.
 
-Then run `Collect And Publish Reponomics Dashboard` with `skip_collect=false`.
+Then run `Collect and Publish` with `skip_collect=false`.
 
 Minimum checks:
 
@@ -344,7 +344,7 @@ Minimum checks:
 Rotation checks:
 
 1. Set `DASHBOARD_NEXT_SECRET`.
-2. Dispatch `Rotate Reponomics dashboard key` with `confirm_rotation=true`.
+2. Dispatch `Rotate Key` with `confirm_rotation=true`.
 3. Confirm the rotation run succeeds.
 4. Promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`.
 5. Remove `DASHBOARD_NEXT_SECRET`.
@@ -373,7 +373,7 @@ During bootstrap, fill and commit `config.yaml` with:
 
 Then run setup. During bootstrap, review `config.yaml` and commit the intended staging repository selection before the first retained-data run. Recurring plaintext/history smoke should preserve the existing config unless the test intentionally changes the tracked repository set.
 
-Then run `Collect And Publish Reponomics Dashboard` with `skip_collect=false`.
+Then run `Collect and Publish` with `skip_collect=false`.
 
 Minimum checks:
 

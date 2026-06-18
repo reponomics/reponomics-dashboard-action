@@ -1,4 +1,4 @@
-name: Keep Reponomics Workflows Active
+name: Keep Alive
 
 on:
   schedule:

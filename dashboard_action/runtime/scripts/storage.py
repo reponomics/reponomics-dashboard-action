@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 DATA_DIR = "data"
 SCHEMA_VERSION = "3"
 SCHEMA_VERSION_INT = int(SCHEMA_VERSION)
+DATA_MODE = os.environ.get("DATA_MODE", "")
+VALID_DATA_MODES = {"encrypted", "plaintext"}
 
 
 class SchemaMigrationError(ValueError):
@@ -193,6 +195,19 @@ def migrate_schema(data_dir=DATA_DIR):
     if changed:
         write_manifest(manifest, data_dir)
     return changed
+
+
+def validate_artifact_data_mode(data_dir=DATA_DIR, expected_data_mode=""):
+    """Fail if retained manifest metadata conflicts with the requested data mode."""
+    expected = str(expected_data_mode or "").strip()
+    if expected not in VALID_DATA_MODES:
+        return
+    recorded = str(read_manifest(data_dir).get("data_mode") or "").strip()
+    if recorded and recorded != expected:
+        raise SchemaMigrationError(
+            "retained artifact data_mode "
+            + f"{recorded!r} does not match this run's data-mode {expected!r}"
+        )
 
 
 def _validate_migratable_manifest(manifest):
@@ -409,6 +424,8 @@ def write_manifest(manifest, data_dir=DATA_DIR):
     manifest["schema_version"] = SCHEMA_VERSION
     manifest["files"] = list(CSV_REGISTRY.keys())
     manifest["retention_days"] = RETENTION_DAYS
+    if DATA_MODE in VALID_DATA_MODES:
+        manifest["data_mode"] = DATA_MODE
     manifest["last_updated"] = _now_iso()
     path = os.path.join(data_dir, "manifest.json")
     with open(path, "w") as f:
@@ -430,7 +447,7 @@ def create_manifest(data_dir=DATA_DIR):
 
 
 def _default_manifest():
-    return {
+    manifest = {
         "schema_version": SCHEMA_VERSION,
         "created_at": "",
         "last_updated": "",
@@ -441,3 +458,6 @@ def _default_manifest():
             "auto_cutoff_created_at": "",
         },
     }
+    if DATA_MODE in VALID_DATA_MODES:
+        manifest["data_mode"] = DATA_MODE
+    return manifest

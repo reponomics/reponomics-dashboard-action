@@ -111,15 +111,15 @@ ARTIFACT_FILES = list(CSV_REGISTRY.keys()) + ["manifest.json"]
 
 # Future compatible migrations should extend these maps instead of adding
 # one-off read paths in collection or publication code.
-LEGACY_FILE_RENAMES = {
+LEGACY_FILE_RENAMES: dict[str, str] = {
     # "old-name.csv": "new-name.csv",
 }
 
-CSV_FIELD_ALIASES = {
+CSV_FIELD_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     # "new-name.csv": {"new_field": ("old_field",)},
 }
 
-CSV_FIELD_DEFAULTS = {
+CSV_FIELD_DEFAULTS: dict[str, dict[str, str]] = {
     # "new-name.csv": {"new_field": "safe-default"},
 }
 

@@ -70,10 +70,6 @@ inputs:
     description: Optional workflow run ID whose dashboard-data artifact should be restored. Blank restores the latest available dashboard-data artifact.
     required: false
     default: ""
-  require-collect-provenance:
-    description: Require a matching collect provenance artifact before publishing. Use true for republishing retained data without collecting.
-    required: false
-    default: "false"
   generate-readme:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
@@ -159,7 +155,6 @@ runs:
         REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
         REPONOMICS_PUBLISH_PAGES: ${{ inputs.publish-pages }}
         REPONOMICS_ARTIFACT_RUN_ID: ${{ inputs.artifact-run-id }}
-        REPONOMICS_REQUIRE_COLLECT_PROVENANCE: ${{ inputs.require-collect-provenance }}
         REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
         REPONOMICS_ALLOW_DOCS_SYNC: ${{ inputs.allow-docs-sync }}
         REPONOMICS_README_PATH: ${{ inputs.readme-path }}
@@ -234,15 +229,6 @@ runs:
       with:
         name: dashboard-data
         path: data
-        retention-days: ${{ inputs.retention-days }}
-        overwrite: true
-
-    - name: Upload collect provenance artifact
-      if: ${{ inputs.mode == 'collect' }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: reponomics-collect-provenance
-        path: .reponomics/collect-provenance/collect-provenance.json
         retention-days: ${{ inputs.retention-days }}
         overwrite: true
 

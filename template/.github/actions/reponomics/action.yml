@@ -61,10 +61,6 @@ inputs:
     description: Optional workflow run ID whose dashboard-data artifact should be restored.
     required: false
     default: ""
-  require-collect-provenance:
-    description: Require a matching collect provenance artifact before publishing.
-    required: false
-    default: "false"
   generate-readme:
     description: Generate private-repository README dashboard output.
     required: false
@@ -92,5 +88,4 @@ runs:
         retention-days: ${{ inputs.retention-days }}
         publish-pages: ${{ inputs.publish-pages }}
         artifact-run-id: ${{ inputs.artifact-run-id }}
-        require-collect-provenance: ${{ inputs.require-collect-provenance }}
         generate-readme: ${{ inputs.generate-readme }}

@@ -1276,6 +1276,136 @@ def test_lineage_accepts_recorded_parent_before_additive_registry_migration(
     run.lineage.validate_snapshot_lineage(restored)
 
 
+def test_lineage_validates_recorded_legacy_file_before_rename(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    legacy_path = data_dir / "legacy-growth.csv"
+    _write_csv(
+        legacy_path,
+        ["repo", "day", "stars", "schema_version"],
+        [
+            {
+                "repo": "demo/reponomics",
+                "day": "2099-05-01",
+                "stars": "11",
+                "schema_version": "1",
+            }
+        ],
+    )
+    legacy_digest = hashlib.sha256(legacy_path.read_bytes()).hexdigest()
+    (data_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "lineage": {
+                    "artifact_kind": "dashboard-data",
+                    "files": {
+                        "legacy-growth.csv": {
+                            "sha256": legacy_digest,
+                            "rows": 1,
+                        }
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_REGISTRY",
+        {"repo-growth.csv": (["repo", "ts", "stars", "schema_version"], "ts")},
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "LEGACY_FILE_RENAMES",
+        {"legacy-growth.csv": "repo-growth.csv"},
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_FIELD_ALIASES",
+        {"repo-growth.csv": {"ts": ("day",)}},
+    )
+    monkeypatch.setattr(
+        run.lineage,
+        "ROW_IDENTITY_FIELDS",
+        {"repo-growth.csv": ("repo", "ts")},
+    )
+
+    restored = run.lineage.snapshot_payload(data_dir)
+
+    assert restored.files["legacy-growth.csv"].sha256 == legacy_digest
+    run.lineage.validate_snapshot_lineage(restored)
+
+
+def test_lineage_enforces_row_preservation_across_legacy_file_rename(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_REGISTRY",
+        {"repo-growth.csv": (["repo", "ts", "stars", "schema_version"], "ts")},
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "LEGACY_FILE_RENAMES",
+        {"legacy-growth.csv": "repo-growth.csv"},
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_FIELD_ALIASES",
+        {"repo-growth.csv": {"ts": ("day",)}},
+    )
+    monkeypatch.setattr(
+        run.lineage,
+        "ROW_IDENTITY_FIELDS",
+        {"repo-growth.csv": ("repo", "ts")},
+    )
+    _write_csv(
+        data_dir / "legacy-growth.csv",
+        ["repo", "day", "stars", "schema_version"],
+        [
+            {
+                "repo": "demo/reponomics",
+                "day": "2099-05-01",
+                "stars": "11",
+                "schema_version": "1",
+            }
+        ],
+    )
+    (data_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": "1"}),
+        encoding="utf-8",
+    )
+    parent = run.lineage.snapshot_payload(data_dir)
+
+    (data_dir / "legacy-growth.csv").unlink()
+    _write_csv(
+        data_dir / "repo-growth.csv",
+        ["repo", "ts", "stars", "schema_version"],
+        [
+            {
+                "repo": "demo/reponomics",
+                "ts": "2099-05-02",
+                "stars": "11",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    with pytest.raises(run.lineage.LineageError, match="does not preserve retained parent rows"):
+        run.lineage.write_verified_lineage(
+            data_dir,
+            parent=parent,
+            retention_days=90,
+            action_version=run.VERSION,
+            operation="test-migration",
+        )
+
+
 def test_publish_fixture_renders_outputs_without_live_api(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -4467,13 +4597,14 @@ def test_collect_records_generic_collection_errors_and_exits(
 
 
 def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     fixture = _copy_fixture("compat_v2", tmp_path)
     data_dir = fixture / "data"
 
-    run.storage.DATA_DIR = data_dir.as_posix()
-    run.merge.DATA_DIR = data_dir.as_posix()
+    monkeypatch.setattr(run.storage, "DATA_DIR", data_dir.as_posix())
+    monkeypatch.setattr(run.merge, "DATA_DIR", data_dir.as_posix())
     run.storage.migrate_schema(data_dir.as_posix())
     run.merge.dedup_all()
     run.merge.trim_all()
@@ -4523,6 +4654,134 @@ def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
     assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
     assert manifest["files"] == list(run.storage.CSV_REGISTRY.keys())
     assert manifest["created_at"] == "2026-05-01T12:00:00Z"
+
+
+def test_schema_migration_handles_file_field_renames_and_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    _write_csv(
+        data_dir / "legacy-growth.csv",
+        ["repo", "day", "stars", "schema_version"],
+        [
+            {
+                "repo": "demo/reponomics",
+                "day": "2026-05-01",
+                "stars": "11",
+                "schema_version": "1",
+            }
+        ],
+    )
+    (data_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "files": ["legacy-growth.csv"],
+                "created_at": "2026-05-01T12:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_REGISTRY",
+        {
+            "repo-growth.csv": (
+                ["repo", "ts", "stargazers_count", "source", "schema_version"],
+                "ts",
+            )
+        },
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "LEGACY_FILE_RENAMES",
+        {"legacy-growth.csv": "repo-growth.csv"},
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_FIELD_ALIASES",
+        {
+            "repo-growth.csv": {
+                "ts": ("day",),
+                "stargazers_count": ("stars",),
+            }
+        },
+    )
+    monkeypatch.setattr(
+        run.storage,
+        "CSV_FIELD_DEFAULTS",
+        {"repo-growth.csv": {"source": "migration-default"}},
+    )
+
+    assert run.storage.migrate_schema(data_dir.as_posix()) is True
+
+    with (data_dir / "repo-growth.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-05-01",
+            "stargazers_count": "11",
+            "source": "migration-default",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert not (data_dir / "legacy-growth.csv").exists()
+    manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    assert manifest["files"] == ["repo-growth.csv"]
+
+
+def test_prepare_data_schema_rejects_future_retained_schema(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": int(run.storage.SCHEMA_VERSION) + 1}),
+        encoding="utf-8",
+    )
+    config = _config(tmp_path, data_dir=data_dir)
+
+    with pytest.raises(run.ActionError, match="newer than this runtime supports"):
+        run._prepare_data_schema(config)
+
+
+def test_prepare_data_schema_rejects_retained_data_mode_mismatch(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": run.storage.SCHEMA_VERSION, "data_mode": "encrypted"}),
+        encoding="utf-8",
+    )
+    config = _config(tmp_path, data_dir=data_dir, data_mode="plaintext", dashboard_secret="")
+
+    with pytest.raises(run.ActionError, match="data_mode 'encrypted'"):
+        run._prepare_data_schema(config)
+
+
+def test_publish_plaintext_rejects_encrypted_retained_artifact_before_migration(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    encrypted_artifact = data_dir / "dashboard-data.enc"
+    encrypted_artifact.write_text("not a plaintext data directory", encoding="utf-8")
+    config = _config(
+        tmp_path,
+        mode="publish",
+        data_dir=data_dir,
+        data_mode="plaintext",
+        dashboard_secret="",
+        publish_pages_requested=False,
+    )
+
+    with pytest.raises(run.ActionError, match="artifact is encrypted"):
+        run.run_publish(config, restore_artifact=False)
+
+    assert encrypted_artifact.read_text(encoding="utf-8") == "not a plaintext data directory"
+    assert not (data_dir / "traffic-log.csv").exists()
 
 
 def test_collect_from_v2_fixture_migrates_and_keeps_old_config(

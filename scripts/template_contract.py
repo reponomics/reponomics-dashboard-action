@@ -46,7 +46,6 @@ REQUIRED_TEMPLATE_WRAPPER_INPUTS = {
     "incident-confirm-purge",
     "mode",
     "publish-pages",
-    "require-collect-provenance",
     "retention-days",
     "use-github-app",
 }

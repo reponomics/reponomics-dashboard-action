@@ -54,28 +54,35 @@ class PayloadSnapshot:
 def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
     root = Path(data_dir)
     files: dict[str, FileSummary] = {}
-    row_identities: dict[str, set[str]] = {}
-    row_dates: dict[str, dict[str, str]] = {}
+    row_identities: dict[str, set[str]] = {
+        filename: set() for filename in storage.CSV_REGISTRY
+    }
+    row_dates: dict[str, dict[str, str]] = {
+        filename: {} for filename in storage.CSV_REGISTRY
+    }
+    manifest = storage.read_manifest(root.as_posix())
 
-    for filename, (_fields, date_field) in storage.CSV_REGISTRY.items():
+    for filename in _snapshot_filenames(root, manifest):
+        identity_filename = _identity_filename(filename)
+        date_field = storage.CSV_REGISTRY.get(identity_filename, ((), ""))[1]
         path = root / filename
         rows = _read_rows(path)
         dates = sorted(
-            row.get(date_field, "") for row in rows if row.get(date_field, "")
+            _row_value(identity_filename, row, date_field)
+            for row in rows
+            if date_field and _row_value(identity_filename, row, date_field)
         )
-        identity_dates = {
-            _row_identity(filename, row): row.get(date_field, "") for row in rows
-        }
         files[filename] = FileSummary(
             sha256=_sha256(path),
             rows=len(rows),
             date_min=dates[0] if dates else "",
             date_max=dates[-1] if dates else "",
         )
-        row_identities[filename] = set(identity_dates)
-        row_dates[filename] = identity_dates
+        identity_dates = _identity_dates(identity_filename, rows, date_field)
+        if identity_dates and identity_filename in storage.CSV_REGISTRY:
+            row_identities[identity_filename].update(identity_dates)
+            row_dates[identity_filename].update(identity_dates)
 
-    manifest = storage.read_manifest(root.as_posix())
     return PayloadSnapshot(
         manifest_digest=_sha256(root / "manifest.json"),
         payload_digest=_hash_json(
@@ -92,6 +99,37 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
         row_dates=row_dates,
         lineage=dict(manifest.get("lineage") or {}),
     )
+
+
+def _snapshot_filenames(root: Path, manifest: dict[str, Any]) -> list[str]:
+    filenames = list(storage.CSV_REGISTRY.keys())
+    recorded_files = (manifest.get("lineage") or {}).get("files")
+    if isinstance(recorded_files, dict):
+        filenames.extend(
+            filename
+            for filename in recorded_files
+            if isinstance(filename, str)
+        )
+    filenames.extend(
+        legacy_filename
+        for legacy_filename in storage.LEGACY_FILE_RENAMES
+        if (root / legacy_filename).is_file()
+    )
+    return list(dict.fromkeys(filenames))
+
+
+def _identity_filename(filename: str) -> str:
+    return storage.LEGACY_FILE_RENAMES.get(filename, filename)
+
+
+def _identity_dates(
+    filename: str,
+    rows: list[dict[str, str]],
+    date_field: str,
+) -> dict[str, str]:
+    if filename not in ROW_IDENTITY_FIELDS:
+        return {}
+    return {_row_identity(filename, row): _row_value(filename, row, date_field) for row in rows}
 
 
 def write_verified_lineage(
@@ -209,7 +247,35 @@ def _validate_recorded_file_digests(
 
 def _row_identity(filename: str, row: dict[str, str]) -> str:
     fields = ROW_IDENTITY_FIELDS[filename]
-    return _hash_json([row.get(field, "") for field in fields])
+    values = []
+    for field in fields:
+        value = _row_value(filename, row, field)
+        if field and not _row_field_present(filename, row, field):
+            raise LineageError(
+                "Retained row identity field "
+                + f"{field!r} is missing for {filename}; add a migration alias "
+                + "or an explicit row-identity transform."
+            )
+        values.append(value)
+    return _hash_json(values)
+
+
+def _row_value(filename: str, row: dict[str, str], field: str) -> str:
+    if not field:
+        return ""
+    for candidate in (field, *storage.CSV_FIELD_ALIASES.get(filename, {}).get(field, ())):
+        if candidate in row:
+            return row.get(candidate, "")
+    return ""
+
+
+def _row_field_present(filename: str, row: dict[str, str], field: str) -> bool:
+    if not field:
+        return True
+    return any(
+        candidate in row
+        for candidate in (field, *storage.CSV_FIELD_ALIASES.get(filename, {}).get(field, ()))
+    )
 
 
 def _retained_parent_row_count(parent: PayloadSnapshot, cutoff: str) -> int:

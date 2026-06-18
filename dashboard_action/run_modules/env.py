@@ -56,6 +56,7 @@ def _patch_runtime_paths(config: RuntimeConfig) -> None:
     data_dir = config.data_dir.as_posix()
     storage.DATA_DIR = data_dir
     storage.RETENTION_DAYS = config.retention_days
+    storage.DATA_MODE = config.resolved_data_mode
     bootstrap.DATA_DIR = data_dir
     collect_mod.DATA_DIR = data_dir
     collect_mod.CONFIG_PATH = config.config_path.as_posix()
@@ -145,6 +146,7 @@ def _read_managed_docs_manifest(existing_state: str) -> dict[str, Any] | None:
 def _set_runtime_env(config: RuntimeConfig, *, next_key: bool = False) -> None:
     os.environ["RETENTION_DAYS"] = str(config.retention_days)
     os.environ["DATA_DIR"] = config.data_dir.as_posix()
+    os.environ["DATA_MODE"] = config.resolved_data_mode
     os.environ["PUBLISH_PAGES"] = str(config.publish_pages).lower()
     os.environ["DASHBOARD_ACCESS_MODE"] = (
         "public" if config.resolved_data_mode == "plaintext" else "encrypted"

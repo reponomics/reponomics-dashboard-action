@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from .config import _env
-from .core import SCRIPTS_DIR, VERSION, RuntimeConfig
+from .core import SCRIPTS_DIR, VERSION, ActionError, RuntimeConfig
 
 import crypto_artifact  # noqa: E402
 import render_dashboard  # noqa: E402
@@ -57,12 +57,18 @@ def _restore_artifact(
 
 
 def _decrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
+    encrypted = config.data_dir / "dashboard-data.enc"
     if config.resolved_data_mode != "encrypted":
-        encrypted = config.data_dir / "dashboard-data.enc"
+        if encrypted.is_file():
+            raise ActionError(
+                "Retained dashboard-data artifact is encrypted, but this run is "
+                + "configured with data-mode plaintext. Run with data-mode encrypted "
+                + "or collect a plaintext dashboard-data artifact before publishing."
+            )
         encrypted.unlink(missing_ok=True)
         return
     crypto_artifact.decrypt(
-        config.data_dir / "dashboard-data.enc",
+        encrypted,
         config.data_dir,
         secret_env,
     )
@@ -80,7 +86,14 @@ def _encrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
 
 def _prepare_data_schema(config: RuntimeConfig) -> None:
     config.data_dir.mkdir(parents=True, exist_ok=True)
-    storage.migrate_schema(config.data_dir.as_posix())
+    try:
+        storage.validate_artifact_data_mode(
+            config.data_dir.as_posix(),
+            config.resolved_data_mode,
+        )
+        storage.migrate_schema(config.data_dir.as_posix())
+    except storage.SchemaMigrationError as exc:
+        raise ActionError(f"Could not migrate retained dashboard data: {exc}") from exc
 
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:

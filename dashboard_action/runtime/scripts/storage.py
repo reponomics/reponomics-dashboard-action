@@ -12,6 +12,13 @@ from datetime import datetime, timezone
 
 DATA_DIR = "data"
 SCHEMA_VERSION = "3"
+SCHEMA_VERSION_INT = int(SCHEMA_VERSION)
+DATA_MODE = os.environ.get("DATA_MODE", "")
+VALID_DATA_MODES = {"encrypted", "plaintext"}
+
+
+class SchemaMigrationError(ValueError):
+    """Raised when a retained artifact cannot be migrated safely."""
 
 
 def _int_env(name, default):
@@ -104,6 +111,20 @@ CSV_REGISTRY = {
 
 ARTIFACT_FILES = list(CSV_REGISTRY.keys()) + ["manifest.json"]
 
+# Future compatible migrations should extend these maps instead of adding
+# one-off read paths in collection or publication code.
+LEGACY_FILE_RENAMES: dict[str, str] = {
+    # "old-name.csv": "new-name.csv",
+}
+
+CSV_FIELD_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
+    # "new-name.csv": {"new_field": ("old_field",)},
+}
+
+CSV_FIELD_DEFAULTS: dict[str, dict[str, str]] = {
+    # "new-name.csv": {"new_field": "safe-default"},
+}
+
 # ---------------------------------------------------------------------------
 # CSV I/O
 # ---------------------------------------------------------------------------
@@ -142,27 +163,25 @@ def ensure_csv(filepath, fieldnames):
 
 
 def migrate_schema(data_dir=DATA_DIR):
-    """Apply compatible artifact schema migrations in-place.
+    """Apply compatible retained artifact migrations in-place.
 
-    Migrations are intentionally additive. Existing retained rows keep their
-    historical values, newly introduced columns are blank unless a safe default
-    is known, and manifest metadata is refreshed to the runtime schema.
+    The runtime treats this function as the compatibility boundary between any
+    restored packet shape and the current canonical CSV registry. Compatible
+    migrations may add files, add nullable fields, rename CSV files, rename
+    fields, and fill safe defaults. Destructive changes require an explicit
+    transformation here and a compatibility fixture before release.
     """
     os.makedirs(data_dir, exist_ok=True)
     changed = False
-
-    for filename, (fieldnames, _date_field) in CSV_REGISTRY.items():
-        filepath = os.path.join(data_dir, filename)
-        if not os.path.exists(filepath):
-            write_csv(filepath, [], fieldnames)
-            changed = True
-            continue
-        if _migrate_csv_header(filepath, fieldnames):
-            changed = True
-
     manifest_path = os.path.join(data_dir, "manifest.json")
     manifest_exists = os.path.exists(manifest_path)
     manifest = read_manifest(data_dir)
+    _validate_migratable_manifest(manifest)
+
+    for filename, (fieldnames, _date_field) in CSV_REGISTRY.items():
+        if _migrate_csv_file(data_dir, filename, fieldnames):
+            changed = True
+
     if not manifest_exists and not manifest.get("created_at"):
         manifest["created_at"] = _now_iso()
         changed = True
@@ -178,30 +197,107 @@ def migrate_schema(data_dir=DATA_DIR):
     return changed
 
 
-def _migrate_csv_header(filepath, fieldnames):
-    """Rewrite a registered CSV when its header differs from the canonical one."""
+def validate_artifact_data_mode(data_dir=DATA_DIR, expected_data_mode=""):
+    """Fail if retained manifest metadata conflicts with the requested data mode."""
+    expected = str(expected_data_mode or "").strip()
+    if expected not in VALID_DATA_MODES:
+        return
+    recorded = str(read_manifest(data_dir).get("data_mode") or "").strip()
+    if recorded and recorded != expected:
+        raise SchemaMigrationError(
+            "retained artifact data_mode "
+            + f"{recorded!r} does not match this run's data-mode {expected!r}"
+        )
+
+
+def _validate_migratable_manifest(manifest):
+    raw_version = manifest.get("schema_version")
+    if raw_version in (None, ""):
+        return
+    try:
+        version = int(str(raw_version))
+    except (TypeError, ValueError) as exc:
+        raise SchemaMigrationError(
+            f"retained artifact manifest has invalid schema_version {raw_version!r}"
+        ) from exc
+    if version > SCHEMA_VERSION_INT:
+        raise SchemaMigrationError(
+            "retained artifact schema_version "
+            + f"{version} is newer than this runtime supports ({SCHEMA_VERSION})"
+        )
+
+
+def _migrate_csv_file(data_dir, filename, fieldnames):
+    """Rewrite a registered CSV into its current canonical shape."""
+    current_path = os.path.join(data_dir, filename)
+    legacy_paths = [
+        os.path.join(data_dir, legacy)
+        for legacy, target in LEGACY_FILE_RENAMES.items()
+        if target == filename
+    ]
+    source_paths = [
+        path
+        for path in [current_path, *legacy_paths]
+        if os.path.exists(path)
+    ]
+
+    if not source_paths:
+        write_csv(current_path, [], fieldnames)
+        return True
+
+    original_rows = []
+    existing_fields = None
+    rows = []
+    for path in source_paths:
+        fields, source_rows = _read_csv_payload(path)
+        if path == current_path:
+            existing_fields = fields
+            original_rows = source_rows
+        rows.extend(source_rows)
+
+    normalized = [
+        {
+            field: _migrated_value(filename, row, field)
+            for field in fieldnames
+        }
+        for row in rows
+    ]
+    current_matches = (
+        existing_fields == fieldnames
+        and len(source_paths) == 1
+        and source_paths[0] == current_path
+        and original_rows == normalized
+    )
+
+    if not current_matches:
+        write_csv(current_path, normalized, fieldnames)
+        for legacy_path in legacy_paths:
+            if legacy_path != current_path:
+                try:
+                    os.remove(legacy_path)
+                except FileNotFoundError:
+                    pass
+        return True
+    return False
+
+
+def _read_csv_payload(filepath):
     with open(filepath, newline="") as f:
         reader = csv.DictReader(f)
         existing_fields = reader.fieldnames or []
         rows = list(reader)
-
-    if existing_fields == fieldnames:
-        return False
-
-    normalized = []
-    for row in rows:
-        normalized.append({
-            field: _migrated_value(row, field)
-            for field in fieldnames
-        })
-    write_csv(filepath, normalized, fieldnames)
-    return True
+    return existing_fields, rows
 
 
-def _migrated_value(row, field):
+def _migrated_value(filename, row, field):
     """Return the value for a field during additive CSV migration."""
     if field == "schema_version":
         return SCHEMA_VERSION
+    for candidate in (field, *CSV_FIELD_ALIASES.get(filename, {}).get(field, ())):
+        if candidate in row:
+            return row.get(candidate, "")
+    if field in CSV_FIELD_DEFAULTS.get(filename, {}):
+        return CSV_FIELD_DEFAULTS[filename][field]
     return row.get(field, "")
 
 
@@ -328,6 +424,8 @@ def write_manifest(manifest, data_dir=DATA_DIR):
     manifest["schema_version"] = SCHEMA_VERSION
     manifest["files"] = list(CSV_REGISTRY.keys())
     manifest["retention_days"] = RETENTION_DAYS
+    if DATA_MODE in VALID_DATA_MODES:
+        manifest["data_mode"] = DATA_MODE
     manifest["last_updated"] = _now_iso()
     path = os.path.join(data_dir, "manifest.json")
     with open(path, "w") as f:
@@ -349,7 +447,7 @@ def create_manifest(data_dir=DATA_DIR):
 
 
 def _default_manifest():
-    return {
+    manifest = {
         "schema_version": SCHEMA_VERSION,
         "created_at": "",
         "last_updated": "",
@@ -360,3 +458,6 @@ def _default_manifest():
             "auto_cutoff_created_at": "",
         },
     }
+    if DATA_MODE in VALID_DATA_MODES:
+        manifest["data_mode"] = DATA_MODE
+    return manifest

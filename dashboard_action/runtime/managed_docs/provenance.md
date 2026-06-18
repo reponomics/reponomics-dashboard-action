@@ -12,8 +12,8 @@ This page lists the provenance and verification material Reponomics publishes or
 | Managed-docs manifest | `docs/reponomics/.manifest.json` | action repository, action version, managed namespace, generation timestamp, managed-doc file hashes |
 | Template provenance | `.reponomics/template-provenance.json` | source repository and commit, template version, action repository/default ref/compatible major, template compatibility line, generated payload digest metadata |
 | Workflow action refs | `.github/workflows/*.yml` | Reponomics action refs used by generated workflows |
-| Collect provenance artifact | `reponomics-collect-provenance` workflow artifact, path `.reponomics/collect-provenance/collect-provenance.json` | source repository SHA, workflow run ID/attempt, action repository/ref/resolved SHA, runtime version, data mode, retention and publication settings |
 | Retained dashboard data artifact | `dashboard-data` workflow artifact | retained encrypted or plaintext dashboard data, depending on `data_mode` |
+| Retained-data lineage manifest | `manifest.json` inside `dashboard-data` | retained-data schema version, file digests, row counts, retention cutoff, parent digest, and row-preservation verification metadata |
 | Rendered dashboard outputs | Pages artifact or downloadable dashboard artifact | generated dashboard HTML and assets from the repository workflow run |
 
 ## Generated Template Publication

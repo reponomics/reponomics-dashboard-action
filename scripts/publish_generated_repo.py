@@ -119,6 +119,91 @@ def _commit_message(message: str, source_commit: str) -> str:
     return f"{message}\n\nSource-Commit: {source_commit}"
 
 
+def _template_release_tag(version: str) -> str:
+    return f"reponomics-dashboard-v{version}"
+
+
+def _remote_tag_commit(worktree: Path, tag: str) -> str:
+    output = _output(
+        ["git", "ls-remote", "--tags", "target", f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}"],
+        worktree,
+    )
+    peeled = ""
+    direct = ""
+    for line in output.splitlines():
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        oid, ref = parts
+        if ref == f"refs/tags/{tag}^{{}}":
+            peeled = oid
+        elif ref == f"refs/tags/{tag}":
+            direct = oid
+    return peeled or direct
+
+
+def _template_version_from_ref(worktree: Path, ref: str) -> str:
+    try:
+        raw = _output(
+            ["git", "show", f"{ref}:{template_provenance.PROVENANCE_PATH.as_posix()}"],
+            worktree,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise PublishError(
+            f"Cannot archive existing generated template {ref}: missing "
+            + f"{template_provenance.PROVENANCE_PATH.as_posix()}"
+        ) from exc
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise PublishError(
+            f"Cannot archive existing generated template {ref}: provenance is invalid JSON"
+        ) from exc
+    version = payload.get("template", {}).get("version")
+    if not isinstance(version, str) or not version.strip():
+        raise PublishError(
+            f"Cannot archive existing generated template {ref}: provenance has no template version"
+        )
+    return version
+
+
+def _ensure_existing_generated_ref_tagged(
+    worktree: Path,
+    *,
+    existing_ref: str,
+    existing_oid: str,
+    next_release_tag: str | None,
+) -> None:
+    version = _template_version_from_ref(worktree, existing_ref)
+    archive_tag = _template_release_tag(version)
+    if archive_tag == next_release_tag:
+        print(
+            f"Existing generated {existing_ref} already has next release tag name "
+            + f"{archive_tag}; treating it as an in-progress publication."
+        )
+        return
+
+    tag_oid = _remote_tag_commit(worktree, archive_tag)
+    if tag_oid:
+        if tag_oid != existing_oid:
+            raise PublishError(
+                f"Existing generated template archive tag {archive_tag} points to "
+                + f"{tag_oid}, not current {existing_ref} {existing_oid}"
+            )
+        print(f"Existing generated template {existing_ref} is archived by {archive_tag}")
+        return
+
+    _run(["git", "-c", "tag.gpgSign=false", "tag", archive_tag, existing_ref], worktree)
+    _run(["git", "push", "target", f"refs/tags/{archive_tag}"], worktree)
+    print(f"Archived existing generated template {existing_ref} as {archive_tag}")
+
+
+def _write_github_outputs(path: Path, values: dict[str, str]) -> None:
+    with path.open("a", encoding="utf-8") as handle:
+        for key, value in values.items():
+            handle.write(f"{key}={value}\n")
+
+
 def _payload_paths(root: Path) -> set[str]:
     paths: set[str] = set()
     for line in template_provenance.canonical_tree_manifest(root).splitlines():
@@ -188,7 +273,9 @@ def publish(
     *,
     push: bool,
     expected_repo: str | None = None,
-) -> None:
+    release_tag: str | None = None,
+    github_output: Path | None = None,
+) -> str | None:
     output_dir = output_dir.resolve()
     if not output_dir.exists():
         raise PublishError(f"Generated output does not exist: {output_dir}")
@@ -211,8 +298,9 @@ def publish(
 
     if not push:
         print("Dry run only. Re-run with --push to publish.")
-        return
+        return None
 
+    published_commit = ""
     with tempfile.TemporaryDirectory(prefix="generated-repo-") as tmp:
         worktree = Path(tmp) / "repo"
         shutil.copytree(output_dir, worktree)
@@ -246,14 +334,36 @@ def publish(
         if remote_oid:
             expected_oid = remote_oid.split()[0]
             _run(["git", "fetch", "target", f"{remote_ref}:{lease_ref}"], worktree)
+            if release_tag:
+                _ensure_existing_generated_ref_tagged(
+                    worktree,
+                    existing_ref=lease_ref,
+                    existing_oid=expected_oid,
+                    next_release_tag=release_tag,
+                )
             lease = f"--force-with-lease={remote_ref}:{expected_oid}"
         else:
             lease = f"--force-with-lease={remote_ref}:"
         _run(["git", "push", lease, "target", f"HEAD:{remote_ref}"], worktree)
+        published_commit = _output(["git", "rev-parse", "HEAD"], worktree)
 
     digest = _verify_published_digest(output_dir, remote_url, branch)
     print(f"Verified published template payload digest: {digest}")
     print(f"Published {output_dir} to {display_remote_url}/{branch}")
+    if published_commit:
+        print(f"Published generated commit: {published_commit}")
+    if github_output and published_commit:
+        _write_github_outputs(
+            github_output,
+            {
+                "published_commit": published_commit,
+                "payload_digest": digest,
+                "source_commit": source_commit,
+                "target_branch": branch,
+                "target_repo": expected_repo or _remote_repo_path(remote_url),
+            },
+        )
+    return published_commit or None
 
 
 def main() -> None:
@@ -266,6 +376,14 @@ def main() -> None:
         "--expected-repo",
         help="Reject the publish if the target remote does not resolve to this repository name.",
     )
+    parser.add_argument(
+        "--release-tag",
+        help=(
+            "Generated-template release tag for the publication. When set, the "
+            + "current target branch is archived under its provenance version tag before push."
+        ),
+    )
+    parser.add_argument("--github-output", type=Path)
     parser.add_argument("--push", action="store_true")
     args = parser.parse_args()
     publish(
@@ -275,6 +393,8 @@ def main() -> None:
         args.message,
         push=args.push,
         expected_repo=args.expected_repo,
+        release_tag=args.release_tag,
+        github_output=args.github_output,
     )
 
 

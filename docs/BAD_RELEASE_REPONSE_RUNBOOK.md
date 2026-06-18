@@ -7,8 +7,8 @@ This runbook covers failures across:
 - action release: `vX.Y.Z`
 - floating action refs: `vX`, `vX.Y`
 - template acceptance PR
-- source-repo template release: `reponomics-dashboard-vA.B.C`
-- generated template publication: `reponomics/reponomics-dashboard`
+- source template tag: `reponomics-dashboard-vA.B.C`
+- generated template release/publication: `reponomics/reponomics-dashboard`
 - generated template provenance and release artifacts
 
 The guiding rule is: immutable release history is not rewritten. Recovery happens through rerunning failed workflows when the approved source is still correct, or through corrective patch releases when the approved source was wrong.
@@ -28,10 +28,11 @@ Use this operational runbook before and after public launch. Do not defer recove
 ## Immutable Release Rules
 
 - Exact action tags are immutable.
-- Source-repo template release tags are immutable.
+- Source template tags and generated template release tags are immutable.
 - Published GitHub Releases are not edited as a recovery mechanism.
 - Floating action refs may move to corrective releases after validation.
-- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source release.
+- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source commit.
+- Before generated `main` is replaced, the previous generated template snapshot should remain reachable from its generated-template release tag.
 - Recovery uses reruns from the same approved source when the source is correct, or corrective patch releases when the source is wrong.
 
 ## Public Readiness And Versioning
@@ -49,8 +50,8 @@ First identify the failure layer:
 1. Action release failed before tag creation.
 2. Action tag exists but floating refs are wrong.
 3. Action release exists but template acceptance PR failed.
-4. Template acceptance PR merged but template release failed.
-5. Template release exists but generated publication failed.
+4. Template acceptance PR merged but template release/publication failed.
+5. Generated template release exists but publication state is incomplete.
 6. Generated template was published with wrong contents/provenance.
 7. Released action breaks an older protected template.
 8. Released template gives new users broken setup.
@@ -106,28 +107,28 @@ Public note: normally just the eventual template release note, e.g. `Updated act
 
 ## 4. Template Acceptance PR Merged But Template Release Failed
 
-Impact: `main` says the template version should be released, but no `reponomics-dashboard-vA.B.C` release exists.
+Impact: `main` says the template version should be released, but no matching source tag or generated repository release exists.
 
 Response:
 
 - Do not bump the template version again just to retry.
 - Fix the workflow or validation failure.
 - Rerun the failed workflow if possible.
-- If rerun is impossible, create the same `reponomics-dashboard-vA.B.C` source-repo release from the merged commit only after running `make template-release-gates` locally or in CI.
-- Confirm `publish-template.yml` runs from that release.
+- If rerun is impossible, create the same `reponomics-dashboard-vA.B.C` source tag from the merged commit only after running `make template-release-gates` locally or in CI, then use the normal workflow or emergency publication path to publish the generated repository from that approved source.
+- Confirm the generated repository release `reponomics-dashboard-vA.B.C` is created in `reponomics/reponomics-dashboard`.
 
 Public note: use the merged PR’s release notes unchanged.
 
-## 5. Template Release Exists But Generated Publication Failed
+## 5. Generated Template Release Exists But Publication State Is Incomplete
 
-Impact: source-repo release exists, but `reponomics/reponomics-dashboard` was not updated.
+Impact: source tag or generated repository release exists, but `reponomics/reponomics-dashboard` was not updated or the generated release points at the wrong commit.
 
 Response:
 
-- Inspect `publish-template.yml` failure.
-- If the failure occurred before publication, fix and rerun `publish-template.yml`.
+- Inspect `template-release.yml` failure.
+- If the failure occurred before generated publication, fix and rerun `template-release.yml`.
 - If publication partially pushed, compare generated repo `Source-Commit` and `.reponomics/template-provenance.json`.
-- Rerun publication only from the same source-repo release tag.
+- Rerun publication only from the same approved source commit or source tag.
 - Do not create a new template version unless the template payload itself must change.
 
 Public note: not required unless users could copy the stale/broken generated repository during the incident window.
@@ -136,7 +137,7 @@ Public note: not required unless users could copy the stale/broken generated rep
 
 Impact: users may copy a bad template.
 
-This should not happen after a successful normal publication run. `publish-template.yml`
+This should not happen after a successful normal publication run. `template-release.yml`
 runs `make template-release-gates` before minting the publication app token, and
 `scripts/publish_generated_repo.py --push` fetches the published branch after the
 push and verifies its `.reponomics/template-provenance.json` payload digest against
@@ -149,11 +150,11 @@ the generated source tree. If this incident occurs anyway, treat it as one of:
 Response:
 
 - Stop further releases.
-- Confirm whether the failed or suspect `publish-template.yml` run reached the post-push verification step.
-- Determine whether the source-repo template release artifact and recorded source commit were correct.
-- If the source release was correct but the generated repo was mutated or publication verification had a bug, fix the verifier if needed, then republish from the same release tag only if doing so restores the exact approved payload.
-- If the approved source release itself was wrong, publish a corrective template patch release.
-- Do not silently mutate the source-repo release notes to hide the incident.
+- Confirm whether the failed or suspect `template-release.yml` run reached the post-push verification step.
+- Determine whether the source tag, template release artifacts, and recorded source commit were correct.
+- If the approved source was correct but the generated repo was mutated or publication verification had a bug, fix the verifier if needed, then republish from the same approved source only if doing so restores the exact approved payload.
+- If the approved source itself was wrong, publish a corrective template patch release.
+- Do not silently mutate generated repository release notes to hide the incident.
 - Add a release note explaining the corrected payload if users could have copied the bad version.
 
 Corrective release example:
@@ -235,10 +236,10 @@ Compatibility reset: this release raises the minimum compatible template version
 ## Decision Rules
 
 - Exact release tags are immutable.
-- Source-repo template release tags are immutable.
+- Source template tags and generated template release tags are immutable.
 - Published GitHub Releases are not edited as a recovery mechanism.
 - Floating action refs may move to corrective releases.
-- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source release.
+- Generated template repo `main` may be force-pushed only by the publication workflow from an approved source commit.
 - If a bad generated template may have been copied, publish a corrective template patch release.
 - If a bad action may affect existing users through floating refs, publish a corrective action patch release and move the floating refs.
 - Do not move `minimum_compatible_template_version` in response to a bad release. Move it only for an intentional compatibility reset.
@@ -260,7 +261,8 @@ Then verify:
 - floating action refs
 - template contract version
 - accepted action metadata
-- source-repo template release tag
+- source template tag
+- generated repository release/tag
 - generated repo `Source-Commit`
 - `.reponomics/template-provenance.json`
 
@@ -272,7 +274,7 @@ Use one or more scenarios:
 
 1. Action release exists, but the template acceptance PR failed.
 2. Template acceptance PR merged, but `template-release.yml` failed.
-3. Template release exists, but `publish-template.yml` failed before generated publication.
+3. Template release exists, but `template-release.yml` failed before generated publication.
 4. Generated template publication completed with wrong provenance.
 5. Action patch release breaks the minimum compatible protected template.
 6. Template release gives new copied repositories broken setup.

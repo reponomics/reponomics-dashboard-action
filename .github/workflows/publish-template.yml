@@ -1,8 +1,6 @@
-name: Publish Template Repository
+name: Emergency Publish Template Repository
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       source_ref:
@@ -11,7 +9,7 @@ on:
         type: string
         default: main
       confirm_unreleased_template_publish:
-        description: "Publish without a reponomics-dashboard-v* release tag"
+        description: "Emergency-only: publish without normal template release automation"
         required: true
         type: boolean
         default: false
@@ -19,7 +17,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: template-release-${{ github.event.release.tag_name || github.ref }}
+  group: template-publication-manual-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -27,8 +25,8 @@ env:
 
 jobs:
   publish-template:
-    name: Publish generated template
-    if: ${{ (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'reponomics-dashboard-v')) || (github.event_name == 'workflow_dispatch' && inputs.confirm_unreleased_template_publish) }}
+    name: Emergency publish generated template
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_unreleased_template_publish }}
     runs-on: ubuntu-24.04
     environment: template-publication
     permissions:
@@ -42,23 +40,9 @@ jobs:
       - name: Checkout release source
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.source_ref }}
-
-      - name: Validate template release tag
-        if: ${{ github.event_name == 'release' }}
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          template_version="$(sed -n 's/^template_version: //p' template-contract.yml | tr -d '"')"
-          expected_tag="reponomics-dashboard-v${template_version}"
-          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
-            echo "Template release tag $RELEASE_TAG does not match template-contract.yml ($expected_tag)." >&2
-            exit 1
-          fi
+          ref: ${{ inputs.source_ref }}
 
       - name: Validate manual publication source
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           SOURCE_REF: ${{ inputs.source_ref }}
         run: |
@@ -72,13 +56,12 @@ jobs:
           esac
 
       - name: Record manual unreleased publication
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           {
-            echo "## Manual template publication"
+            echo "## Emergency template publication"
             echo
-            echo "This run publishes from \`${{ inputs.source_ref }}\` without a matching \`reponomics-dashboard-v*\` release tag."
-            echo "Use this only as an operator escape hatch; normal template publication should come from a template release tag matching \`template-contract.yml\`."
+            echo "This run bypasses normal generated-template release automation and publishes from \`${{ inputs.source_ref }}\`."
+            echo "Use this only for operator recovery. Normal template publication is handled by \`.github/workflows/template-release.yml\` after a template acceptance merge."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Python
@@ -92,16 +75,14 @@ jobs:
           TEMPLATE_REMOTE="https://github.com/${TEMPLATE_EXPECTED_REPO}.git" make template-release-gates
 
       - name: Upload template release artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: reponomics-dashboard-template-release-${{ github.event.release.tag_name }}
+          name: reponomics-dashboard-template-manual-${{ github.run_id }}
           path: dist/template-release/*
           if-no-files-found: error
           retention-days: 90
 
       - name: Attest template release artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -128,8 +109,6 @@ jobs:
           git remote add "${TEMPLATE_REMOTE}" "https://x-access-token:${RELEASE_TOKEN}@github.com/${TEMPLATE_EXPECTED_REPO}.git"
 
       - name: Publish generated template repository
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name || 'manual' }}
         run: |
           set -euo pipefail
           venv/bin/python scripts/publish_generated_repo.py \
@@ -137,5 +116,5 @@ jobs:
             --remote "${TEMPLATE_REMOTE}" \
             --branch main \
             --expected-repo "${TEMPLATE_EXPECTED_REPO}" \
-            --message "chore: publish generated template ${RELEASE_TAG}" \
+            --message "chore: publish generated template manual" \
             --push

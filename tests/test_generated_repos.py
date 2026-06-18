@@ -4,6 +4,7 @@
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -1780,6 +1781,31 @@ def test_publish_commit_message_records_source_commit():
     assert message == "chore: publish generated template\n\nSource-Commit: abc123"
 
 
+def _create_generated_remote_main(remote: Path, source: Path, tmp_path: Path, version: str) -> str:
+    clone = tmp_path / f"seed-{version}"
+    shutil.copytree(source, clone)
+    provenance_path = clone / template_provenance.PROVENANCE_PATH
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["template"]["version"] = version
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
+    subprocess.run(["git", "init", "-b", "main"], cwd=clone, check=True)
+    subprocess.run(["git", "config", "user.name", "tester"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "tester@example.com"],
+        cwd=clone,
+        check=True,
+    )
+    subprocess.run(["git", "add", "-A"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "-c", "core.hooksPath=/dev/null", "commit", "-m", "seed generated"],
+        cwd=clone,
+        check=True,
+    )
+    subprocess.run(["git", "remote", "add", "origin", remote.as_posix()], cwd=clone, check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=clone, check=True)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
+
+
 def test_publish_verifies_published_template_digest(tmp_path):
     output = tmp_path / "template"
     remote = tmp_path / "remote.git"
@@ -1823,6 +1849,126 @@ def test_publish_verifies_published_template_digest(tmp_path):
             remote.as_posix(),
             "main",
         )
+
+
+def test_publish_archives_existing_generated_main_before_release_push(tmp_path):
+    previous = tmp_path / "previous-template"
+    next_output = tmp_path / "next-template"
+    remote = tmp_path / "remote.git"
+    github_output = tmp_path / "github-output"
+    build_template.build_template(previous)
+    build_template.build_template(next_output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+    previous_commit = _create_generated_remote_main(remote, previous, tmp_path, "0.9.9")
+
+    published = publish_generated_repo.publish(
+        next_output,
+        remote.as_posix(),
+        "main",
+        "chore: publish generated template",
+        push=True,
+        release_tag="reponomics-dashboard-v0.10.0",
+        github_output=github_output,
+    )
+
+    archived = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/tags/reponomics-dashboard-v0.9.9"],
+        text=True,
+    ).strip()
+    current = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main"],
+        text=True,
+    ).strip()
+    output_values = dict(
+        line.split("=", 1)
+        for line in github_output.read_text(encoding="utf-8").splitlines()
+    )
+    assert archived == previous_commit
+    assert current == published
+    assert output_values["published_commit"] == published
+    assert output_values["payload_digest"] == template_provenance.verify_template_provenance(
+        next_output
+    )["payload"]["digest"]
+    assert output_values["target_branch"] == "main"
+
+
+def test_publish_rejects_conflicting_generated_archive_tag(tmp_path):
+    previous = tmp_path / "previous-template"
+    next_output = tmp_path / "next-template"
+    remote = tmp_path / "remote.git"
+    build_template.build_template(previous)
+    build_template.build_template(next_output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+    _create_generated_remote_main(remote, previous, tmp_path, "0.9.9")
+
+    other = tmp_path / "other"
+    subprocess.run(["git", "clone", remote.as_posix(), other], check=True)
+    subprocess.run(["git", "config", "user.name", "tester"], cwd=other, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "tester@example.com"],
+        cwd=other,
+        check=True,
+    )
+    (other / "README.md").write_text("other archive\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=other, check=True)
+    subprocess.run(
+        ["git", "-c", "core.hooksPath=/dev/null", "commit", "-m", "other archive"],
+        cwd=other,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-c", "tag.gpgSign=false", "tag", "reponomics-dashboard-v0.9.9"],
+        cwd=other,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "push", "--force", "origin", "refs/tags/reponomics-dashboard-v0.9.9"],
+        cwd=other,
+        check=True,
+    )
+
+    with pytest.raises(publish_generated_repo.PublishError, match="archive tag"):
+        publish_generated_repo.publish(
+            next_output,
+            remote.as_posix(),
+            "main",
+            "chore: publish generated template",
+            push=True,
+            release_tag="reponomics-dashboard-v0.10.0",
+        )
+
+
+def test_manual_publish_does_not_create_generated_archive_tag(tmp_path):
+    previous = tmp_path / "previous-template"
+    next_output = tmp_path / "next-template"
+    remote = tmp_path / "remote.git"
+    build_template.build_template(previous)
+    build_template.build_template(next_output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+    _create_generated_remote_main(remote, previous, tmp_path, "0.9.9")
+
+    publish_generated_repo.publish(
+        next_output,
+        remote.as_posix(),
+        "main",
+        "chore: publish generated template",
+        push=True,
+    )
+
+    tag_lookup = subprocess.run(
+        [
+            "git",
+            "--git-dir",
+            remote.as_posix(),
+            "rev-parse",
+            "--verify",
+            "refs/tags/reponomics-dashboard-v0.9.9",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert tag_lookup.returncode != 0
 
 
 def test_publish_dry_run_rejects_payload_files_ignored_by_git(tmp_path):

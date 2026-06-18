@@ -56,6 +56,16 @@ jobs:
           set -euo pipefail
           make template-compat-e2e
 
+      - name: Verify generated template publication readiness
+        run: |
+          set -euo pipefail
+          make verify-workflow-classification
+          make verify-template
+          make validate-template-action-ref
+          make template-smoke
+          make publish-template-dry-run
+          make package-template-release
+
       - name: Create release PR or GitHub release
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
@@ -123,7 +133,7 @@ jobs:
           {
             echo "Template acceptance for ${action_tag}."
             echo
-            echo "Merging this PR is the template release approval step. After it lands on main, the Template Release workflow will run the release gates and create ${template_tag} from the merged commit."
+            echo "Merging this PR is the template release approval step. After it lands on main, the Template Release workflow will run the release gates, publish the generated template repository, and create ${template_tag} in reponomics/reponomics-dashboard."
             echo
             echo "## Template release notes"
             echo

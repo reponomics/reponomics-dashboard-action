@@ -4,7 +4,7 @@ Date: 2026-06-18
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -68,7 +68,7 @@ The intended public release surfaces become:
 - `reponomics/reponomics-dashboard` GitHub Releases: generated template releases
   only, using `reponomics-dashboard-vX.Y.Z` tags or an equivalent generated
   template tag shape.
-- This source repository: template acceptance PRs, source tags if needed for
+- This source repository: template acceptance PRs, matching source tags for
   immutable source anchors, workflow artifacts, attestations, SBOM/provenance
   evidence, and maintainer documentation.
 
@@ -231,23 +231,24 @@ If accepted, implementation should proceed conservatively:
 7. Backfill generated-repository release tags or releases only if the historical
    value is worth the risk of confusing source and generated provenance.
 
-## Open Questions
+## Resolved Implementation Choices
 
-- Should the generated repository tag point only to the generated commit, or
-  should there also be an immutable source-repository tag for the acceptance
-  commit?
-- During migration, should missing generated-repository archive refs be
-  backfilled as tags only, or should temporary release-named branches also be
-  created for operator convenience?
-- Should generated-repository release creation happen in `publish-template.yml`
-  or in a follow-up workflow that verifies the publication commit first?
-- What is the best durable link format from generated-repository release notes
-  to source-repository attestations and workflow artifacts?
-- Should GitHub's template repository release feed be advertised to users, or
-  should the generated repository README point primarily to a curated release
-  train index in the source repository?
-- How should failed generated-repository release creation be recovered when the
-  generated tree has already been published correctly?
+- The generated repository tag points to the generated commit that users copy.
+- A matching source-repository tag points to the accepted source commit so
+  compatibility gates and source provenance still have an immutable source
+  anchor.
+- Missing generated-repository archive refs are backfilled as tags, not
+  branches.
+- Generated-repository publication and release creation happen in
+  `.github/workflows/template-release.yml` after the acceptance merge. The
+  emergency `publish-template.yml` workflow remains available only for operator
+  recovery and does not create the public generated-template release.
+- Generated-repository release notes include source commit, generated commit,
+  accepted action metadata, source workflow run, and
+  `.reponomics/template-provenance.json` references.
+- Failed generated-repository release creation after a correct generated push is
+  recovered by rerunning from the same accepted source when possible, or by
+  using the emergency publication path only from an already-approved source.
 
 ## Non-Goals
 

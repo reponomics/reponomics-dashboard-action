@@ -13,14 +13,14 @@ The release rule is simple: release the action when existing users should receiv
 | Surface | Version source | Tag shape | Release owner |
 | --- | --- | --- | --- |
 | Action | `pyproject.toml`, `dashboard_action/run_modules/core.py`, `.github/.release-please-manifest.json` | `vX.Y.Z`, plus floating `vX` and `vX.Y` | Release Please |
-| Template | `template-contract.yml` `template_version` | `reponomics-dashboard-vX.Y.Z` | Automated action-release acceptance or maintainer-created source-repo release |
+| Template | `template-contract.yml` `template_version` | `reponomics-dashboard-vX.Y.Z` in `reponomics-dashboard`, plus a matching immutable source tag | Automated action-release acceptance or maintainer-created template release |
 | Demo | none | none | Generated from an approved source ref |
 
-Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboard-v*` tags for action releases.
+Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboard-v*` tags for action releases. The public generated-template GitHub Release belongs in `reponomics/reponomics-dashboard`, not in this Action repository's release feed.
 
 `template-contract.yml` is the source of truth for the generated template version, generated action ref, accepted action release metadata, and action/template compatibility line. Generated templates ship against the current compatible action channel. Action releases must continue to pass against both the current generated template and the minimum compatible template version.
 
-Every public action release publishes a corresponding template acceptance release. The acceptance PR records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; merging that PR is the maintainer approval for the template release. Generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
+Every public action release publishes a corresponding template acceptance release. The acceptance PR records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; merging that PR is the maintainer approval for the template release. The Template Release workflow then creates an immutable source tag, runs the release gates, publishes `reponomics/reponomics-dashboard`, and creates the public generated-template release there. Generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
 
 Generated dashboard repositories are supported on released action refs: floating major/minor release refs, exact release tags, or full commit SHAs for released action commits. Branch refs such as `main` are not a supported generated-template runtime channel because they can run unreleased action behavior outside the accepted template contract.
 
@@ -80,7 +80,7 @@ Staging setup checklist:
 6. Run `.github/workflows/publish-template-staging.yml` from `main` with confirmation enabled.
 7. Run the private consumer staging smoke protocol in `docs/STAGING_SMOKE.md` when the change warrants it.
 
-Do not use `publish-template.yml` for routine staging. That workflow is the production template publication path for `reponomics-dashboard-v*` releases; its manual dispatch remains an operator recovery escape hatch.
+Do not use `publish-template.yml` for routine staging. That workflow is an emergency-only operator recovery escape hatch for generated-template publication. Normal public template releases use `.github/workflows/template-release.yml`; routine private staging should use `publish-template-staging.yml`.
 
 ## When To Release The Action
 
@@ -98,7 +98,8 @@ Before merging an action release PR:
 4. Confirm retained artifacts produced by the minimum compatible template's original accepted action/schema migrate to the candidate runtime's current retained packet schema.
 5. Confirm any intended staging/soak period is complete.
 6. Run `.github/workflows/pre-release-validation.yml` on the release candidate ref if the action change touches rendering, artifacts, managed docs, action metadata, generated workflow behavior, or any template-facing contract.
-7. Confirm the changelog entry and SemVer bump match the change.
+7. Confirm the candidate has already exercised the template publication dry-run path through CI, `pre-release-validation.yml`, or local `make template-release-gates`. This gives the highest available confidence that template publication will succeed before the final action release SHA exists.
+8. Confirm the changelog entry and SemVer bump match the change.
 
 After the action release:
 
@@ -106,7 +107,7 @@ After the action release:
 2. Confirm floating `vX` and `vX.Y` point to the release SHA.
 3. Confirm the template acceptance PR was created or was already current.
 4. Review and merge the template acceptance PR as the effective template release approval.
-5. Confirm the matching `reponomics-dashboard-vX.Y.Z` template release was created with the template version from `template-contract.yml`.
+5. Confirm the matching source tag and `reponomics/reponomics-dashboard` release `reponomics-dashboard-vX.Y.Z` were created with the template version from `template-contract.yml`.
 6. Confirm the release provenance/SBOM workflow completed or failed for an understood reason.
 7. If the release changes the public dashboard experience, refresh the demo.
 
@@ -118,17 +119,17 @@ Every public action release also creates a template acceptance release, even for
 
 If a user or organization requires SHA-pinned Actions, the generated template metadata should point them to `.reponomics/template-provenance.json` for the accepted action repository, version, tag, SHA, and default compatible ref associated with that template snapshot. `docs/reponomics/.manifest.json` also records the managed-docs action version. SHA-pinning is an opt-in policy choice; users who pin own the update cadence that the default floating compatible ref normally handles.
 
-The template version is `template-contract.yml` `template_version`. Normal template publication requires a source-repository GitHub Release whose tag is exactly:
+The template version is `template-contract.yml` `template_version`. Normal template publication creates an immutable source tag and a generated-repository GitHub Release whose tag is exactly:
 
 ```text
 reponomics-dashboard-v<template_version>
 ```
 
-If `template-contract.yml` contains `template_version: X.Y.Z`, the release tag must be `reponomics-dashboard-vX.Y.Z`.
+If `template-contract.yml` contains `template_version: X.Y.Z`, the source tag and generated repository release tag must be `reponomics-dashboard-vX.Y.Z`.
 
-The `.github/workflows/publish-template.yml` workflow listens for published releases with that tag shape. It checks that the tag matches `template-contract.yml`, runs `make template-release-gates`, validates the public action ref used by generated workflows, validates the accepted action tag/version/SHA metadata, runs template smoke and generated-template e2e checks against the accepted action release, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, and only then mints the template publication app token and force-pushes the generated tree to `reponomics/reponomics-dashboard`.
+The `.github/workflows/template-release.yml` workflow runs after an accepted template PR lands on `main`. It reads the merged PR release notes, checks whether the generated repository release already exists, runs `make template-release-gates`, validates the public action ref used by generated workflows, validates the accepted action tag/version/SHA metadata, runs template smoke and generated-template e2e checks against the accepted action release, dry-runs publication, packages deterministic template release artifacts, uploads them as workflow artifacts, creates GitHub artifact attestations, creates the immutable source tag, and only then mints the template publication app token. It force-pushes the generated tree to `reponomics/reponomics-dashboard`, preserving the previous generated `main` behind its own generated-template tag when needed, then creates the public generated-repository release.
 
-The workflow intentionally does not upload assets to an already-published GitHub Release. Release evidence is carried as workflow artifacts and artifact attestations.
+The workflow intentionally does not upload assets to a GitHub Release after publication. Release evidence is carried as source workflow artifacts, artifact attestations, generated `.reponomics/template-provenance.json`, and the generated repository release body.
 
 ## Template Release Sequence
 
@@ -140,9 +141,9 @@ For a template-only release:
 4. Confirm CI is green.
 5. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
 6. Review and merge the PR as the effective template release approval.
-7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching release already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, and creates `reponomics-dashboard-vX.Y.Z`, where `X.Y.Z` equals `template-contract.yml`.
-8. Watch `.github/workflows/publish-template.yml`.
-9. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
+7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It skips if the matching generated repository release already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.
+8. Confirm `reponomics-dashboard` `main` was force-pushed with a generated commit containing the expected `Source-Commit`.
+9. Confirm the previous generated `main` commit remains reachable through its generated-template release tag when applicable.
 10. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
 11. Refresh the demo if the public showcase should reflect the new template before the next scheduled daily refresh.
 
@@ -152,11 +153,10 @@ For a coupled action/template release where the template requires new action beh
 2. Cut the action release first, so `default_action_ref: v0` resolves to the intended released action behavior.
 3. Let `.github/workflows/release-please.yml` open or update the template acceptance PR. That PR class-locks the template SemVer bump to the action release class: action patch implies template patch, and action minor implies template minor.
 4. Review and merge the template acceptance PR as the effective template release approval. The generated PR body includes a `## Template release notes` section with a terse `Updated action to ...` note; edit that section before merging if the template release needs fuller notes.
-5. Let `.github/workflows/template-release.yml` create the matching `reponomics-dashboard-vX.Y.Z` release from the merged acceptance commit.
-6. Watch `.github/workflows/publish-template.yml`.
-7. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.
+5. Let `.github/workflows/template-release.yml` create the source tag, publish the generated template, and create the matching `reponomics-dashboard-vX.Y.Z` release in `reponomics/reponomics-dashboard` from the merged acceptance commit.
+6. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.
 
-The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an operator escape hatch for recovery. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use a matching `reponomics-dashboard-v*` release tag.
+The manual `publish-template.yml` dispatch path with `confirm_unreleased_template_publish` is an emergency-only operator escape hatch for recovery. It is not a normal release path and does not create a public generated-template release. Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use `.github/workflows/template-release.yml`.
 
 ## Local Release Gates
 
@@ -225,6 +225,6 @@ A scheduled demo refresh is not an action release and not a template release. It
 
 After action release, verify the GitHub Release, exact tag, floating tags, and release provenance/SBOM workflow.
 
-After template publication, verify the generated repository commit, `Source-Commit`, `.reponomics/template-provenance.json`, package artifacts, checksums, and attestations.
+After template publication, verify the source tag, generated repository release/tag, generated repository commit, `Source-Commit`, `.reponomics/template-provenance.json`, package artifacts, checksums, attestations, and previous-template archive tag when applicable.
 
 After demo publication, verify the demo repository commit, `.reponomics/demo-provenance.json`, absence of `data/` and `dist/` in git, presence of the target `dashboard-data` artifact, and the live Pages dashboard at `https://reponomics.github.io/reponomics-dashboard-demo/`.

@@ -8,7 +8,7 @@ The demo is generated from this source repository. Maintainers should not hand-m
 
 - The demo repository is public.
 - The README dashboard is committed to the demo repository.
-- The Pages dashboard shell is committed under `docs/` and published with GitHub Pages Actions.
+- The Pages dashboard is published with GitHub Pages Actions.
 - The dashboard data is encrypted and stored as a `dashboard-data` Actions artifact in `reponomics-dashboard-demo`.
 - The public demo key is shown in the Pages unlock UI so visitors can unlock the demo without reading separate instructions.
 - The data is synthetic, curated, and date-shifted so the dashboard tells a useful product story without exposing live repository analytics.
@@ -18,12 +18,7 @@ The useful product truth is that Reponomics dashboard data is artifact-backed, w
 
 ## Design Boundary
 
-The demo deliberately differs from ordinary generated user repositories in two ways:
-
-- It commits a README dashboard in a public repository.
-- It exposes a public unlock key in the Pages dashboard shell.
-
-Those differences are demo-specific. They do not change the supported user template contract. The action runtime still rejects `generate-readme=true` in public repositories, and normal encrypted dashboards do not render a demo unlock panel. The demo builder calls the lower-level product renderers directly instead of calling the public action runtime's `publish` mode.
+When maintaining or updating the demo repository, try to localize the deviations to the smallest possible surface area - always prefer to leverage real dashboard tooling instead of bespoke demo-specific logic. Any significant deviations should be explicitly foregrounded so as not to mislead the public. Avoid modifying anything that touches the critical path for the real dashboard product.
 
 The maintenance rule is:
 
@@ -80,19 +75,11 @@ The source publication workflow uploads two source artifacts:
 - `generated-demo-repo`: the generated demo repository tree plus the source commit file;
 - `generated-demo-dashboard-data`: the encrypted retained-data seed.
 
-After the generated tree is force-pushed to `reponomics-dashboard-demo`, the target workflow downloads `generated-demo-dashboard-data` from `reponomics/reponomics-dashboard-action`, validates it, re-uploads it in the demo repository as `dashboard-data`, uploads the committed `docs/` shell as a Pages artifact, and deploys it.
-
 The target artifact-import workflow uses `actions/download-artifact` with `github-token`, `repository`, and `run-id`. It passes the target workflow's `${{ github.token }}` as the explicit `github-token` input. This was validated against public source artifact run `27471925728` and target demo run `27472044670`: the target repo `GITHUB_TOKEN` could download the public source artifact, store it as `dashboard-data`, and deploy Pages.
-
-If the source repo becomes private, artifact visibility changes, or GitHub tightens cross-repository artifact access, fall back to minting a narrowly scoped source-artifact GitHub App token in the target workflow. That cross-repository artifact path should remain demo-specific until it is designed as a user-facing import or recovery workflow.
 
 ## Public Demo Key
 
 The Pages dashboard shell is public. The dashboard data remains encrypted. The demo key is displayed openly in the shell because visitors should be able to unlock the demo from the page itself.
-
-The key is not public as a security tradeoff for synthetic data; it is public because this is a shareable demo. The data is synthetic for a separate reason: the demo needs a manicured, stable, non-sensitive portfolio that demonstrates the product surface well.
-
-The demo key must never be reused for real dashboards.
 
 The demo unlock panel is rendered only when `build_encrypted_html(..., demo_unlock=...)` receives demo metadata. Normal action-driven encrypted dashboards do not pass that metadata and do not render the panel.
 
@@ -124,33 +111,18 @@ Publication refuses targets other than `reponomics/reponomics-dashboard-demo` un
 
 ## GitHub Workflow
 
-`.github/workflows/publish-demo.yml` is the source-repository publication workflow. It supports manual publication and scheduled daily refresh, and it is split into two jobs:
+`.github/workflows/publish-demo.yml` is the demo repo publication workflow. It supports manual publication and scheduled daily refresh, and it is split into two jobs:
 
 - `build-demo-artifact` resolves the allowed source ref, checks it out, builds, verifies, dry-runs, packages `dist/demo` as a workflow artifact, and uploads `dist/demo-seed/dashboard-data.enc` as `generated-demo-dashboard-data`. This job has only `contents: read` and does not receive demo publication secrets.
 - `publish-demo` downloads and validates the generated tree, then creates a demo publication app token scoped to `reponomics-dashboard-demo`, force-publishes the generated demo repository, and dispatches the generated target seed workflow with the source workflow run ID. After the token is minted, the job runs only a fixed shell publication sequence, not project Make targets or Python scripts.
 
 Manual publication and scheduled daily refresh use the same demo-only publication app. The scheduled source ref defaults to `main`; set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` or an allowed release tag if the demo should follow a promoted ref instead of main.
 
-The publication app should be a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. It needs `contents: write`, `workflows: write`, and `actions: write` on the demo repository so it can force-push the generated tree and dispatch the target seed workflow. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository.
+The publication app is a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. It needs `contents: write`, `workflows: write`, and `actions: write` on the demo repository so it can force-push the generated tree and dispatch the target seed workflow. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository.
 
-The target demo repository must have GitHub Pages enabled with source set to GitHub Actions. The generated target workflow stores the encrypted seed artifact and deploys the Pages shell after the generated commit lands.
+## Future Enhancement: Artifact History
 
-## Maintenance
-
-The demo should be regenerated and republished when:
-
-- a template release changes setup surface, docs, workflows, or first-run experience;
-- an action release changes README rendering, Pages rendering, managed docs, setup behavior, or user-visible dashboard behavior;
-- `demo/dataset.yml` changes;
-- the relative synthetic 90-day window needs to roll forward.
-
-The scheduled workflow rolls the relative synthetic data window forward daily. Treat failures in that path as demo-publication failures, not as action or template release failures.
-
-## Later Enhancement: Artifact History
-
-The first artifact-backed implementation seeds only the current `dashboard-data` artifact. Do not engineer a multi-run backup-artifact simulation in this pass.
-
-Because the demo will eventually refresh daily, previous target workflow runs will naturally accumulate. A later enhancement can generate a current 90-day packet and a previous 89-day or prior-day packet, then seed them through separate target workflow runs. That would make the demo Actions artifact history look more like a real dashboard repository with retained prior runs, and it may also inform a future repo-to-repo import workflow for template upgrades, compromise recovery, or dashboard repository migration.
+A future enhancement can generate a current 90-day packet and a previous 89-day or prior-day packet, then seed them through separate target workflow runs. That would make the demo Actions artifact history look more like a real dashboard repository with retained prior runs.
 
 ## Guardrails
 
@@ -158,5 +130,4 @@ Because the demo will eventually refresh daily, previous target workflow runs wi
 - Keep demo repository names under `reponomics-demo/demo-*` to avoid brand or search confusion.
 - Keep retained canonical CSV data out of the published git tree.
 - Keep demo unlock behavior out of `action.yml` and the public action input surface.
-- Treat `.github/workflows/seed-and-publish-demo-dashboard.yml` as demo target infrastructure, not as a template workflow users should copy as setup guidance.
 - If renderer APIs change, `make verify-demo` should fail before publication.

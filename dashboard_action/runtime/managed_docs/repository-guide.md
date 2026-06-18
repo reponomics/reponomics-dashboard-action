@@ -88,7 +88,7 @@ GitHub documents that scheduled workflows in public repositories may be disabled
 
 Ordinary collection outages are handled by artifact retention and active supersession rather than a separate preservation workflow. Collection uploads a successor `dashboard-data` artifact before older superseded artifacts are cleaned up. If collection fails, no successor is uploaded and no cleanup is attempted, so the previous unexpired artifact remains the recovery point. If scheduled collection stays disabled past artifact expiry, the GitHub-hosted recovery point can expire even though the product does not impose a fixed maximum history length.
 
-`incident-reset` handles suspected dashboard-key exposure. For serious exposure, make the dashboard repository private and disable any published Pages dashboard first. Then set `DASHBOARD_NEXT_SECRET`, run **Actions -> Reset Reponomics dashboard incident history**, and enter the required confirmation strings. The reset restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts it with `DASHBOARD_NEXT_SECRET`, uploads the fresh retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts. The generated workflow has a 30-minute timeout. After the run succeeds, promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`, then delete `DASHBOARD_NEXT_SECRET`.
+`incident-reset` handles suspected dashboard-key exposure. For serious exposure, make the dashboard repository private and disable any published Pages dashboard first. Then set `DASHBOARD_NEXT_SECRET`, run **Actions -> INCIDENT - Reset**, and enter the required confirmation strings. The reset restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts it with `DASHBOARD_NEXT_SECRET`, uploads the fresh retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts. The generated workflow has a 30-minute timeout. After the run succeeds, promote `DASHBOARD_NEXT_SECRET` into `DASHBOARD_SECRET_DO_NOT_REPLACE`, then delete `DASHBOARD_NEXT_SECRET`.
 
 ## CSV Export
 
@@ -100,7 +100,7 @@ For plaintext retained data, download the `dashboard-data` workflow artifact dir
 
 ## Offline Viewing
 
-The generated dashboard is not committed to this repository. To view an encrypted dashboard offline, open a successful **Collect And Publish Reponomics Dashboard** workflow run and download the dashboard artifact before it expires. Extract the artifact and open `index.html` with the same dashboard key that unlocks the hosted Pages dashboard.
+The generated dashboard is not committed to this repository. To view an encrypted dashboard offline, open a successful **Collect and Publish** workflow run and download the dashboard artifact before it expires. Extract the artifact and open `index.html` with the same dashboard key that unlocks the hosted Pages dashboard.
 
 Some browsers block local `file://` fetches used by CSV export. If export fails offline, serve the extracted artifact directory over local HTTP or use the hosted Pages dashboard.
 
@@ -108,7 +108,7 @@ Some browsers block local `file://` fetches used by CSV export. If export fails 
 
 1. Generate and save a new dashboard key.
 2. Add it as `DASHBOARD_NEXT_SECRET`.
-3. Run **Actions -> Rotate Reponomics dashboard key -> Run workflow**.
+3. Run **Actions -> Rotate Key -> Run workflow**.
 4. Confirm the dashboard opens with the new key.
 5. Replace `DASHBOARD_SECRET_DO_NOT_REPLACE` with the new key (this a rare instance in which you are allowed to disobey the instructions in the secret's name).
 6. Delete `DASHBOARD_NEXT_SECRET`.

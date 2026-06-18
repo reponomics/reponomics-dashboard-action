@@ -1,4 +1,4 @@
-name: Rotate Reponomics dashboard key
+name: Rotate Key
 
 on:
   workflow_dispatch:

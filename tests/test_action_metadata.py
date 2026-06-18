@@ -312,6 +312,7 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "release_notes:" not in workflow_text
     assert workflow["permissions"] == {"contents": "read", "pull-requests": "read"}
     assert workflow["concurrency"]["group"] == "generated-template-publication-reponomics-dashboard"
+    assert workflow["concurrency"]["queue"] == "max"
     assert workflow["concurrency"]["cancel-in-progress"] is False
     assert job["environment"] == "template-publication"
     assert job["permissions"] == {

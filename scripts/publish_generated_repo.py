@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -165,6 +166,27 @@ def _write_github_outputs(path: Path, values: dict[str, str]) -> None:
             handle.write(f"{key}={value}\n")
 
 
+def _write_publish_outputs(
+    path: Path,
+    *,
+    published_commit: str,
+    payload_digest: str,
+    source_commit: str,
+    target_branch: str,
+    target_repo: str,
+) -> None:
+    _write_github_outputs(
+        path,
+        {
+            "published_commit": published_commit,
+            "payload_digest": payload_digest,
+            "source_commit": source_commit,
+            "target_branch": target_branch,
+            "target_repo": target_repo,
+        },
+    )
+
+
 def _payload_paths(root: Path) -> set[str]:
     paths: set[str] = set()
     for line in template_provenance.canonical_tree_manifest(root).splitlines():
@@ -267,6 +289,56 @@ def _has_staged_changes(worktree: Path) -> bool:
     return False
 
 
+VERSION_RE = re.compile(r"^\d+(?:\.\d+){0,2}(?:[-+].*)?$")
+
+
+def _template_version(provenance: dict[str, object]) -> str:
+    template = provenance.get("template", {})
+    version = template.get("version") if isinstance(template, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        raise PublishError("Template provenance has no template version")
+    return version
+
+
+def _version_key(version: str) -> tuple[int, int, int, str]:
+    core = version.split("-", 1)[0].split("+", 1)[0]
+    if not VERSION_RE.match(version):
+        raise PublishError(f"Unsupported template version for ordering: {version}")
+    parts = [int(part) for part in core.split(".")]
+    while len(parts) < 3:
+        parts.append(0)
+    return (parts[0], parts[1], parts[2], version)
+
+
+def _guard_target_not_newer(
+    worktree: Path,
+    *,
+    target_branch: str,
+    expected_provenance: dict[str, object],
+) -> None:
+    try:
+        current_provenance = template_provenance.load_template_provenance(worktree)
+    except template_provenance.TemplateProvenanceError as exc:
+        raise PublishError(
+            f"Cannot compare generated target {target_branch}: current provenance is invalid"
+        ) from exc
+
+    current_version = _template_version(current_provenance)
+    expected_version = _template_version(expected_provenance)
+    current_key = _version_key(current_version)
+    expected_key = _version_key(expected_version)
+    if current_key > expected_key:
+        raise PublishError(
+            f"Refusing to publish template {expected_version}: target {target_branch} "
+            + f"already contains newer template {current_version}"
+        )
+    if current_key == expected_key and current_provenance != expected_provenance:
+        raise PublishError(
+            f"Refusing to republish template {expected_version}: target {target_branch} "
+            + "already contains different provenance for that version"
+        )
+
+
 def verify_remote_ref(
     output_dir: Path,
     remote: str,
@@ -348,11 +420,46 @@ def publish(
             worktree,
         )
         _run(["git", "remote", "add", "target", remote_url], worktree)
+        if release_tag:
+            remote_tag_oid = _remote_tag_commit(worktree, release_tag)
+            if remote_tag_oid:
+                try:
+                    digest, tag_commit = _verify_published_ref(
+                        output_dir,
+                        remote_url,
+                        f"refs/tags/{release_tag}",
+                    )
+                except PublishError as exc:
+                    raise PublishError(
+                        f"Generated template release tag {release_tag} does not "
+                        + f"match expected output: {exc}"
+                    ) from exc
+                print(
+                    f"Generated template release tag {release_tag} already points to "
+                    + f"{tag_commit}."
+                )
+                print(f"Verified generated template release tag payload digest: {digest}")
+                if github_output:
+                    _write_publish_outputs(
+                        github_output,
+                        published_commit=tag_commit,
+                        payload_digest=digest,
+                        source_commit=source_commit,
+                        target_branch=branch,
+                        target_repo=expected_repo or _remote_repo_path(remote_url),
+                    )
+                return tag_commit
+
         remote_ref = f"refs/heads/{branch}"
         remote_oid = _output(["git", "ls-remote", "--heads", "target", branch], worktree)
         if remote_oid:
             _run(["git", "fetch", "target", remote_ref], worktree)
             _run(["git", "checkout", "-B", branch, "FETCH_HEAD"], worktree)
+            _guard_target_not_newer(
+                worktree,
+                target_branch=branch,
+                expected_provenance=provenance,
+            )
         else:
             _run(["git", "checkout", "--orphan", branch], worktree)
 
@@ -374,41 +481,35 @@ def publish(
             print(f"Generated template tree already matches target {branch}.")
         published_commit = _output(["git", "rev-parse", "HEAD"], worktree)
         if release_tag:
-            remote_tag_oid = _remote_tag_commit(worktree, release_tag)
-            if remote_tag_oid:
-                if remote_tag_oid != published_commit:
-                    raise PublishError(
-                        f"Generated template release tag {release_tag} points to "
-                        + f"{remote_tag_oid}, not published commit {published_commit}"
-                    )
-                print(f"Generated template release tag {release_tag} already exists.")
-            else:
-                _run(
-                    ["git", "-c", "tag.gpgSign=false", "tag", release_tag, published_commit],
-                    worktree,
-                )
-                tag_push_ref = f"refs/tags/{release_tag}:refs/tags/{release_tag}"
+            _run(
+                ["git", "-c", "tag.gpgSign=false", "tag", release_tag, published_commit],
+                worktree,
+            )
+            tag_push_ref = f"refs/tags/{release_tag}:refs/tags/{release_tag}"
 
         push_args = ["git", "push", "--atomic", "target", f"HEAD:{remote_ref}"]
         if tag_push_ref:
             push_args.append(tag_push_ref)
         _run(push_args, worktree)
 
-    digest = _verify_published_digest(output_dir, remote_url, branch)
+    verify_ref = f"refs/tags/{release_tag}" if release_tag else branch
+    digest, verified_commit = _verify_published_ref(output_dir, remote_url, verify_ref)
     print(f"Verified published template payload digest: {digest}")
     print(f"Published {output_dir} to {display_remote_url}/{branch}")
     if published_commit:
         print(f"Published generated commit: {published_commit}")
+    if verified_commit != published_commit:
+        raise PublishError(
+            f"Published ref {verify_ref} points to {verified_commit}, not {published_commit}"
+        )
     if github_output and published_commit:
-        _write_github_outputs(
+        _write_publish_outputs(
             github_output,
-            {
-                "published_commit": published_commit,
-                "payload_digest": digest,
-                "source_commit": source_commit,
-                "target_branch": branch,
-                "target_repo": expected_repo or _remote_repo_path(remote_url),
-            },
+            published_commit=published_commit,
+            payload_digest=digest,
+            source_commit=source_commit,
+            target_branch=branch,
+            target_repo=expected_repo or _remote_repo_path(remote_url),
         )
     return published_commit or None
 

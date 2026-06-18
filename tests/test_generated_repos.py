@@ -1796,10 +1796,7 @@ def test_publish_commit_message_records_source_commit():
 def _create_generated_remote_main(remote: Path, source: Path, tmp_path: Path, version: str) -> str:
     clone = tmp_path / f"seed-{version}"
     shutil.copytree(source, clone)
-    provenance_path = clone / template_provenance.PROVENANCE_PATH
-    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
-    provenance["template"]["version"] = version
-    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
+    _set_template_version(clone, version)
     subprocess.run(["git", "init", "-b", "main"], cwd=clone, check=True)
     subprocess.run(["git", "config", "user.name", "tester"], cwd=clone, check=True)
     subprocess.run(
@@ -1816,6 +1813,46 @@ def _create_generated_remote_main(remote: Path, source: Path, tmp_path: Path, ve
     subprocess.run(["git", "remote", "add", "origin", remote.as_posix()], cwd=clone, check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=clone, check=True)
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
+
+
+def _append_generated_remote_main(remote: Path, source: Path, tmp_path: Path, version: str) -> str:
+    clone = tmp_path / f"append-{version}"
+    subprocess.run(["git", "clone", remote.as_posix(), clone], check=True)
+    subprocess.run(["git", "config", "user.name", "tester"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "tester@example.com"],
+        cwd=clone,
+        check=True,
+    )
+    for child in clone.iterdir():
+        if child.name == ".git":
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    for child in source.iterdir():
+        target = clone / child.name
+        if child.is_dir():
+            shutil.copytree(child, target)
+        else:
+            shutil.copy2(child, target)
+    _set_template_version(clone, version)
+    subprocess.run(["git", "add", "-A"], cwd=clone, check=True)
+    subprocess.run(
+        ["git", "-c", "core.hooksPath=/dev/null", "commit", "-m", f"seed {version}"],
+        cwd=clone,
+        check=True,
+    )
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=clone, check=True)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
+
+
+def _set_template_version(root: Path, version: str) -> None:
+    provenance_path = root / template_provenance.PROVENANCE_PATH
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["template"]["version"] = version
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
 
 
 def test_publish_verifies_published_template_digest(tmp_path):
@@ -1907,6 +1944,88 @@ def test_publish_appends_generated_main_and_tags_release_commit(tmp_path):
         next_output
     )["payload"]["digest"]
     assert output_values["target_branch"] == "main"
+
+
+def test_publish_existing_release_tag_verifies_without_mutating_newer_main(tmp_path):
+    output = tmp_path / "template"
+    newer_output = tmp_path / "newer-template"
+    remote = tmp_path / "remote.git"
+    github_output = tmp_path / "github-output"
+    template_version = template_contract.load_contract().template_version
+    release_tag = f"reponomics-dashboard-v{template_version}"
+    build_template.build_template(output)
+    build_template.build_template(newer_output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+
+    old_commit = publish_generated_repo.publish(
+        output,
+        remote.as_posix(),
+        "main",
+        f"chore: publish generated template v{template_version}",
+        push=True,
+        release_tag=release_tag,
+    )
+    newer_commit = _append_generated_remote_main(
+        remote,
+        newer_output,
+        tmp_path,
+        "99.0.0",
+    )
+
+    recovered = publish_generated_repo.publish(
+        output,
+        remote.as_posix(),
+        "main",
+        f"chore: publish generated template v{template_version}",
+        push=True,
+        release_tag=release_tag,
+        github_output=github_output,
+    )
+
+    current = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main"],
+        text=True,
+    ).strip()
+    output_values = dict(
+        line.split("=", 1)
+        for line in github_output.read_text(encoding="utf-8").splitlines()
+    )
+    assert recovered == old_commit
+    assert current == newer_commit
+    assert output_values["published_commit"] == old_commit
+    assert output_values["target_branch"] == "main"
+
+
+def test_publish_rejects_older_template_when_target_main_is_newer(tmp_path):
+    output = tmp_path / "template"
+    newer_output = tmp_path / "newer-template"
+    remote = tmp_path / "remote.git"
+    template_version = template_contract.load_contract().template_version
+    build_template.build_template(output)
+    build_template.build_template(newer_output)
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", remote], check=True)
+    newer_commit = _create_generated_remote_main(
+        remote,
+        newer_output,
+        tmp_path,
+        "99.0.0",
+    )
+
+    with pytest.raises(publish_generated_repo.PublishError, match="already contains newer"):
+        publish_generated_repo.publish(
+            output,
+            remote.as_posix(),
+            "main",
+            f"chore: publish generated template v{template_version}",
+            push=True,
+            release_tag=f"reponomics-dashboard-v{template_version}",
+        )
+
+    current = subprocess.check_output(
+        ["git", "--git-dir", remote.as_posix(), "rev-parse", "refs/heads/main"],
+        text=True,
+    ).strip()
+    assert current == newer_commit
 
 
 def test_publish_rejects_conflicting_generated_release_tag(tmp_path):

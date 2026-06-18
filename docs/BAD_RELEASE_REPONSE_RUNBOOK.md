@@ -114,7 +114,7 @@ Response:
 - Do not bump the template version again just to retry.
 - Fix the workflow or validation failure.
 - Rerun the failed workflow if possible.
-- If rerun is impossible, create the same `reponomics-dashboard-vA.B.C` source tag from the merged commit only after running `make template-release-gates` locally or in CI, then use the normal workflow or emergency publication path to publish the generated repository from that approved source.
+- If rerun is impossible, create the same `reponomics-dashboard-vA.B.C` source tag from the merged commit only after running `make template-release-gates` locally or in CI, then use an explicit incident-specific repair procedure to publish the generated repository from that approved source.
 - Confirm the generated repository release `reponomics-dashboard-vA.B.C` is created in `reponomics/reponomics-dashboard`.
 
 Public note: use the merged PR’s release notes unchanged.

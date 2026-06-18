@@ -59,28 +59,6 @@ def test_sync_writes_missing_managed_docs_and_manifest(tmp_path: Path) -> None:
     assert sorted(manifest["files"]) == ["README.md"]
 
 
-def test_sync_writes_generated_reference_files(tmp_path: Path) -> None:
-    bundle_dir = _write_bundle(tmp_path / "bundle", {"README.md": "Managed docs\n"})
-    reference = tmp_path / "config.yaml"
-    reference.write_text("example: true\n", encoding="utf-8")
-
-    result = managed_docs.sync_managed_docs(
-        namespace=tmp_path / "repo" / "docs" / "reponomics",
-        bundle_dir=bundle_dir,
-        reference_files={"config.example.yaml": reference},
-        action_repository="reponomics/reponomics-dashboard-action",
-        action_version="0.0.0-test",
-        allowed=True,
-    )
-
-    manifest = json.loads((result.namespace / ".manifest.json").read_text(encoding="utf-8"))
-    assert result.state == managed_docs.STATE_WRITTEN
-    assert (result.namespace / "config.example.yaml").read_text(encoding="utf-8") == (
-        "example: true\n"
-    )
-    assert sorted(manifest["files"]) == ["README.md", "config.example.yaml"]
-
-
 def test_sync_updates_clean_managed_docs_and_removes_stale_files(tmp_path: Path) -> None:
     first = _sync(
         tmp_path,

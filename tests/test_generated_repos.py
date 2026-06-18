@@ -34,6 +34,7 @@ STAGING_SMOKE_PAUSED_REASON = (
     "Staging smoke is pre-live; pause brittle runbook/output assertions until "
     "the staging protocol is revisited with a lighter contract model."
 )
+CONFIG_EXAMPLE_SOURCE = Path("dashboard_action/runtime/managed_docs/config.example.yaml")
 
 
 ACTION_YML_FIXTURE = """
@@ -107,6 +108,9 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         generated_readme
     )
     assert "README.backup.md" in generated_readme
+    assert (output / "config.yaml").read_text(encoding="utf-8") == (
+        CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8")
+    )
 
 
 def test_template_manifest_strips_template_prefix_by_default():
@@ -168,9 +172,9 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
     assert "`docs/reponomics/.manifest.json` records the action version" in readme
-    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == Path(
-        "template/config.yaml"
-    ).read_text(encoding="utf-8")
+    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == (
+        CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8")
+    )
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version
@@ -523,7 +527,7 @@ def test_setup_workflow_does_not_commit_workflow_file_changes(tmp_path):
 
 def test_required_fields_do_not_have_default_value():
     """Required fields should require explicit user consent, so omit default values."""
-    template_payload = yaml.safe_load(Path("template/config.yaml").read_text(encoding="utf-8"))
+    template_payload = yaml.safe_load(CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8"))
     resolver = Path("template/.github/scripts/resolve-reponomics-config.py").read_text(
         encoding="utf-8"
     )
@@ -1385,9 +1389,9 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
     assert "`docs/reponomics/.manifest.json` records the action version" in readme
-    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == Path(
-        "template/config.yaml"
-    ).read_text(encoding="utf-8")
+    assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == (
+        CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8")
+    )
     assert manifest["managed_namespace"] == "docs/reponomics"
     assert manifest["action_repository"] == contract.action_repository
     assert manifest["action_version"] == contract.action_version

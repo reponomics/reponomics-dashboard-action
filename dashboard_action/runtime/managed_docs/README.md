@@ -8,7 +8,7 @@
 
 The manifest at `docs/reponomics/.manifest.json` records the action version for this managed-docs snapshot.
 
-`config.example.yaml` is a managed reference copy of the starter configuration shape. Use it when your repository's active `config.yaml` has been edited and you want to compare it against the current action-bundled example. New keys shown in this managed example are only usable when your copied template workflows and local action wrapper can pass them through; docs sync cannot upgrade old workflow wiring by itself.
+`config.example.yaml` is the managed starter/reference configuration shape. New template repositories receive it once as root `config.yaml`; later docs sync updates only this managed reference copy. Use it when your repository's active `config.yaml` has been edited and you want to compare it against the current action-bundled example. New keys shown in this managed example are only usable when your copied template workflows and local action wrapper can pass them through; docs sync cannot upgrade old workflow wiring by itself.
 
 Start here:
 

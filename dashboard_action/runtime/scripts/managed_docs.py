@@ -38,7 +38,6 @@ def sync_managed_docs(
     *,
     namespace: Path,
     bundle_dir: Path,
-    reference_files: dict[str, Path] | None = None,
     action_repository: str,
     action_version: str,
     allowed: bool,
@@ -64,7 +63,7 @@ def sync_managed_docs(
             namespace,
         )
 
-    bundle_files = _load_bundle(bundle_dir, reference_files=reference_files)
+    bundle_files = _load_bundle(bundle_dir)
     next_hashes = {path: _sha_bytes(content) for path, content in bundle_files.items()}
     manifest_path = namespace / MANIFEST_NAME
     current_hashes = _current_file_hashes(namespace)
@@ -164,11 +163,7 @@ def _result(
     )
 
 
-def _load_bundle(
-    bundle_dir: Path,
-    *,
-    reference_files: dict[str, Path] | None = None,
-) -> dict[str, bytes]:
+def _load_bundle(bundle_dir: Path) -> dict[str, bytes]:
     bundle_dir = Path(bundle_dir)
     if not bundle_dir.is_dir():
         raise ManagedDocsError(f"managed docs bundle directory is missing: {bundle_dir}")
@@ -180,16 +175,6 @@ def _load_bundle(
         relative = path.relative_to(bundle_dir).as_posix()
         _validate_relative_path(relative)
         files[relative] = path.read_bytes()
-    for relative, source in sorted((reference_files or {}).items()):
-        _validate_relative_path(relative)
-        if relative in files:
-            raise ManagedDocsError(
-                f"managed docs bundle already contains generated reference file: {relative}"
-            )
-        source_path = Path(source)
-        if not source_path.is_file():
-            raise ManagedDocsError(f"managed docs reference file is missing: {source_path}")
-        files[relative] = source_path.read_bytes()
 
     if not files:
         raise ManagedDocsError("managed docs bundle is empty.")

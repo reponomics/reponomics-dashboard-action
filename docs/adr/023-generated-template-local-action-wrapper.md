@@ -44,7 +44,6 @@ The wrapper must declare and forward every input currently passed by generated w
 - `incident-confirm-purge`
 - `mode`
 - `publish-pages`
-- `require-collect-provenance`
 - `retention-days`
 - `use-github-app`
 

@@ -324,13 +324,13 @@ def test_restore_artifact_supports_named_required_artifacts(
 
     run._restore_artifact(
         config,
-        artifact_name=run.COLLECT_PROVENANCE_ARTIFACT_NAME,
-        data_dir=run.COLLECT_PROVENANCE_DIR,
+        artifact_name="custom-report",
+        data_dir=tmp_path / ".custom-report",
         required=True,
     )
 
-    assert calls[0]["env"]["ARTIFACT_NAME"] == "reponomics-collect-provenance"
-    assert calls[0]["env"]["DATA_DIR"] == run.COLLECT_PROVENANCE_DIR.as_posix()
+    assert calls[0]["env"]["ARTIFACT_NAME"] == "custom-report"
+    assert calls[0]["env"]["DATA_DIR"] == (tmp_path / ".custom-report").as_posix()
     assert calls[0]["env"]["ARTIFACT_REQUIRED"] == "true"
 
 
@@ -383,146 +383,11 @@ def test_runtime_env_sets_optional_tokens_and_next_dashboard_key(
     assert run.os.environ["REPONOMICS_ACTION_REPOSITORY"] == "demo/action"
 
 
-def test_collect_provenance_writes_runtime_contract(
+def test_publish_restores_requested_dashboard_data_run(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setenv("GITHUB_RUN_ID", "123")
-    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
-    monkeypatch.setattr(run.provenance_mod, "current_source_sha", lambda: "a" * 40)
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "b" * 40)
-    config = _config_for_run_tests(
-        tmp_path,
-        mode="collect",
-        data_mode="encrypted",
-        action_ref="v1",
-        action_repository="reponomics/reponomics-dashboard-action",
-        publish_pages_requested=False,
-        generate_readme=True,
-    )
-
-    provenance = run.provenance_mod.write_collect_provenance(config)
-
-    payload = json.loads(run.COLLECT_PROVENANCE_PATH.read_text(encoding="utf-8"))
-    assert provenance.action_sha == "b" * 40
-    assert payload == {
-        "action_ref": "v1",
-        "action_repository": "reponomics/reponomics-dashboard-action",
-        "action_sha": "b" * 40,
-        "generate_readme": "true",
-        "data_mode": "encrypted",
-        "publish_pages": "false",
-        "retention_days": "90",
-        "runtime_version": run.VERSION,
-        "schema_version": 1,
-        "source_repository": "demo/repo",
-        "source_sha": "a" * 40,
-        "workflow_run_attempt": "2",
-        "workflow_run_id": "123",
-    }
-
-
-def test_collect_provenance_skips_outside_action_runtime(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setenv("GITHUB_RUN_ID", "123")
-    monkeypatch.delenv("GITHUB_ACTION_PATH", raising=False)
-    monkeypatch.delenv("REPONOMICS_ACTION_SHA", raising=False)
-
-    assert run.provenance_mod.should_write_collect_provenance() is False
-
-    monkeypatch.setenv("GITHUB_ACTION_PATH", "/tmp/action")
-
-    assert run.provenance_mod.should_write_collect_provenance() is True
-
-
-def test_current_source_sha_prefers_checkout_head(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("GITHUB_SHA", "A" * 40)
-    monkeypatch.setattr(run.provenance_mod, "_git_output", lambda *_args, **_kwargs: "B" * 40)
-
-    assert run.provenance_mod.current_source_sha() == "b" * 40
-
-
-def test_current_source_sha_falls_back_to_github_sha(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("GITHUB_SHA", "A" * 40)
-    monkeypatch.setattr(run.provenance_mod, "_git_output", lambda *_args, **_kwargs: "")
-
-    assert run.provenance_mod.current_source_sha() == "a" * 40
-
-
-def test_current_action_sha_resolves_action_ref_from_github_api(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    calls: list[dict[str, Any]] = []
-
-    def fake_get(
-        url: str,
-        *,
-        headers: dict[str, str],
-        timeout: int,
-    ) -> requests.Response:
-        calls.append({"url": url, "headers": headers, "timeout": timeout})
-        response = requests.Response()
-        response.status_code = 200
-        response._content = json.dumps({"sha": "c" * 40}).encode("utf-8")
-        return response
-
-    monkeypatch.setenv("REPONOMICS_ACTION_REPOSITORY", "demo/action")
-    monkeypatch.setenv("REPONOMICS_ACTION_REF", "v1")
-    monkeypatch.setenv("REPONOMICS_GITHUB_TOKEN", "ghp_token")
-    monkeypatch.setattr(run.provenance_mod.requests, "get", fake_get)
-    monkeypatch.setattr(run.provenance_mod, "_git_output", lambda *_args, **_kwargs: "")
-
-    assert run.provenance_mod.current_action_sha() == "c" * 40
-    assert calls == [
-        {
-            "url": "https://api.github.com/repos/demo/action/commits/v1",
-            "headers": {
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2026-03-10",
-                "User-Agent": "reponomics-dashboard-action-runtime",
-                "Authorization": "Bearer ghp_token",
-            },
-            "timeout": run.INCIDENT_API_TIMEOUT_SECONDS,
-        }
-    ]
-
-
-def test_publish_restores_and_validates_collect_provenance(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "b" * 40)
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "123",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "plaintext",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(run, "_restore_artifact", lambda *args, **kwargs: calls.append(kwargs))
     monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
@@ -538,49 +403,20 @@ def test_publish_restores_and_validates_collect_provenance(
     config = _config_for_run_tests(
         tmp_path,
         mode="publish",
-        artifact_run_id="123",
+        artifact_run_id="789",
         github_token="ghp_test",
-        action_ref="v1",
     )
 
     run.run_publish(config)
 
-    assert calls[0] == {
-        "artifact_name": run.COLLECT_PROVENANCE_ARTIFACT_NAME,
-        "data_dir": run.COLLECT_PROVENANCE_DIR,
-        "required": True,
-    }
-    assert calls[1] == {}
+    assert calls == [{"required": True}]
 
 
-def test_publish_restores_dashboard_data_from_provenance_run(
+def test_publish_without_requested_run_restores_latest_dashboard_data(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "b" * 40)
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "789",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "plaintext",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(run, "_restore_artifact", lambda *args, **kwargs: calls.append(kwargs))
     monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
@@ -593,181 +429,11 @@ def test_publish_restores_dashboard_data_from_provenance_run(
     monkeypatch.setattr(run, "_render_outputs", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_git_commit_readme", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(run, "_write_outputs", lambda *_args, **_kwargs: None)
-    config = _config_for_run_tests(
-        tmp_path,
-        mode="publish",
-        github_token="ghp_test",
-        action_ref="v1",
-    )
+    config = _config_for_run_tests(tmp_path, mode="publish")
 
     run.run_publish(config)
 
-    assert calls[0] == {
-        "artifact_name": run.COLLECT_PROVENANCE_ARTIFACT_NAME,
-        "data_dir": run.COLLECT_PROVENANCE_DIR,
-        "required": False,
-    }
-    assert calls[1] == {"artifact_run_id": "789"}
-
-
-def test_publish_rejects_collect_provenance_run_id_mismatch(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "b" * 40)
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "456",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "plaintext",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(run, "_restore_artifact", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
-    monkeypatch.setattr(run, "_set_runtime_env", lambda _config: None)
-    monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
-    config = _config_for_run_tests(tmp_path, mode="publish", artifact_run_id="123")
-
-    with pytest.raises(run.ActionError, match="does not match requested artifact-run-id"):
-        run.run_publish(config)
-
-
-def test_publish_rejects_collect_provenance_data_mode_mismatch(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "123",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "encrypted",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(run, "_restore_artifact", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
-    monkeypatch.setattr(run, "_set_runtime_env", lambda _config: None)
-    monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
-    config = _config_for_run_tests(tmp_path, mode="publish", data_mode="plaintext")
-
-    with pytest.raises(run.ActionError, match="data mode encrypted"):
-        run.run_publish(config)
-
-
-def test_publish_allows_collect_provenance_with_same_data_mode(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "b" * 40)
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "789",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "encrypted",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
-    calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(run, "_restore_artifact", lambda *args, **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
-    monkeypatch.setattr(run, "_set_runtime_env", lambda _config: None)
-    monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
-    monkeypatch.setattr(run, "_decrypt_if_needed", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_prepare_data_schema", lambda _config: None)
-    monkeypatch.setattr(run.merge, "materialize_reporting_coverage", lambda: None)
-    monkeypatch.setattr(run, "_set_version_status_env", lambda _config: None)
-    monkeypatch.setattr(run, "_render_outputs", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_git_commit_readme", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_write_outputs", lambda *_args, **_kwargs: None)
-    config = _config_for_run_tests(tmp_path, mode="publish", data_mode="encrypted")
-
-    run.run_publish(config)
-
-    assert calls[1] == {"artifact_run_id": "789"}
-
-
-def test_publish_rejects_collect_provenance_from_another_runtime(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/repo")
-    monkeypatch.setattr(run.provenance_mod, "current_action_sha", lambda: "c" * 40)
-    run.COLLECT_PROVENANCE_PATH.parent.mkdir(parents=True)
-    run.COLLECT_PROVENANCE_PATH.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "source_repository": "demo/repo",
-                "source_sha": "a" * 40,
-                "workflow_run_id": "123",
-                "workflow_run_attempt": "1",
-                "action_repository": "reponomics/reponomics-dashboard-action",
-                "action_ref": "v1",
-                "action_sha": "b" * 40,
-                "runtime_version": run.VERSION,
-                "data_mode": "plaintext",
-                "retention_days": "90",
-                "publish_pages": "false",
-                "generate_readme": "false",
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(run, "_restore_artifact", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(run, "_patch_runtime_paths", lambda _config: None)
-    monkeypatch.setattr(run, "_set_runtime_env", lambda _config: None)
-    monkeypatch.setattr(run, "_snapshot_outputs", lambda _config: {})
-    config = _config_for_run_tests(tmp_path, mode="publish", artifact_run_id="123")
-
-    with pytest.raises(run.ActionError, match="Run collect again"):
-        run.run_publish(config)
+    assert calls == [{"required": False}]
 
 
 def test_set_managed_docs_status_env_handles_absent_invalid_current_and_stale(

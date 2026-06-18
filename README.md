@@ -45,9 +45,9 @@ Use normal GitHub Action refs to choose the upgrade cadence:
 - `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.
 - `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; during `publish` runs the generated dashboard can show compact action version status with a link to the latest stable release.
 
-Retained dashboard data artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`.
+Retained dashboard data artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`. Publication does not need to know which action version collected the retained packet; it restores the requested or latest `dashboard-data` artifact, migrates that packet forward when needed, and renders from the runtime's current canonical schema.
 
-New metrics can appear after a compatible upgrade once collection has run with the newer runtime. Historical rows keep blank values unless a safe migration default exists.
+New metrics can appear after a compatible upgrade once collection has run with the newer runtime. Historical rows keep blank values unless a safe migration default exists. A runtime rejects retained artifacts whose manifest schema is newer than the runtime can understand.
 
 ## Usage
 

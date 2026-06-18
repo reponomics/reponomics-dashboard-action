@@ -210,7 +210,6 @@ jobs:
         uses: ./.github/actions/reponomics
         with:
           mode: publish
-          require-collect-provenance: "true"
           github-token: ${{ github.token }}
           dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
           data-mode: ${{ env.DATA_MODE }}

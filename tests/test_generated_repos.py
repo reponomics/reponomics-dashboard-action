@@ -299,6 +299,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "PUBLISH_PAGES_DASHBOARD" in collect_publish
     assert "PUBLISH_README_DASHBOARD" in collect_publish
     assert "reponomics-collect-provenance" not in collect_publish
+    assert "require-collect-provenance" not in collect_publish
     assert "source_sha" not in collect_publish
     assert "workflow_run_id" not in collect_publish
     assert "resolve_action_ref(" not in collect_publish
@@ -306,7 +307,6 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "actions/download-artifact@" not in collect_publish
     assert "mode: publish" in collect_publish
     assert "artifact-run-id: ${{ github.run_id }}" in collect_publish
-    assert 'require-collect-provenance: "true"' in collect_publish
     assert "Republish dashboard outputs" in collect_publish
     assert "mode: docs-sync" in collect_publish
     assert "allow-docs-sync" not in collect_publish

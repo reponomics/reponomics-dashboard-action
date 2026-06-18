@@ -56,16 +56,16 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
     files: dict[str, FileSummary] = {}
     row_identities: dict[str, set[str]] = {}
     row_dates: dict[str, dict[str, str]] = {}
+    manifest = storage.read_manifest(root.as_posix())
 
-    for filename, (_fields, date_field) in storage.CSV_REGISTRY.items():
+    for filename in _snapshot_filenames(manifest):
+        date_field = storage.CSV_REGISTRY.get(filename, ((), ""))[1]
         path = root / filename
         rows = _read_rows(path)
         dates = sorted(
             row.get(date_field, "") for row in rows if row.get(date_field, "")
         )
-        identity_dates = {
-            _row_identity(filename, row): row.get(date_field, "") for row in rows
-        }
+        identity_dates = _identity_dates(filename, rows, date_field)
         files[filename] = FileSummary(
             sha256=_sha256(path),
             rows=len(rows),
@@ -75,7 +75,6 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
         row_identities[filename] = set(identity_dates)
         row_dates[filename] = identity_dates
 
-    manifest = storage.read_manifest(root.as_posix())
     return PayloadSnapshot(
         manifest_digest=_sha256(root / "manifest.json"),
         payload_digest=_hash_json(
@@ -92,6 +91,30 @@ def snapshot_payload(data_dir: str | Path) -> PayloadSnapshot:
         row_dates=row_dates,
         lineage=dict(manifest.get("lineage") or {}),
     )
+
+
+def _snapshot_filenames(manifest: dict[str, Any]) -> list[str]:
+    filenames = list(storage.CSV_REGISTRY.keys())
+    recorded_files = (manifest.get("lineage") or {}).get("files")
+    if isinstance(recorded_files, dict):
+        filenames.extend(
+            filename
+            for filename in recorded_files
+            if isinstance(filename, str)
+        )
+    return list(dict.fromkeys(filenames))
+
+
+def _identity_dates(
+    filename: str,
+    rows: list[dict[str, str]],
+    date_field: str,
+) -> dict[str, str]:
+    if filename not in ROW_IDENTITY_FIELDS:
+        return {}
+    return {
+        _row_identity(filename, row): row.get(date_field, "") for row in rows
+    }
 
 
 def write_verified_lineage(

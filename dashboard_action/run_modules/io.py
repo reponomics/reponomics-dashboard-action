@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from .config import _env
-from .core import SCRIPTS_DIR, VERSION, RuntimeConfig
+from .core import SCRIPTS_DIR, VERSION, ActionError, RuntimeConfig
 
 import crypto_artifact  # noqa: E402
 import render_dashboard  # noqa: E402
@@ -80,7 +80,10 @@ def _encrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
 
 def _prepare_data_schema(config: RuntimeConfig) -> None:
     config.data_dir.mkdir(parents=True, exist_ok=True)
-    storage.migrate_schema(config.data_dir.as_posix())
+    try:
+        storage.migrate_schema(config.data_dir.as_posix())
+    except storage.SchemaMigrationError as exc:
+        raise ActionError(f"Could not migrate retained dashboard data: {exc}") from exc
 
 
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:

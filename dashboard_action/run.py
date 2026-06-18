@@ -19,7 +19,6 @@ from .run_modules import env as env_mod
 from .run_modules import github as github_mod
 from .run_modules import github_artifacts as github_artifacts_mod
 from .run_modules import io as io_mod
-from .run_modules import provenance as provenance_mod
 from .run_modules import summaries as summaries_mod
 from .run_modules.validation import (
     _validate_incident_confirmations,
@@ -41,9 +40,6 @@ from .run_modules.config import (
 )
 from .run_modules.core import (
     COLLECT_ROLLBACK_ARTIFACTS,
-    COLLECT_PROVENANCE_ARTIFACT_NAME,
-    COLLECT_PROVENANCE_DIR,
-    COLLECT_PROVENANCE_PATH,
     DOCS_ACTION_VERSION_ENV,
     DOCS_STATE_STALE,
     DOCS_SYNC_STATE_ENV,
@@ -136,7 +132,6 @@ def _sync_version() -> None:
     io_mod.VERSION = VERSION
     docs_mod.VERSION = VERSION
     summaries_mod.VERSION = VERSION
-    provenance_mod.VERSION = VERSION
 
 
 def _set_managed_docs_status_env() -> None:
@@ -295,10 +290,6 @@ def run_collect(
     merge.main()
     _write_verified_lineage(config, parent, operation="collect")
     _encrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
-    if provenance_mod.should_write_collect_provenance():
-        provenance_mod.write_collect_provenance(config)
-    else:
-        print("Skipping collect provenance outside GitHub Actions run context.")
     _write_outputs(config, before)
 
 
@@ -306,38 +297,8 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
     _patch_runtime_paths(config)
     _set_runtime_env(config)
     before = _snapshot_outputs(config)
-    require_collect_provenance = bool(config.artifact_run_id) or _parse_bool(
-        _env("REPONOMICS_REQUIRE_COLLECT_PROVENANCE", "false"),
-        name="require-collect-provenance",
-    )
     if restore_artifact:
-        _restore_artifact(
-            config,
-            artifact_name=COLLECT_PROVENANCE_ARTIFACT_NAME,
-            data_dir=COLLECT_PROVENANCE_DIR,
-            required=require_collect_provenance,
-        )
-    provenance = None
-    if COLLECT_PROVENANCE_PATH.is_file():
-        provenance = provenance_mod.read_collect_provenance()
-        provenance_mod.validate_collect_provenance(
-            provenance,
-            config,
-            require_current_runtime=True,
-        )
-        if config.artifact_run_id and provenance.workflow_run_id != config.artifact_run_id:
-            raise ActionError(
-                "Collect provenance workflow run ID "
-                + f"{provenance.workflow_run_id} does not match requested artifact-run-id "
-                + f"{config.artifact_run_id}."
-            )
-    elif require_collect_provenance:
-        raise ActionError("Publish requires collect provenance for the requested artifact run.")
-    if restore_artifact:
-        if provenance is not None and not config.artifact_run_id:
-            _restore_artifact(config, artifact_run_id=provenance.workflow_run_id)
-        else:
-            _restore_artifact(config)
+        _restore_artifact(config, required=bool(config.artifact_run_id))
     _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
     _prepare_data_schema(config)
     merge.materialize_reporting_coverage()

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.7](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.6...v0.23.7) (2026-06-18)
+
+
+### Code Refactoring
+
+* generated template local action wrapper ([d8b5a0a](https://github.com/reponomics/reponomics-dashboard-action/commit/d8b5a0a62652dfddd19697c8f73646343a4480eb))
+
 ## [0.23.6](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.5...v0.23.6) (2026-06-17)
 
 

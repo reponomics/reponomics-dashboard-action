@@ -127,6 +127,9 @@ def test_release_please_remains_action_only() -> None:
     assert "template" not in release_manifest
     assert "template" not in release_config["packages"]
     assert release_config["packages"]["."]["include-component-in-tag"] is False
+    exclude_paths = set(release_config["packages"]["."]["exclude-paths"])
+    assert ".github/workflows/template-release.yml" in exclude_paths
+    assert ".github/workflows/publish-template.yml" not in exclude_paths
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
 
 

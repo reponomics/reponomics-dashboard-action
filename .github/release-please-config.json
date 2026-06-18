@@ -9,7 +9,7 @@
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "exclude-paths": [
-        ".github/workflows/publish-template.yml",
+        ".github/workflows/template-release.yml",
         "scripts/build_template.py",
         "scripts/publish_generated_repo.py",
         "scripts/smoke_template_release.py",

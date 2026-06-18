@@ -36,6 +36,8 @@ Action changes are breaking when they invalidate a previously published template
 
 Template changes are breaking when newly copied repositories require different user setup, repository permissions, secrets, Pages behavior, or action capabilities than older template versions required.
 
+Retained data compatibility is part of that same contract. Generated template users can stay pinned to the action version they started with and later upgrade directly to a newer release. If the newer runtime cannot migrate retained packet schemas produced by a previously supported template/action pairing, the release has broken the upgrade path for those users. Treat that as a breaking compatibility reset, not as a separate template-versus-runtime compatibility floor. The retained packet migration policy is maintained in [Retained Data Migrations](./RETAINED_DATA_MIGRATIONS.md).
+
 When changing the action input schema, update the full boundary, not just `action.yml`. This often includes `action.yml`, `dashboard_action/run.py`, `dashboard_action/run_modules/config.py`, `dashboard_action/run_modules/core.py`, `dashboard_action/run_modules/validation.py`, `scripts/template_consumer_e2e.py`, `scripts/template_contract.py`, and tests such as `tests/test_action_metadata.py`, `tests/test_run_unit.py`, and `tests/test_runner.py`. This list is a search aid, not an exhaustive contract; update it when those files stop owning the relevant boundary.
 
 ## Staging Before Release

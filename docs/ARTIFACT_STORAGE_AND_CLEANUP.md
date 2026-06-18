@@ -54,6 +54,8 @@ For each parent row inside the child retention horizon, the child must contain t
 
 The migration boundary is restore -> decrypt -> `storage.migrate_schema()` -> collect/render/rotate/reset. Downstream collection, merge, load, and render code should see only the current canonical CSV registry.
 
+The project policy for retained packet compatibility, versioned migrations, and breaking changes lives in [Retained Data Migrations](./RETAINED_DATA_MIGRATIONS.md).
+
 Compatible retained-data changes must follow these rules:
 
 1. Add new CSV families to `storage.CSV_REGISTRY` with a row identity in `lineage.ROW_IDENTITY_FIELDS` when rows must be preserved across child artifacts.

@@ -347,7 +347,6 @@ def render_managed_docs_snapshot(
         relative = path.relative_to(MANAGED_DOCS_BUNDLE_DIR).as_posix()
         _validate_managed_docs_relative_path(relative)
         rendered[relative] = path.read_text(encoding="utf-8")
-
     if not rendered:
         raise TemplateContractError("managed docs bundle is empty")
 

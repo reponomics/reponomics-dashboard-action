@@ -45,7 +45,7 @@ Advanced option: use a user-owned GitHub App installation token for collection i
 
 `config.yaml` is the active configuration for this repository. It is user-owned: collection and publication runs read it, but do not silently rewrite it.
 
-`config.example.yaml` shows the supported configuration shape. The setup fields at the top of `config.yaml` are required and explicit keys in `config.yaml` are treated as your choices.
+`docs/reponomics/config.example.yaml` shows the managed reference configuration shape. The setup fields at the top of `config.yaml` are required and explicit keys in `config.yaml` are treated as your choices.
 
 `.reponomics/setup-complete` is an empty, non-secret marker file. Setup writes it after validating `config.yaml` and required secrets. Generated operational workflows treat its presence as the setup-complete signal; deleting it pauses normal workflow work until setup writes it again. If you intentionally complete `config.yaml` and manage setup manually, recreating the empty marker is acceptable.
 

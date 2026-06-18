@@ -96,6 +96,7 @@ def build_config(mode):
         "readme_path": consumer_repo / "README.md",
         "incident_confirm_mode": "",
         "incident_confirm_purge": "",
+        "incident_confirm_next_secret": "",
         "incident_confirm_irreversible": "",
         "action_ref": "template-consumer-e2e",
         "action_repository": "reponomics/reponomics-dashboard-action",

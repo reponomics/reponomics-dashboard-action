@@ -1,44 +1,55 @@
-# Consolidated Action And Template Architecture
+# Repository Architecture
 
-This note describes the architecture this repository should converge on after the action/template transfer. It is partly descriptive and partly normative: some pieces already exist on this branch, while others are recommendations for the next hardening pass.
+## Overview
 
-It is not an ADR. The goal is to make the intended operating model legible now that the source has been co-located.
+The Reponomics Dashboard project publishes two independently versioned products that are tightly coupled, one public demo surface, and one promotional splash page. The core pieces consist of:
 
-## Architectural Thesis
+- `reponomics-dashboard`: the primary user-facing offering - a template repository that provides the basic scaffolding to support the Dashboard - its main functional surface is the set of workflows that consume the Dashboard Action; it also houses important repo owner documentation, and the owner's configuration files. 
+- `reponomics-dashboard-action`: the GitHub Marketplace action that implements the runtime for the core Dashboard feature offerings.
+- `reponomics-dashboard-demo`: a public demo repository that uses synthetic data to show prospective Dashboard repo owners the set of features that the Reponomics Dashboard has to offer.
+- `reponomics-dashboard-web`: a promotional splash page that gives a public presence to the Dashboard project outside of GitHub - it presents an overview of the project and highlights the core functionality.
 
-Reponomics has one development repository and two independently versioned products, plus one public demo surface:
+The `@reponomics/reponomics-dashboard-action` repository is the development repository responsible for maintaing the template repo, the GitHub action, and the demo repo. It is also the repository that Dashboard owners, project contributors, and potential collaborators are invited to use to file issues (feature enhancements, bug reports), make PRs, and review more detailed technical literature. Because it is part of the supply chain for the other products, it strives to follow Open Source best practices to the greatest extent, and produces the necessary provenance artifacts, attestations, immutable releases, and other outputs necessary for the project to establish publicly verifiable evidence regarding the claims that are made about the project. 
 
-- `reponomics-dashboard-action`: the GitHub Marketplace action and runtime update channel.
-- `reponomics-dashboard`: the generated template repository users copy.
-- `reponomics-dashboard-demo`: a generated, public, user-realistic demonstration repository showing the post-setup experience.
+The dashboard-action repo is also the repo that is referenced by workflows that consume the action:
 
-The generated template is not a second development repository. It is a published artifact built from this source tree. The retired `reponomics-dashboard-dev` repository should not sit in the release path.
+```yaml
+uses: reponomics/reponomics-dashboard-action@v0
+```
 
-The demo repository is also not a third development repository. It is generated from this source repository with an explicit demo profile layered on top.
+The reason for this bifurcated design (template + action) is due to the goal of providing maintainers with a data dashboard that is completely under their control, and at the same time offering feature updates, security patches, and bug fixes. Since the product is a data dashboard repo, a template repo is a natural way to package it. However, after copying a template, the repo owner has virtually no connection to that template. (The template repo is not "upstream" of its copies.) So, the template needs some sort of distribution channel. Since the majority of the functionality comes from the workflows (querying the GitHub API, collecting and storing the data, etc.), it is the _action_ that is the primary functional core, or "runtime", for the Reponomics Dashboard, and the template repo is supposed to be only a thin compatibility layer.
 
-This split is necessary because copied GitHub template repositories cannot be updated in place by the publisher. After a user copies the template, that copy is effectively durable. The action is therefore the ongoing delivery channel for compatible fixes, enhancements, runtime docs, and operational behavior.
+> [!NOTE]
+> Maintainers who copy the Dashboard template should be referred to as "owners" when speaking in that mode, although they may also be referred to as "users" of the Dashboard action. "Consumer" is the most generic label, if one is needed, although this also applies to the workflows themselves. This is only stylistic advice.
 
-That creates an asymmetric compatibility rule:
+## Compatibility
 
-- New compatible action releases must continue to work with previously published template versions.
-- New template releases are published against the current compatible action channel.
-- Old templates are not expected to learn new template structure unless their owners choose to recopy or manually migrate.
+The architecture must always be designed with this constraint in mind: after copying the template, that copy owner might never update, or migrate, their data to a newer template version. Therefore, the action must _always_ be able to prove that as it evolves, it maintains compatibility with the minimum compatible template version. Breaking this contract is what decides whether a new major version of the action is justified, or required.
+
+The project follows an asymmetric compatibility rule:
+
+- New action releases on the same major version line must continue to work with previously published template versions.
+- New template releases, however, may assume that any user who copies it will be using the action version that is current at the time of its publication, or later.
+
+So, action releases must establish backwards-compatibility with the template version stated as the `minimum_compatible_template_version` in the `template-contract`; template releases do not have to take into account backwards compatibility at all.
 
 ## Repository Topology
 
-The intended source layout is:
+The core directory structure is as follows:
 
-```text
-reponomics-dashboard-action/
-  action.yml
-  dashboard_action/
-  template/
-  template-contract.yml
-  template-manifest.yml
-  scripts/
-  tests/
-  docs/
-  .github/workflows/
+```
+├── .github/              # Workflows for CI/CD and release management
+├── action.yml            # GitHub action metadata file
+├── dashboard_action/     # Central runtime implementation
+│   ├── run_modules/      # Core module files and facades
+│   └── runtime/
+│       └── managed-docs/ # Documentation that is shipped to Dashboard owners
+│       └── scripts/      # Large collection of implementation scripts and shared logic
+├── docs/                 # Maintainer documentation (live docs, ADRs)
+├── scripts/              # Shared scripts/helpers
+├── template/             # A sub-tree that is mostly isomorphic with the generated template repo
+├── tests/                # Collected tests for both products
+└── vendor/               # Vendored assets (chart.js, fonts)
 ```
 
 The major areas of responsibility are:
@@ -58,9 +69,7 @@ The major areas of responsibility are:
 | Demo tooling | Builds and publishes `reponomics-dashboard-demo` from the generated template plus explicit synthetic data, demo fixtures, and demo-only publication overrides. |
 | `tests/` | Action runtime tests, generated-template tests, scenario snapshots, security/contract checks, and compatibility fixtures. |
 | `.github/workflows/` | CI, release, template publish, pre-release validation, and repository hygiene workflows. |
-| `docs/` | Maintainer documentation for this development repository. User-facing generated-repo docs should live in managed docs or `template/`. |
-
-`dist/template/` is a local build output. It should be treated like a compiled artifact: useful for inspection, tests, and publication, but not as source.
+| `docs/` | Maintainer documentation for this development repository. |
 
 ## Product Boundaries
 
@@ -74,12 +83,8 @@ The action product consists of:
 - bundled runtime assets
 - bundled managed docs
 - Marketplace-facing README and release notes
-- action release tags, currently `v*`
-- floating action tags such as `v0` and `v0.22`
-
-The action version is owned by the Python package/runtime metadata. Release Please may remain useful for the action release PR and GitHub release process, but it should be understood as action-only automation.
-
-Action changes are breaking when they invalidate a previously published template contract within the declared compatible action major. That includes removing action inputs or outputs used by old templates, changing workflow mode semantics, changing required secrets without migration behavior, or changing artifact/provenance formats without compatibility handling.
+- action release tags
+- floating action tags (major and minor lines)
 
 ### Template Product
 
@@ -88,17 +93,12 @@ The template product consists of the generated output published to `reponomics/r
 - `template/`
 - `template-manifest.yml`
 - `template-contract.yml`
-- template-affecting generator scripts
+- template-generator scripts
 - `dashboard_action/runtime/managed_docs/`
 - action metadata required by generated workflows
-
-The template version is owned by `template-contract.yml`, not Release Please. Template releases should use `reponomics-dashboard-vX.Y.Z` tags so they do not compete with action tags. Every public action release should be accepted by a corresponding template release, but the template version remains independent from the action version.
-
-Template changes are breaking when a newly copied generated repository requires different user setup, different repository permissions, different secrets, different GitHub Pages behavior, or a newer action capability than older template versions required. Because there are no users yet, the project can still use this pre-public phase to simplify aggressively, but this distinction should be preserved before public release.
+- template publication workflows
 
 ### Generated Template Repository
-
-`reponomics-dashboard` should contain only polished user-facing template output. It should not contain maintainer scripts, tests, source-only docs, caches, internal planning files, or action runtime source.
 
 Publication should be a reproducible projection from this repository:
 
@@ -110,13 +110,10 @@ source tree at commit S
   -> reponomics-dashboard main
 ```
 
-The generated commit message should continue to record `Source-Commit: S`. That gives maintainers a cheap provenance link from the generated template back to the exact source commit.
-
 ### Demo Repository
 
-`reponomics-dashboard-demo` is a public generated repository that answers a different user question than the template: "What will this look like after I copy the template and run setup?"
+Because the template repository has nothing very interesting to show when it is first copied, the demo repository is maintained as a faithful replica of the current template, seeded with synthetic data. It is intended to deviate from the genuine template to the smallest extent possible - the synthetic data is encrypted according to the same protocols, with the minor difference that the unlock key is printed directly to the unlock screen (normal templates don't expost this, for obvious reasons).
 
-The demo is generated from the same template output, then configured by an explicit demo profile. That profile is narrow and auditable:
 
 - use the same repository layout as a real generated template repository
 - use the same repository layout, rendering paths, encrypted artifact format, Pages publication path, and managed docs surface wherever possible
@@ -126,9 +123,7 @@ The demo is generated from the same template output, then configured by an expli
 - use encrypted dashboard mode with an intentionally public demo key so visitors can unlock the Pages dashboard
 - label the public demo key unmistakably as a demo credential that must never be reused
 
-The demo intentionally violates real-template constraints only where the demonstration requires it. Those violations live in demo-specific source, scripts, or workflow inputs rather than weakening the normal template contract. In particular, the public-template rule that blocks README dashboard generation in public repositories remains true for users; the demo bypasses it through the demo builder and generated demo workflow, not by relaxing the production validation rule.
-
-The demo repository should be treated as a public showroom and an integration test surface, not as a third SemVer product. It should normally track the current compatible action/template line and be republished when action or template changes materially affect the displayed experience. The initial artifact-backed demo publication path has landed; the remaining work is cadence automation, continued UI/product polish, and optional richer artifact-history simulation.
+The demo repository should be treated as a public showroom and, to some degree, a secondary integration test surface, not as a third semantically versioned product. It is regenerated every day so that the synthetic data can be advanced in time by one day, giving the impression that it is always "up to date". 
 
 ## Development Tooling
 
@@ -392,27 +387,27 @@ Release Please may still help as process tooling if configured narrowly, for exa
 
 The managed-docs snapshot at `dist/template/docs/reponomics/` is generated by `scripts/build_template.py` through `scripts/template_contract.py`. The generated `.manifest.json` records the current action version, managed namespace, source timestamp, and SHA-256 hashes for the rendered managed-doc files. Maintainers should not edit that manifest or its generated hashes by hand.
 
-To regenerate the template locally, run `make build-template`. To prove the generated tree still matches the source contract, run `make verify-template`; this target rebuilds `dist/template` before verification so ignored local output cannot mask stale generated files. If managed docs, action version metadata, template workflow refs, accepted action metadata, or the template contract change, these commands are the authoritative way to refresh and verify `dist/template`.
+To regenerate the template locally, run `make build-template`. To prove the generated tree still matches the source contract, run `make verify-template`; this target rebuilds `dist/template` before verification so ignored local output cannot mask stale generated files. If managed docs, action version metadata, template workflow or wrapper refs, accepted action metadata, or the template contract change, these commands are the authoritative way to refresh and verify `dist/template`.
 
 Publishing `dist/template` to `reponomics-dashboard` is a product decision for template-only changes, but it is now a required acceptance step for every public action release. Existing generated repositories consume compatible fixes through the floating action channel; the corresponding template release records that the template contract accepts the released action version/tag/SHA and gives SHA-pinned users an auditable recommendation. For template-only changes, perform a template release when the first-copy template surface should change for new users, or use an explicitly recorded manual private publication for non-public staging.
 
 ### Template Contract
 
-`template-contract.yml` is the human-owned compatibility contract between this source repository, the generated template repository, and the public action channel that generated workflows invoke. It is intentionally small: it should answer which template is being published, which Reponomics action line the template uses by default, the minimum compatible template version that action releases must continue to support, which published template refs prove that claim, and where generated managed docs belong.
+`template-contract.yml` is the human-owned compatibility contract between this source repository, the generated template repository, and the public action channel that generated workflows invoke through their local wrapper. It is intentionally small: it should answer which template is being published, which Reponomics action line the template uses by default, the minimum compatible template version that action releases must continue to support, which published template refs prove that claim, and where generated managed docs belong.
 
 The current fields have these meanings:
 
 - `schema_version`: the contract file format. Version `1` means the fields below are required and validated by `scripts/template_contract.py`.
 - `template_version`: the SemVer version of the generated template product. Template release tags must be `reponomics-dashboard-v<template_version>`.
-- `action_repository`: the GitHub repository that generated workflows invoke. For this product line it must remain `reponomics/reponomics-dashboard-action`.
-- `default_action_ref`: the default ref written into executable generated workflows. During the `v0` beta line this should remain the compatible floating major ref `v0`, not a full SHA.
+- `action_repository`: the GitHub repository that the generated local wrapper invokes. For this product line it must remain `reponomics/reponomics-dashboard-action`.
+- `default_action_ref`: the default ref written into the generated local wrapper. During the `v0` beta line this should remain the compatible floating major ref `v0`, not a full SHA.
 - `compatible_action_major`: the action major line the template is allowed to use. It must match `default_action_ref`, so `compatible_action_major: 0` implies `default_action_ref: v0`.
 - `accepted_action`: the released action that this template contract accepts. It records the action repository, SemVer version, exact tag, immutable commit SHA, and default compatible ref that generated templates recommend by default.
 - `minimum_compatible_template_version`: the oldest published template version that action releases must continue to support.
 - `protected_template_refs`: the source-repository template release refs that prove the minimum compatible template version and any additional compatibility-relevant published template releases.
 - `managed_docs_namespace`: the generated repository path that receives the managed Reponomics docs snapshot. It is currently fixed at `docs/reponomics`.
 
-The contract is validated in four layers. Local validation proves the checked-out action version matches `compatible_action_major` and still exposes action metadata required by generated workflows. Generated-template validation proves `dist/template` contains the expected managed-docs snapshot and executable workflow refs matching `action_repository@default_action_ref`. Accepted-action validation proves the recorded action tag resolves to the recorded SHA and that the public default ref is consistent with the accepted release. Action-release validation proves the candidate action still works against both the current generated template and the minimum compatible template version recorded by `template-contract.yml`. Template publication should use `make template-release-gates` so these checks run together before the generated repository is pushed.
+The contract is validated in four layers. Local validation proves the checked-out action version matches `compatible_action_major` and still exposes action metadata required by generated workflows. Generated-template validation proves `dist/template` contains the expected managed-docs snapshot, generated workflows invoke the local wrapper, and the wrapper's remote action ref matches `action_repository@default_action_ref`. Accepted-action validation proves the recorded action tag resolves to the recorded SHA and that the public default ref is consistent with the accepted release. Action-release validation proves the candidate action still works against both the current generated template and the minimum compatible template version recorded by `template-contract.yml`. Template publication should use `make template-release-gates` so these checks run together before the generated repository is pushed.
 
 ### Coordinated Releases
 
@@ -484,6 +479,8 @@ files changed.
 The direct generated-template consumer e2e and the composite action boundary e2e are separate bridge checks. The direct runtime e2e proves that generated consumer repositories still work against the local runtime under realistic template data/config conditions. The composite boundary e2e proves that `action.yml` maps generated workflow inputs into the expected `REPONOMICS_*` environment and executes the runtime command through the composite action surface. They do not both need to run routinely for every PR: run the direct bridge as the regular generated-template behavior gate, and run the composite boundary gate when `action.yml`, generated workflow `with:` blocks, action input names/defaults, or runtime env-loading changes. Product release candidates may run both as an explicit pre-release confidence check.
 
 When changing the action input schema, update the full boundary, not just `action.yml`. The usual checklist is: update `action.yml` input metadata and the composite runtime-step env mapping; update `dashboard_action/run_modules/config.py` and `RuntimeConfig` if the runtime consumes a new or renamed `REPONOMICS_*` variable; update generated workflow `with:` blocks under `template/.github/workflows/`; update managed docs and template README/config examples when user-facing setup changes; update `scripts/template_consumer_e2e.py`'s required composite env contract and generated-repo tests when the boundary intentionally changes. Run `make template-action-boundary-e2e` for any action input/default/env-loading change. Run `make template-consumer-e2e` when the change affects runtime behavior in generated consumer repositories. Run `make template-compat-e2e` for release candidates and for changes that might affect copied template compatibility. If an action release intentionally stops supporting older published templates, update `template-contract.yml`'s `minimum_compatible_template_version` and protected template refs in the same review and make the compatibility reset explicit in release notes.
+
+As a search aid, action input changes often touch `action.yml`, `dashboard_action/run.py`, `dashboard_action/run_modules/config.py`, `dashboard_action/run_modules/core.py`, `dashboard_action/run_modules/validation.py`, `scripts/template_consumer_e2e.py`, `scripts/template_contract.py`, and tests such as `tests/test_action_metadata.py`, `tests/test_run_unit.py`, and `tests/test_runner.py`. This list is intentionally not exhaustive. If these files stop owning the relevant boundary, update the guidance instead of treating the list as a fixed contract.
 
 Compatibility fixtures should be phased by release maturity:
 

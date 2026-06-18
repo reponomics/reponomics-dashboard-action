@@ -458,8 +458,17 @@ def test_incident_reset_purge_runs_after_data_upload() -> None:
     assert "incident-reset" in inputs["mode"]["description"]
     assert "incident-purge-max-runs" not in inputs
     assert "REPONOMICS_INCIDENT_PURGE_MAX_RUNS" not in runtime_env
+    assert inputs["incident-confirm-next-secret"]["default"] == ""
+    assert (
+        runtime_env["REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET"]
+        == "${{ inputs.incident-confirm-next-secret }}"
+    )
     assert purge["if"] == "${{ inputs.mode == 'incident-reset' }}"
     assert purge["env"]["REPONOMICS_INCIDENT_RESET_PURGE_ONLY"] == "true"
+    assert (
+        purge["env"]["REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET"]
+        == "${{ inputs.incident-confirm-next-secret }}"
+    )
     assert "REPONOMICS_INCIDENT_PURGE_MAX_RUNS" not in purge["env"]
     assert _step_index("Purge incident reset history") > _step_index(
         "Upload encrypted dashboard data artifact"

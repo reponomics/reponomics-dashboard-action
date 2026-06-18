@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -118,6 +119,44 @@ def _commit_message(message: str, source_commit: str) -> str:
     return f"{message}\n\nSource-Commit: {source_commit}"
 
 
+def _payload_paths(root: Path) -> set[str]:
+    paths: set[str] = set()
+    for line in template_provenance.canonical_tree_manifest(root).splitlines():
+        if not line:
+            continue
+        payload = json.loads(line)
+        paths.add(str(payload["path"]))
+    return paths
+
+
+def _tracked_paths(worktree: Path) -> set[str]:
+    output = _output(["git", "ls-files"], worktree)
+    return {line for line in output.splitlines() if line}
+
+
+def _verify_payload_tracked(worktree: Path) -> None:
+    payload_paths = _payload_paths(worktree)
+    tracked_paths = _tracked_paths(worktree)
+    unpublished = sorted(payload_paths - tracked_paths)
+    if unpublished:
+        sample = "\n".join(f"  - {path}" for path in unpublished[:20])
+        suffix = "\n  - ..." if len(unpublished) > 20 else ""
+        raise PublishError(
+            "Generated template payload contains file(s) that git will not publish:\n"
+            + sample
+            + suffix
+        )
+
+
+def _verify_output_publishable(output_dir: Path, branch: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="generated-repo-check-") as tmp:
+        worktree = Path(tmp) / "repo"
+        shutil.copytree(output_dir, worktree)
+        _run(["git", "init", "-b", branch], worktree)
+        _run(["git", "add", "-A"], worktree)
+        _verify_payload_tracked(worktree)
+
+
 def _verify_published_digest(output_dir: Path, remote_url: str, branch: str) -> str:
     expected = template_provenance.verify_template_provenance(output_dir)["payload"]["digest"]
     with tempfile.TemporaryDirectory(prefix="published-template-") as tmp:
@@ -168,6 +207,7 @@ def publish(
     if source_commit:
         print(f"Source commit: {source_commit}")
     print(f"Template payload digest: {provenance['payload']['digest']}")
+    _verify_output_publishable(output_dir, branch)
 
     if not push:
         print("Dry run only. Re-run with --push to publish.")

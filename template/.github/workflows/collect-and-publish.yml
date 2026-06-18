@@ -37,7 +37,7 @@ jobs:
 
       - name: Sync managed Reponomics docs
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: docs-sync
           github-token: ${{ github.token }}
@@ -139,7 +139,7 @@ jobs:
 
       - name: Collect retained dashboard data
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: collect
           collection-token: ${{ steps.resolve_collection_token.outputs.collection_token }}
@@ -174,7 +174,7 @@ jobs:
         if: >-
           env.REPONOMICS_SETUP_COMPLETE == 'true' &&
           (env.PUBLISH_PAGES_DASHBOARD == 'true' || env.PUBLISH_README_DASHBOARD == 'true')
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: publish
           artifact-run-id: ${{ github.run_id }}
@@ -207,7 +207,7 @@ jobs:
         if: >-
           env.REPONOMICS_SETUP_COMPLETE == 'true' &&
           (env.PUBLISH_PAGES_DASHBOARD == 'true' || env.PUBLISH_README_DASHBOARD == 'true')
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: publish
           require-collect-provenance: "true"

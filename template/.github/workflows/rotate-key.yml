@@ -45,7 +45,7 @@ jobs:
 
       - name: Rotate dashboard key
         if: env.REPONOMICS_SETUP_COMPLETE == 'true'
-        uses: reponomics/reponomics-dashboard-action@v0
+        uses: ./.github/actions/reponomics
         with:
           mode: rotate-key
           github-token: ${{ github.token }}

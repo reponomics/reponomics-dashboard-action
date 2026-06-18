@@ -267,6 +267,46 @@ def _assert_template_workflow_inputs_supported(
     *,
     action_inputs: set[str],
 ) -> None:
+    wrapper_path = (
+        generated_template.repo_dir / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    )
+    if not wrapper_path.is_file():
+        _assert_legacy_template_workflow_inputs_supported(
+            generated_template,
+            action_inputs=action_inputs,
+        )
+        return
+    wrapper = _load_mapping(wrapper_path)
+    forwarded: set[str] = set()
+    seen_reponomics_step = False
+    for step in _iter_steps(wrapper):
+        uses = str(step.get("uses") or "")
+        if not uses.startswith(f"{ACTION_REPOSITORY}@"):
+            continue
+        seen_reponomics_step = True
+        with_payload = step.get("with") or {}
+        if not isinstance(with_payload, dict):
+            continue
+        forwarded.update(str(name) for name in with_payload)
+    if not seen_reponomics_step:
+        raise TemplateCompatibilityError(
+            f"{generated_template.name}: local wrapper does not invoke {ACTION_REPOSITORY}"
+        )
+    missing = forwarded - action_inputs
+    if missing:
+        raise TemplateCompatibilityError(
+            (
+                f"{generated_template.name}: local wrapper forwards input(s) no longer "
+                + f"declared by action.yml: {', '.join(sorted(missing))}"
+            )
+        )
+
+
+def _assert_legacy_template_workflow_inputs_supported(
+    generated_template: GeneratedTemplate,
+    *,
+    action_inputs: set[str],
+) -> None:
     missing: dict[str, set[str]] = {}
     seen_reponomics_step = False
     for path, workflow in _workflow_documents(generated_template.repo_dir):

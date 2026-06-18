@@ -1,5 +1,8 @@
 # Staging Smoke Protocol
 
+> [!IMPORTANT]
+> This staging smoke effort is currently paused and is not a live release gate. It was started to provide realistic generated-template and copied-repository smoke coverage, then paused because the protocol became complex while more urgent release hardening work took priority. The helper scripts and Make targets remain in the repository, but the staging smoke tests are skipped until the protocol is revisited with a lighter contract model.
+
 This runbook defines the local, maintainer-operated smoke process for exercising generated dashboard repositories before public release. It complements CI and template publication gates; it does not replace them.
 
 The goal is to prove that a real generated repository can be configured, collect data, publish outputs, rotate keys where applicable, and produce dashboards that a maintainer can inspect in a browser.

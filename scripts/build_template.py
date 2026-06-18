@@ -102,6 +102,12 @@ def _relative(path: Path) -> str:
 
 def _matches_path(path: str, pattern: str) -> bool:
     normalized = pattern.rstrip("/")
+    if (
+        "/" not in normalized
+        and not any(char in normalized for char in "*?[")
+        and (normalized.startswith(".") or normalized == "__pycache__")
+    ):
+        return normalized in Path(path).parts
     return (
         path == normalized
         or path.startswith(f"{normalized}/")

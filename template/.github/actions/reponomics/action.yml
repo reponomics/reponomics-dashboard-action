@@ -1,0 +1,96 @@
+name: Reponomics Dashboard
+description: Local wrapper for the generated template's Reponomics Dashboard Action.
+
+inputs:
+  mode:
+    description: Runtime mode.
+    required: true
+  collection-token:
+    description: Value of the API token used for repository data collection.
+    required: false
+    default: ""
+  use-github-app:
+    description: Set true when collection-token is a GitHub App installation token minted in the workflow.
+    required: false
+    default: "false"
+  github-token:
+    description: Token used for GitHub artifact and repository workflow operations.
+    required: false
+    default: ""
+  dashboard-secret:
+    description: Current dashboard or artifact encryption secret.
+    required: false
+    default: ""
+  dashboard-next-secret:
+    description: Next dashboard or artifact encryption secret for key rotation or incident reset.
+    required: false
+    default: ""
+  comparison-secret:
+    description: Optional second dashboard secret for doctor mode.
+    required: false
+    default: ""
+  incident-confirm-mode:
+    description: Destructive incident-reset confirmation.
+    required: false
+    default: ""
+  incident-confirm-purge:
+    description: Destructive incident-reset confirmation for old history purge.
+    required: false
+    default: ""
+  incident-confirm-next-secret:
+    description: Destructive incident-reset confirmation for the replacement dashboard secret.
+    required: false
+    default: ""
+  incident-confirm-irreversible:
+    description: Destructive incident-reset irreversible-action confirmation.
+    required: false
+    default: ""
+  data-mode:
+    description: Data storage mode.
+    required: false
+    default: encrypted
+  retention-days:
+    description: GitHub Actions artifact retention period.
+    required: false
+    default: "90"
+  publish-pages:
+    description: Set false to render dashboard output without deploying GitHub Pages.
+    required: false
+    default: "true"
+  artifact-run-id:
+    description: Optional workflow run ID whose dashboard-data artifact should be restored.
+    required: false
+    default: ""
+  require-collect-provenance:
+    description: Require a matching collect provenance artifact before publishing.
+    required: false
+    default: "false"
+  generate-readme:
+    description: Generate private-repository README dashboard output.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Run Reponomics Dashboard Action
+      id: reponomics
+      uses: reponomics/reponomics-dashboard-action@v0
+      with:
+        mode: ${{ inputs.mode }}
+        collection-token: ${{ inputs.collection-token }}
+        use-github-app: ${{ inputs.use-github-app }}
+        github-token: ${{ inputs.github-token }}
+        dashboard-secret: ${{ inputs.dashboard-secret }}
+        dashboard-next-secret: ${{ inputs.dashboard-next-secret }}
+        comparison-secret: ${{ inputs.comparison-secret }}
+        incident-confirm-mode: ${{ inputs.incident-confirm-mode }}
+        incident-confirm-purge: ${{ inputs.incident-confirm-purge }}
+        incident-confirm-next-secret: ${{ inputs.incident-confirm-next-secret }}
+        incident-confirm-irreversible: ${{ inputs.incident-confirm-irreversible }}
+        data-mode: ${{ inputs.data-mode }}
+        retention-days: ${{ inputs.retention-days }}
+        publish-pages: ${{ inputs.publish-pages }}
+        artifact-run-id: ${{ inputs.artifact-run-id }}
+        require-collect-provenance: ${{ inputs.require-collect-provenance }}
+        generate-readme: ${{ inputs.generate-readme }}

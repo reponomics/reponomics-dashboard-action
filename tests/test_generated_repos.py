@@ -51,6 +51,19 @@ outputs:
 """
 
 
+def _iter_steps(value):
+    steps = []
+    if isinstance(value, dict):
+        if isinstance(value.get("steps"), list):
+            steps.extend(step for step in value["steps"] if isinstance(step, dict))
+        for child in value.values():
+            steps.extend(_iter_steps(child))
+    elif isinstance(value, list):
+        for child in value:
+            steps.extend(_iter_steps(child))
+    return steps
+
+
 def test_template_manifest_includes_thin_template_surface(tmp_path):
     output = tmp_path / "template"
 
@@ -58,6 +71,7 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
 
     required = [
         ".github/scripts/resolve-reponomics-config.py",
+        ".github/actions/reponomics/action.yml",
         ".github/workflows/collect-and-publish.yml",
         ".github/workflows/doctor.yml",
         ".github/workflows/incident-reset.yml",
@@ -129,6 +143,11 @@ def test_template_manifest_expands_directory_file_entries():
     assert (Path("template/SECURITY.template.md"), Path("SECURITY.md")) in root_entries
     assert (Path("template/LICENSE.template"), Path("LICENSE")) in root_entries
     assert all(".template" not in target.name for _, target in root_entries)
+
+
+def test_template_forbidden_basename_matches_nested_paths():
+    assert build_template._matches_path(".github/scripts/__pycache__/module.pyc", "__pycache__")
+    assert build_template._matches_path("docs/.DS_Store", ".DS_Store")
 
 
 def test_template_includes_initial_managed_docs_snapshot(tmp_path):
@@ -211,12 +230,39 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     resolver = (
         output / ".github" / "scripts" / "resolve-reponomics-config.py"
     ).read_text(encoding="utf-8")
+    wrapper_path = output / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = yaml.safe_load(wrapper_path.read_text(encoding="utf-8"))
     collect_publish_workflow = yaml.safe_load(collect_publish)
     incident_reset_workflow = yaml.safe_load(incident_reset)
     doctor_workflow = yaml.safe_load(doctor)
     rotate_workflow = yaml.safe_load(rotate)
 
-    action_ref = f"uses: {contract.action_repository}@{contract.default_action_ref}"
+    action_ref = f"{contract.action_repository}@{contract.default_action_ref}"
+    local_action = f"uses: {template_contract.LOCAL_REPONOMICS_ACTION}"
+    workflow_texts = {
+        "collect-and-publish.yml": collect_publish,
+        "doctor.yml": doctor,
+        "incident-reset.yml": incident_reset,
+        "rotate-key.yml": rotate,
+    }
+    workflow_documents = [
+        collect_publish_workflow,
+        incident_reset_workflow,
+        doctor_workflow,
+        rotate_workflow,
+    ]
+    wrapper_inputs = set(wrapper["inputs"])
+    wrapper_steps = _iter_steps(wrapper)
+    remote_steps = [
+        step for step in wrapper_steps if step.get("uses") == action_ref
+    ]
+    workflow_inputs = {
+        str(input_name)
+        for workflow in workflow_documents
+        for step in _iter_steps(workflow)
+        for input_name in (step.get("with") or {})
+        if step.get("uses") == template_contract.LOCAL_REPONOMICS_ACTION
+    }
     assert "skip_collect:" in collect_publish
     assert "docs-sync:" in collect_publish
     assert "resolve-reponomics-config.py --require-setup" in collect_publish
@@ -224,9 +270,21 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: docs-sync" in collect_publish
     assert "github-token: ${{ github.token }}" in collect_publish
     assert "allow-docs-sync" not in collect_publish
-    assert action_ref in collect_publish
-    assert action_ref in doctor
-    assert action_ref in incident_reset
+    assert len(remote_steps) == 1
+    assert remote_steps[0]["id"] == "reponomics"
+    assert local_action in collect_publish
+    assert local_action in doctor
+    assert local_action in incident_reset
+    assert local_action in rotate
+    assert f"{contract.action_repository}@" not in "\n".join(workflow_texts.values())
+    assert all(
+        str(input_name) in wrapper_inputs
+        for step in wrapper_steps
+        for input_name in (step.get("with") or {})
+        if step.get("uses") == action_ref
+    )
+    assert template_contract.REQUIRED_TEMPLATE_WRAPPER_INPUTS <= wrapper_inputs
+    assert wrapper_inputs == workflow_inputs
     assert 'REPONOMICS_ACTION_REF: "' not in collect_publish
     assert 'REPONOMICS_ACTION_SHA: "' not in collect_publish
     assert 'GENERATE_HTML_DASHBOARD: "false"' not in collect_publish
@@ -244,8 +302,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "Republish dashboard outputs" in collect_publish
     assert "mode: docs-sync" in collect_publish
     assert "allow-docs-sync" not in collect_publish
-    assert action_ref not in setup
-    assert action_ref in rotate
+    assert local_action not in setup
     assert "python scripts/" not in collect_publish
     assert "python scripts/" not in doctor
     assert "python scripts/" not in incident_reset
@@ -303,6 +360,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: incident-reset" in incident_reset
     assert "incident-confirm-mode: ${{ inputs.confirm_mode }}" in incident_reset
     assert "incident-confirm-purge: ${{ inputs.confirm_purge }}" in incident_reset
+    assert "incident-confirm-next-secret: ${{ inputs.confirm_next_secret }}" in incident_reset
     assert "incident-confirm-irreversible: ${{ inputs.confirm_irreversible }}" in incident_reset
     assert "incident-purge-max-runs" not in incident_reset
     assert "timeout-minutes: 30" in incident_reset
@@ -334,6 +392,38 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
     assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
     assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
+
+
+def test_template_contract_rejects_missing_required_wrapper_input(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
+    contract = template_contract.load_contract()
+    wrapper_path = output / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = yaml.safe_load(wrapper_path.read_text(encoding="utf-8"))
+    del wrapper["inputs"]["comparison-secret"]
+    wrapper_path.write_text(yaml.safe_dump(wrapper, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(
+        template_contract.TemplateContractError,
+        match="missing required input",
+    ):
+        template_contract.verify_template_refs(output, contract=contract)
+
+
+def test_template_contract_rejects_unused_wrapper_input(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
+    contract = template_contract.load_contract()
+    wrapper_path = output / template_contract.TEMPLATE_ACTION_WRAPPER_PATH
+    wrapper = yaml.safe_load(wrapper_path.read_text(encoding="utf-8"))
+    wrapper["inputs"]["unused-input"] = {"required": False, "default": ""}
+    wrapper_path.write_text(yaml.safe_dump(wrapper, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(
+        template_contract.TemplateContractError,
+        match="not consumed by generated workflows",
+    ):
+        template_contract.verify_template_refs(output, contract=contract)
 
 
 def test_generated_workflow_run_steps_do_not_interpolate_untrusted_contexts():
@@ -1298,33 +1388,86 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     ],
 )
 def test_template_contract_verify_rejects_unexpected_action_refs(tmp_path, action_ref):
-    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
-    (tmp_path / "template-contract.yml").write_text(
-        Path("template-contract.yml").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
-    (tmp_path / "README.md").write_text(f"uses: {action_ref}\n", encoding="utf-8")
+    output = tmp_path / "template"
+    build_template.build_template(output)
+    contract = template_contract.load_contract()
+    (output / "README.md").write_text(f"uses: {action_ref}\n", encoding="utf-8")
 
     with pytest.raises(template_contract.TemplateContractError, match="Stale template action"):
-        template_contract.verify_template_refs(tmp_path)
+        template_contract.verify_template_refs(output, contract=contract)
 
 
-def test_template_contract_verify_accepts_expected_action_ref(tmp_path):
+def test_template_contract_verify_accepts_expected_wrapper_action_ref(tmp_path):
+    output = tmp_path / "template"
+    build_template.build_template(output)
     contract = template_contract.load_contract()
-    (tmp_path / "action.yml").write_text(ACTION_YML_FIXTURE, encoding="utf-8")
-    (tmp_path / "template-contract.yml").write_text(
-        Path("template-contract.yml").read_text(encoding="utf-8"),
-        encoding="utf-8",
-    )
-    (tmp_path / "README.md").write_text(
-        f"uses: {contract.action_repository}@{contract.default_action_ref}\n",
-        encoding="utf-8",
-    )
 
-    template_contract.verify_template_refs(tmp_path)
+    template_contract.verify_template_refs(output, contract=contract)
 
 
 def test_template_compat_rejects_workflow_inputs_removed_from_action(tmp_path):
+    repo_dir = tmp_path / "template"
+    workflow_dir = repo_dir / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    wrapper_dir = repo_dir / template_contract.TEMPLATE_ACTION_WRAPPER_PATH.parent
+    wrapper_dir.mkdir(parents=True)
+    (wrapper_dir / "action.yml").write_text(
+        "\n".join(
+            [
+                "name: Reponomics Dashboard",
+                "inputs:",
+                "  mode:",
+                "    required: true",
+                "  removed-input:",
+                "    required: false",
+                "runs:",
+                "  using: composite",
+                "  steps:",
+                "    - id: reponomics",
+                "      uses: reponomics/reponomics-dashboard-action@v0",
+                "      with:",
+                "        mode: ${{ inputs.mode }}",
+                "        removed-input: ${{ inputs.removed-input }}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (workflow_dir / "collect.yml").write_text(
+        "\n".join(
+            [
+                "name: Collect",
+                "on: workflow_dispatch",
+                "jobs:",
+                "  collect:",
+                "    runs-on: ubuntu-24.04",
+                "    steps:",
+                f"      - uses: {template_contract.LOCAL_REPONOMICS_ACTION}",
+                "        with:",
+                "          removed-input: value",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    generated_template = template_compat_e2e.GeneratedTemplate(
+        name="test-template",
+        repo_dir=repo_dir,
+        template_version="0.10.0",
+        source_commit="a" * 40,
+    )
+
+    with pytest.raises(
+        template_compat_e2e.TemplateCompatibilityError,
+        match="removed-input",
+    ):
+        template_compat_e2e._assert_template_workflow_inputs_supported(
+            generated_template,
+            action_inputs={"mode"},
+        )
+
+
+def test_template_compat_supports_pre_wrapper_protected_templates(tmp_path):
     repo_dir = tmp_path / "template"
     workflow_dir = repo_dir / ".github" / "workflows"
     workflow_dir.mkdir(parents=True)
@@ -1346,7 +1489,7 @@ def test_template_compat_rejects_workflow_inputs_removed_from_action(tmp_path):
         encoding="utf-8",
     )
     generated_template = template_compat_e2e.GeneratedTemplate(
-        name="test-template",
+        name="pre-wrapper-template",
         repo_dir=repo_dir,
         template_version="0.10.0",
         source_commit="a" * 40,
@@ -1596,4 +1739,26 @@ def test_publish_verifies_published_template_digest(tmp_path):
             output,
             remote.as_posix(),
             "main",
+        )
+
+
+def test_publish_dry_run_rejects_payload_files_ignored_by_git(tmp_path):
+    output = tmp_path / "template"
+    remote = tmp_path / "remote.git"
+    build_template.build_template(output)
+    ignored = output / "__pycache__" / "module.pyc"
+    ignored.parent.mkdir()
+    ignored.write_bytes(b"cache")
+    template_provenance.write_template_provenance(output)
+
+    with pytest.raises(
+        publish_generated_repo.PublishError,
+        match="git will not publish",
+    ):
+        publish_generated_repo.publish(
+            output,
+            remote.as_posix(),
+            "main",
+            "chore: publish generated template",
+            push=False,
         )

@@ -22,6 +22,8 @@ Do not use bare `v*` tags for template releases. Do not use `reponomics-dashboar
 
 Every public action release publishes a corresponding template acceptance release. The acceptance PR records the released action version, tag, resolved commit SHA, and default compatible ref in `template-contract.yml`; merging that PR is the maintainer approval for the template release. Generated template provenance carries the same accepted action metadata. The generated managed-docs manifest still records the bundled action version in `docs/reponomics/.manifest.json`.
 
+Generated dashboard repositories are supported on released action refs: floating major/minor release refs, exact release tags, or full commit SHAs for released action commits. Branch refs such as `main` are not a supported generated-template runtime channel because they can run unreleased action behavior outside the accepted template contract.
+
 ADR 020 records the compatibility-gate rationale and the contract-field cleanup for the minimum compatible template version. ADR 022 records the action-release template acceptance model.
 
 After a major consolidation or other release-cadence reset, it is reasonable to bump `template_version` and, only for an explicit compatibility reset, move `minimum_compatible_template_version` forward. Do that in `template-contract.yml`, not by recording the concrete version values here. Do not move `minimum_compatible_template_version` for ordinary action acceptance releases.
@@ -34,9 +36,11 @@ Action changes are breaking when they invalidate a previously published template
 
 Template changes are breaking when newly copied repositories require different user setup, repository permissions, secrets, Pages behavior, or action capabilities than older template versions required.
 
+When changing the action input schema, update the full boundary, not just `action.yml`. This often includes `action.yml`, `dashboard_action/run.py`, `dashboard_action/run_modules/config.py`, `dashboard_action/run_modules/core.py`, `dashboard_action/run_modules/validation.py`, `scripts/template_consumer_e2e.py`, `scripts/template_contract.py`, and tests such as `tests/test_action_metadata.py`, `tests/test_run_unit.py`, and `tests/test_runner.py`. This list is a search aid, not an exhaustive contract; update it when those files stop owning the relevant boundary.
+
 ## Staging Before Release
 
-Merging to `main` does not require cutting an action release immediately. `main` may serve as a short staging line where maintainers run CI, candidate validation, local smoke tests, private template staging publication, and demo checks before promoting the action or template.
+Merging to `main` does not require cutting an action release immediately. `main` may serve as a short staging line where maintainers run CI, candidate validation, local smoke tests, demo checks, and private template staging publication if the staging protocol is later resumed.
 
 Use this staging period when a change has meaningful surface area, such as dashboard rendering, artifact format, generated workflows, setup behavior, managed docs, release tooling, or demo publication behavior.
 
@@ -46,7 +50,7 @@ Recommended staging flow:
 2. Let scheduled and push CI run on `main`.
 3. Run `.github/workflows/pre-release-validation.yml` against `main`.
 4. Run local or manual smoke checks against a copied generated template when the change is user-visible.
-5. Publish `main` to `reponomics-dashboard-staging` with `.github/workflows/publish-template-staging.yml` when the generated template should be exercised as a persistent private surface.
+5. If the paused staging protocol has been resumed, publish `main` to `reponomics-dashboard-staging` with `.github/workflows/publish-template-staging.yml` when the generated template should be exercised as a persistent private surface.
 6. Refresh the demo from `main` if the public demo is intentionally allowed to show staging behavior.
 7. Cut the action release only after the soak period has not exposed release-blocking regressions.
 
@@ -56,7 +60,9 @@ The public demo can either follow staging `main` or follow a promoted stable ref
 
 ## Template Staging Repository
 
-Provision `reponomics-dashboard-staging` now as a private generated-output repository. It should mirror the production generated-template repository closely enough to support realistic copy/smoke testing, but it is not the canonical user template and should not be advertised.
+Status: staging publication and copied-repository smoke work is paused and is not a live release gate. The effort was started to provide realistic generated-template staging coverage, then paused because the protocol became complex while more urgent release hardening work took priority. The helper scripts, Make targets, and workflow remain in the repository, but staging smoke tests are skipped until the protocol is revisited with a lighter contract model.
+
+When resumed, `reponomics-dashboard-staging` should be provisioned as a private generated-output repository. It should mirror the production generated-template repository closely enough to support realistic copy/smoke testing, but it is not the canonical user template and should not be advertised.
 
 Staging publication is handled by `.github/workflows/publish-template-staging.yml`. It is manual, restricted to `main` or release tags, runs the generated-template gates, dry-runs the staging target, then force-pushes `dist/template` to `reponomics-dashboard-staging`.
 
@@ -151,7 +157,7 @@ The manual `publish-template.yml` dispatch path with `confirm_unreleased_templat
 
 ## Local Release Gates
 
-Before a release or publication handoff, the local equivalent of the release gates is:
+For day-to-day test selection before a change is release-shaped, see [TESTING.md](./TESTING.md). Before a release or publication handoff, the local equivalent of the release gates is:
 
 ```sh
 make lint
@@ -168,7 +174,6 @@ make template-consumer-e2e
 make template-accepted-action-e2e
 make template-release-gates
 make publish-template-dry-run
-make publish-template-staging-dry-run
 ```
 
 For demo-affecting changes, also run:

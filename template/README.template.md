@@ -5,13 +5,13 @@
 
 This is the setup README for your Reponomics dashboard repository. It helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
 
-The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs sync are owned by the versioned action:
+The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs sync are owned by the versioned action referenced by the local wrapper at `.github/actions/reponomics/action.yml`.
 
 ```yaml
-uses: reponomics/reponomics-dashboard-action@v0
+uses: ./.github/actions/reponomics
 ```
 
-If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and pin only if you intend to own manual action updates.
+If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates.
 
 ## Get Started
 

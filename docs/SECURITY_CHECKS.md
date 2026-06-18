@@ -22,7 +22,7 @@ Public visibility for this posture comes from:
 
 PolicyChecks is intentionally narrow: it makes selected repository settings easier for reviewers to inspect. It is an additional public signal, not a replacement for the repository policy or for OpenSSF Scorecard.
 
-Generated dashboard template repositories are different. They intentionally default to the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, so most users receive compatible bug fixes and security fixes without self-managing SHA updates. Users with stricter organization policy can pin generated workflows to exact tags or SHAs, but they then own the upgrade cadence.
+Generated dashboard template repositories are different. They intentionally default to the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, through the local wrapper at `.github/actions/reponomics/action.yml`, so most users receive compatible bug fixes and security fixes without self-managing SHA updates. Users with stricter organization policy can pin that nested wrapper reference to an exact tag or SHA, but they then own the upgrade cadence.
 
 ## Vendored Assets
 

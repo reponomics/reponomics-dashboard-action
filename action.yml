@@ -70,6 +70,10 @@ inputs:
     description: Optional workflow run ID whose dashboard-data artifact should be restored. Blank restores the latest available dashboard-data artifact.
     required: false
     default: ""
+  require-collect-provenance:
+    description: Deprecated compatibility input for older generated templates. The runtime ignores this value because retained data migrations now decouple collect and publish.
+    required: false
+    default: "false"
   generate-readme:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false

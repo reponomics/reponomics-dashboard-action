@@ -497,7 +497,7 @@ def test_publish_pages_input_metadata_contract() -> None:
 
     assert action["inputs"]["publish-pages"]["default"] == "true"
     assert runtime_env["REPONOMICS_PUBLISH_PAGES"] == "${{ inputs.publish-pages }}"
-    assert "require-collect-provenance" not in action["inputs"]
+    assert action["inputs"]["require-collect-provenance"]["default"] == "false"
     assert "REPONOMICS_REQUIRE_COLLECT_PROVENANCE" not in runtime_env
 
 

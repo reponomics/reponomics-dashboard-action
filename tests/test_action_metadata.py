@@ -127,61 +127,16 @@ def test_release_please_remains_action_only() -> None:
     assert "template" not in release_manifest
     assert "template" not in release_config["packages"]
     assert release_config["packages"]["."]["include-component-in-tag"] is False
+    exclude_paths = set(release_config["packages"]["."]["exclude-paths"])
+    assert ".github/workflows/template-release.yml" in exclude_paths
+    assert ".github/workflows/publish-template.yml" not in exclude_paths
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
 
 
-def test_publish_template_workflow_requires_release_tag_or_manual_confirmation() -> None:
-    workflow_text = Path(".github/workflows/publish-template.yml").read_text(encoding="utf-8")
-    workflow = yaml.safe_load(workflow_text)
-    publish_job = workflow["jobs"]["publish-template"]
-    steps = publish_job["steps"]
-    step_names = [step["name"] for step in steps]
-    commands = "\n".join(step["run"] for step in steps if "run" in step)
-    checkout_step = next(step for step in steps if step["name"] == "Checkout release source")
-    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+def test_no_manual_production_template_publication_workflow() -> None:
+    workflow_path = Path(".github/workflows/publish-template.yml")
 
-    assert publish_job["if"] == (
-        "${{ (github.event_name == 'release' && "
-        + "startsWith(github.event.release.tag_name, 'reponomics-dashboard-v')) || "
-        + "(github.event_name == 'workflow_dispatch' && "
-        + "inputs.confirm_unreleased_template_publish) }}"
-    )
-    assert publish_job["environment"] == "template-publication"
-    assert publish_job["permissions"] == {
-        "attestations": "write",
-        "contents": "read",
-        "id-token": "write",
-    }
-    assert "source_ref:" in workflow_text
-    assert "confirm_unreleased_template_publish:" in workflow_text
-    assert "expected_tag=\"reponomics-dashboard-v${template_version}\"" in workflow_text
-    assert "Manual template publication" in workflow_text
-    assert "Manual template publication is restricted to main or reponomics-dashboard-v* tags" in workflow_text
-    assert "token" not in checkout_step["with"]
-    assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
-    assert "make template-release-gates" in commands
-    assert "make build-template" not in commands
-    assert "make validate-template-accepted-action" not in commands
-    assert "make template-consumer-e2e" not in commands
-    assert "make publish-template-dry-run" not in commands
-    assert "make template-release-gates" in workflow_text
-    assert "gh release upload" not in workflow_text
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
-    assert "reponomics-dashboard-template-release-${{ github.event.release.tag_name }}" in workflow_text
-    assert "actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26" in workflow_text
-    assert "dist/template-release/SHA256SUMS" in workflow_text
-    assert step_names.index("Validate generated template release gates") < step_names.index(
-        "Upload template release artifacts"
-    )
-    assert step_names.index("Upload template release artifacts") < step_names.index(
-        "Attest template release artifacts"
-    )
-    assert step_names.index("Attest template release artifacts") < step_names.index(
-        "Create release app token"
-    )
-    assert step_names.index("Create release app token") < step_names.index(
-        "Publish generated template repository"
-    )
+    assert not workflow_path.exists()
 
 
 def test_publish_template_staging_workflow_targets_staging_repo_only() -> None:
@@ -304,12 +259,16 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
     assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
     assert "make template-compat-e2e" in commands
+    assert "make publish-template-dry-run" in commands
+    assert "make package-template-release" in commands
     assert "scripts/accept_action_release.py" in workflow_text
     assert "make validate-template-accepted-action" in commands
     assert "gh release create" not in commands
     assert "gh pr create" in commands
     assert "gh pr edit" in commands
     assert "## Template release notes" in commands
+    assert "publish the generated template repository" in commands
+    assert "create ${template_tag} in reponomics/reponomics-dashboard" in commands
     assert "automation/template-accept-${action_tag}" in commands
     assert 'git push origin "HEAD:${GITHUB_REF_NAME}"' not in commands
     assert 'git push --force-with-lease origin "HEAD:${branch}"' in commands
@@ -321,6 +280,9 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     )
     assert "template_tag=" in workflow_text
     assert step_names.index("Verify action compatibility with generated templates") < (
+        step_names.index("Verify generated template publication readiness")
+    )
+    assert step_names.index("Verify generated template publication readiness") < (
         step_names.index("Create release PR or GitHub release")
     )
     assert step_names.index("Create release PR or GitHub release") < (
@@ -343,31 +305,84 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     steps = job["steps"]
     step_names = [step["name"] for step in steps]
     commands = "\n".join(step["run"] for step in steps if "run" in step)
-    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+    read_token_step = next(
+        step for step in steps if step["name"] == "Create generated template read token"
+    )
+    app_token_step = next(step for step in steps if step["name"] == "Create publication app token")
 
     assert "workflow_dispatch" not in workflow_text
     assert "source_ref:" not in workflow_text
     assert "release_notes:" not in workflow_text
     assert workflow["permissions"] == {"contents": "read", "pull-requests": "read"}
+    assert workflow["concurrency"]["group"] == "generated-template-publication-reponomics-dashboard"
+    assert workflow["concurrency"]["queue"] == "max"
+    assert workflow["concurrency"]["cancel-in-progress"] is False
+    assert job["environment"] == "template-publication"
+    assert job["permissions"] == {
+        "attestations": "write",
+        "contents": "write",
+        "id-token": "write",
+        "pull-requests": "read",
+    }
+    assert job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
     assert "template-contract.yml" in workflow_text
     assert "template/**" in workflow_text
     assert "dashboard_action/runtime/managed_docs/**" in workflow_text
+    assert "scripts/publish_generated_repo.py" in workflow_text
     assert "scripts/template_release_notes.py" in workflow_text
     assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
     assert "--pr-body .tmp/template-release-pr-body.md" in workflow_text
     assert "make template-release-gates" in commands
-    assert "gh release view" in commands
+    assert "curl -sS -L" in commands
+    assert "Generated template release lookup failed with HTTP ${http_status}." in commands
+    assert "--verify-ref \"refs/tags/${TEMPLATE_TAG}\"" in commands
     assert "gh release create" in commands
     assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
-    _assert_release_app_token_permissions_are_implicit(app_token_step)
+    assert "--repo \"${TEMPLATE_EXPECTED_REPO}\"" in workflow_text
+    assert "--target \"${PUBLISHED_COMMIT}\"" not in workflow_text
+    assert "--verify-tag" in workflow_text
+    assert "git -c tag.gpgSign=false tag \"${TEMPLATE_TAG}\" \"${current}\"" in workflow_text
+    assert "git push origin \"refs/tags/${TEMPLATE_TAG}\"" in workflow_text
+    assert "--release-tag \"${TEMPLATE_TAG}\"" in workflow_text
+    assert "--github-output \"$GITHUB_OUTPUT\"" in workflow_text
+    assert "## New-copy template changes" in workflow_text
+    assert "## Accepted action metadata" in workflow_text
+    assert "Source workflow run:" in workflow_text
+    assert "Template provenance:" in workflow_text
+    assert read_token_step["with"]["repositories"] == "reponomics-dashboard"
+    assert read_token_step["with"]["permission-contents"] == "read"
+    assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
+    assert app_token_step["with"]["permission-contents"] == "write"
+    assert app_token_step["with"]["permission-workflows"] == "write"
     assert step_names.index("Prepare template release metadata") < step_names.index(
-        "Check template release status"
+        "Create generated template read token"
     )
-    assert step_names.index("Check template release status") < step_names.index(
+    assert step_names.index("Create generated template read token") < step_names.index(
         "Validate template release gates"
     )
     assert step_names.index("Validate template release gates") < step_names.index(
-        "Create template release"
+        "Check generated template release status"
+    )
+    assert step_names.index("Check generated template release status") < step_names.index(
+        "Verify existing generated template release"
+    )
+    assert step_names.index("Verify existing generated template release") < step_names.index(
+        "Upload template release artifacts"
+    )
+    assert step_names.index("Upload template release artifacts") < step_names.index(
+        "Attest template release artifacts"
+    )
+    assert step_names.index("Attest template release artifacts") < step_names.index(
+        "Create source template tag"
+    )
+    assert step_names.index("Create source template tag") < step_names.index(
+        "Create publication app token"
+    )
+    assert step_names.index("Create publication app token") < step_names.index(
+        "Publish generated template repository"
+    )
+    assert step_names.index("Publish generated template repository") < step_names.index(
+        "Create generated template release"
     )
 
 

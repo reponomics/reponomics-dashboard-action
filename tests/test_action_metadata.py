@@ -310,18 +310,41 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     )
     workflow = yaml.safe_load(workflow_text)
     trigger_paths = set(workflow[True]["push"]["paths"])
-    job = workflow["jobs"]["release-template"]
-    steps = job["steps"]
-    step_names = [step["name"] for step in steps]
-    commands = "\n".join(step["run"] for step in steps if "run" in step)
-    source_tag_step = next(step for step in steps if step["name"] == "Check source template tag status")
+    gates_job = workflow["jobs"]["template-release-gates"]
+    publish_job = workflow["jobs"]["publish-template-release"]
+    gates_steps = gates_job["steps"]
+    publish_steps = publish_job["steps"]
+    gates_step_names = [step["name"] for step in gates_steps]
+    publish_step_names = [step["name"] for step in publish_steps]
+    gates_commands = "\n".join(step["run"] for step in gates_steps if "run" in step)
+    publish_commands = "\n".join(step["run"] for step in publish_steps if "run" in step)
+    source_tag_step = next(
+        step for step in gates_steps if step["name"] == "Check source template tag status"
+    )
     read_token_step = next(
-        step for step in steps if step["name"] == "Create generated template read token"
+        step for step in gates_steps if step["name"] == "Create generated template read token"
     )
     stop_other_source_step = next(
-        step for step in steps if step["name"] == "Stop if source tag belongs to another commit"
+        step
+        for step in gates_steps
+        if step["name"] == "Stop if source tag belongs to another commit"
     )
-    app_token_step = next(step for step in steps if step["name"] == "Create publication app token")
+    publication_step = next(
+        step for step in gates_steps if step["name"] == "Record publication decision"
+    )
+    handoff_step = next(
+        step for step in gates_steps if step["name"] == "Prepare publication handoff"
+    )
+    download_handoff_step = next(
+        step for step in publish_steps if step["name"] == "Download publication handoff"
+    )
+    handoff_artifact_name = (
+        "reponomics-dashboard-template-publication-"
+        + "${{ needs.template-release-gates.outputs.template_tag }}"
+    )
+    app_token_step = next(
+        step for step in publish_steps if step["name"] == "Create publication app token"
+    )
 
     assert "workflow_dispatch" not in workflow_text
     assert "source_ref:" not in workflow_text
@@ -330,14 +353,24 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert workflow["concurrency"]["group"] == "generated-template-publication-reponomics-dashboard"
     assert workflow["concurrency"]["queue"] == "max"
     assert workflow["concurrency"]["cancel-in-progress"] is False
-    assert job["environment"] == "template-publication"
-    assert job["permissions"] == {
+    assert "environment" not in gates_job
+    assert gates_job["permissions"] == {"contents": "read", "pull-requests": "read"}
+    assert gates_job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
+    assert gates_job["outputs"]["should_publish"] == "${{ steps.publication.outputs.should_publish }}"
+    assert gates_job["outputs"]["template_tag"] == "${{ steps.metadata.outputs.template_tag }}"
+    assert (
+        gates_job["outputs"]["accepted_action_tag"]
+        == "${{ steps.metadata.outputs.accepted_action_tag }}"
+    )
+    assert publish_job["needs"] == "template-release-gates"
+    assert publish_job["if"] == "${{ needs.template-release-gates.outputs.should_publish == 'true' }}"
+    assert publish_job["environment"] == "template-publication"
+    assert publish_job["permissions"] == {
         "attestations": "write",
         "contents": "write",
         "id-token": "write",
-        "pull-requests": "read",
     }
-    assert job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
+    assert publish_job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
     assert trigger_paths == {"template-contract.yml"}
     assert "scripts/publish_generated_repo.py" not in trigger_paths
     assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
@@ -347,12 +380,18 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "Rerun or repair publication from the source-tag commit" in stop_other_source_step["run"]
     assert stop_other_source_step["if"] == "${{ steps.source-tag.outputs.status == 'other' }}"
     assert "git fetch --quiet --no-tags origin" in source_tag_step["run"]
-    assert "make template-release-gates" in commands
-    assert "curl -sS -L" in commands
-    assert "Generated template release lookup failed with HTTP ${http_status}." in commands
-    assert "--verify-ref \"refs/tags/${TEMPLATE_TAG}\"" in commands
-    assert "gh release create" in commands
+    assert "make template-release-gates" in gates_commands
+    assert "curl -sS -L" in gates_commands
+    assert "Generated template release lookup failed with HTTP ${http_status}." in gates_commands
+    assert "--verify-ref \"refs/tags/${TEMPLATE_TAG}\"" in gates_commands
+    assert 'echo "should_publish=true" >> "$GITHUB_OUTPUT"' in publication_step["run"]
+    assert "tar -C dist -czf dist/publication-handoff/template-publication.tgz" in handoff_step["run"]
+    assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in workflow_text
+    assert download_handoff_step["with"]["name"] == handoff_artifact_name
+    assert "tar -C dist -xzf .tmp/publication-handoff/template-publication.tgz" in publish_commands
+    assert "gh release create" in publish_commands
     assert "${{ steps.metadata.outputs.template_tag }}" in workflow_text
+    assert "${{ needs.template-release-gates.outputs.template_tag }}" in workflow_text
     assert "--repo \"${TEMPLATE_EXPECTED_REPO}\"" in workflow_text
     assert "--target \"${PUBLISHED_COMMIT}\"" not in workflow_text
     assert "--verify-tag" in workflow_text
@@ -370,55 +409,69 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard"
     assert app_token_step["with"]["permission-contents"] == "write"
     assert app_token_step["with"]["permission-workflows"] == "write"
-    guarded_steps = [
+    gates_guarded_steps = [
         "Validate template release gates",
         "Verify existing generated template release",
         "Upload template release artifacts",
-        "Attest template release artifacts",
-        "Create source template tag",
-        "Create publication app token",
-        "Configure template remote",
-        "Publish generated template repository",
-        "Write generated template release notes",
-        "Create generated template release",
+        "Prepare publication handoff",
+        "Upload publication handoff",
     ]
-    for step in steps:
-        if step["name"] in guarded_steps:
-            assert "steps.source-tag.outputs.status != 'other'" in step["if"]
-    assert step_names.index("Prepare template release metadata") < step_names.index(
+    for step in gates_steps:
+        if step["name"] in gates_guarded_steps:
+            assert "if" in step
+    assert (
+        "steps.source-tag.outputs.status != 'other'"
+        in next(
+            step
+            for step in gates_steps
+            if step["name"] == "Validate template release gates"
+        )["if"]
+    )
+    for step in publish_steps:
+        assert "steps.source-tag.outputs.status" not in str(step.get("if", ""))
+    assert gates_step_names.index("Prepare template release metadata") < gates_step_names.index(
         "Check source template tag status"
     )
-    assert step_names.index("Check source template tag status") < step_names.index(
+    assert gates_step_names.index("Check source template tag status") < gates_step_names.index(
         "Create generated template read token"
     )
-    assert step_names.index("Create generated template read token") < step_names.index(
+    assert gates_step_names.index("Create generated template read token") < gates_step_names.index(
         "Check generated template release status"
     )
-    assert step_names.index("Check generated template release status") < step_names.index(
+    assert gates_step_names.index("Check generated template release status") < gates_step_names.index(
         "Stop if source tag belongs to another commit"
     )
-    assert step_names.index("Stop if source tag belongs to another commit") < step_names.index(
+    assert gates_step_names.index("Stop if source tag belongs to another commit") < gates_step_names.index(
         "Validate template release gates"
     )
-    assert step_names.index("Validate template release gates") < step_names.index(
+    assert gates_step_names.index("Validate template release gates") < gates_step_names.index(
         "Verify existing generated template release"
     )
-    assert step_names.index("Verify existing generated template release") < step_names.index(
+    assert gates_step_names.index("Verify existing generated template release") < gates_step_names.index(
         "Upload template release artifacts"
     )
-    assert step_names.index("Upload template release artifacts") < step_names.index(
+    assert gates_step_names.index("Upload template release artifacts") < gates_step_names.index(
+        "Prepare publication handoff"
+    )
+    assert gates_step_names.index("Prepare publication handoff") < gates_step_names.index(
+        "Upload publication handoff"
+    )
+    assert publish_step_names.index("Download publication handoff") < publish_step_names.index(
+        "Restore publication handoff"
+    )
+    assert publish_step_names.index("Restore publication handoff") < publish_step_names.index(
         "Attest template release artifacts"
     )
-    assert step_names.index("Attest template release artifacts") < step_names.index(
+    assert publish_step_names.index("Attest template release artifacts") < publish_step_names.index(
         "Create source template tag"
     )
-    assert step_names.index("Create source template tag") < step_names.index(
+    assert publish_step_names.index("Create source template tag") < publish_step_names.index(
         "Create publication app token"
     )
-    assert step_names.index("Create publication app token") < step_names.index(
+    assert publish_step_names.index("Create publication app token") < publish_step_names.index(
         "Publish generated template repository"
     )
-    assert step_names.index("Publish generated template repository") < step_names.index(
+    assert publish_step_names.index("Publish generated template repository") < publish_step_names.index(
         "Create generated template release"
     )
 

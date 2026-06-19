@@ -19,17 +19,23 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
-  release-template:
-    name: Publish template release
+  template-release-gates:
+    name: Validate template release
     runs-on: ubuntu-24.04
-    environment: template-publication
     permissions:
-      attestations: write
-      contents: write
-      id-token: write
+      contents: read
       pull-requests: read
+    outputs:
+      accepted_action_sha: ${{ steps.metadata.outputs.accepted_action_sha }}
+      accepted_action_tag: ${{ steps.metadata.outputs.accepted_action_tag }}
+      accepted_action_version: ${{ steps.metadata.outputs.accepted_action_version }}
+      generated_release_exists: ${{ steps.release-status.outputs.exists }}
+      should_publish: ${{ steps.publication.outputs.should_publish }}
+      source_tag_commit: ${{ steps.source-tag.outputs.commit }}
+      source_tag_status: ${{ steps.source-tag.outputs.status }}
+      template_tag: ${{ steps.metadata.outputs.template_tag }}
+      template_version: ${{ steps.metadata.outputs.template_version }}
     env:
-      TEMPLATE_REMOTE: reponomics-dashboard
       TEMPLATE_EXPECTED_REPO: reponomics/reponomics-dashboard
     steps:
       - name: Checkout release source
@@ -189,8 +195,21 @@ jobs:
             --expected-repo "${TEMPLATE_EXPECTED_REPO}" \
             --verify-ref "refs/tags/${TEMPLATE_TAG}"
 
+      - name: Record publication decision
+        id: publication
+        run: |
+          set -euo pipefail
+          if [ "${SOURCE_TAG_STATUS}" != "other" ] && [ "${GENERATED_RELEASE_EXISTS}" != "true" ]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GENERATED_RELEASE_EXISTS: ${{ steps.release-status.outputs.exists }}
+          SOURCE_TAG_STATUS: ${{ steps.source-tag.outputs.status }}
+
       - name: Upload template release artifacts
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
+        if: ${{ steps.publication.outputs.should_publish == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: reponomics-dashboard-template-release-${{ steps.metadata.outputs.template_tag }}
@@ -198,8 +217,64 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Prepare publication handoff
+        if: ${{ steps.publication.outputs.should_publish == 'true' }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/publication-handoff
+          tar -C dist -czf dist/publication-handoff/template-publication.tgz template template-release
+          cp .tmp/template-release-notes.md dist/publication-handoff/template-release-notes.md
+
+      - name: Upload publication handoff
+        if: ${{ steps.publication.outputs.should_publish == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reponomics-dashboard-template-publication-${{ steps.metadata.outputs.template_tag }}
+          path: dist/publication-handoff/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-template-release:
+    name: Publish template release
+    needs: template-release-gates
+    if: ${{ needs.template-release-gates.outputs.should_publish == 'true' }}
+    runs-on: ubuntu-24.04
+    environment: template-publication
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    env:
+      TEMPLATE_REMOTE: reponomics-dashboard
+      TEMPLATE_EXPECTED_REPO: reponomics/reponomics-dashboard
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Download publication handoff
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: reponomics-dashboard-template-publication-${{ needs.template-release-gates.outputs.template_tag }}
+          path: .tmp/publication-handoff
+
+      - name: Restore publication handoff
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp dist
+          tar -C dist -xzf .tmp/publication-handoff/template-publication.tgz
+          cp .tmp/publication-handoff/template-release-notes.md .tmp/template-release-notes.md
+
       - name: Attest template release artifacts
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -208,9 +283,8 @@ jobs:
             dist/template-release/SHA256SUMS
 
       - name: Create source template tag
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
-          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+          TEMPLATE_TAG: ${{ needs.template-release-gates.outputs.template_tag }}
         run: |
           set -euo pipefail
 
@@ -234,7 +308,6 @@ jobs:
 
       - name: Create publication app token
         id: app-token
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -245,7 +318,6 @@ jobs:
           permission-workflows: write
 
       - name: Configure template remote
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           RELEASE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -254,9 +326,8 @@ jobs:
 
       - name: Publish generated template repository
         id: publish
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
-          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
+          TEMPLATE_TAG: ${{ needs.template-release-gates.outputs.template_tag }}
         run: |
           set -euo pipefail
           venv/bin/python scripts/publish_generated_repo.py \
@@ -270,15 +341,14 @@ jobs:
             --push
 
       - name: Write generated template release notes
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
-          ACCEPTED_ACTION_TAG: ${{ steps.metadata.outputs.accepted_action_tag }}
-          ACCEPTED_ACTION_SHA: ${{ steps.metadata.outputs.accepted_action_sha }}
-          ACCEPTED_ACTION_VERSION: ${{ steps.metadata.outputs.accepted_action_version }}
+          ACCEPTED_ACTION_TAG: ${{ needs.template-release-gates.outputs.accepted_action_tag }}
+          ACCEPTED_ACTION_SHA: ${{ needs.template-release-gates.outputs.accepted_action_sha }}
+          ACCEPTED_ACTION_VERSION: ${{ needs.template-release-gates.outputs.accepted_action_version }}
           PUBLISHED_COMMIT: ${{ steps.publish.outputs.published_commit }}
           SOURCE_COMMIT: ${{ github.sha }}
-          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
-          TEMPLATE_VERSION: ${{ steps.metadata.outputs.template_version }}
+          TEMPLATE_TAG: ${{ needs.template-release-gates.outputs.template_tag }}
+          TEMPLATE_VERSION: ${{ needs.template-release-gates.outputs.template_version }}
         run: |
           set -euo pipefail
           {
@@ -306,13 +376,11 @@ jobs:
           } > .tmp/generated-template-release-notes.md
 
       - name: Create generated template release
-        if: ${{ steps.source-tag.outputs.status != 'other' && steps.release-status.outputs.exists != 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TEMPLATE_TAG: ${{ steps.metadata.outputs.template_tag }}
-          TEMPLATE_VERSION: ${{ steps.metadata.outputs.template_version }}
+          TEMPLATE_TAG: ${{ needs.template-release-gates.outputs.template_tag }}
+          TEMPLATE_VERSION: ${{ needs.template-release-gates.outputs.template_version }}
           TEMPLATE_EXPECTED_REPO: ${{ env.TEMPLATE_EXPECTED_REPO }}
-          PUBLISHED_COMMIT: ${{ steps.publish.outputs.published_commit }}
         run: |
           set -euo pipefail
           gh release create "${TEMPLATE_TAG}" \

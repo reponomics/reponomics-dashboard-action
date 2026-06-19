@@ -1,0 +1,446 @@
+{
+  "chunk_count": 3,
+  "chunks": {
+    "c0001": "{\"growth\":{\"per_repo\":{\"conversion\":{\"forks\":{\"denominator\":88,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stargazers\":{\"denominator\":88,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stars\":{\"denominator\":88,\"denominator_metric\":\"visitors\",\"value\":0.0},\"subscribers\":{\"denominator\":88,\"denominator_metric\":\"visitors\",\"value\":0.0}},\"deltas\":{\"current_forks\":7,\"current_stargazers\":46,\"current_stars\":46,\"current_subscribers\":11,\"end_date\":\"2026-06-08\",\"forks_delta\":0,\"sample_count\":8,\"stargazers_delta\":0,\"stars_delta\":0,\"start_date\":\"2026-06-01\",\"subscribers_delta\":0},\"repo\":\"demo/toolkit\",\"series\":{\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\"],\"forks\":[7,7,7,7,7,7,7,7],\"samples\":8,\"stargazers\":[46,46,46,46,46,46,46,46],\"subscribers\":[11,11,11,11,11,11,11,11]},\"traffic\":{\"clone_uniques\":24,\"clones\":32,\"sample_count\":8,\"uniques\":88,\"views\":188}}},\"repo\":\"demo/toolkit\",\"repo_paths\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"16\",\"path\":\"/demo/toolkit\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"title\":\"Repository overview\",\"uniques\":\"9\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"6\",\"path\":\"/demo/toolkit/blob/main/README.md\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"title\":\"README\",\"uniques\":\"3\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"4\",\"path\":\"/demo/toolkit/releases\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"title\":\"Releases\",\"uniques\":\"2\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"path\":\"/demo/toolkit/tree/main/docs\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"title\":\"Documentation\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"path\":\"/demo/toolkit/issues\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"title\":\"Issues\",\"uniques\":\"1\"}],\"repo_referrers\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"16\",\"referrer\":\"github.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"9\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"10\",\"referrer\":\"google.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"6\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"6\",\"referrer\":\"docs.github.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"3\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"4\",\"referrer\":\"news.ycombinator.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"2\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"referrer\":\"reddit.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"1\",\"referrer\":\"stackoverflow.com\",\"repo\":\"demo/toolkit\",\"schema_version\":\"3\",\"uniques\":\"1\"}],\"repo_series\":{\"clone_uniques\":[3,3,3,3,3,3,3,3,null,null,null],\"clones\":[4,4,4,4,4,4,4,4,null,null,null],\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\",\"2026-06-09\",\"2026-06-10\",\"2026-06-11\"],\"uniques\":[11,11,11,11,11,11,11,11,null,null,null],\"views\":[20,21,22,23,24,25,26,27,null,null,null]},\"repo_weekday\":{\"clones\":[4.0,4.0,4.0,4.0,4.0,4.0,4.0],\"labels\":[\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\",\"Sat\",\"Sun\"],\"views\":[23.5,21.0,22.0,23.0,24.0,25.0,26.0]}}",
+    "c0002": "{\"growth\":{\"per_repo\":{\"conversion\":{\"forks\":{\"denominator\":72,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stargazers\":{\"denominator\":72,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stars\":{\"denominator\":72,\"denominator_metric\":\"visitors\",\"value\":0.0},\"subscribers\":{\"denominator\":72,\"denominator_metric\":\"visitors\",\"value\":0.0}},\"deltas\":{\"current_forks\":5,\"current_stargazers\":35,\"current_stars\":35,\"current_subscribers\":8,\"end_date\":\"2026-06-08\",\"forks_delta\":0,\"sample_count\":8,\"stargazers_delta\":0,\"stars_delta\":0,\"start_date\":\"2026-06-01\",\"subscribers_delta\":0},\"repo\":\"demo/docs-site\",\"series\":{\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\"],\"forks\":[5,5,5,5,5,5,5,5],\"samples\":8,\"stargazers\":[35,35,35,35,35,35,35,35],\"subscribers\":[8,8,8,8,8,8,8,8]},\"traffic\":{\"clone_uniques\":16,\"clones\":24,\"sample_count\":8,\"uniques\":72,\"views\":156}}},\"repo\":\"demo/docs-site\",\"repo_paths\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"14\",\"path\":\"/demo/docs-site\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"title\":\"Repository overview\",\"uniques\":\"8\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"5\",\"path\":\"/demo/docs-site/blob/main/README.md\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"title\":\"README\",\"uniques\":\"2\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"path\":\"/demo/docs-site/releases\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"title\":\"Releases\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"path\":\"/demo/docs-site/tree/main/docs\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"title\":\"Documentation\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"path\":\"/demo/docs-site/issues\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"title\":\"Issues\",\"uniques\":\"1\"}],\"repo_referrers\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"14\",\"referrer\":\"github.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"8\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"8\",\"referrer\":\"google.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"4\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"5\",\"referrer\":\"docs.github.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"3\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"referrer\":\"news.ycombinator.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"referrer\":\"reddit.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"1\",\"referrer\":\"stackoverflow.com\",\"repo\":\"demo/docs-site\",\"schema_version\":\"3\",\"uniques\":\"1\"}],\"repo_series\":{\"clone_uniques\":[2,2,2,2,2,2,2,2,null,null,null],\"clones\":[3,3,3,3,3,3,3,3,null,null,null],\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\",\"2026-06-09\",\"2026-06-10\",\"2026-06-11\"],\"uniques\":[9,9,9,9,9,9,9,9,null,null,null],\"views\":[16,17,18,19,20,21,22,23,null,null,null]},\"repo_weekday\":{\"clones\":[3.0,3.0,3.0,3.0,3.0,3.0,3.0],\"labels\":[\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\",\"Sat\",\"Sun\"],\"views\":[19.5,17.0,18.0,19.0,20.0,21.0,22.0]}}",
+    "c0003": "{\"growth\":{\"per_repo\":{\"conversion\":{\"forks\":{\"denominator\":56,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stargazers\":{\"denominator\":56,\"denominator_metric\":\"visitors\",\"value\":0.0},\"stars\":{\"denominator\":56,\"denominator_metric\":\"visitors\",\"value\":0.0},\"subscribers\":{\"denominator\":56,\"denominator_metric\":\"visitors\",\"value\":0.0}},\"deltas\":{\"current_forks\":3,\"current_stargazers\":24,\"current_stars\":24,\"current_subscribers\":5,\"end_date\":\"2026-06-08\",\"forks_delta\":0,\"sample_count\":8,\"stargazers_delta\":0,\"stars_delta\":0,\"start_date\":\"2026-06-01\",\"subscribers_delta\":0},\"repo\":\"demo/api-monitor\",\"series\":{\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\"],\"forks\":[3,3,3,3,3,3,3,3],\"samples\":8,\"stargazers\":[24,24,24,24,24,24,24,24],\"subscribers\":[5,5,5,5,5,5,5,5]},\"traffic\":{\"clone_uniques\":8,\"clones\":16,\"sample_count\":8,\"uniques\":56,\"views\":124}}},\"repo\":\"demo/api-monitor\",\"repo_paths\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"11\",\"path\":\"/demo/api-monitor\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"title\":\"Repository overview\",\"uniques\":\"6\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"4\",\"path\":\"/demo/api-monitor/blob/main/README.md\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"title\":\"README\",\"uniques\":\"2\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"path\":\"/demo/api-monitor/releases\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"title\":\"Releases\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"path\":\"/demo/api-monitor/tree/main/docs\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"title\":\"Documentation\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"1\",\"path\":\"/demo/api-monitor/issues\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"title\":\"Issues\",\"uniques\":\"1\"}],\"repo_referrers\":[{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"11\",\"referrer\":\"github.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"6\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"6\",\"referrer\":\"google.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"3\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"4\",\"referrer\":\"docs.github.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"2\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"3\",\"referrer\":\"news.ycombinator.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"2\",\"referrer\":\"reddit.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"1\"},{\"captured_at\":\"2026-06-08T12:00:00Z\",\"count\":\"1\",\"referrer\":\"stackoverflow.com\",\"repo\":\"demo/api-monitor\",\"schema_version\":\"3\",\"uniques\":\"1\"}],\"repo_series\":{\"clone_uniques\":[1,1,1,1,1,1,1,1,null,null,null],\"clones\":[2,2,2,2,2,2,2,2,null,null,null],\"dates\":[\"2026-06-01\",\"2026-06-02\",\"2026-06-03\",\"2026-06-04\",\"2026-06-05\",\"2026-06-06\",\"2026-06-07\",\"2026-06-08\",\"2026-06-09\",\"2026-06-10\",\"2026-06-11\"],\"uniques\":[7,7,7,7,7,7,7,7,null,null,null],\"views\":[12,13,14,15,16,17,18,19,null,null,null]},\"repo_weekday\":{\"clones\":[2.0,2.0,2.0,2.0,2.0,2.0,2.0],\"labels\":[\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\",\"Sat\",\"Sun\"],\"views\":[15.5,13.0,14.0,15.0,16.0,17.0,18.0]}}"
+  },
+  "encoding": "json",
+  "summary": {
+    "daily": {
+      "clone_uniques": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        null,
+        null,
+        null
+      ],
+      "clones": [
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        null,
+        null,
+        null
+      ],
+      "dates": [
+        "2026-06-01",
+        "2026-06-02",
+        "2026-06-03",
+        "2026-06-04",
+        "2026-06-05",
+        "2026-06-06",
+        "2026-06-07",
+        "2026-06-08",
+        "2026-06-09",
+        "2026-06-10",
+        "2026-06-11"
+      ],
+      "uniques": [
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        null,
+        null,
+        null
+      ],
+      "views": [
+        48,
+        51,
+        54,
+        57,
+        60,
+        63,
+        66,
+        69,
+        null,
+        null,
+        null
+      ]
+    },
+    "data_quality": {
+      "available": true,
+      "coverage_ratio": 1.0,
+      "days": [
+        {
+          "coverage_ratio": 1.0,
+          "date": "2026-06-11",
+          "error_repos": 0,
+          "has_collection_gaps": false,
+          "latest_captured_at": "2026-06-11T12:00:00Z",
+          "repos": [],
+          "run_count": 1,
+          "skipped_repos": 0,
+          "status": "healthy",
+          "tracked_repos": 3,
+          "with_data_repos": 3,
+          "zero_traffic_repos": 0
+        }
+      ],
+      "error_repos": 0,
+      "has_collection_gaps": false,
+      "latest_captured_at": "2026-06-11T12:00:00Z",
+      "message": "",
+      "repos": [],
+      "skipped_repos": 0,
+      "status": "healthy",
+      "tracked_repos": 3,
+      "with_data_repos": 3,
+      "zero_traffic_repos": 0
+    },
+    "generated_at": "2026-05-28 12:00 UTC",
+    "growth": {
+      "cutoff": "2026-05-26",
+      "latest_date": "2026-06-08",
+      "totals": {
+        "total_forks": 15,
+        "total_forks_delta": 0,
+        "total_stargazers": 105,
+        "total_stargazers_delta": 0,
+        "total_stars": 105,
+        "total_stars_delta": 0,
+        "total_subscribers": 24,
+        "total_subscribers_delta": 0
+      },
+      "window_days": 14
+    },
+    "insights": [
+      "`demo/toolkit` drew 188 views and 88 visitors without downstream growth in the selected window.",
+      "`demo/docs-site` drew 156 views and 72 visitors without downstream growth in the selected window.",
+      "`demo/api-monitor` drew 124 views and 56 visitors without downstream growth in the selected window."
+    ],
+    "insights_v2": [
+      {
+        "downstream_delta": 0,
+        "kind": "growth",
+        "metric": "growth",
+        "repo": "demo/toolkit",
+        "subtype": "high_attention_low_interest",
+        "text": "`demo/toolkit` drew 188 views and 88 visitors without downstream growth in the selected window.",
+        "traffic": 188,
+        "visitors": 88
+      },
+      {
+        "downstream_delta": 0,
+        "kind": "growth",
+        "metric": "growth",
+        "repo": "demo/docs-site",
+        "subtype": "high_attention_low_interest",
+        "text": "`demo/docs-site` drew 156 views and 72 visitors without downstream growth in the selected window.",
+        "traffic": 156,
+        "visitors": 72
+      },
+      {
+        "downstream_delta": 0,
+        "kind": "growth",
+        "metric": "growth",
+        "repo": "demo/api-monitor",
+        "subtype": "high_attention_low_interest",
+        "text": "`demo/api-monitor` drew 124 views and 56 visitors without downstream growth in the selected window.",
+        "traffic": 124,
+        "visitors": 56
+      }
+    ],
+    "meta": {
+      "default_min_activity": 1,
+      "default_range": "recent",
+      "default_window": "14",
+      "recent_window_days": 14,
+      "window_presets": [
+        7,
+        14,
+        30,
+        90,
+        "all"
+      ]
+    },
+    "paths": [
+      {
+        "content": "Repository overview",
+        "count": 16,
+        "path": "/demo/toolkit",
+        "repo": "demo/toolkit",
+        "title": "Repository overview",
+        "uniques": 9
+      },
+      {
+        "content": "Repository overview",
+        "count": 14,
+        "path": "/demo/docs-site",
+        "repo": "demo/docs-site",
+        "title": "Repository overview",
+        "uniques": 8
+      },
+      {
+        "content": "Repository overview",
+        "count": 11,
+        "path": "/demo/api-monitor",
+        "repo": "demo/api-monitor",
+        "title": "Repository overview",
+        "uniques": 6
+      },
+      {
+        "content": "README",
+        "count": 6,
+        "path": "/demo/toolkit/blob/main/README.md",
+        "repo": "demo/toolkit",
+        "title": "README",
+        "uniques": 3
+      },
+      {
+        "content": "README",
+        "count": 5,
+        "path": "/demo/docs-site/blob/main/README.md",
+        "repo": "demo/docs-site",
+        "title": "README",
+        "uniques": 2
+      },
+      {
+        "content": "Releases",
+        "count": 4,
+        "path": "/demo/toolkit/releases",
+        "repo": "demo/toolkit",
+        "title": "Releases",
+        "uniques": 2
+      },
+      {
+        "content": "README",
+        "count": 4,
+        "path": "/demo/api-monitor/blob/main/README.md",
+        "repo": "demo/api-monitor",
+        "title": "README",
+        "uniques": 2
+      },
+      {
+        "content": "Documentation",
+        "count": 3,
+        "path": "/demo/toolkit/tree/main/docs",
+        "repo": "demo/toolkit",
+        "title": "Documentation",
+        "uniques": 1
+      },
+      {
+        "content": "Releases",
+        "count": 3,
+        "path": "/demo/docs-site/releases",
+        "repo": "demo/docs-site",
+        "title": "Releases",
+        "uniques": 1
+      },
+      {
+        "content": "Documentation",
+        "count": 3,
+        "path": "/demo/docs-site/tree/main/docs",
+        "repo": "demo/docs-site",
+        "title": "Documentation",
+        "uniques": 1
+      }
+    ],
+    "referrers": [
+      {
+        "count": 41,
+        "referrer": "github.com",
+        "uniques": 23
+      },
+      {
+        "count": 24,
+        "referrer": "google.com",
+        "uniques": 13
+      },
+      {
+        "count": 15,
+        "referrer": "docs.github.com",
+        "uniques": 8
+      },
+      {
+        "count": 10,
+        "referrer": "news.ycombinator.com",
+        "uniques": 4
+      },
+      {
+        "count": 7,
+        "referrer": "reddit.com",
+        "uniques": 3
+      },
+      {
+        "count": 3,
+        "referrer": "stackoverflow.com",
+        "uniques": 3
+      }
+    ],
+    "repo_chunks": {
+      "demo/api-monitor": "c0003",
+      "demo/docs-site": "c0002",
+      "demo/toolkit": "c0001"
+    },
+    "repos": [
+      {
+        "clone_uniques": 24,
+        "clones": 32,
+        "community": {
+          "available": true,
+          "content_reports_enabled": true,
+          "documentation": "README.md",
+          "has_code_of_conduct": true,
+          "has_contributing": true,
+          "has_issue_template": true,
+          "has_license": true,
+          "has_pull_request_template": true,
+          "has_readme": true,
+          "health_percentage": 78,
+          "updated_at": "2026-06-08T11:30:00Z"
+        },
+        "created_at": "2025-01-01T00:00:00Z",
+        "days": 11,
+        "name": "demo/toolkit",
+        "pushed_at": "2026-06-08T11:00:00Z",
+        "uniques": 88,
+        "updated_at": "2026-06-08T11:30:00Z",
+        "views": 188
+      },
+      {
+        "clone_uniques": 16,
+        "clones": 24,
+        "community": {
+          "available": true,
+          "content_reports_enabled": true,
+          "documentation": "README.md",
+          "has_code_of_conduct": true,
+          "has_contributing": true,
+          "has_issue_template": true,
+          "has_license": true,
+          "has_pull_request_template": true,
+          "has_readme": true,
+          "health_percentage": 87,
+          "updated_at": "2026-06-08T11:30:00Z"
+        },
+        "created_at": "2025-01-01T00:00:00Z",
+        "days": 11,
+        "name": "demo/docs-site",
+        "pushed_at": "2026-06-08T11:00:00Z",
+        "uniques": 72,
+        "updated_at": "2026-06-08T11:30:00Z",
+        "views": 156
+      },
+      {
+        "clone_uniques": 8,
+        "clones": 16,
+        "community": {
+          "available": true,
+          "content_reports_enabled": true,
+          "documentation": "README.md",
+          "has_code_of_conduct": true,
+          "has_contributing": false,
+          "has_issue_template": true,
+          "has_license": true,
+          "has_pull_request_template": true,
+          "has_readme": true,
+          "health_percentage": 96,
+          "updated_at": "2026-06-08T11:30:00Z"
+        },
+        "created_at": "2025-01-01T00:00:00Z",
+        "days": 11,
+        "name": "demo/api-monitor",
+        "pushed_at": "2026-06-08T11:00:00Z",
+        "uniques": 56,
+        "updated_at": "2026-06-08T11:30:00Z",
+        "views": 124
+      }
+    ],
+    "totals": {
+      "days_tracked": 8,
+      "repo_count": 3,
+      "total_clone_uniques": 48,
+      "total_clones": 72,
+      "total_uniques": 216,
+      "total_views": 468
+    },
+    "traffic_reporting": {
+      "affected_repos": [
+        "demo/api-monitor",
+        "demo/docs-site",
+        "demo/toolkit"
+      ],
+      "available": true,
+      "coverage_counts": {
+        "collection_failed": 0,
+        "not_reported_by_api": 9,
+        "repo_skipped": 0,
+        "reported": 24
+      },
+      "has_lag": true,
+      "lag_days": 3,
+      "latest_collection_date": "2026-06-11",
+      "latest_reported_traffic_date": "2026-06-08",
+      "unreported_days": 3,
+      "unreported_end_date": "2026-06-11",
+      "unreported_ranges": [
+        {
+          "days": 3,
+          "end": "2026-06-11",
+          "repo": "demo/api-monitor",
+          "start": "2026-06-09"
+        },
+        {
+          "days": 3,
+          "end": "2026-06-11",
+          "repo": "demo/docs-site",
+          "start": "2026-06-09"
+        },
+        {
+          "days": 3,
+          "end": "2026-06-11",
+          "repo": "demo/toolkit",
+          "start": "2026-06-09"
+        }
+      ],
+      "unreported_start_date": "2026-06-09"
+    },
+    "weekday": {
+      "clones": [
+        9.0,
+        9.0,
+        9.0,
+        9.0,
+        9.0,
+        9.0,
+        9.0
+      ],
+      "labels": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "views": [
+        58.5,
+        51.0,
+        54.0,
+        57.0,
+        60.0,
+        63.0,
+        66.0
+      ]
+    }
+  },
+  "version": 2
+}

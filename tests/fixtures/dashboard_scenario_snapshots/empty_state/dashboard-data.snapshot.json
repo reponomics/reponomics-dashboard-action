@@ -1,0 +1,120 @@
+{
+  "chunk_count": 0,
+  "chunks": {},
+  "encoding": "json",
+  "summary": {
+    "daily": {
+      "clone_uniques": [],
+      "clones": [],
+      "dates": [],
+      "uniques": [],
+      "views": []
+    },
+    "data_quality": {
+      "available": false,
+      "coverage_ratio": 1.0,
+      "days": [],
+      "error_repos": 0,
+      "has_collection_gaps": false,
+      "latest_captured_at": "",
+      "message": "",
+      "repos": [],
+      "skipped_repos": 0,
+      "status": "unknown",
+      "tracked_repos": 0,
+      "with_data_repos": 0,
+      "zero_traffic_repos": 0
+    },
+    "generated_at": "2026-05-28 12:00 UTC",
+    "growth": {
+      "cutoff": null,
+      "latest_date": "",
+      "totals": {
+        "total_forks": 0,
+        "total_forks_delta": 0,
+        "total_stargazers": 0,
+        "total_stargazers_delta": 0,
+        "total_stars": 0,
+        "total_stars_delta": 0,
+        "total_subscribers": 0,
+        "total_subscribers_delta": 0
+      },
+      "window_days": 14
+    },
+    "insights": [],
+    "insights_v2": [],
+    "meta": {
+      "default_min_activity": 1,
+      "default_range": "recent",
+      "default_window": "14",
+      "recent_window_days": 14,
+      "window_presets": [
+        7,
+        14,
+        30,
+        90,
+        "all"
+      ]
+    },
+    "paths": [],
+    "referrers": [],
+    "repo_chunks": {},
+    "repos": [],
+    "totals": {
+      "days_tracked": 0,
+      "repo_count": 0,
+      "total_clone_uniques": 0,
+      "total_clones": 0,
+      "total_uniques": 0,
+      "total_views": 0
+    },
+    "traffic_reporting": {
+      "affected_repos": [],
+      "available": false,
+      "coverage_counts": {
+        "collection_failed": 0,
+        "not_reported_by_api": 0,
+        "repo_skipped": 0,
+        "reported": 0
+      },
+      "has_lag": false,
+      "lag_days": 0,
+      "latest_collection_date": "",
+      "latest_reported_traffic_date": "",
+      "unreported_days": 0,
+      "unreported_end_date": "",
+      "unreported_ranges": [],
+      "unreported_start_date": ""
+    },
+    "weekday": {
+      "clones": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "labels": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "views": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "version": 2
+}

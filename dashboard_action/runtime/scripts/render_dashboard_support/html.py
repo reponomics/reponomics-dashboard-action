@@ -94,25 +94,27 @@ PUBLISHED_FONT_ASSETS = (
 )
 DEMO_UNLOCK_STYLESHEET_ASSET = "demo-unlock.css"
 DEMO_UNLOCK_STYLES = load_asset(DEMO_UNLOCK_STYLESHEET_ASSET)
-PUBLISHED_META_CSP = (
-    "default-src 'none'; "
-    "base-uri 'none'; "
-    "object-src 'none'; "
-    "script-src 'self'; "
-    "script-src-elem 'self'; "
-    "script-src-attr 'none'; "
-    "style-src 'self'; "
-    "style-src-elem 'self'; "
-    "style-src-attr 'none'; "
-    "font-src 'self'; "
-    "img-src 'self'; "
-    "connect-src 'self'; "
-    "media-src 'none'; "
-    "frame-src 'none'; "
-    "child-src 'none'; "
-    "worker-src 'none'; "
-    "manifest-src 'none'; "
-    "form-action 'none'"
+PUBLISHED_META_CSP = "; ".join(
+    [
+        "default-src 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+        "script-src 'self'",
+        "script-src-elem 'self'",
+        "script-src-attr 'none'",
+        "style-src 'self'",
+        "style-src-elem 'self'",
+        "style-src-attr 'none'",
+        "font-src 'self'",
+        "img-src 'self'",
+        "connect-src 'self'",
+        "media-src 'none'",
+        "frame-src 'none'",
+        "child-src 'none'",
+        "worker-src 'none'",
+        "manifest-src 'none'",
+        "form-action 'none'",
+    ]
 )
 HEADER_CSP = PUBLISHED_META_CSP + "; frame-ancestors 'none'"
 
@@ -500,6 +502,32 @@ createDashboardApp().renderDashboard(plaintextDashboardData);
     )
 
 
+def _secure_runtime_js() -> str:
+    source = _published_runtime_asset_content(SECURE_ENTRY_ASSET)
+    source = re.sub(r"^import .*$\n?", "", source, flags=re.MULTILINE)
+    json_loader_pattern = (
+        r"const encryptedDashboardData = await readJsonAsset\(\n.*?\n\);\n"
+        + r"const exportManifestPayload = await readJsonAsset\(\n.*?\n\);\n"
+    )
+    source = re.sub(
+        json_loader_pattern,
+        """function readEmbeddedJson(id) {
+  return JSON.parse(document.getElementById(id).textContent || 'null');
+}
+const encryptedDashboardData = readEmbeddedJson('encrypted-dashboard-data');
+const exportManifestPayload = readEmbeddedJson('export-manifest');
+""",
+        source,
+        flags=re.DOTALL,
+    )
+    return "\n\n".join(
+        [
+            *(_standalone_module_content(name) for name in STANDALONE_BUNDLE_ASSETS),
+            source.strip(),
+        ]
+    )
+
+
 APP_RUNTIME_JS = _public_runtime_js()
 SECURE_RUNTIME_JS = _published_runtime_asset_content(SECURE_ENTRY_ASSET)
 
@@ -847,7 +875,7 @@ def build_encrypted_html(
     return wrap_html(
         body,
         chart_loader,
-        "",
+        "" if external_assets else _secure_runtime_js(),
         extra_head="\n  ".join(extra_head_parts),
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
         extra_csp_scripts=extra_csp_scripts,

@@ -13,8 +13,6 @@ def _git(repo: Path, *args: str) -> None:
     env.update(
         {
             "EDITOR": ":",
-            "GIT_CONFIG_GLOBAL": os.devnull,
-            "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_EDITOR": ":",
             "VISUAL": ":",
         }
@@ -72,12 +70,11 @@ def test_release_policy_from_git_checks_major_manifest_bump_messages(tmp_path: P
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "config", "commit.gpgSign", "false")
-    _git(tmp_path, "config", "tag.gpgSign", "false")
     _git(tmp_path, "config", "core.hooksPath", "/dev/null")
     _write_manifest(tmp_path, "0.24.0")
     _git(tmp_path, "add", ".github/.release-please-manifest.json")
     _git(tmp_path, "commit", "-m", "chore: release 0.24.0")
-    _git(tmp_path, "tag", "v0.24.0")
+    _git(tmp_path, "-c", "tag.gpgSign=false", "tag", "v0.24.0")
     _write_manifest(tmp_path, "1.0.0")
     _git(tmp_path, "add", ".github/.release-please-manifest.json")
     _git(tmp_path, "commit", "-m", "chore: release 1.0.0")

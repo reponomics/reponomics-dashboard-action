@@ -250,6 +250,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     steps = workflow["jobs"]["release"]["steps"]
     step_names = [step["name"] for step in steps]
     commands = "\n".join(step["run"] for step in steps if "run" in step)
+    checkout_step = next(step for step in steps if step["name"] == "Checkout")
 
     assert "reponomics-dashboard-dev" not in workflow_text
     assert "repository_dispatch" not in workflow_text
@@ -259,7 +260,9 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     _assert_release_app_token_permissions_are_implicit(app_token_step)
     assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
     assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
+    assert checkout_step["with"]["fetch-depth"] == 0
     assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
+    assert "python3 scripts/enforce_release_policy.py" in commands
     assert "make template-compat-e2e" in commands
     assert "make publish-template-dry-run" in commands
     assert "make package-template-release" in commands
@@ -281,6 +284,9 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
         in commands
     )
     assert "template_tag=" in workflow_text
+    assert step_names.index("Enforce release policy") < (
+        step_names.index("Verify action compatibility with generated templates")
+    )
     assert step_names.index("Verify action compatibility with generated templates") < (
         step_names.index("Verify generated template publication readiness")
     )

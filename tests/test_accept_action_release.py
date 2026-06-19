@@ -84,6 +84,33 @@ def test_accept_action_release_bumps_template_minor_for_action_minor(tmp_path):
     assert payload["template_version"] == "0.11.0"
 
 
+def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, monkeypatch):
+    root = _write_root(tmp_path, template_version="0.11.0")
+    monkeypatch.setattr(template_contract, "VERSION", "1.0.0")
+
+    payload, changed = accept_action_release.accept_action_release(
+        root=root,
+        action_version="1.0.0",
+        action_sha="b" * 40,
+    )
+
+    assert changed is True
+    assert payload["template_version"] == "1.0.0"
+    assert payload["compatible_action_major"] == 1
+    assert payload["default_action_ref"] == "v1"
+    assert payload["accepted_action"] == {
+        "repository": "reponomics/reponomics-dashboard-action",
+        "version": "1.0.0",
+        "tag": "v1.0.0",
+        "sha": "b" * 40,
+        "default_ref": "v1",
+    }
+    written = _contract_payload(root)
+    assert written["template_version"] == "1.0.0"
+    assert written["compatible_action_major"] == 1
+    assert written["default_action_ref"] == "v1"
+
+
 def test_accept_action_release_is_idempotent_when_action_already_accepted(tmp_path):
     root = _write_root(tmp_path)
     accept_action_release.accept_action_release(

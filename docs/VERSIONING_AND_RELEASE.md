@@ -152,7 +152,7 @@ For a coupled action/template release where the template requires new action beh
 
 1. Land the runtime and template changes on `main`.
 2. Cut the action release first, so `default_action_ref: v0` resolves to the intended released action behavior.
-3. Let `.github/workflows/release-please.yml` open or update the template acceptance PR. That PR class-locks the template SemVer bump to the action release class: action patch implies template patch, and action minor implies template minor.
+3. Let `.github/workflows/release-please.yml` open or update the template acceptance PR. That PR class-locks the template SemVer bump to the action release class: action patch implies template patch, action minor implies template minor, and an explicitly approved action major implies template major plus a `default_action_ref`/`compatible_action_major` transition to the new action major line. Major action releases require a matching `Release-As: X.Y.Z` trailer before Release Please is allowed to create the release.
 4. Review and merge the template acceptance PR as the effective template release approval. The generated PR body includes a `## Template release notes` section with a terse `Updated action to ...` note; edit that section before merging if the template release needs fuller notes.
 5. Let `.github/workflows/template-release.yml` create the source tag, publish the generated template, and create the matching `reponomics-dashboard-vX.Y.Z` release in `reponomics/reponomics-dashboard` from the merged acceptance commit.
 6. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.

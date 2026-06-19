@@ -40,7 +40,7 @@ def _bump_kind(previous: str, current: str) -> str:
             f"action version {current} must be newer than accepted action {previous}"
         )
     if current_tuple[0] != previous_tuple[0]:
-        raise AcceptActionReleaseError("major action/template lockstep is not supported yet")
+        return "major"
     if current_tuple[1] != previous_tuple[1]:
         return "minor"
     return "patch"
@@ -48,6 +48,8 @@ def _bump_kind(previous: str, current: str) -> str:
 
 def _bump_version(version: str, kind: str) -> str:
     major, minor, patch = _version_tuple(version)
+    if kind == "major":
+        return f"{major + 1}.0.0"
     if kind == "minor":
         return f"{major}.{minor + 1}.0"
     if kind == "patch":
@@ -76,8 +78,12 @@ def accept_action_release(
     payload = _load_contract_payload(contract_path)
     contract = template_contract.load_contract(root)
 
+    action_major = _version_tuple(action_version)[0]
+    accepted_major = _version_tuple(contract.accepted_action.version)[0]
     action_tag = action_tag or f"v{action_version}"
-    default_ref = default_ref or contract.default_action_ref
+    default_ref = default_ref or (
+        f"v{action_major}" if action_major != accepted_major else contract.default_action_ref
+    )
     next_action = {
         "repository": contract.action_repository,
         "version": action_version,
@@ -99,11 +105,17 @@ def accept_action_release(
         raise AcceptActionReleaseError("action tag must be v<action-version>")
     if not template_contract.GIT_SHA_RE.fullmatch(action_sha):
         raise AcceptActionReleaseError("action SHA must be a 40-character commit SHA")
-    if default_ref != contract.default_action_ref:
-        raise AcceptActionReleaseError("accepted default ref must match template contract")
 
     bump = template_bump or _bump_kind(contract.accepted_action.version, action_version)
+    expected_default_ref = f"v{action_major}" if bump == "major" else contract.default_action_ref
+    if default_ref != expected_default_ref:
+        raise AcceptActionReleaseError(
+            f"accepted default ref must be {expected_default_ref} for {bump} acceptance"
+        )
     payload["template_version"] = _bump_version(contract.template_version, bump)
+    if bump == "major":
+        payload["compatible_action_major"] = action_major
+        payload["default_action_ref"] = expected_default_ref
     payload["accepted_action"] = next_action
 
     next_text = yaml.safe_dump(payload, sort_keys=False)
@@ -149,7 +161,7 @@ def main() -> None:
     parser.add_argument("--action-sha", required=True)
     parser.add_argument("--action-tag")
     parser.add_argument("--default-ref")
-    parser.add_argument("--template-bump", choices=["patch", "minor"])
+    parser.add_argument("--template-bump", choices=["patch", "minor", "major"])
     parser.add_argument("--github-output", type=Path)
     parser.add_argument("--release-notes", type=Path)
     args = parser.parse_args()

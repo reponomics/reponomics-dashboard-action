@@ -61,6 +61,11 @@ class ConfigOption(Enum):
         workflow_env_var="USE_GITHUB_APP",
         default="false",
     )
+    AUTO_DOCTOR_DAYS = ConfigOptionSpec(
+        config_key="auto_doctor_every_n_days",
+        workflow_env_var="AUTO_DOCTOR_EVERY_N_DAYS",
+        default="0",
+    )
 
     @property
     def config_key(self) -> str:
@@ -99,6 +104,8 @@ DEFAULT_CONFIG_VALUES = {
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
+MIN_AUTO_DOCTOR_DAYS = 0
+MAX_AUTO_DOCTOR_DAYS = 30
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$")
 
@@ -240,6 +247,18 @@ def _resolve(config_path: Path) -> dict[str, str]:
             + f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
         )
 
+    try:
+        auto_doctor_days = int(
+            _defaulted_scalar(scalars, ConfigOption.AUTO_DOCTOR_DAYS.config_key)
+        )
+    except ValueError as exc:
+        raise ValueError("auto_doctor_every_n_days must be an integer.") from exc
+    if auto_doctor_days < MIN_AUTO_DOCTOR_DAYS or auto_doctor_days > MAX_AUTO_DOCTOR_DAYS:
+        raise ValueError(
+            "auto_doctor_every_n_days must be between "
+            f"{MIN_AUTO_DOCTOR_DAYS} and {MAX_AUTO_DOCTOR_DAYS}."
+        )
+
     publish_pages = _bool(
         _required_scalar(scalars, ConfigOption.PUBLISH_PAGES.config_key),
         name=ConfigOption.PUBLISH_PAGES.config_key,
@@ -273,6 +292,7 @@ def _resolve(config_path: Path) -> dict[str, str]:
         ConfigOption.PUBLISH_README.workflow_env_var: publish_readme,
         ConfigOption.RETENTION_DAYS.workflow_env_var: str(retention_days),
         ConfigOption.USE_GITHUB_APP.workflow_env_var: use_github_app,
+        ConfigOption.AUTO_DOCTOR_DAYS.workflow_env_var: str(auto_doctor_days),
         "COLLECTION_AUTH_MODE": collection_auth_mode,
     }
 

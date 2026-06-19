@@ -60,6 +60,7 @@ def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
         "publish_readme_dashboard": False,
         "artifact_retention_days": 90,
         "use_github_app": False,
+        "auto_doctor_every_n_days": 0,
     }
     values.update(overrides)
 
@@ -825,6 +826,7 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "auto_doctor_every_n_days": 0,
         "artifact_run_id": "",
         "publish_pages_requested": True,
         "generate_readme": False,

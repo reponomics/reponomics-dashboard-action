@@ -58,6 +58,11 @@ class ConfigOption(Enum):
         runtime_env_var="REPONOMICS_USE_GITHUB_APP",
         default=False,
     )
+    AUTO_DOCTOR_DAYS = ConfigOptionSpec(
+        config_key="auto_doctor_every_n_days",
+        workflow_env_var="AUTO_DOCTOR_EVERY_N_DAYS",
+        default=0,
+    )
 
     @property
     def config_key(self) -> str:

@@ -31,6 +31,8 @@ DEFAULT_CONFIG_VALUES = {
 }
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
+MIN_AUTO_DOCTOR_DAYS = 0
+MAX_AUTO_DOCTOR_DAYS = 30
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
@@ -163,6 +165,31 @@ def _config_retention_days(payload: dict[str, object]) -> int:
     return _parse_retention_days(str(value))
 
 
+def _parse_auto_doctor_days(raw: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ActionError(f"auto_doctor_every_n_days must be an integer, got {raw!r}.") from exc
+    if value < MIN_AUTO_DOCTOR_DAYS or value > MAX_AUTO_DOCTOR_DAYS:
+        raise ActionError(
+            "auto_doctor_every_n_days must be between "
+            + f"{MIN_AUTO_DOCTOR_DAYS} and {MAX_AUTO_DOCTOR_DAYS}."
+        )
+    return value
+
+
+def _config_auto_doctor_days(payload: dict[str, object]) -> int:
+    value = payload.get(
+        ConfigOption.AUTO_DOCTOR_DAYS.config_key,
+        ConfigOption.AUTO_DOCTOR_DAYS.default,
+    )
+    if value is None:
+        value = ConfigOption.AUTO_DOCTOR_DAYS.default
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ActionError("auto_doctor_every_n_days in config.yaml must be an integer.")
+    return _parse_auto_doctor_days(str(value))
+
+
 def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str]:
     payload = _load_config_yaml(config_path)
     missing = [key for key in EXPLICIT_DECISION_CONFIG_KEYS if key not in payload]
@@ -191,6 +218,7 @@ def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str
             ConfigOption.USE_GITHUB_APP.config_key,
             default=bool(ConfigOption.USE_GITHUB_APP.default),
         ),
+        "auto_doctor_every_n_days": _config_auto_doctor_days(payload),
     }
 
 
@@ -332,6 +360,7 @@ def load_config_from_env() -> RuntimeConfig:
         config_path=config_path,
         data_dir=Path("data"),
         retention_days=_retention_days_from_env_or_config(configured),
+        auto_doctor_every_n_days=int(configured["auto_doctor_every_n_days"]),
         artifact_run_id=_validate_artifact_run_id(_env("REPONOMICS_ARTIFACT_RUN_ID")),
         publish_pages_requested=_bool_from_env_or_config(
             ConfigOption.PUBLISH_PAGES.runtime_env_var or "",

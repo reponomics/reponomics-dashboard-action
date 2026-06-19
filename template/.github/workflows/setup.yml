@@ -151,6 +151,7 @@ jobs:
             echo "- Collection auth mode: \`$COLLECTION_AUTH_MODE\`"
             echo "- README generation: \`$PUBLISH_README_DASHBOARD\`"
             echo "- Artifact retention: \`$RETENTION_DAYS\` day(s)"
+            echo "- Auto-doctor cadence: \`$AUTO_DOCTOR_EVERY_N_DAYS\` day(s)"
           } >> "$GITHUB_STEP_SUMMARY"
 
           {

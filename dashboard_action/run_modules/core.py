@@ -53,6 +53,7 @@ class RuntimeConfig:
     data_dir: Path
     retention_days: int
     artifact_run_id: str
+    auto_doctor_every_n_days: int
     publish_pages_requested: bool
     generate_readme: bool
     pages_index_path: Path

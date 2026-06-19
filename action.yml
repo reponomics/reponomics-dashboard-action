@@ -217,7 +217,7 @@ runs:
         overwrite: true
 
     - name: Upload encrypted dashboard data artifact
-      if: ${{ steps.runtime.outputs.data-mode == 'encrypted' && inputs.mode != 'publish' && inputs.mode != 'update-docs' }}
+      if: ${{ steps.runtime.outputs.data-mode == 'encrypted' && (inputs.mode == 'collect' || inputs.mode == 'rotate-key' || inputs.mode == 'incident-reset') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data
@@ -226,7 +226,7 @@ runs:
         overwrite: true
 
     - name: Upload dashboard data artifact
-      if: ${{ steps.runtime.outputs.data-mode == 'plaintext' && inputs.mode != 'publish' && inputs.mode != 'update-docs' }}
+      if: ${{ steps.runtime.outputs.data-mode == 'plaintext' && (inputs.mode == 'collect' || inputs.mode == 'rotate-key' || inputs.mode == 'incident-reset') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: dashboard-data

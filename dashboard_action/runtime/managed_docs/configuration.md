@@ -31,6 +31,8 @@ The setup fields at the top of `config.yaml` represent important user preference
 
 - `use_github_app`: boolean; when `true`, collection uses a user-owned GitHub App installation token instead of `COLLECTION_TOKEN` as a PAT.
 
+- `auto_doctor_every_n_days`: integer from `0` to `30`; `0` disables automatic doctor diagnostics. When set from `1` to `30`, collect-and-publish runs check the auto-doctor marker and run doctor when at least that many UTC days have elapsed since the last successful auto-doctor.
+
 - `max_repos`: positive integer; caps how many repositories the dashboard tracks.
 
 - `include_only`: list of `owner/repo` names; when non-empty, track only these repositories and ignore automatic discovery.

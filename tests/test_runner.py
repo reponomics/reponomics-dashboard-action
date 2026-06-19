@@ -256,6 +256,7 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "config_path": tmp_path / "config.yaml",
         "data_dir": tmp_path / "data",
         "retention_days": 90,
+        "auto_doctor_every_n_days": 0,
         "artifact_run_id": "",
         "publish_pages_requested": True,
         "generate_readme": False,
@@ -280,6 +281,7 @@ def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
         "publish_readme_dashboard": False,
         "artifact_retention_days": 90,
         "use_github_app": False,
+        "auto_doctor_every_n_days": 0,
     }
     values.update(overrides)
 
@@ -740,6 +742,7 @@ def test_input_normalization_from_env(
     assert config.resolved_data_mode == "encrypted"
     assert config.publish_pages is True
     assert config.retention_days == 30
+    assert config.auto_doctor_every_n_days == 0
     assert config.generate_readme is False
 
 
@@ -768,6 +771,45 @@ def test_use_github_app_input_normalization_from_env(
     config = run.load_config_from_env()
 
     assert config.use_github_app is True
+
+
+def test_auto_doctor_every_n_days_uses_config_and_defaults_when_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, auto_doctor_every_n_days=14)
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+
+    assert run.load_config_from_env().auto_doctor_every_n_days == 14
+
+    config_path.write_text(
+        "\n".join(
+            line
+            for line in config_path.read_text(encoding="utf-8").splitlines()
+            if not line.startswith("auto_doctor_every_n_days:")
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert run.load_config_from_env().auto_doctor_every_n_days == 0
+
+
+@pytest.mark.parametrize("value", [-1, 31, "weekly", True])
+def test_auto_doctor_every_n_days_rejects_invalid_values(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    value: Any,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    _write_runtime_config(config_path, auto_doctor_every_n_days=value)
+    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
+    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
+
+    with pytest.raises(run.ActionError, match="auto_doctor_every_n_days"):
+        run.load_config_from_env()
 
 
 @pytest.mark.parametrize(

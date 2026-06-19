@@ -33,6 +33,21 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 VERSION_STATUS_TEST_VERSION = "0.13.1"
 VERSION_STATUS_TEST_TAG = f"v{VERSION_STATUS_TEST_VERSION}"
 VERSION_STATUS_RELEASES_URL = "https://github.com/reponomics/reponomics-dashboard-action/releases"
+PUBLISHED_CORE_RUNTIME_SOURCES = [
+    "assets/runtime-state.js",
+    "assets/runtime-data-provider.js",
+    "assets/runtime-theme.js",
+    "assets/runtime-format.js",
+    "assets/runtime-selection.js",
+    "assets/runtime-quality-calendar.js",
+    "assets/runtime-series.js",
+    "assets/runtime-momentum.js",
+    "assets/runtime-chart-options.js",
+    "assets/runtime-controls.js",
+    "assets/runtime-charts.js",
+    "assets/runtime-tables.js",
+    "assets/runtime-app.js",
+]
 
 
 @pytest.fixture(autouse=True)
@@ -77,6 +92,27 @@ def _parse_dashboard_html(html: str) -> DashboardHtmlParser:
     parser = DashboardHtmlParser()
     parser.feed(html)
     return parser
+
+
+def _asset_text(index_path: Path, name: str) -> str:
+    return (index_path.parent / "assets" / name).read_text(encoding="utf-8")
+
+
+def _published_script_sources(*, encrypted: bool) -> list[str]:
+    return [
+        "assets/chart.umd.min.js",
+        "assets/theme-bootstrap.js",
+        *PUBLISHED_CORE_RUNTIME_SOURCES,
+        "assets/secure-runtime.js" if encrypted else "assets/public-bootstrap.js",
+    ]
+
+
+def _published_runtime_text(index_path: Path, *, encrypted: bool) -> str:
+    asset_names = [
+        *(source.removeprefix("assets/") for source in PUBLISHED_CORE_RUNTIME_SOURCES),
+        "secure-runtime.js" if encrypted else "public-bootstrap.js",
+    ]
+    return "\n".join(_asset_text(index_path, name) for name in asset_names)
 
 
 def _script_json(html: str, script_id: str) -> dict[str, Any]:
@@ -1429,9 +1465,11 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert 'id="export-button"' in dashboard
     assert 'id="export-hash-button"' in dashboard
     assert "How download verification works" in dashboard
-    assert "validateEncryptedDashboardData" in dashboard
-    assert "EXPECTED_KDF_ITERATIONS = 600000" in dashboard
+    secure_runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
+    assert "validateEncryptedDashboardData" in secure_runtime
+    assert "EXPECTED_KDF_ITERATIONS = 600000" in secure_runtime
     assert 'src="assets/chart.umd.min.js"' in dashboard
+    assert 'src="assets/secure-runtime.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
     assert len(list((config.pages_index_path.parent / "assets").glob("export-data-*.enc"))) == 1
@@ -1460,11 +1498,12 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
     assert encrypted_data["encoding"] == "gzip+json"
     assert "encrypted-payload" not in dashboard
     assert "demo/reponomics" not in dashboard
-    assert "loadRepoChunk" in dashboard
-    assert "ensureCurrentRepoChunksLoaded" in dashboard
-    assert "MAX_COMPARE_REPOS = 8" in dashboard
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
+    assert "loadRepoChunk" in runtime
+    assert "ensureCurrentRepoChunksLoaded" in runtime
+    assert "MAX_COMPARE_REPOS = 8" in runtime
     assert "dashboard-notice-region" in dashboard
-    assert "normalizeChunkLoadError" in dashboard
+    assert "normalizeChunkLoadError" in runtime
 
     summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
     repo_names = [repo["name"] for repo in summary["repos"]]
@@ -2345,10 +2384,11 @@ def test_publish_plaintext_private_renders_plaintext_dashboard_for_artifact_down
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-dashboard-data" not in dashboard
     assert "plaintext-dashboard-data" in dashboard
-    assert "plaintextDashboardData" in dashboard
+    assert "plaintextDashboardData" in _asset_text(config.pages_index_path, "public-bootstrap.js")
     assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
+    assert 'src="assets/public-bootstrap.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
     plaintext_data = _script_json(dashboard, "plaintext-dashboard-data")
@@ -2439,9 +2479,10 @@ def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_pay
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=False)
     assert 'id="calendarMonthLabel"' in dashboard
-    assert "function shiftCalendarMonth(delta)" in dashboard
-    assert "Array.isArray(day?.repos) && day.repos.length > 0" in dashboard
+    assert "function shiftCalendarMonth(delta)" in runtime
+    assert "Array.isArray(day?.repos) && day.repos.length > 0" in runtime
     assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in dashboard
     assert '"date":"2026-04-30","status":"gaps_detected"' in dashboard
     assert '"date":"2026-05-14","status":"all_zero"' in dashboard
@@ -2468,29 +2509,35 @@ def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboar
     assert "encrypted-dashboard-data" in dashboard
     assert "Reponomics Dashboard" in dashboard
     assert 'h1 class="brand">reponomics<span class="accent">.</span></h1>' in dashboard
-    assert "data:font/woff2;base64," in dashboard
+    assert "data:font/woff2;base64," not in dashboard
+    assert 'href="assets/font-face.css"' in dashboard
+    assert (config.pages_index_path.parent / "assets" / "inter-latin-wght-normal.woff2").is_file()
+    assert (
+        config.pages_index_path.parent / "assets" / "jetbrains-mono-latin-wght-normal.woff2"
+    ).is_file()
     assert "fonts.googleapis.com" not in dashboard
     assert 'data-window="7"' in dashboard
     assert 'data-window="14"' in dashboard
     assert 'data-window="30"' in dashboard
     assert 'data-window="90"' in dashboard
     assert 'data-window="all"' in dashboard
-    assert "params.set('window', getSelectedWindow())" in dashboard
-    assert "range === 'recent'" in dashboard
-    assert "range === 'all'" in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert "Attention" in dashboard
     assert "Interest" in dashboard
     assert "Adoption" in dashboard
-    assert "Star Growth" in dashboard
-    assert "Watcher Growth" in dashboard
-    assert "Fork Growth" in dashboard
-    assert "function buildGrowthDeltaSeries(series)" in dashboard
-    assert "stars_delta: deltaFor('stargazers')" in dashboard
-    assert "SERIES_METRIC_KEYS" in dashboard
-    assert "function compareRepoFreshness(a, b)" in dashboard
-    assert "repoFreshnessTimestamp(a)" in dashboard
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
+    assert "Star Growth" in runtime
+    assert "Watcher Growth" in runtime
+    assert "Fork Growth" in runtime
+    assert "params.set('window', getSelectedWindow())" in runtime
+    assert "range === 'recent'" in runtime
+    assert "range === 'all'" in runtime
+    assert "function buildGrowthDeltaSeries(series)" in runtime
+    assert "stars_delta: deltaFor('stargazers')" in runtime
+    assert "SERIES_METRIC_KEYS" in runtime
+    assert "function compareRepoFreshness(a, b)" in runtime
+    assert "repoFreshnessTimestamp(a)" in runtime
     assert '"total_subscribers":2' not in dashboard
     assert '"total_forks_delta":0' not in dashboard
 
@@ -2551,14 +2598,24 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     published = _parse_dashboard_html(dashboard_html)
     csp = _csp_content(dashboard_html)
     script_sources = [script.get("src") for script in published.scripts if script.get("src")]
-    assert script_sources == ["assets/chart.umd.min.js"]
+    assert script_sources == _published_script_sources(encrypted=True)
     assert all(not str(src).startswith(("http://", "https://", "//")) for src in script_sources)
+    assert 'href="assets/font-face.css"' in dashboard_html
+    assert 'href="assets/base.css"' in dashboard_html
+    assert (config.pages_index_path.parent / "assets" / "inter-latin-wght-normal.woff2").is_file()
+    assert (
+        config.pages_index_path.parent / "assets" / "jetbrains-mono-latin-wght-normal.woff2"
+    ).is_file()
     assert "default-src 'self'" in csp
     assert "script-src 'self' 'sha256-" in csp
-    assert "style-src 'self' 'sha256-" in csp
+    assert "style-src 'self'" in csp
+    assert "style-src 'self' 'sha256-" not in csp
+    assert "font-src 'self'" in csp
+    assert "font-src 'self' data:" not in csp
     assert "connect-src 'self'" in csp
     assert "object-src 'none'" in csp
     assert "'unsafe-inline'" not in csp
+    assert "<style" not in dashboard_html
     assert "onclick=" not in dashboard_html
     assert 'style="' not in dashboard_html
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= published.canvases
@@ -2567,20 +2624,21 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert 'id="calendarDayDetail"' in dashboard_html
     assert 'id="calendarGrid"' in dashboard_html
     assert 'id="calendarMonthLabel"' in dashboard_html
-    assert 'data-detail="' in dashboard_html
-    assert "function configureYAxis(chart, labels, datasets, stacked)" in dashboard_html
-    assert "y.max = Math.max(1, Math.ceil(max) + 1)" in dashboard_html
-    assert "function renderCollectionCalendar()" in dashboard_html
-    assert "function computeNoRunStats(days)" in dashboard_html
-    assert "function calendarStatusLabel(day)" in dashboard_html
-    assert "function trafficReportingByDate()" in dashboard_html
-    assert "function applyVisibilityThresholdToQualityDays(days)" in dashboard_html
-    assert "no workflow run" in dashboard_html
-    assert "no-run day(s)" in dashboard_html
-    assert "collection gap day(s)" in dashboard_html
-    assert "traffic lag day(s)" in dashboard_html
-    assert "GitHub traffic unreported" in dashboard_html
-    assert "function shiftCalendarMonth(delta)" in dashboard_html
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
+    assert 'data-detail="' in runtime
+    assert "function configureYAxis(chart, labels, datasets, stacked)" in runtime
+    assert "y.max = Math.max(1, Math.ceil(max) + 1)" in runtime
+    assert "function renderCollectionCalendar()" in runtime
+    assert "function computeNoRunStats(days)" in runtime
+    assert "function calendarStatusLabel(day)" in runtime
+    assert "function trafficReportingByDate()" in runtime
+    assert "function applyVisibilityThresholdToQualityDays(days)" in runtime
+    assert "no workflow run" in runtime
+    assert "no-run day(s)" in runtime
+    assert "collection gap day(s)" in runtime
+    assert "traffic lag day(s)" in runtime
+    assert "GitHub traffic unreported" in runtime
+    assert "function shiftCalendarMonth(delta)" in runtime
 
     standalone = _parse_dashboard_html(
         (tmp_path / "dist" / "dashboard-standalone.html").read_text(encoding="utf-8")
@@ -2605,8 +2663,12 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert '<body class="auth-locked" data-screen-label="Unlock - Encrypted Pages">' in dashboard
     assert 'class="auth-theme-toggle theme-toggle"' in dashboard
     assert 'id="auth-theme-toggle"' in dashboard
-    assert "right: calc(env(safe-area-inset-right, 0px) + 1rem);" in dashboard
-    assert "document.querySelectorAll('.theme-toggle')" in dashboard
+    assert "right: calc(env(safe-area-inset-right, 0px) + 1rem);" in _asset_text(
+        config.pages_index_path, "base.css"
+    )
+    assert "document.querySelectorAll('.theme-toggle')" in _asset_text(
+        config.pages_index_path, "runtime-theme.js"
+    )
 
     assert 'class="auth-card-icon"' in dashboard
     assert 'class="auth-mark"' not in dashboard
@@ -2630,7 +2692,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
 
     expected_runtime_markers = [
         "UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:'",
@@ -2646,7 +2708,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
         "Wrong dashboard key or corrupted data. Try again in ",
     ]
     for marker in expected_runtime_markers:
-        assert marker in dashboard
+        assert marker in runtime
 
 
 def test_publish_dashboard_toolbar_controls_snapshot(
@@ -2678,19 +2740,20 @@ def test_publish_dashboard_toolbar_layout_and_status_regression(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "font-size: clamp(2.75rem, 5.2vw, 3.2rem);" in dashboard
-    assert dashboard.count(".theme-toggle .theme-label { display: none; }") == 1
-    assert "@media (max-width: 1240px) {" in dashboard
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in dashboard
-    assert ".hero-toolbar-controls > .export-verify-tip > summary {" in dashboard
-    assert "@media (max-width: 480px) {" in dashboard
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in dashboard
-    assert "grid-template-columns: repeat(3, minmax(0, max-content));" not in dashboard
-    assert "grid-template-columns: repeat(2, minmax(0, max-content));" not in dashboard
-    assert "const useMultiline = rawMessage.includes('\\n');" in dashboard
-    assert "setExportStatus('📄 CSV export ready.\\nSHA-256: ' + plaintextSha256, 'success');" in dashboard
-    assert "const shaMatch = /SHA-256:\\\\s*([0-9a-f]{16,})/i.exec(rawMessage);" not in dashboard
+    base_css = _asset_text(config.pages_index_path, "base.css")
+    secure_runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
+    assert "font-size: clamp(2.75rem, 5.2vw, 3.2rem);" in base_css
+    assert base_css.count(".theme-toggle .theme-label { display: none; }") == 1
+    assert "@media (max-width: 1240px) {" in base_css
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in base_css
+    assert ".hero-toolbar-controls > .export-verify-tip > summary {" in base_css
+    assert "@media (max-width: 480px) {" in base_css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in base_css
+    assert "grid-template-columns: repeat(3, minmax(0, max-content));" not in base_css
+    assert "grid-template-columns: repeat(2, minmax(0, max-content));" not in base_css
+    assert "const useMultiline = rawMessage.includes('\\n');" in secure_runtime
+    assert "setExportStatus('📄 CSV export ready.\\nSHA-256: ' + plaintextSha256, 'success');" in secure_runtime
+    assert "const shaMatch = /SHA-256:\\\\s*([0-9a-f]{16,})/i.exec(rawMessage);" not in secure_runtime
 
 
 def test_version_status_semver_comparison() -> None:

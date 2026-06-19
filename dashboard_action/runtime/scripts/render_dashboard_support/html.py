@@ -6,6 +6,7 @@ import base64
 import hashlib
 import html
 import json
+import shutil
 from pathlib import Path
 from typing import Any, Mapping, TypedDict, cast
 
@@ -41,70 +42,33 @@ VENDORED_MONO_FONT_PATH = (
 )
 PBKDF2_ITERATIONS = 600_000
 BASE_STYLES = load_asset("base.css")
-APP_RUNTIME_JS = load_asset("app-runtime.js")
+CORE_RUNTIME_ASSETS = (
+    "runtime-state.js",
+    "runtime-data-provider.js",
+    "runtime-theme.js",
+    "runtime-format.js",
+    "runtime-selection.js",
+    "runtime-quality-calendar.js",
+    "runtime-series.js",
+    "runtime-momentum.js",
+    "runtime-chart-options.js",
+    "runtime-controls.js",
+    "runtime-charts.js",
+    "runtime-tables.js",
+    "runtime-app.js",
+)
+PUBLISHED_STYLESHEET_ASSETS = ("font-face.css", "base.css")
+THEME_BOOTSTRAP_ASSET = "theme-bootstrap.js"
+PUBLIC_BOOTSTRAP_ASSET = "public-bootstrap.js"
+SECURE_RUNTIME_ASSET = "secure-runtime.js"
+PUBLISHED_FONT_ASSETS = (
+    (VENDORED_INTER_FONT_PATH, "inter-latin-wght-normal.woff2"),
+    (VENDORED_MONO_FONT_PATH, "jetbrains-mono-latin-wght-normal.woff2"),
+)
+APP_RUNTIME_JS = "\n".join(load_asset(name) for name in CORE_RUNTIME_ASSETS)
 SECURE_RUNTIME_JS = load_asset("secure-runtime.js")
-DEMO_UNLOCK_STYLES = """
-    .demo-unlock-panel {
-      border: 1px solid rgba(63, 185, 80, 0.32);
-      border-radius: 12px;
-      background: rgba(63, 185, 80, 0.08);
-      padding: 0.85rem;
-      margin-bottom: 1rem;
-    }
-    .demo-unlock-copy {
-      margin-bottom: 0.75rem;
-    }
-    .demo-unlock-label {
-      color: var(--text);
-      font-weight: 650;
-      font-size: 0.92rem;
-      margin-bottom: 0.25rem;
-    }
-    .demo-unlock-note {
-      margin: 0;
-      color: var(--text-muted);
-      line-height: 1.45;
-      font-size: 0.9rem;
-    }
-    .demo-unlock-key-row {
-      display: flex;
-      gap: 0.65rem;
-      align-items: stretch;
-      flex-wrap: wrap;
-    }
-    .demo-unlock-key {
-      flex: 1 1 240px;
-      min-width: 0;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--bg-raised);
-      color: var(--text);
-      padding: 0.72rem 0.8rem;
-      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.84rem;
-      overflow-wrap: anywhere;
-    }
-    .demo-unlock-button {
-      border: 1px solid rgba(63, 185, 80, 0.42);
-      border-radius: 10px;
-      background: rgba(63, 185, 80, 0.16);
-      color: var(--text);
-      min-height: 42px;
-      padding: 0 1rem;
-      font-family: 'Inter', sans-serif;
-      font-weight: 650;
-      cursor: pointer;
-      transition: border-color 150ms ease, background 150ms ease;
-    }
-    .demo-unlock-button:hover {
-      border-color: var(--c-positive);
-      background: rgba(63, 185, 80, 0.24);
-    }
-    .demo-unlock-button:focus-visible {
-      outline: 2px solid var(--c-positive);
-      outline-offset: 2px;
-    }
-"""
+DEMO_UNLOCK_STYLESHEET_ASSET = "demo-unlock.css"
+DEMO_UNLOCK_STYLES = load_asset(DEMO_UNLOCK_STYLESHEET_ASSET)
 
 
 def _font_face_rule(family: str, path: Path, weight_range: str) -> str:
@@ -390,14 +354,20 @@ def csp_hash(content: str) -> str:
     return "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
 
 
-def build_csp(style_blocks: list[str], script_blocks: list[str]) -> str:
+def build_csp(
+    style_blocks: list[str],
+    script_blocks: list[str],
+    *,
+    allow_font_data: bool = True,
+) -> str:
     style_sources = ["'self'", *[csp_hash(block) for block in style_blocks if block]]
     script_sources = ["'self'", *[csp_hash(block) for block in script_blocks if block]]
+    font_sources = ["'self'", *(["data:"] if allow_font_data else [])]
     directives = [
         "default-src 'self'",
         "script-src " + " ".join(script_sources),
         "style-src " + " ".join(style_sources),
-        "font-src 'self' data:",
+        "font-src " + " ".join(font_sources),
         "img-src 'self' data:",
         "connect-src 'self'",
         "object-src 'none'",
@@ -419,6 +389,84 @@ def theme_bootstrap_js() -> str:
     })();"""
 
 
+def _asset_path(name: str) -> str:
+    return f"assets/{name}"
+
+
+def _published_head_assets(
+    chart_loader: str,
+    encrypted: bool,
+    *,
+    include_demo_styles: bool = False,
+) -> str:
+    scripts = [
+        THEME_BOOTSTRAP_ASSET,
+        *CORE_RUNTIME_ASSETS,
+        SECURE_RUNTIME_ASSET if encrypted else PUBLIC_BOOTSTRAP_ASSET,
+    ]
+    stylesheets = (
+        *PUBLISHED_STYLESHEET_ASSETS,
+        *((DEMO_UNLOCK_STYLESHEET_ASSET,) if include_demo_styles else ()),
+    )
+    tags = [
+        f'  <link rel="stylesheet" href="{_asset_path(name)}">'
+        for name in stylesheets
+    ]
+    tags.append(f"  {chart_loader}")
+    tags.extend(
+        f'  <script defer src="{_asset_path(name)}"></script>'
+        for name in scripts
+    )
+    return "\n".join(tags)
+
+
+def _secure_runtime_js() -> str:
+    return SECURE_RUNTIME_JS.replace("__PBKDF2_ITERATIONS__", str(PBKDF2_ITERATIONS))
+
+
+def _public_runtime_js() -> str:
+    return APP_RUNTIME_JS + "\n" + load_asset(PUBLIC_BOOTSTRAP_ASSET)
+
+
+def _encrypted_runtime_js() -> str:
+    return APP_RUNTIME_JS + "\n" + _secure_runtime_js()
+
+
+def _published_runtime_asset_content(name: str) -> str:
+    if name == SECURE_RUNTIME_ASSET:
+        return _secure_runtime_js()
+    return load_asset(name)
+
+
+def published_runtime_assets(encrypted: bool) -> tuple[str, ...]:
+    return (
+        THEME_BOOTSTRAP_ASSET,
+        *CORE_RUNTIME_ASSETS,
+        SECURE_RUNTIME_ASSET if encrypted else PUBLIC_BOOTSTRAP_ASSET,
+    )
+
+
+def copy_published_dashboard_assets(output_path: str, *, encrypted: bool) -> None:
+    """Copy first-party dashboard assets beside a generated published page."""
+    asset_dir = Path(output_path).parent / "assets"
+    asset_dir.mkdir(parents=True, exist_ok=True)
+
+    for asset_name in (
+        *PUBLISHED_STYLESHEET_ASSETS,
+        DEMO_UNLOCK_STYLESHEET_ASSET,
+        *published_runtime_assets(encrypted),
+    ):
+        (asset_dir / asset_name).write_text(
+            _published_runtime_asset_content(asset_name)
+            if asset_name.endswith(".js")
+            else load_asset(asset_name),
+            encoding="utf-8",
+        )
+
+    for source, filename in PUBLISHED_FONT_ASSETS:
+        shutil.copyfile(source, asset_dir / filename)
+
+
 def wrap_html(
     body: str,
     chart_loader: str,
@@ -428,18 +476,32 @@ def wrap_html(
     inline_chart_js: str = "",
     extra_csp_scripts: list[str] | None = None,
     extra_styles: str = "",
+    external_assets: bool = False,
+    encrypted_assets: bool = False,
 ) -> str:
     """Wrap page markup in the shared HTML shell."""
     body_attribute_text = f" {body_attributes}" if body_attributes else ""
-    style_content = f"{build_font_face_styles()}\n{BASE_STYLES}{extra_styles}"
+    style_content = "" if external_assets else f"{build_font_face_styles()}\n{BASE_STYLES}{extra_styles}"
     theme_js = theme_bootstrap_js()
-    script_blocks = [
-        inline_chart_js,
-        theme_js,
-        *(extra_csp_scripts or []),
-        runtime_js,
-    ]
-    csp = html.escape(build_csp([style_content], script_blocks), quote=True)
+    script_blocks = [*(extra_csp_scripts or [])]
+    if external_assets:
+        head_assets = _published_head_assets(
+            chart_loader,
+            encrypted_assets,
+            include_demo_styles=bool(extra_styles),
+        )
+        tail_script = ""
+        style_tag = ""
+        csp_value = build_csp([], script_blocks, allow_font_data=False)
+    else:
+        head_assets = f"  {chart_loader}\n  <style>{style_content}</style>\n  <script>{theme_js}</script>"
+        tail_script = f"\n  <script>{runtime_js}</script>"
+        style_tag = ""
+        csp_value = build_csp(
+            [style_content],
+            [inline_chart_js, theme_js, *script_blocks, runtime_js],
+        )
+    csp = html.escape(csp_value, quote=True)
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -448,9 +510,7 @@ def wrap_html(
   <title>Reponomics Dashboard</title>
   <meta http-equiv="Content-Security-Policy" content="{csp}">
   {extra_head}
-  {chart_loader}
-  <style>{style_content}</style>
-  <script>{theme_js}</script>
+{head_assets}{style_tag}
 </head>
 <body{body_attribute_text}>
 {body}
@@ -472,8 +532,7 @@ def wrap_html(
       <span>Made for indie hackers shipping across many repos</span>
     </div>
   </footer>
-
-  <script>{runtime_js}</script>
+{tail_script}
 </body>
 </html>
 """
@@ -483,6 +542,8 @@ def build_public_html(
     dashboard_data: DashboardData,
     chart_loader: str,
     inline_chart_js: str = "",
+    *,
+    external_assets: bool = False,
 ) -> str:
     """Build the standard published dashboard HTML."""
     summary = dashboard_data["summary"]
@@ -508,18 +569,13 @@ def build_public_html(
         + dashboard_data_json
         + "</script>\n"
     )
-    runtime_js = (
-        APP_RUNTIME_JS
-        + "\nconst plaintextDashboardData = JSON.parse("
-        + "document.getElementById('plaintext-dashboard-data').textContent"
-        + ");\nrenderDashboard(plaintextDashboardData);\n"
-    )
     return wrap_html(
         body,
         chart_loader,
-        runtime_js,
+        _public_runtime_js(),
         inline_chart_js=inline_chart_js,
         extra_csp_scripts=[dashboard_data_json],
+        external_assets=external_assets,
     )
 
 
@@ -562,6 +618,7 @@ def build_encrypted_html(
     export_manifest: ExportManifest,
     *,
     demo_unlock: DemoUnlockMetadata | None = None,
+    external_assets: bool = False,
 ) -> str:
     """Build the encrypted published dashboard HTML."""
     demo_unlock_panel = _build_demo_unlock_panel(demo_unlock)
@@ -678,10 +735,6 @@ def build_encrypted_html(
         },
         hidden=True,
     )
-    runtime_js = (APP_RUNTIME_JS + "\n" + SECURE_RUNTIME_JS).replace(
-        "__PBKDF2_ITERATIONS__",
-        str(PBKDF2_ITERATIONS),
-    )
     encrypted_dashboard_data_json = json.dumps(
         encrypted_dashboard_data, separators=(",", ":")
     )
@@ -699,9 +752,11 @@ def build_encrypted_html(
     return wrap_html(
         body,
         chart_loader,
-        runtime_js,
+        _encrypted_runtime_js(),
         extra_head='<meta name="robots" content="noindex, nofollow">',
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
         extra_csp_scripts=[encrypted_dashboard_data_json, export_manifest_json],
         extra_styles=DEMO_UNLOCK_STYLES if demo_unlock is not None else "",
+        external_assets=external_assets,
+        encrypted_assets=external_assets,
     )

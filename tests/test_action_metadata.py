@@ -332,11 +332,8 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
         "pull-requests": "read",
     }
     assert job["env"]["TEMPLATE_EXPECTED_REPO"] == "reponomics/reponomics-dashboard"
-    assert "template-contract.yml" in trigger_paths
-    assert "template/**" in trigger_paths
-    assert "dashboard_action/runtime/managed_docs/**" in trigger_paths
+    assert trigger_paths == {"template-contract.yml"}
     assert "scripts/publish_generated_repo.py" not in trigger_paths
-    assert "scripts/template_release_notes.py" in trigger_paths
     assert "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" in workflow_text
     assert "--pr-body .tmp/template-release-pr-body.md" in workflow_text
     assert 'echo "status=other" >> "$GITHUB_OUTPUT"' in source_tag_step["run"]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 from typing import TextIO
@@ -20,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import template_contract  # noqa: E402
+from scripts import template_release_notes  # noqa: E402
 
 
 class PrepareTemplateReleaseError(RuntimeError):
@@ -72,10 +74,46 @@ def prepare_template_release(
     return payload, previous_version, next_version
 
 
-def _release_notes(release_notes: str, next_version: str, release_type: str) -> str:
-    notes = release_notes.strip()
+def _format_pr_entry(item: object) -> str:
+    if not isinstance(item, dict):
+        raise PrepareTemplateReleaseError("release notes source entries must be objects")
+    number = item.get("number")
+    title = item.get("title")
+    url = item.get("url")
+    body = item.get("body")
+    if not isinstance(number, int):
+        raise PrepareTemplateReleaseError("release notes source entry number must be an integer")
+    if not isinstance(title, str) or not title.strip():
+        raise PrepareTemplateReleaseError("release notes source entry title is required")
+    if not isinstance(url, str) or not url.strip():
+        raise PrepareTemplateReleaseError("release notes source entry URL is required")
+
+    notes = template_release_notes.extract_notes_from_pr_body(body if isinstance(body, str) else "")
     if notes:
         return notes
+    return f"- {title.strip()} ([#{number}]({url.strip()}))"
+
+
+def _release_notes(
+    *,
+    release_notes_source: Path | None,
+    next_version: str,
+    release_type: str,
+) -> str:
+    if release_notes_source:
+        try:
+            payload = json.loads(release_notes_source.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise PrepareTemplateReleaseError(
+                f"release notes source does not exist: {release_notes_source}"
+            ) from exc
+        except json.JSONDecodeError as exc:
+            raise PrepareTemplateReleaseError("release notes source must be valid JSON") from exc
+        if not isinstance(payload, list):
+            raise PrepareTemplateReleaseError("release notes source must be a JSON array")
+        entries = [_format_pr_entry(item) for item in payload]
+        if entries:
+            return "\n".join(entries)
     return (
         f"Prepared a {release_type} template-only release for "
         + f"`reponomics-dashboard v{next_version}`."
@@ -95,7 +133,7 @@ def _write_outputs(
     previous_version: str,
     next_version: str,
     release_type: str,
-    release_notes: str,
+    release_notes_source: Path | None = None,
 ) -> None:
     template_tag = f"reponomics-dashboard-v{next_version}"
     branch = f"automation/template-release-{template_tag}"
@@ -108,7 +146,11 @@ def _write_outputs(
         + "the generated template repository, and create "
         + f"{template_tag} in reponomics/reponomics-dashboard.\n\n"
         + "## Template release notes\n\n"
-        + _release_notes(release_notes, next_version, release_type)
+        + _release_notes(
+            release_notes_source=release_notes_source,
+            next_version=next_version,
+            release_type=release_type,
+        )
         + "\n"
     )
     with path.open("a", encoding="utf-8") as handle:
@@ -125,7 +167,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--release-type", choices=["patch", "minor", "major"], required=True)
-    parser.add_argument("--release-notes", default="")
+    parser.add_argument("--release-notes-source", type=Path)
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
 
@@ -139,7 +181,7 @@ def main() -> None:
             previous_version=previous_version,
             next_version=next_version,
             release_type=args.release_type,
-            release_notes=args.release_notes,
+            release_notes_source=args.release_notes_source,
         )
     print(
         "Prepared template release "

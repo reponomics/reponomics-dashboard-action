@@ -138,8 +138,8 @@ For a template-only release:
 1. Open a PR with the template-source changes.
 2. Confirm CI is green.
 3. Merge the template-source PR.
-4. Run `.github/workflows/prepare-template-release.yml` from `main` with `release_type` set to `patch`, `minor`, or `major`, and include release notes when the default generated notes are not specific enough.
-5. Review the generated `chore: prepare template release reponomics-dashboard-vX.Y.Z` PR. That PR bumps only `template-contract.yml` and carries the `## Template release notes` section used by the public generated-template release.
+4. Run `.github/workflows/prepare-template-release.yml` from `main` with `release_type` set to `patch`, `minor`, or `major`. The workflow derives release notes from merged PRs since the previous source template tag, preferring each PR's `## Template release notes` section and falling back to PR titles.
+5. Review the generated `chore: prepare template release reponomics-dashboard-vX.Y.Z` PR. That PR bumps only `template-contract.yml` and carries the generated `## Template release notes` section used by the public generated-template release.
 6. Run `.github/workflows/pre-release-validation.yml` on the release-prep PR ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
 7. Review and merge the release-prep PR as the effective template release approval.
 8. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It verifies the matching generated repository release if it already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.

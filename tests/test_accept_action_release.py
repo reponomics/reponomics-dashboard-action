@@ -167,7 +167,7 @@ def test_prepare_template_release_writes_pr_outputs(tmp_path):
         previous_version="0.10.0",
         next_version="0.10.1",
         release_type="patch",
-        release_notes="Clarified template setup docs.",
+        release_notes_source=None,
     )
 
     output_text = output.read_text(encoding="utf-8")
@@ -178,7 +178,47 @@ def test_prepare_template_release_writes_pr_outputs(tmp_path):
     assert "title=chore: prepare template release reponomics-dashboard-v0.10.1" in output_text
     assert "body<<" in output_text
     assert "## Template release notes" in output_text
-    assert "Clarified template setup docs." in output_text
+    assert "Prepared a patch template-only release" in output_text
+
+
+def test_prepare_template_release_uses_merged_pr_notes_source(tmp_path):
+    output = tmp_path / "github-output.txt"
+    source = tmp_path / "prs.json"
+    source.write_text(
+        """
+[
+  {
+    "number": 145,
+    "title": "docs: tweak default template docs",
+    "url": "https://github.com/reponomics/reponomics-dashboard-action/pull/145",
+    "body": "## Template release notes\\n\\nClarified setup docs for new template copies."
+  },
+  {
+    "number": 146,
+    "title": "docs: tune template security copy",
+    "url": "https://github.com/reponomics/reponomics-dashboard-action/pull/146",
+    "body": ""
+  }
+]
+""",
+        encoding="utf-8",
+    )
+
+    prepare_template_release._write_outputs(
+        output,
+        previous_version="0.10.0",
+        next_version="0.10.1",
+        release_type="patch",
+        release_notes_source=source,
+    )
+
+    output_text = output.read_text(encoding="utf-8")
+    assert "Clarified setup docs for new template copies." in output_text
+    assert (
+        "- docs: tune template security copy "
+        + "([#146](https://github.com/reponomics/reponomics-dashboard-action/pull/146))"
+        in output_text
+    )
 
 
 def test_template_release_notes_writes_contract_metadata(tmp_path):

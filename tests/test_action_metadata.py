@@ -429,6 +429,10 @@ def test_prepare_template_release_workflow_opens_release_pr() -> None:
     steps = job["steps"]
     commands = "\n".join(step["run"] for step in steps if "run" in step)
     app_token_step = next(step for step in steps if step["name"] == "Create release app token")
+    checkout_step = next(step for step in steps if step["name"] == "Checkout release source")
+    prepare_step = next(
+        step for step in steps if step["name"] == "Prepare template release contract"
+    )
 
     assert workflow["name"] == "Prepare Template Release"
     assert "workflow_dispatch" in workflow[True]
@@ -437,14 +441,18 @@ def test_prepare_template_release_workflow_opens_release_pr() -> None:
     assert "- patch" in workflow_text
     assert "- minor" in workflow_text
     assert "- major" in workflow_text
-    assert "release_notes:" in workflow_text
+    assert "release_notes:" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
     assert "permissions" not in job
     assert app_token_step["with"]["permission-contents"] == "write"
     assert app_token_step["with"]["permission-pull-requests"] == "write"
+    assert checkout_step["with"]["fetch-depth"] == 0
+    assert prepare_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
     assert "scripts/prepare_template_release.py" in commands
     assert "--release-type \"${{ inputs.release_type }}\"" in commands
-    assert "--release-notes \"${RELEASE_NOTES}\"" in commands
+    assert "--release-notes-source .tmp/template-release-prs.json" in commands
+    assert "/repos/${GITHUB_REPOSITORY}/commits/${commit}/pulls" in commands
+    assert "unique_by(.number)" in commands
     assert "git add template-contract.yml" in commands
     assert 'git push --force-with-lease origin "HEAD:${BRANCH}"' in commands
     assert "gh pr create" in commands

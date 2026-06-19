@@ -1,3 +1,13 @@
+export function installTheme(context) {
+  const document = context.document;
+  const window = context.window;
+  const localStorage = context.localStorage;
+  const getComputedStyle = context.getComputedStyle;
+  const METRICS = context.METRICS;
+  const chartOptions = (...args) => context.chartOptions(...args);
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const updateDashboard = (...args) => context.updateDashboard(...args);
+
     function metricInfo(key) {
       const info = METRICS[key] || METRICS.views;
       return Object.assign({}, info, { color: themeMetricColor(info.key) || info.color });
@@ -50,41 +60,41 @@
     function refreshCharts() {
       // Skip work entirely until charts exist; the first updateDashboard()
       // will pick up theme colors from CSS vars on its own.
-      if (!dailyChart && !weekdayChart && !stackedChart) return;
+      if (!context.charts.dailyChart && !context.charts.weekdayChart && !context.charts.stackedChart) return;
       const newOpts = chartOptions(false);
-      if (dailyChart) {
-        Object.assign(dailyChart.options, newOpts);
-        dailyChart.update('none');
+      if (context.charts.dailyChart) {
+        Object.assign(context.charts.dailyChart.options, newOpts);
+        context.charts.dailyChart.update('none');
       }
-      if (weekdayChart) {
+      if (context.charts.weekdayChart) {
         // weekday uses its own option block — patch the text/grid colors
         const tickColor = getThemeColor('--text-muted', '#8b949e');
         const gridColor = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
         const axisColor = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
-        weekdayChart.options.scales.x.ticks.color = tickColor;
-        weekdayChart.options.scales.y.ticks.color = tickColor;
-        weekdayChart.options.scales.y.grid.color = gridColor;
-        if (weekdayChart.options.scales.x.border) weekdayChart.options.scales.x.border.color = axisColor;
-        if (weekdayChart.options.plugins?.tooltip) {
-          weekdayChart.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
-          weekdayChart.options.plugins.tooltip.borderColor = getThemeColor('--chart-tooltip-border', '#262d38');
-          weekdayChart.options.plugins.tooltip.titleColor = getThemeColor('--text', '#e6edf3');
-          weekdayChart.options.plugins.tooltip.bodyColor = getThemeColor('--text', '#e6edf3');
+        context.charts.weekdayChart.options.scales.x.ticks.color = tickColor;
+        context.charts.weekdayChart.options.scales.y.ticks.color = tickColor;
+        context.charts.weekdayChart.options.scales.y.grid.color = gridColor;
+        if (context.charts.weekdayChart.options.scales.x.border) context.charts.weekdayChart.options.scales.x.border.color = axisColor;
+        if (context.charts.weekdayChart.options.plugins?.tooltip) {
+          context.charts.weekdayChart.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
+          context.charts.weekdayChart.options.plugins.tooltip.borderColor = getThemeColor('--chart-tooltip-border', '#262d38');
+          context.charts.weekdayChart.options.plugins.tooltip.titleColor = getThemeColor('--text', '#e6edf3');
+          context.charts.weekdayChart.options.plugins.tooltip.bodyColor = getThemeColor('--text', '#e6edf3');
         }
-        weekdayChart.update('none');
+        context.charts.weekdayChart.update('none');
       }
-      if (stackedChart) {
+      if (context.charts.stackedChart) {
         const stackedOpts = chartOptions(true);
         // Preserve stack flag set elsewhere
-        const wasStacked = stackedChart.options.scales?.y?.stacked;
-        Object.assign(stackedChart.options, stackedOpts);
-        if (stackedChart.options.scales && stackedChart.options.scales.y) {
-          stackedChart.options.scales.y.stacked = !!wasStacked;
+        const wasStacked = context.charts.stackedChart.options.scales?.y?.stacked;
+        Object.assign(context.charts.stackedChart.options, stackedOpts);
+        if (context.charts.stackedChart.options.scales && context.charts.stackedChart.options.scales.y) {
+          context.charts.stackedChart.options.scales.y.stacked = !!wasStacked;
         }
-        stackedChart.update('none');
+        context.charts.stackedChart.update('none');
       }
       if (currentPayload()) updateDashboard();
     }
-    let dailyChart = null;
-    let weekdayChart = null;
-    let stackedChart = null;
+
+  return { metricInfo, hexAlpha, getThemeColor, themeMetricColor, THEME_KEY, preferredTheme, applyTheme, toggleTheme, refreshCharts };
+}

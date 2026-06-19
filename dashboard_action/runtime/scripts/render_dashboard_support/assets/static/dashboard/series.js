@@ -1,3 +1,15 @@
+export function installSeries(context) {
+  const MAX_DISPLAY_REPOS = context.MAX_DISPLAY_REPOS;
+  const SERIES_METRIC_KEYS = context.SERIES_METRIC_KEYS;
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const dashboardData = (...args) => context.dashboardData(...args);
+  const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
+  const getWindowCutoffDate = (...args) => context.getWindowCutoffDate(...args);
+  const hasChunkLoadError = (...args) => context.hasChunkLoadError(...args);
+  const isComparing = (...args) => context.isComparing(...args);
+  const parseIsoDate = (...args) => context.parseIsoDate(...args);
+  const state = context.state;
+
     function seriesForRange(series) {
       if (!series) {
         return {
@@ -341,3 +353,6 @@
         'path'
       );
     }
+
+  return { seriesForRange, seriesValueAt, latestSeriesValue, seriesDelta, buildGrowthDeltaSeries, mergeMetricSeries, buildRepoMetrics, repoFreshnessTimestamp, compareRepoFreshness, getAllRepoMetrics, getSelectableRepos, getVisibleRepos, buildAggregateSeries, buildWeekdaySummaryFromSeries, getCurrentWindowData, aggregateSnapshotRows, getCurrentSnapshotRepoNames, getCurrentReferrerRows, getCurrentPathRows };
+}

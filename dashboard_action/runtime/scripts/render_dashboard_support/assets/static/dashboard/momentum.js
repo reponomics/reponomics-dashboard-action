@@ -1,3 +1,18 @@
+export function installMomentum(context) {
+  const document = context.document;
+  const window = context.window;
+  const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
+  const buildAggregateSeries = (...args) => context.buildAggregateSeries(...args);
+  const escapeHtml = (...args) => context.escapeHtml(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const getCurrentWindowData = (...args) => context.getCurrentWindowData(...args);
+  const getRangeLabel = (...args) => context.getRangeLabel(...args);
+  const getSelectableRepos = (...args) => context.getSelectableRepos(...args);
+  const getShortName = (...args) => context.getShortName(...args);
+  const getVisibleRepos = (...args) => context.getVisibleRepos(...args);
+  const parseIsoDate = (...args) => context.parseIsoDate(...args);
+  const state = context.state;
+
     function sanitizeSelection() {
       const selectableRepoNames = new Set(getSelectableRepos().map((repo) => repo.name));
       if (state.selectedRepo && !selectableRepoNames.has(state.selectedRepo)) {
@@ -148,3 +163,6 @@
 
       grid.innerHTML = cells.join('');
     }
+
+  return { sanitizeSelection, buildUpdatedText, formatTooltipDate, formatEventDate, daysBetween, computeMomentum, renderMomentum };
+}

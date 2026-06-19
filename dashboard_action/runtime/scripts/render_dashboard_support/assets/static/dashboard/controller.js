@@ -1,3 +1,69 @@
+export function installController(context) {
+  const document = context.document;
+  const window = context.window;
+  const navigator = context.navigator;
+  const localStorage = context.localStorage;
+  const history = context.history;
+  const DEFAULT_WINDOW = context.DEFAULT_WINDOW;
+  const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
+  const METRICS = context.METRICS;
+  const THEME_KEY = context.THEME_KEY;
+  const activateRepo = (...args) => context.activateRepo(...args);
+  const applyTheme = (...args) => context.applyTheme(...args);
+  const buildRepoSparkSVG = (...args) => context.buildRepoSparkSVG(...args);
+  const buildUpdatedText = (...args) => context.buildUpdatedText(...args);
+  const chunkDiagnosticsText = (...args) => context.chunkDiagnosticsText(...args);
+  const clearChunkLoadErrors = (...args) => context.clearChunkLoadErrors(...args);
+  const clearSelection = (...args) => context.clearSelection(...args);
+  const createDashboardDataProvider = (...args) => context.createDashboardDataProvider(...args);
+  const currentChunkLoadErrors = (...args) => context.currentChunkLoadErrors(...args);
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const dashboardData = (...args) => context.dashboardData(...args);
+  const ensureCharts = (...args) => context.ensureCharts(...args);
+  const escapeHtml = (...args) => context.escapeHtml(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const formatSigned = (...args) => context.formatSigned(...args);
+  const getCurrentPathRows = (...args) => context.getCurrentPathRows(...args);
+  const getCurrentReferrerRows = (...args) => context.getCurrentReferrerRows(...args);
+  const getDefaultWindow = (...args) => context.getDefaultWindow(...args);
+  const getRepoColor = (...args) => context.getRepoColor(...args);
+  const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
+  const getShortName = (...args) => context.getShortName(...args);
+  const getVisibleRepos = (...args) => context.getVisibleRepos(...args);
+  const hasChunkLoadError = (...args) => context.hasChunkLoadError(...args);
+  const hexAlpha = (...args) => context.hexAlpha(...args);
+  const isComparing = (...args) => context.isComparing(...args);
+  const metricInfo = (...args) => context.metricInfo(...args);
+  const normalizeChunkLoadError = (...args) => context.normalizeChunkLoadError(...args);
+  const normalizeWindow = (...args) => context.normalizeWindow(...args);
+  const preferredTheme = (...args) => context.preferredTheme(...args);
+  const recordChunkLoadErrors = (...args) => context.recordChunkLoadErrors(...args);
+  const renderCollectionCalendar = (...args) => context.renderCollectionCalendar(...args);
+  const renderCommunityCell = (...args) => context.renderCommunityCell(...args);
+  const renderDashboardNotice = (...args) => context.renderDashboardNotice(...args);
+  const renderInsights = (...args) => context.renderInsights(...args);
+  const renderMomentum = (...args) => context.renderMomentum(...args);
+  const renderPathsTable = (...args) => context.renderPathsTable(...args);
+  const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
+  const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
+  const setMetric = (...args) => context.setMetric(...args);
+  const setRepoSort = (...args) => context.setRepoSort(...args);
+  const setText = (...args) => context.setText(...args);
+  const setThreshold = (...args) => context.setThreshold(...args);
+  const setWindow = (...args) => context.setWindow(...args);
+  const shiftCalendarMonth = (...args) => context.shiftCalendarMonth(...args);
+  const sortRepos = (...args) => context.sortRepos(...args);
+  const state = context.state;
+  const toggleRepoCompare = (...args) => context.toggleRepoCompare(...args);
+  const toggleTheme = (...args) => context.toggleTheme(...args);
+  const updateControls = (...args) => context.updateControls(...args);
+  const updateDailyChart = (...args) => context.updateDailyChart(...args);
+  const updateMetricTabs = (...args) => context.updateMetricTabs(...args);
+  const updateStackedChart = (...args) => context.updateStackedChart(...args);
+  const updateStats = (...args) => context.updateStats(...args);
+  const updateToolbar = (...args) => context.updateToolbar(...args);
+  const updateWeekdayChart = (...args) => context.updateWeekdayChart(...args);
+
     function renderRepoStrip() {
       const strip = document.getElementById('repo-strip');
       const card = document.getElementById('repo-strip-card');
@@ -417,3 +483,6 @@
       });
       updateDashboard();
     }
+
+  return { renderRepoStrip, renderRepoTable, syncUrlHash, applyUrlHash, repoNamesRequiredForCurrentView, loadRepoChunks, ensureCurrentRepoChunksLoaded, handleChunkLoadResults, retryFailedChunks, copyChunkDiagnostics, handleNoticeAction, updateDashboard, renderDashboard };
+}

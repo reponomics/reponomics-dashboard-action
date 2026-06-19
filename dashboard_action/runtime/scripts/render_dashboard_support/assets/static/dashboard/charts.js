@@ -1,3 +1,34 @@
+export function installCharts(context) {
+  const document = context.document;
+  const window = context.window;
+  const activateRepo = (...args) => context.activateRepo(...args);
+  const buildWeekdaySummaryFromSeries = (...args) => context.buildWeekdaySummaryFromSeries(...args);
+  const chartOptions = (...args) => context.chartOptions(...args);
+  const compactNumber = (...args) => context.compactNumber(...args);
+  const computeDelta = (...args) => context.computeDelta(...args);
+  const configureYAxis = (...args) => context.configureYAxis(...args);
+  const dashboardData = (...args) => context.dashboardData(...args);
+  const escapeHtml = (...args) => context.escapeHtml(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const formatSigned = (...args) => context.formatSigned(...args);
+  const getCurrentWindowData = (...args) => context.getCurrentWindowData(...args);
+  const getRepoByName = (...args) => context.getRepoByName(...args);
+  const getRepoColor = (...args) => context.getRepoColor(...args);
+  const getRepoDash = (...args) => context.getRepoDash(...args);
+  const getShortName = (...args) => context.getShortName(...args);
+  const getThemeColor = (...args) => context.getThemeColor(...args);
+  const getVisibleRepos = (...args) => context.getVisibleRepos(...args);
+  const hexAlpha = (...args) => context.hexAlpha(...args);
+  const isComparing = (...args) => context.isComparing(...args);
+  const metricInfo = (...args) => context.metricInfo(...args);
+  const palette = context.palette;
+  const renderDelta = (...args) => context.renderDelta(...args);
+  const renderSparkline = (...args) => context.renderSparkline(...args);
+  const seriesValueAt = (...args) => context.seriesValueAt(...args);
+  const setText = (...args) => context.setText(...args);
+  const splitWindow = (...args) => context.splitWindow(...args);
+  const state = context.state;
+
     function updateStats() {
       const windowData = getCurrentWindowData();
       const totals = windowData.totals || {};
@@ -99,21 +130,21 @@
     }
 
     function ensureCharts() {
-      if (!dailyChart) {
-        dailyChart = new Chart(document.getElementById('dailyChart'), {
+      if (!context.charts.dailyChart) {
+        context.charts.dailyChart = context.chartAdapter.createChart(document.getElementById('dailyChart'), {
           type: 'line',
           data: { labels: [], datasets: [] },
           options: chartOptions(false)
         });
       }
-      if (!weekdayChart) {
+      if (!context.charts.weekdayChart) {
         const tick = getThemeColor('--text-muted', '#8b949e');
         const grid = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
         const axis = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
         const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
         const tipBorder = getThemeColor('--chart-tooltip-border', '#262d38');
         const text = getThemeColor('--text', '#e6edf3');
-        weekdayChart = new Chart(document.getElementById('weekdayChart'), {
+        context.charts.weekdayChart = context.chartAdapter.createChart(document.getElementById('weekdayChart'), {
           type: 'bar',
           data: { labels: [], datasets: [] },
           options: {
@@ -152,7 +183,7 @@
           }
         });
       }
-      if (!stackedChart) {
+      if (!context.charts.stackedChart) {
         const opts = chartOptions(true);
         const repoFromDatasetLabel = function(label) {
           return (dashboardData()?.getRepos() || []).find((r) => getShortName(r.name) === label)?.name || label;
@@ -180,7 +211,7 @@
             activateRepo(repoFromDatasetLabel(ds.label), modifierFromEvent(event));
           };
         }
-        stackedChart = new Chart(document.getElementById('stackedChart'), {
+        context.charts.stackedChart = context.chartAdapter.createChart(document.getElementById('stackedChart'), {
           type: 'line',
           data: { labels: [], datasets: [] },
           options: opts
@@ -228,7 +259,7 @@
         const compareDates = [...new Set(
           state.compareRepos.flatMap((repoName) => (getRepoByName(repoName)?.series?.dates || []))
         )].sort();
-        dailyChart.data.labels = compareDates;
+        context.charts.dailyChart.data.labels = compareDates;
         state.compareRepos.forEach((repoName) => {
           const series = getRepoByName(repoName)?.series;
           if (!series) return;
@@ -246,7 +277,7 @@
       } else if (state.selectedRepo) {
         const series = getRepoByName(state.selectedRepo)?.series;
         title.textContent = metric.label + ': ' + getShortName(state.selectedRepo);
-        dailyChart.data.labels = series ? series.dates : [];
+        context.charts.dailyChart.data.labels = series ? series.dates : [];
         datasets.push(makeAreaDataset(
           metric.label,
           series ? (series[metric.key] || []) : [],
@@ -254,7 +285,7 @@
         ));
       } else {
         title.textContent = metric.label + ' over time';
-        dailyChart.data.labels = windowData.daily.dates || [];
+        context.charts.dailyChart.data.labels = windowData.daily.dates || [];
         datasets.push(makeAreaDataset(
           metric.label,
           windowData.daily[metric.key] || [],
@@ -262,9 +293,9 @@
         ));
       }
 
-      dailyChart.data.datasets = datasets;
-      configureYAxis(dailyChart, dailyChart.data.labels, datasets, false);
-      dailyChart.update();
+      context.charts.dailyChart.data.datasets = datasets;
+      configureYAxis(context.charts.dailyChart, context.charts.dailyChart.data.labels, datasets, false);
+      context.charts.dailyChart.update();
     }
 
     function updateWeekdayChart() {
@@ -311,10 +342,10 @@
         ];
       }
 
-      weekdayChart.data.labels = labels;
-      weekdayChart.data.datasets = datasets;
-      configureYAxis(weekdayChart, labels, datasets, false);
-      weekdayChart.update();
+      context.charts.weekdayChart.data.labels = labels;
+      context.charts.weekdayChart.data.datasets = datasets;
+      configureYAxis(context.charts.weekdayChart, labels, datasets, false);
+      context.charts.weekdayChart.update();
     }
 
     function updateStackedChart() {
@@ -335,12 +366,12 @@
 
       if (isComparing()) {
         title.textContent = metric.label + ' across compared repos';
-        stackedChart.options.scales.y.stacked = false;
-        stackedChart.data.labels = allDates;
+        context.charts.stackedChart.options.scales.y.stacked = false;
+        context.charts.stackedChart.data.labels = allDates;
         // Render all visible repos; compared ones get bold styling, others
         // are ghosted but still appear in the legend so the user can click
         // to add them to the compare set without leaving the chart.
-        stackedChart.data.datasets = repoNames.map((repoName) => {
+        context.charts.stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
           (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
@@ -362,11 +393,11 @@
       } else if (state.selectedRepo) {
         const focusName = state.selectedRepo;
         title.textContent = metric.label + ' over time: ' + getShortName(focusName);
-        stackedChart.options.scales.y.stacked = false;
-        stackedChart.data.labels = allDates;
+        context.charts.stackedChart.options.scales.y.stacked = false;
+        context.charts.stackedChart.data.labels = allDates;
         // Render every visible repo so the legend stays interactive — the
         // focused repo gets full styling, the others fade to ghosts.
-        stackedChart.data.datasets = repoNames.map((repoName) => {
+        context.charts.stackedChart.data.datasets = repoNames.map((repoName) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
           (series?.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
@@ -387,9 +418,9 @@
         });
       } else {
         title.textContent = metric.label + ' by repository';
-        stackedChart.options.scales.y.stacked = true;
-        stackedChart.data.labels = allDates;
-        stackedChart.data.datasets = repoNames.map((repoName, idx) => {
+        context.charts.stackedChart.options.scales.y.stacked = true;
+        context.charts.stackedChart.data.labels = allDates;
+        context.charts.stackedChart.data.datasets = repoNames.map((repoName, idx) => {
           const series = getRepoByName(repoName)?.series;
           const dateMap = {};
           (series?.dates || []).forEach((date, seriesIdx) => { dateMap[date] = seriesValueAt(series, metric.key, seriesIdx); });
@@ -408,6 +439,9 @@
           };
         });
       }
-      configureYAxis(stackedChart, stackedChart.data.labels, stackedChart.data.datasets, !!stackedChart.options.scales.y.stacked);
-      stackedChart.update();
+      configureYAxis(context.charts.stackedChart, context.charts.stackedChart.data.labels, context.charts.stackedChart.data.datasets, !!context.charts.stackedChart.options.scales.y.stacked);
+      context.charts.stackedChart.update();
     }
+
+  return { updateStats, ensureCharts, buildAreaGradient, makeAreaDataset, updateDailyChart, updateWeekdayChart, updateStackedChart };
+}

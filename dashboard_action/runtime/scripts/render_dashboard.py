@@ -40,6 +40,7 @@ from render_dashboard_support.html import (
     build_encrypted_html as _build_encrypted_html,
     build_public_html as _build_public_html,
     copy_published_dashboard_assets as _copy_published_dashboard_assets,
+    write_published_json_asset as _write_published_json_asset,
 )
 
 import storage
@@ -633,19 +634,36 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         export_manifest = _build_encrypted_export_manifest(
             PAGE_INDEX_OUTPUT_PATH, dashboard_key
         )
+        encrypted_dashboard_data = _build_encrypted_dashboard_data(payload, dashboard_key)
         _copy_published_dashboard_assets(PAGE_INDEX_OUTPUT_PATH, encrypted=True)
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_ENCRYPTED_DASHBOARD_DATA_ASSET,
+            encrypted_dashboard_data,
+        )
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_EXPORT_MANIFEST_ASSET,
+            export_manifest,
+        )
         published_html = _build_encrypted_html(
-            _build_encrypted_dashboard_data(payload, dashboard_key),
-            f'<script defer src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
+            encrypted_dashboard_data,
+            f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             export_manifest,
             demo_unlock=demo_unlock,
             external_assets=True,
         )
     else:
+        plaintext_dashboard_data = _build_plaintext_dashboard_data(payload)
         _copy_published_dashboard_assets(PAGE_INDEX_OUTPUT_PATH, encrypted=False)
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_DASHBOARD_DATA_ASSET,
+            plaintext_dashboard_data,
+        )
         published_html = _build_public_html(
-            _build_plaintext_dashboard_data(payload),
-            f'<script defer src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
+            plaintext_dashboard_data,
+            f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             external_assets=True,
         )
 

@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -54,14 +56,100 @@ from doctor_support import (
 )
 
 
+ENCRYPTED_DASHBOARD_META_NAME = "reponomics-encrypted-dashboard-data"
+PLAINTEXT_DASHBOARD_META_NAME = "reponomics-dashboard-data"
+EXPORT_MANIFEST_META_NAME = "reponomics-export-manifest"
+
+
+class _DashboardMetaParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.meta: dict[str, str] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "meta":
+            return
+        attr_map = {
+            key.lower(): value
+            for key, value in attrs
+            if key is not None and value is not None
+        }
+        name = attr_map.get("name")
+        content = attr_map.get("content")
+        if name and content and name not in self.meta:
+            self.meta[name] = content
+
+
+def _dashboard_meta_content(html: str, name: str) -> str | None:
+    parser = _DashboardMetaParser()
+    parser.feed(html)
+    return parser.meta.get(name)
+
+
+def _dashboard_json_asset_path(dashboard_html_path: Path, asset_ref: str) -> Path:
+    parsed = urlsplit(asset_ref)
+    if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
+        raise _DashboardDoctorError("asset", f"dashboard JSON asset {asset_ref!r} must be a plain relative path")
+    asset_path = parsed.path
+    if asset_path.startswith("/") or not asset_path.startswith("assets/") or not asset_path.endswith(".json"):
+        raise _DashboardDoctorError("asset", f"dashboard JSON asset {asset_ref!r} is not an expected assets/*.json path")
+
+    resolved = (dashboard_html_path.parent / asset_path).resolve()
+    dashboard_dir = dashboard_html_path.parent.resolve()
+    if not resolved.is_relative_to(dashboard_dir):
+        raise _DashboardDoctorError("asset", f"dashboard JSON asset {asset_ref!r} escapes the dashboard directory")
+    return resolved
+
+
+def _optional_dashboard_json_source(
+    html: str,
+    dashboard_html_path: Path,
+    *,
+    meta_name: str,
+    script_id: str,
+) -> tuple[str | None, str, str, str | None]:
+    asset_ref = _dashboard_meta_content(html, meta_name)
+    if asset_ref:
+        source_label = f"{meta_name} asset {asset_ref}"
+        try:
+            asset_path = _dashboard_json_asset_path(dashboard_html_path, asset_ref)
+            content = asset_path.read_text(encoding="utf-8")
+        except _DashboardDoctorError as exc:
+            return None, source_label, "", exc.detail
+        except OSError as exc:
+            return None, source_label, "", f"dashboard JSON asset {asset_ref!r} was not readable: {exc}"
+        return content, source_label, f"JSON asset {asset_ref!r} was found", None
+
+    script_content = _optional_script_content(html, script_id)
+    if script_content:
+        return script_content, script_id, f"script payload {script_id!r} was found", None
+    return None, "", "", None
+
+
 def _parse_dashboard_payload(
     html: str,
+    dashboard_html_path: Path,
 ) -> tuple[DetectedDashboardMode, dict[str, Any] | None, list[DoctorStage]]:
     stages: list[DoctorStage] = []
-    encrypted_content = _optional_script_content(html, ENCRYPTED_DASHBOARD_SCRIPT_ID)
-    plaintext_script_content = _optional_script_content(html, PLAINTEXT_DASHBOARD_SCRIPT_ID)
+    encrypted_content, encrypted_label, encrypted_detail, encrypted_error = _optional_dashboard_json_source(
+        html,
+        dashboard_html_path,
+        meta_name=ENCRYPTED_DASHBOARD_META_NAME,
+        script_id=ENCRYPTED_DASHBOARD_SCRIPT_ID,
+    )
+    (
+        plaintext_script_content,
+        plaintext_label,
+        plaintext_detail,
+        plaintext_error,
+    ) = _optional_dashboard_json_source(
+        html,
+        dashboard_html_path,
+        meta_name=PLAINTEXT_DASHBOARD_META_NAME,
+        script_id=PLAINTEXT_DASHBOARD_SCRIPT_ID,
+    )
 
-    if encrypted_content:
+    if encrypted_content or encrypted_error:
         stages.append(
             _stage(
                 "detected_dashboard_mode_recorded",
@@ -72,19 +160,22 @@ def _parse_dashboard_payload(
         stages.append(
             _stage(
                 "dashboard_script_found",
-                "passed",
-                f"script payload {ENCRYPTED_DASHBOARD_SCRIPT_ID!r} was found",
+                "failed" if encrypted_error else "passed",
+                encrypted_error or encrypted_detail,
             )
         )
+        if encrypted_error:
+            return "encrypted", None, stages
+        assert encrypted_content is not None
         try:
-            data = _json_object(encrypted_content, ENCRYPTED_DASHBOARD_SCRIPT_ID)
+            data = _json_object(encrypted_content, encrypted_label)
         except _DashboardDoctorError as exc:
             stages.append(_stage("dashboard_script_json_valid", "failed", exc.detail))
             return "encrypted", None, stages
         stages.append(_stage("dashboard_script_json_valid", "passed", "encrypted payload is JSON"))
         return "encrypted", data, stages
 
-    if plaintext_script_content:
+    if plaintext_script_content or plaintext_error:
         stages.append(
             _stage(
                 "detected_dashboard_mode_recorded",
@@ -95,12 +186,15 @@ def _parse_dashboard_payload(
         stages.append(
             _stage(
                 "dashboard_script_found",
-                "passed",
-                f"script payload {PLAINTEXT_DASHBOARD_SCRIPT_ID!r} was found",
+                "failed" if plaintext_error else "passed",
+                plaintext_error or plaintext_detail,
             )
         )
+        if plaintext_error:
+            return "plaintext", None, stages
+        assert plaintext_script_content is not None
         try:
-            data = _json_object(plaintext_script_content, PLAINTEXT_DASHBOARD_SCRIPT_ID)
+            data = _json_object(plaintext_script_content, plaintext_label)
         except _DashboardDoctorError as exc:
             stages.append(_stage("dashboard_script_json_valid", "failed", exc.detail))
             return "plaintext", None, stages
@@ -653,11 +747,28 @@ def _diagnose_export_artifact(
         ], "skipped"
 
     stages: list[DoctorStage] = []
-    content = _optional_script_content(html, EXPORT_MANIFEST_SCRIPT_ID)
+    content, manifest_label, manifest_detail, manifest_error = _optional_dashboard_json_source(
+        html,
+        dashboard_html_path,
+        meta_name=EXPORT_MANIFEST_META_NAME,
+        script_id=EXPORT_MANIFEST_SCRIPT_ID,
+    )
+    if manifest_error:
+        stages.extend(
+            [
+                _stage("export_manifest_found", "failed", manifest_error),
+                _stage("export_manifest_valid", "skipped", "export manifest was unavailable"),
+                _stage("export_asset_found", "skipped", "export manifest was unavailable"),
+                _stage("export_ciphertext_hash_valid", "skipped", "export manifest was unavailable"),
+                _stage("export_decrypts", "skipped", "export manifest was unavailable"),
+                _stage("export_plaintext_hash_valid", "skipped", "export manifest was unavailable"),
+            ]
+        )
+        return stages, "failed"
     if not content:
         stages.extend(
             [
-                _stage("export_manifest_found", "failed", "export manifest script was not found"),
+                _stage("export_manifest_found", "failed", "export manifest was not found"),
                 _stage("export_manifest_valid", "skipped", "export manifest was unavailable"),
                 _stage("export_asset_found", "skipped", "export manifest was unavailable"),
                 _stage("export_ciphertext_hash_valid", "skipped", "export manifest was unavailable"),
@@ -667,9 +778,9 @@ def _diagnose_export_artifact(
         )
         return stages, "failed"
 
-    stages.append(_stage("export_manifest_found", "passed", "export manifest script was found"))
+    stages.append(_stage("export_manifest_found", "passed", manifest_detail))
     try:
-        manifest = _json_object(content, EXPORT_MANIFEST_SCRIPT_ID)
+        manifest = _json_object(content, manifest_label)
     except _DashboardDoctorError as exc:
         stages.extend(
             [
@@ -1048,7 +1159,7 @@ def diagnose_dashboard_artifact(
         )
 
     stages.append(_stage("dashboard_html_found", "passed", "dashboard HTML was readable"))
-    detected_mode, payload, payload_stages = _parse_dashboard_payload(html)
+    detected_mode, payload, payload_stages = _parse_dashboard_payload(html, dashboard_html_path)
     stages.extend(payload_stages)
     stages.append(_mode_match_stage(configured_mode, detected_mode))
     browser_stage_names = {

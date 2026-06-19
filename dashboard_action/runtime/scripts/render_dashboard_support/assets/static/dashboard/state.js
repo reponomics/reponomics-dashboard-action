@@ -1,3 +1,7 @@
+export function installState(context) {
+  const window = context.window;
+  const dashboardData = (...args) => context.dashboardData(...args);
+
 
     // Categorical palette for the per-repo lines. Drawn from the
     // Okabe-Ito + Paul Tol palettes, designed to remain
@@ -82,3 +86,5 @@
       return error;
     }
 
+  return { palette, DASH_PATTERNS, dashForRepoIndex, getRepoDash, METRICS, SERIES_METRIC_KEYS, WINDOW_PRESETS, DEFAULT_WINDOW, MAX_DISPLAY_REPOS, MAX_COMPARE_REPOS, CHUNK_FAILURE_LABELS, state, dashboardChunkError };
+}

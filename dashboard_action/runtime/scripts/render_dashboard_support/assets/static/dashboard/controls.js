@@ -1,3 +1,18 @@
+export function installControls(context) {
+  const document = context.document;
+  const window = context.window;
+  const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
+  const METRICS = context.METRICS;
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
+  const getShortName = (...args) => context.getShortName(...args);
+  const getWindowDays = (...args) => context.getWindowDays(...args);
+  const isComparing = (...args) => context.isComparing(...args);
+  const normalizeWindow = (...args) => context.normalizeWindow(...args);
+  const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
+  const state = context.state;
+  const updateDashboard = (...args) => context.updateDashboard(...args);
+
     function resetCheckboxes() {
       document.querySelectorAll('#repo-table input[type="checkbox"]').forEach((input) => {
         input.checked = false;
@@ -147,3 +162,6 @@
         clearButton.classList.remove('visible');
       }
     }
+
+  return { resetCheckboxes, updateControls, setWindow, setMetric, updateMetricTabs, setThreshold, clearSelection, selectRepo, activateRepo, toggleRepoCompare, updateToolbar };
+}

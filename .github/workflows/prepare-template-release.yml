@@ -13,7 +13,7 @@ on:
           - major
         default: patch
       base_ref:
-        description: "Source ref to prepare from"
+        description: "Source ref to prepare from; use main for normal template-only releases, not an action tag"
         required: true
         type: string
         default: main

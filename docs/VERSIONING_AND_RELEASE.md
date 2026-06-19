@@ -138,7 +138,7 @@ For a template-only release:
 1. Open a PR with the template-source changes.
 2. Confirm CI is green.
 3. Merge the template-source PR.
-4. Run `.github/workflows/prepare-template-release.yml` from `main` with `release_type` set to `patch`, `minor`, or `major`. The workflow derives release notes from merged PRs since the previous source template tag, preferring each PR's `## Template release notes` section and falling back to PR titles.
+4. Run `.github/workflows/prepare-template-release.yml` with `base_ref` left at its default `main` and `release_type` set to `patch`, `minor`, or `major`. Do not use the latest action tag as the base for a normal template-only release; action tags mark the action product release boundary and may omit later template-source changes. The workflow derives release notes from merged PRs since the previous source template tag, preferring each PR's `## Template release notes` section and falling back to PR titles.
 5. Review the generated `chore: prepare template release reponomics-dashboard-vX.Y.Z` PR. That PR bumps only `template-contract.yml` and carries the generated `## Template release notes` section used by the public generated-template release.
 6. Run `.github/workflows/pre-release-validation.yml` on the release-prep PR ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
 7. Review and merge the release-prep PR as the effective template release approval.

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.24.0...v0.24.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* trigger template publication only from contract bumps ([#147](https://github.com/reponomics/reponomics-dashboard-action/issues/147)) ([e5b4448](https://github.com/reponomics/reponomics-dashboard-action/commit/e5b44481816dd1de655b525320c7e29e85c7480b))
+
 ## [0.24.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.23.7...v0.24.0) (2026-06-18)
 
 

@@ -4,6 +4,7 @@ import tomllib
 
 import yaml
 
+from dashboard_action.run_modules.config_options import ACTION_CONFIG_OPTIONS
 from dashboard_action.run_modules.core import VERSION
 from scripts import template_contract
 
@@ -648,9 +649,14 @@ def test_publish_pages_input_metadata_contract() -> None:
     assert "REPONOMICS_REQUIRE_COLLECT_PROVENANCE" not in runtime_env
 
 
-def test_use_github_app_input_metadata_contract() -> None:
+def test_config_option_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert action["inputs"]["use-github-app"]["default"] == ""
-    assert runtime_env["REPONOMICS_USE_GITHUB_APP"] == "${{ inputs.use-github-app }}"
+    for option in ACTION_CONFIG_OPTIONS:
+        assert option.action_input is not None
+        assert option.runtime_env_var is not None
+        assert action["inputs"][option.action_input]["default"] == ""
+        assert runtime_env[option.runtime_env_var] == (
+            f"${{{{ inputs.{option.action_input} }}}}"
+        )

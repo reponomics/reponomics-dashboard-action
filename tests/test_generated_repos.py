@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from dashboard_action.run_modules.config_options import ACTION_CONFIG_OPTIONS, CONFIG_OPTIONS
 from dashboard_action.run_modules import config as runtime_config
 from scripts import build_template
 from scripts import publish_generated_repo
@@ -286,6 +287,14 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "github-token: ${{ github.token }}" in update_docs
     assert len(remote_steps) == 1
     assert remote_steps[0]["id"] == "reponomics"
+    for option in ACTION_CONFIG_OPTIONS:
+        assert option.action_input is not None
+        assert option.workflow_env_var is not None
+        assert wrapper["inputs"][option.action_input]["default"] == ""
+        assert remote_steps[0]["with"][option.action_input] == (
+            f"${{{{ inputs.{option.action_input} }}}}"
+        )
+        assert f"{option.action_input}: ${{{{ env.{option.workflow_env_var} }}}}" in update_docs
     assert local_action in collect_publish
     assert local_action in doctor
     assert local_action in incident_reset
@@ -405,9 +414,9 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert ".reponomics/setup-complete" in resolver
     assert "commit the generated setup marker" not in resolver
     assert "let setup validate the config and write the setup marker" in resolver
-    assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
-    assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
-    assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
+    for option in CONFIG_OPTIONS:
+        assert option.config_key in resolver
+        assert option.workflow_env_var in resolver
 
 
 def test_template_contract_rejects_missing_required_wrapper_input(tmp_path):
@@ -548,6 +557,7 @@ def test_required_fields_do_not_have_default_value():
     resolver_globals: dict[str, object] = {"__name__": "resolve_reponomics_config_test"}
     exec(compile(resolver, "resolve-reponomics-config.py", "exec"), resolver_globals)
     resolver_config_keys = resolver_globals["CONFIG_KEYS"]
+    resolver_config_options = tuple(resolver_globals["ConfigOption"])
     resolver_explicit_decision_keys = tuple(resolver_globals["EXPLICIT_DECISION_KEYS"])
     resolver_default_config_values = resolver_globals["DEFAULT_CONFIG_VALUES"]
 
@@ -565,6 +575,17 @@ def test_required_fields_do_not_have_default_value():
     assert expected_required_keys == runtime_config.EXPLICIT_DECISION_CONFIG_KEYS
     assert expected_defaulted_keys == tuple(runtime_config.DEFAULT_CONFIG_VALUES)
     assert expected_required_keys == resolver_explicit_decision_keys
+    assert {
+        option.name: (option.config_key, option.workflow_env_var, option.default)
+        for option in resolver_config_options
+    } == {
+        option.name: (
+            option.config_key,
+            option.workflow_env_var,
+            str(option.default).lower() if option.default is not None else None,
+        )
+        for option in CONFIG_OPTIONS
+    }
     assert resolver_default_config_values == {
         key: str(value).lower() if isinstance(value, bool) else str(value)
         for key, value in runtime_config.DEFAULT_CONFIG_VALUES.items()

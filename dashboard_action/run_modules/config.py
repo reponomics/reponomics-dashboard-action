@@ -16,17 +16,18 @@ from .core import (
     ActionError,
     RuntimeConfig,
 )
+from .config_options import (
+    ConfigOption,
+    DEFAULTED_OPTIONS,
+    EXPLICIT_DECISION_OPTIONS,
+)
 
 
-EXPLICIT_DECISION_CONFIG_KEYS = (
-    "i_have_read_the_readme",
-    "data_mode",
-    "publish_pages_dashboard",
-    "publish_readme_dashboard",
+EXPLICIT_DECISION_CONFIG_KEYS = tuple(
+    option.config_key for option in EXPLICIT_DECISION_OPTIONS
 )
 DEFAULT_CONFIG_VALUES = {
-    "artifact_retention_days": 90,
-    "use_github_app": False,
+    option.config_key: option.default for option in DEFAULTED_OPTIONS
 }
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
@@ -144,7 +145,7 @@ def _config_bool(
 
 
 def _config_data_mode(payload: dict[str, object]) -> str:
-    value = payload["data_mode"]
+    value = payload[ConfigOption.DATA_MODE.config_key]
     if not isinstance(value, str):
         raise ActionError("data_mode in config.yaml must be encrypted or plaintext.")
     return _normalize_data_mode(value)
@@ -152,11 +153,11 @@ def _config_data_mode(payload: dict[str, object]) -> str:
 
 def _config_retention_days(payload: dict[str, object]) -> int:
     value = payload.get(
-        "artifact_retention_days",
-        DEFAULT_CONFIG_VALUES["artifact_retention_days"],
+        ConfigOption.RETENTION_DAYS.config_key,
+        ConfigOption.RETENTION_DAYS.default,
     )
     if value is None:
-        value = DEFAULT_CONFIG_VALUES["artifact_retention_days"]
+        value = ConfigOption.RETENTION_DAYS.default
     if isinstance(value, bool) or not isinstance(value, int):
         raise ActionError("artifact_retention_days in config.yaml must be an integer.")
     return _parse_retention_days(str(value))
@@ -170,19 +171,25 @@ def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str
             "config.yaml is missing explicit decision field(s): " + ", ".join(missing)
         )
 
-    read_readme = _config_bool(payload, "i_have_read_the_readme")
+    read_readme = _config_bool(payload, ConfigOption.I_HAVE_READ_README.config_key)
     if not read_readme:
         raise ActionError("i_have_read_the_readme in config.yaml must be true.")
 
     return {
         "data_mode": _config_data_mode(payload),
-        "publish_pages_dashboard": _config_bool(payload, "publish_pages_dashboard"),
-        "publish_readme_dashboard": _config_bool(payload, "publish_readme_dashboard"),
+        "publish_pages_dashboard": _config_bool(
+            payload,
+            ConfigOption.PUBLISH_PAGES.config_key,
+        ),
+        "publish_readme_dashboard": _config_bool(
+            payload,
+            ConfigOption.PUBLISH_README.config_key,
+        ),
         "artifact_retention_days": _config_retention_days(payload),
         "use_github_app": _config_bool(
             payload,
-            "use_github_app",
-            default=bool(DEFAULT_CONFIG_VALUES["use_github_app"]),
+            ConfigOption.USE_GITHUB_APP.config_key,
+            default=bool(ConfigOption.USE_GITHUB_APP.default),
         ),
     }
 
@@ -225,15 +232,16 @@ def _bool_from_env_or_config(
 
 
 def _data_mode_from_env_or_config(configured: dict[str, bool | int | str]) -> str:
-    config_value = configured["data_mode"]
+    option = ConfigOption.DATA_MODE
+    config_value = configured[option.config_key]
     if not isinstance(config_value, str):
         raise ActionError("data_mode in config.yaml must be encrypted or plaintext.")
-    raw = _env("REPONOMICS_DATA_MODE")
+    raw = _env(option.runtime_env_var or "")
     if raw:
         input_value = _normalize_data_mode(raw)
         _reject_config_mismatch(
-            input_name="data-mode",
-            config_key="data_mode",
+            input_name=option.action_input or option.config_key,
+            config_key=option.config_key,
             input_value=input_value,
             config_value=config_value,
         )
@@ -241,15 +249,16 @@ def _data_mode_from_env_or_config(configured: dict[str, bool | int | str]) -> st
 
 
 def _retention_days_from_env_or_config(configured: dict[str, bool | int | str]) -> int:
-    config_value = configured["artifact_retention_days"]
+    option = ConfigOption.RETENTION_DAYS
+    config_value = configured[option.config_key]
     if isinstance(config_value, bool) or not isinstance(config_value, int):
         raise ActionError("artifact_retention_days in config.yaml must be an integer.")
-    raw = _env("REPONOMICS_RETENTION_DAYS")
+    raw = _env(option.runtime_env_var or "")
     if raw:
         input_value = _parse_retention_days(raw)
         _reject_config_mismatch(
-            input_name="retention-days",
-            config_key="artifact_retention_days",
+            input_name=option.action_input or option.config_key,
+            config_key=option.config_key,
             input_value=input_value,
             config_value=config_value,
         )
@@ -303,10 +312,11 @@ def load_config_from_env() -> RuntimeConfig:
             "GH_TOKEN",
         ),
         use_github_app=_bool_from_env_or_config(
-            "REPONOMICS_USE_GITHUB_APP",
+            ConfigOption.USE_GITHUB_APP.runtime_env_var or "",
             configured,
-            config_key="use_github_app",
-            input_name="use-github-app",
+            config_key=ConfigOption.USE_GITHUB_APP.config_key,
+            input_name=ConfigOption.USE_GITHUB_APP.action_input
+            or ConfigOption.USE_GITHUB_APP.config_key,
         ),
         github_token=_first_env("REPONOMICS_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"),
         dashboard_secret=_first_env(
@@ -324,16 +334,18 @@ def load_config_from_env() -> RuntimeConfig:
         retention_days=_retention_days_from_env_or_config(configured),
         artifact_run_id=_validate_artifact_run_id(_env("REPONOMICS_ARTIFACT_RUN_ID")),
         publish_pages_requested=_bool_from_env_or_config(
-            "REPONOMICS_PUBLISH_PAGES",
+            ConfigOption.PUBLISH_PAGES.runtime_env_var or "",
             configured,
-            config_key="publish_pages_dashboard",
-            input_name="publish-pages",
+            config_key=ConfigOption.PUBLISH_PAGES.config_key,
+            input_name=ConfigOption.PUBLISH_PAGES.action_input
+            or ConfigOption.PUBLISH_PAGES.config_key,
         ),
         generate_readme=_bool_from_env_or_config(
-            "REPONOMICS_GENERATE_README",
+            ConfigOption.PUBLISH_README.runtime_env_var or "",
             configured,
-            config_key="publish_readme_dashboard",
-            input_name="generate-readme",
+            config_key=ConfigOption.PUBLISH_README.config_key,
+            input_name=ConfigOption.PUBLISH_README.action_input
+            or ConfigOption.PUBLISH_README.config_key,
         ),
         pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),

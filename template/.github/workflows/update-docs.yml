@@ -35,4 +35,9 @@ jobs:
         uses: ./.github/actions/reponomics
         with:
           mode: update-docs
+          use-github-app: ${{ env.USE_GITHUB_APP }}
           github-token: ${{ github.token }}
+          data-mode: ${{ env.DATA_MODE }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
+          generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}

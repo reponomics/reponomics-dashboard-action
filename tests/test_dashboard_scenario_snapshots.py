@@ -329,16 +329,31 @@ def _assert_snapshot_image_refs_resolve(snapshot_path: Path) -> None:
 
 def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
     lower_dashboard = rendered.dashboard.lower()
+    assets_dir = rendered.workdir / "docs" / "assets"
     assert "<!doctype html>" in lower_dashboard
     assert 'http-equiv="content-security-policy"' in lower_dashboard
+    assert "<style" not in lower_dashboard
+    assert "data:font/woff2;base64" not in rendered.dashboard
+    assert 'href="assets/font-face.css"' in rendered.dashboard
+    assert 'href="assets/base.css"' in rendered.dashboard
     assert 'src="assets/chart.umd.min.js"' in rendered.dashboard
-    assert (rendered.workdir / "docs" / "assets" / "chart.umd.min.js").is_file()
+    assert 'src="assets/public-bootstrap.js"' in rendered.dashboard
+    assert (assets_dir / "chart.umd.min.js").is_file()
+    assert (assets_dir / "font-face.css").is_file()
+    assert (assets_dir / "base.css").is_file()
+    assert (assets_dir / "theme-bootstrap.js").is_file()
+    assert (assets_dir / "public-bootstrap.js").is_file()
+    assert (assets_dir / "runtime-app.js").is_file()
+    assert (assets_dir / "inter-latin-wght-normal.woff2").is_file()
+    assert (assets_dir / "jetbrains-mono-latin-wght-normal.woff2").is_file()
     assert "cdn.jsdelivr.net" not in rendered.dashboard
     assert "fonts.googleapis.com" not in rendered.dashboard
     assert "encrypted-payload" not in rendered.dashboard
     assert "encrypted-dashboard-data" not in rendered.dashboard
     assert "plaintext-dashboard-data" in rendered.dashboard
-    assert "plaintextDashboardData" in rendered.dashboard
+    assert "plaintextDashboardData" in (assets_dir / "public-bootstrap.js").read_text(
+        encoding="utf-8"
+    )
     assert "dashboardPayload" not in rendered.dashboard
     assert "Dashboard disabled" not in rendered.dashboard
 

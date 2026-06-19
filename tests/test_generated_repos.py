@@ -1688,14 +1688,26 @@ def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_pa
         "encrypted",
         encoding="utf-8",
     )
+    (tmp_path / "docs" / "assets" / "encrypted-dashboard-data.json").write_text(
+        json.dumps(
+            {
+                "version": 2,
+                "summary": "encrypted-summary",
+                "chunks": {"c0001": "encrypted-chunk"},
+                "chunk_count": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
     (tmp_path / "docs" / "reponomics").mkdir(parents=True)
     (tmp_path / "docs" / "reponomics" / ".manifest.json").write_text(
         "{}\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "index.html").write_text(
-        '<script id="encrypted-dashboard-data" type="application/json"></script>'
-        '<script id="export-manifest" type="application/json"></script>',
+        '<meta name="reponomics-encrypted-dashboard-data" '
+        'content="assets/encrypted-dashboard-data.json">'
+        '<meta name="reponomics-export-manifest" content="assets/export-manifest.json">',
         encoding="utf-8",
     )
     profile = template_consumer_e2e.ConsumerProfile(

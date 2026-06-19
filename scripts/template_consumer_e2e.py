@@ -422,6 +422,30 @@ def _git_tree(consumer_dir: Path) -> set[str]:
     return set(output.splitlines())
 
 
+def _read_dashboard_json_payload(consumer_dir: Path, asset_name: str) -> dict[str, object]:
+    asset_path = consumer_dir / "docs" / "assets" / asset_name
+    if not asset_path.is_file():
+        raise TemplateConsumerE2EError(f"dashboard payload asset missing: {asset_name}")
+    payload = json.loads(asset_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TemplateConsumerE2EError(f"dashboard payload asset is not an object: {asset_name}")
+    return payload
+
+
+def _assert_chunked_dashboard_payload(profile_name: str, payload: Mapping[str, object]) -> None:
+    chunks = payload.get("chunks")
+    summary = payload.get("summary")
+    chunk_count = payload.get("chunk_count")
+    if (
+        payload.get("version") != 2
+        or not isinstance(summary, (dict, str))
+        or not isinstance(chunks, dict)
+        or not isinstance(chunk_count, int)
+        or chunk_count != len(chunks)
+    ):
+        raise TemplateConsumerE2EError(f"{profile_name}: dashboard chunk object missing")
+
+
 def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> None:
     outputs = _read_github_output(consumer_dir / ".e2e-github-output")
     if outputs.get("data-mode") != profile.expected_data_mode:
@@ -440,12 +464,23 @@ def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> 
     if profile.expected_data_mode == "encrypted":
         if "encrypted-dashboard-data" not in dashboard or "export-manifest" not in dashboard:
             raise TemplateConsumerE2EError(f"{profile.name}: encrypted dashboard markers missing")
+        encrypted_payload = _read_dashboard_json_payload(
+            consumer_dir,
+            "encrypted-dashboard-data.json",
+        )
+        _assert_chunked_dashboard_payload(profile.name, encrypted_payload)
         if not list((consumer_dir / "docs" / "assets").glob("export-data-*.enc")):
             raise TemplateConsumerE2EError(f"{profile.name}: encrypted export asset missing")
     elif "encrypted-dashboard-data" in dashboard or "encrypted-payload" in dashboard:
         raise TemplateConsumerE2EError(f"{profile.name}: plaintext dashboard contains encrypted data")
-    elif "plaintextDashboardData" not in dashboard or "dashboardPayload" in dashboard:
-        raise TemplateConsumerE2EError(f"{profile.name}: plaintext dashboard chunk object missing")
+    else:
+        if "reponomics-dashboard-data" not in dashboard or "dashboardPayload" in dashboard:
+            raise TemplateConsumerE2EError(f"{profile.name}: plaintext dashboard markers missing")
+        plaintext_payload = _read_dashboard_json_payload(
+            consumer_dir,
+            "dashboard-data.json",
+        )
+        _assert_chunked_dashboard_payload(profile.name, plaintext_payload)
 
     managed_manifest = consumer_dir / "docs" / "reponomics" / ".manifest.json"
     if not managed_manifest.is_file():

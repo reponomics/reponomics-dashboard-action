@@ -98,6 +98,8 @@ The template product consists of the generated output published to `reponomics/r
 - action metadata required by generated workflows
 - template publication workflows
 
+Template publication is a release ledger, not a normal hand-maintained development history. The source repository builds `dist/template`, validates it against `template-contract.yml` and the accepted action release, then appends a mechanically generated publication commit to `reponomics/reponomics-dashboard`. Each generated release tag points at one of those generated commits. This keeps previous public template snapshots reachable through ordinary Git ancestry while still making tags/releases the version boundary users and maintainers should cite.
+
 ### Generated Template Repository
 
 Publication should be a reproducible projection from this repository:
@@ -109,6 +111,8 @@ source tree at commit S
   -> publish_generated_repo.py
   -> reponomics-dashboard main
 ```
+
+Routine production publication is centralized in `.github/workflows/template-release.yml`. The workflow runs validation and packages the publication handoff before requesting the protected `template-publication` deployment approval; after approval, it attests the release artifacts, creates the immutable source tag, appends the generated publication commit, creates or verifies the generated release tag, and creates the generated repository GitHub Release.
 
 ### Demo Repository
 

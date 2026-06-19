@@ -493,6 +493,11 @@ def test_prepare_template_release_workflow_opens_release_pr() -> None:
     assert workflow["name"] == "Prepare Template Release"
     assert "workflow_dispatch" in workflow[True]
     assert workflow_text.index("release_type:") < workflow_text.index("base_ref:")
+    assert workflow[True]["workflow_dispatch"]["inputs"]["base_ref"]["default"] == "main"
+    assert (
+        "use main for normal template-only releases, not an action tag"
+        in workflow[True]["workflow_dispatch"]["inputs"]["base_ref"]["description"]
+    )
     assert "options:" in workflow_text
     assert "- patch" in workflow_text
     assert "- minor" in workflow_text

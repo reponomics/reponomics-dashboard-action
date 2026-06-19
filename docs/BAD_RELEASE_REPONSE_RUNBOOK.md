@@ -113,7 +113,7 @@ Response:
 
 - Do not bump the template version again just to retry.
 - Fix the workflow or validation failure.
-- Rerun the failed workflow if possible.
+- Rerun `template-release.yml` from the merged `main` commit when possible. Normal reruns should repeat the release gates, prepare the publication handoff, request `template-publication` approval only if publication is still needed, and then publish from the same approved source.
 - If rerun is impossible, create the same `reponomics-dashboard-vA.B.C` source tag from the merged commit only after running `make template-release-gates` locally or in CI, then use an explicit incident-specific repair procedure to publish the generated repository from that approved source.
 - Confirm the generated repository release `reponomics-dashboard-vA.B.C` is created in `reponomics/reponomics-dashboard`.
 
@@ -126,9 +126,10 @@ Impact: source tag or generated repository release exists, but `reponomics/repon
 Response:
 
 - Inspect `template-release.yml` failure.
-- If the failure occurred before generated publication, fix and rerun `template-release.yml`.
-- If publication partially pushed, compare generated repo `Source-Commit` and `.reponomics/template-provenance.json`.
-- Rerun publication only from the same approved source commit or source tag.
+- If the failure occurred before the protected `publish-template-release` job, fix and rerun `template-release.yml`; a healthy rerun should not request deployment approval when the generated release already exists and verifies.
+- If failure occurred after approval but before release creation, rerun `template-release.yml` from the same approved source. The publication helper should verify an existing release tag against the expected payload without moving newer generated `main` backward.
+- If publication partially pushed, compare generated repo `Source-Commit`, `Template-Version`, `Payload-Digest`, `Accepted-Action`, and `.reponomics/template-provenance.json`.
+- Rerun publication only through `template-release.yml` from the same approved source commit or source tag, unless an incident-specific repair plan is explicitly approved.
 - Do not create a new template version unless the template payload itself must change.
 
 Public note: not required unless users could copy the stale/broken generated repository during the incident window.
@@ -274,7 +275,7 @@ Use one or more scenarios:
 
 1. Action release exists, but the template acceptance PR failed.
 2. Template acceptance PR merged, but `template-release.yml` failed.
-3. Template release exists, but `template-release.yml` failed before generated publication.
+3. Source template tag exists, but `template-release.yml` failed before generated publication.
 4. Generated template publication completed with wrong provenance.
 5. Action patch release breaks the minimum compatible protected template.
 6. Template release gives new copied repositories broken setup.

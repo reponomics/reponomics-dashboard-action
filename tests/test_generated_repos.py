@@ -75,6 +75,7 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
 
     required = [
         ".github/scripts/resolve-reponomics-config.py",
+        ".github/scripts/auto-doctor-state.py",
         ".github/actions/reponomics/action.yml",
         ".github/workflows/collect-and-publish.yml",
         ".github/workflows/doctor.yml",
@@ -310,6 +311,12 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: publish" in collect_publish
     assert "artifact-run-id: ${{ github.run_id }}" in collect_publish
     assert "Republish dashboard outputs" in collect_publish
+    assert "auto-doctor-cadence:" in collect_publish
+    assert "uses: ./.github/workflows/doctor.yml" in collect_publish
+    assert "artifact_run_id: ${{ github.run_id }}" in collect_publish
+    assert "secrets: inherit" in collect_publish
+    assert "mode: doctor" not in collect_publish
+    assert ".reponomics/auto-doctor.json" in collect_publish
     assert "mode: docs-sync" in collect_publish
     assert "allow-docs-sync" not in collect_publish
     assert local_action not in setup
@@ -335,6 +342,20 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         "pages": "write",
         "id-token": "write",
     }
+    assert "always()" in collect_publish_workflow["jobs"]["auto-doctor-cadence"]["if"]
+    assert collect_publish_workflow["jobs"]["auto-doctor-cadence"]["permissions"] == {
+        "contents": "read",
+    }
+    assert collect_publish_workflow["jobs"]["auto-doctor"]["uses"] == "./.github/workflows/doctor.yml"
+    assert collect_publish_workflow["jobs"]["auto-doctor"]["with"]["artifact_run_id"] == "${{ github.run_id }}"
+    assert collect_publish_workflow["jobs"]["auto-doctor"]["secrets"] == "inherit"
+    assert collect_publish_workflow["jobs"]["auto-doctor"]["permissions"] == {
+        "contents": "read",
+        "actions": "read",
+    }
+    assert collect_publish_workflow["jobs"]["auto-doctor-marker"]["permissions"] == {
+        "contents": "write",
+    }
     assert collect_publish_workflow["jobs"]["republish"]["permissions"] == {
         "contents": "write",
         "actions": "read",
@@ -345,6 +366,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         "contents": "read",
         "actions": "read",
     }
+    assert "workflow_call:" in doctor
     assert "artifact_run_id:" in doctor
     assert "Validate artifact run ID" in doctor
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in doctor
@@ -402,6 +424,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert '"publish_readme_dashboard": "PUBLISH_README_DASHBOARD"' in resolver
     assert '"publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD"' in resolver
     assert '"artifact_retention_days": "RETENTION_DAYS"' in resolver
+    assert '"auto_doctor_every_n_days": "AUTO_DOCTOR_EVERY_N_DAYS"' in resolver
 
 
 def test_template_contract_rejects_missing_required_wrapper_input(tmp_path):
@@ -449,6 +472,85 @@ def test_generated_workflow_run_steps_do_not_interpolate_untrusted_contexts():
                         f"{workflow_path}:{job_name}:{step.get('name')} "
                         + f"interpolates {pattern} directly into a run block"
                     )
+
+
+def test_auto_doctor_state_script_checks_and_marks_cadence(tmp_path):
+    marker = tmp_path / ".reponomics" / "auto-doctor.json"
+    script = Path("template/.github/scripts/auto-doctor-state.py")
+
+    first = subprocess.run(
+        [
+            "python",
+            script.as_posix(),
+            "--interval-days",
+            "7",
+            "--marker",
+            marker.as_posix(),
+            "--now",
+            "2026-06-19T00:00:00Z",
+            "check",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "due: true" in first.stdout
+
+    subprocess.run(
+        [
+            "python",
+            script.as_posix(),
+            "--interval-days",
+            "7",
+            "--marker",
+            marker.as_posix(),
+            "--run-id",
+            "12345",
+            "--now",
+            "2026-06-19T00:00:00Z",
+            "mark",
+        ],
+        check=True,
+    )
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    assert payload["last_successful_at"] == "2026-06-19T00:00:00Z"
+    assert payload["last_successful_run_id"] == "12345"
+
+    second = subprocess.run(
+        [
+            "python",
+            script.as_posix(),
+            "--interval-days",
+            "7",
+            "--marker",
+            marker.as_posix(),
+            "--now",
+            "2026-06-25T00:00:00Z",
+            "check",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "due: false" in second.stdout
+
+    third = subprocess.run(
+        [
+            "python",
+            script.as_posix(),
+            "--interval-days",
+            "7",
+            "--marker",
+            marker.as_posix(),
+            "--now",
+            "2026-06-26T00:00:00Z",
+            "check",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "due: true" in third.stdout
 
 
 def test_generated_template_workflow_names_are_command_labels():
@@ -557,12 +659,17 @@ def test_required_fields_do_not_have_default_value():
     )
 
     assert expected_required_keys == runtime_config.REQUIRED_SETUP_CONFIG_KEYS
-    assert expected_defaulted_keys == runtime_config.DEFAULTED_CONFIG_KEYS
+    assert expected_defaulted_keys == (
+        runtime_config.DEFAULTED_CONFIG_KEYS
+        + tuple(runtime_config.OPTIONAL_CONFIG_DEFAULTS)
+    )
     assert expected_required_keys == resolver_required_keys
     assert template_payload["artifact_retention_days"] == 90
     assert template_payload["use_github_app"] is False
+    assert template_payload["auto_doctor_every_n_days"] == 0
     assert "artifact_retention_days" not in expected_required_keys
     assert "use_github_app" not in expected_required_keys
+    assert "auto_doctor_every_n_days" not in expected_required_keys
 
 
 def test_template_contract_and_action_metadata_contract():

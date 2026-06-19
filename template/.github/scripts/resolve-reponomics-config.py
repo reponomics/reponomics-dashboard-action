@@ -19,6 +19,7 @@ CONFIG_KEYS = {
     "allow_docs_sync": "ALLOW_DOCS_SYNC",
     "artifact_retention_days": "RETENTION_DAYS",
     "use_github_app": "USE_GITHUB_APP",
+    "auto_doctor_every_n_days": "AUTO_DOCTOR_EVERY_N_DAYS",
 }
 
 REQUIRED_KEYS = (
@@ -31,6 +32,8 @@ REQUIRED_KEYS = (
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
+MIN_AUTO_DOCTOR_DAYS = 0
+MAX_AUTO_DOCTOR_DAYS = 30
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*?)\s*$")
 
@@ -128,6 +131,11 @@ def _required_scalar(scalars: dict[str, str], key: str) -> str:
     return value
 
 
+def _optional_scalar(scalars: dict[str, str], key: str, default: str) -> str:
+    value = scalars.get(key, "").strip()
+    return value if value else default
+
+
 def _resolve(config_path: Path) -> dict[str, str]:
     scalars = _load_top_level_scalars(config_path)
     missing = [key for key in REQUIRED_KEYS if not scalars.get(key, "").strip()]
@@ -161,6 +169,18 @@ def _resolve(config_path: Path) -> dict[str, str]:
         raise ValueError(
             "artifact_retention_days must be between "
             f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
+        )
+
+    try:
+        auto_doctor_days = int(
+            _optional_scalar(scalars, "auto_doctor_every_n_days", "0")
+        )
+    except ValueError as exc:
+        raise ValueError("auto_doctor_every_n_days must be an integer.") from exc
+    if auto_doctor_days < MIN_AUTO_DOCTOR_DAYS or auto_doctor_days > MAX_AUTO_DOCTOR_DAYS:
+        raise ValueError(
+            "auto_doctor_every_n_days must be between "
+            f"{MIN_AUTO_DOCTOR_DAYS} and {MAX_AUTO_DOCTOR_DAYS}."
         )
 
     publish_pages = _bool(
@@ -201,6 +221,7 @@ def _resolve(config_path: Path) -> dict[str, str]:
         "ALLOW_DOCS_SYNC": allow_docs_sync,
         "RETENTION_DAYS": str(retention_days),
         "USE_GITHUB_APP": use_github_app,
+        "AUTO_DOCTOR_EVERY_N_DAYS": str(auto_doctor_days),
         "COLLECTION_AUTH_MODE": collection_auth_mode,
     }
 

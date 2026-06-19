@@ -77,6 +77,7 @@ def _write_setup_config(repo: Path, **overrides: str) -> None:
         "allow_docs_sync": "true",
         "artifact_retention_days": "90",
         "use_github_app": "false",
+        "auto_doctor_every_n_days": "0",
         **overrides,
     }
     config_path = repo / "config.yaml"
@@ -97,6 +98,9 @@ def _write_setup_config(repo: Path, **overrides: str) -> None:
             f"artifact_retention_days: {values['artifact_retention_days']}"
         ),
         "use_github_app: false": f"use_github_app: {values['use_github_app']}",
+        "auto_doctor_every_n_days: 0": (
+            f"auto_doctor_every_n_days: {values['auto_doctor_every_n_days']}"
+        ),
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
@@ -259,6 +263,19 @@ def test_setup_config_resolver_rejects_short_artifact_retention(
 
     assert result.returncode == 1
     assert "artifact_retention_days must be between 14 and 90" in result.stderr
+
+
+def test_setup_config_resolver_rejects_invalid_auto_doctor_cadence(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo, auto_doctor_every_n_days="31")
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 1
+    assert "auto_doctor_every_n_days must be between 0 and 30" in result.stderr
 
 
 def test_setup_config_resolver_rejects_control_character_payload(

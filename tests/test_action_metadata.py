@@ -22,7 +22,11 @@ ENCRYPTED_DASHBOARD_ARTIFACT_IF = (
     "steps.runtime.outputs.publish-pages == 'false' && " +
     "steps.runtime.outputs.data-mode == 'encrypted' }}"
 )
-DATA_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
+DATA_PRODUCER_MODES = (
+    "inputs.mode == 'collect'",
+    "inputs.mode == 'rotate-key'",
+    "inputs.mode == 'incident-reset'",
+)
 
 
 def _action() -> dict:
@@ -550,8 +554,10 @@ def test_pages_deployment_steps_follow_publish_pages_contract() -> None:
     assert plaintext_dashboard["with"]["name"] == "html-dashboard-plaintext"
     assert encrypted_dashboard["if"] == ENCRYPTED_DASHBOARD_ARTIFACT_IF
     assert encrypted_dashboard["with"]["name"] == "html-dashboard-encrypted"
-    assert DATA_MODE_EXCLUSION in encrypted_data["if"]
-    assert DATA_MODE_EXCLUSION in plaintext_data["if"]
+    assert all(mode in encrypted_data["if"] for mode in DATA_PRODUCER_MODES)
+    assert all(mode in plaintext_data["if"] for mode in DATA_PRODUCER_MODES)
+    assert "inputs.mode == 'doctor'" not in encrypted_data["if"]
+    assert "inputs.mode == 'doctor'" not in plaintext_data["if"]
     assert "Upload collect provenance artifact" not in [
         step.get("name") for step in _steps()
     ]
@@ -587,6 +593,8 @@ def test_doctor_mode_metadata_contract() -> None:
     outputs = action["outputs"]
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
     upload_report = _step_by_name("Upload doctor diagnostic report")
+    encrypted_data_upload = _step_by_name("Upload encrypted dashboard data artifact")
+    plaintext_data_upload = _step_by_name("Upload dashboard data artifact")
 
     assert "doctor" in inputs["mode"]["description"]
     assert inputs["comparison-secret"]["default"] == ""
@@ -596,6 +604,10 @@ def test_doctor_mode_metadata_contract() -> None:
     assert upload_report["if"] == "${{ always() && inputs.mode == 'doctor' && steps.runtime.outputs.doctor-report-path != '' }}"
     assert upload_report["with"]["name"] == "reponomics-doctor-report"
     assert upload_report["with"]["path"] == "${{ steps.runtime.outputs.doctor-report-path }}"
+    assert "inputs.mode == 'doctor'" not in encrypted_data_upload["if"]
+    assert "inputs.mode == 'doctor'" not in plaintext_data_upload["if"]
+    assert "inputs.mode == 'collect'" in encrypted_data_upload["if"]
+    assert "inputs.mode == 'collect'" in plaintext_data_upload["if"]
 
 
 def test_incident_reset_purge_runs_after_data_upload() -> None:

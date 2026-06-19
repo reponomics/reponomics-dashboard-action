@@ -185,6 +185,81 @@ jobs:
           publish-pages: ${{ env.PUBLISH_PAGES_DASHBOARD }}
           generate-readme: ${{ env.PUBLISH_README_DASHBOARD }}
 
+  auto-doctor-cadence:
+    needs: publish
+    if: ${{ always() && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      due: ${{ steps.auto_doctor_cadence.outputs.due }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Check auto-doctor cadence
+        id: auto_doctor_cadence
+        if: >-
+          env.REPONOMICS_SETUP_COMPLETE == 'true' &&
+          env.AUTO_DOCTOR_EVERY_N_DAYS != '0' &&
+          (env.PUBLISH_PAGES_DASHBOARD == 'true' || env.PUBLISH_README_DASHBOARD == 'true')
+        run: python .github/scripts/auto-doctor-state.py --interval-days "$AUTO_DOCTOR_EVERY_N_DAYS" check
+
+  auto-doctor:
+    needs: auto-doctor-cadence
+    if: ${{ needs.auto-doctor-cadence.outputs.due == 'true' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/doctor.yml
+    with:
+      artifact_run_id: ${{ github.run_id }}
+    secrets: inherit
+
+  auto-doctor-marker:
+    needs:
+      - auto-doctor-cadence
+      - auto-doctor
+    if: ${{ always() && needs.auto-doctor-cadence.outputs.due == 'true' && needs.auto-doctor.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: main
+
+      - name: Resolve Reponomics configuration
+        run: python .github/scripts/resolve-reponomics-config.py --require-setup
+
+      - name: Mark successful auto-doctor
+        id: auto_doctor_marker
+        run: python .github/scripts/auto-doctor-state.py --interval-days "$AUTO_DOCTOR_EVERY_N_DAYS" --run-id "$GITHUB_RUN_ID" mark
+
+      - name: Commit auto-doctor marker
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .reponomics/auto-doctor.json
+
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+
+          git commit -m "chore: record Reponomics auto-doctor [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME:-main}"
+          git push
+
   republish:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.skip_collect }}
     runs-on: ubuntu-latest

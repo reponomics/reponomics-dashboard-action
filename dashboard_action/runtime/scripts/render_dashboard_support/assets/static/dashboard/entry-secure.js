@@ -1,5 +1,20 @@
+import { createDashboardApp } from './app.js';
+import { readJsonAsset } from './json-assets.js';
 
-    const EXPECTED_DASHBOARD_DATA_VERSION = 2;
+const app = createDashboardApp();
+const encryptedDashboardData = await readJsonAsset(
+  document,
+  'reponomics-encrypted-dashboard-data',
+  'encrypted-dashboard-data'
+);
+const exportManifestPayload = await readJsonAsset(
+  document,
+  'reponomics-export-manifest',
+  'export-manifest',
+  { optional: true }
+);
+
+const EXPECTED_DASHBOARD_DATA_VERSION = 2;
     const EXPECTED_CIPHER = 'AES-GCM';
     const EXPECTED_KDF_NAME = 'PBKDF2';
     const EXPECTED_KDF_HASH = 'SHA-256';
@@ -7,13 +22,6 @@
     const EXPECTED_SALT_BYTES = 16;
     const EXPECTED_IV_BYTES = 12;
 
-    const encryptedDashboardData = JSON.parse(
-      document.getElementById('encrypted-dashboard-data').textContent
-    );
-    const exportManifestNode = document.getElementById('export-manifest');
-    const exportManifestPayload = exportManifestNode
-      ? JSON.parse(exportManifestNode.textContent)
-      : null;
     const authShell = document.getElementById('auth-shell');
     const unlockForm = document.getElementById('unlock-form');
     const dashboardKeyInput = document.getElementById('dashboard-key');
@@ -566,8 +574,8 @@
     }
 
     if (authThemeToggle) {
-      authThemeToggle.addEventListener('click', toggleTheme);
-      applyTheme(preferredTheme(), false);
+      authThemeToggle.addEventListener('click', app.toggleTheme);
+      app.applyTheme(app.preferredTheme(), false);
     }
 
     async function unlockWithCurrentInput() {
@@ -605,7 +613,7 @@
         authShell.style.display = 'none';
         document.body.classList.remove('auth-locked');
         document.body.removeAttribute('data-screen-label');
-        renderDashboard(payload);
+        app.renderDashboard(payload);
         enableExport();
         if (unlockDelayTimer) {
           clearTimeout(unlockDelayTimer);

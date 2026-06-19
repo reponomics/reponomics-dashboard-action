@@ -34,19 +34,25 @@ VERSION_STATUS_TEST_VERSION = "0.13.1"
 VERSION_STATUS_TEST_TAG = f"v{VERSION_STATUS_TEST_VERSION}"
 VERSION_STATUS_RELEASES_URL = "https://github.com/reponomics/reponomics-dashboard-action/releases"
 PUBLISHED_CORE_RUNTIME_SOURCES = [
-    "assets/runtime-state.js",
-    "assets/runtime-data-provider.js",
-    "assets/runtime-theme.js",
-    "assets/runtime-format.js",
-    "assets/runtime-selection.js",
-    "assets/runtime-quality-calendar.js",
-    "assets/runtime-series.js",
-    "assets/runtime-momentum.js",
-    "assets/runtime-chart-options.js",
-    "assets/runtime-controls.js",
-    "assets/runtime-charts.js",
-    "assets/runtime-tables.js",
-    "assets/runtime-app.js",
+    "assets/dashboard/chart-adapter.js",
+    "assets/dashboard/state.js",
+    "assets/dashboard/data-provider.js",
+    "assets/dashboard/theme.js",
+    "assets/dashboard/format.js",
+    "assets/dashboard/selection.js",
+    "assets/dashboard/quality-calendar.js",
+    "assets/dashboard/series.js",
+    "assets/dashboard/momentum.js",
+    "assets/dashboard/chart-options.js",
+    "assets/dashboard/controls.js",
+    "assets/dashboard/charts.js",
+    "assets/dashboard/tables.js",
+    "assets/dashboard/controller.js",
+    "assets/dashboard/app.js",
+    "assets/dashboard/json-assets.js",
+    "assets/dashboard/theme-preload.js",
+    "assets/dashboard/entry-public.js",
+    "assets/dashboard/entry-secure.js",
 ]
 
 
@@ -101,17 +107,13 @@ def _asset_text(index_path: Path, name: str) -> str:
 def _published_script_sources(*, encrypted: bool) -> list[str]:
     return [
         "assets/chart.umd.min.js",
-        "assets/theme-bootstrap.js",
-        *PUBLISHED_CORE_RUNTIME_SOURCES,
-        "assets/secure-runtime.js" if encrypted else "assets/public-bootstrap.js",
+        "assets/dashboard/theme-preload.js",
+        "assets/dashboard/entry-secure.js" if encrypted else "assets/dashboard/entry-public.js",
     ]
 
 
 def _published_runtime_text(index_path: Path, *, encrypted: bool) -> str:
-    asset_names = [
-        *(source.removeprefix("assets/") for source in PUBLISHED_CORE_RUNTIME_SOURCES),
-        "secure-runtime.js" if encrypted else "public-bootstrap.js",
-    ]
+    asset_names = [source.removeprefix("assets/") for source in PUBLISHED_CORE_RUNTIME_SOURCES]
     return "\n".join(_asset_text(index_path, name) for name in asset_names)
 
 
@@ -124,6 +126,43 @@ def _script_json(html: str, script_id: str) -> dict[str, Any]:
     if not match:
         raise AssertionError(f"missing script payload for {script_id}")
     return json.loads(match.group(1))
+
+
+def _asset_json(index_path: Path, asset_name: str) -> dict[str, Any]:
+    return json.loads((index_path.parent / "assets" / asset_name).read_text(encoding="utf-8"))
+
+
+def _dashboard_json(
+    index_path: Path,
+    document: str,
+    legacy_script_id: str,
+    asset_name: str,
+) -> dict[str, Any]:
+    try:
+        return _script_json(document, legacy_script_id)
+    except AssertionError:
+        return _asset_json(index_path, asset_name)
+
+
+def _write_dashboard_json(
+    index_path: Path,
+    document: str,
+    legacy_script_id: str,
+    asset_name: str,
+    value: dict[str, Any],
+) -> None:
+    try:
+        _script_json(document, legacy_script_id)
+    except AssertionError:
+        (index_path.parent / "assets" / asset_name).write_text(
+            json.dumps(value, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    else:
+        index_path.write_text(
+            _replace_script_json(document, legacy_script_id, value),
+            encoding="utf-8",
+        )
 
 
 def _runtime_const_json(html: str, const_name: str) -> dict[str, Any]:
@@ -1400,16 +1439,16 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert "Latest data capture: 2026-05-01 12:00 UTC" in readme
     assert "Last updated:" not in readme
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    assert "encrypted-dashboard-data" in dashboard
-    assert "export-manifest" in dashboard
+    assert 'name="reponomics-encrypted-dashboard-data"' in dashboard
+    assert 'name="reponomics-export-manifest"' in dashboard
     assert 'id="export-button"' in dashboard
     assert 'id="export-hash-button"' in dashboard
     assert "How download verification works" in dashboard
-    secure_runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
+    secure_runtime = _asset_text(config.pages_index_path, "dashboard/entry-secure.js")
     assert "validateEncryptedDashboardData" in secure_runtime
     assert "EXPECTED_KDF_ITERATIONS = 600000" in secure_runtime
     assert 'src="assets/chart.umd.min.js"' in dashboard
-    assert 'src="assets/secure-runtime.js"' in dashboard
+    assert 'type="module" src="assets/dashboard/entry-secure.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
     assert len(list((config.pages_index_path.parent / "assets").glob("export-data-*.enc"))) == 1
@@ -1427,7 +1466,7 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    encrypted_data = _dashboard_json(config.pages_index_path, dashboard, "encrypted-dashboard-data", "encrypted-dashboard-data.json")
     assert encrypted_data["version"] == 2
     assert encrypted_data["cipher"] == "AES-GCM"
     assert encrypted_data["kdf"] == {
@@ -1512,14 +1551,17 @@ def test_doctor_dashboard_key_check_rejects_corrupt_chunk_ciphertext(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    encrypted_data = _dashboard_json(config.pages_index_path, dashboard, "encrypted-dashboard-data", "encrypted-dashboard-data.json")
     first_chunk_id = next(iter(encrypted_data["chunks"]))
     encrypted_data["chunks"][first_chunk_id] = _tamper_encrypted_token(
         encrypted_data["chunks"][first_chunk_id]
     )
-    config.pages_index_path.write_text(
-        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
-        encoding="utf-8",
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+        encrypted_data,
     )
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
@@ -1561,14 +1603,17 @@ def test_doctor_mode_fails_when_ui_handoff_boundary_fails(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    encrypted_data = _dashboard_json(config.pages_index_path, dashboard, "encrypted-dashboard-data", "encrypted-dashboard-data.json")
     first_chunk_id = next(iter(encrypted_data["chunks"]))
     encrypted_data["chunks"][first_chunk_id] = _tamper_encrypted_token(
         encrypted_data["chunks"][first_chunk_id]
     )
-    config.pages_index_path.write_text(
-        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
-        encoding="utf-8",
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+        encrypted_data,
     )
 
     doctor_config = _config(tmp_path, mode="doctor", dashboard_secret=OLD_KEY)
@@ -1925,7 +1970,7 @@ def test_doctor_browser_contract_constants_match_renderer_and_secure_runtime() -
     assert "const EXPECTED_CIPHER = 'AES-GCM';" in secure_runtime
     assert f"const EXPECTED_KDF_NAME = '{run.doctor_mod.EXPECTED_KDF_NAME}';" in secure_runtime
     assert f"const EXPECTED_KDF_HASH = '{run.doctor_mod.EXPECTED_KDF_HASH}';" in secure_runtime
-    assert "const EXPECTED_KDF_ITERATIONS = __PBKDF2_ITERATIONS__;" in secure_runtime
+    assert f"const EXPECTED_KDF_ITERATIONS = {run.doctor_mod.EXPECTED_KDF_ITERATIONS};" in secure_runtime
     assert f"const EXPECTED_SALT_BYTES = {run.doctor_mod.EXPECTED_SALT_BYTES};" in secure_runtime
     assert f"const EXPECTED_IV_BYTES = {run.doctor_mod.EXPECTED_IV_BYTES};" in secure_runtime
     assert r"/^c[0-9]{4,}$/.test(chunkId)" in secure_runtime
@@ -1959,11 +2004,14 @@ def test_doctor_encrypted_browser_contract_rejects_runtime_invalid_envelopes(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    encrypted_data = _dashboard_json(config.pages_index_path, dashboard, "encrypted-dashboard-data", "encrypted-dashboard-data.json")
     _mutate_encrypted_dashboard_contract(encrypted_data, mutation)
-    config.pages_index_path.write_text(
-        _replace_script_json(dashboard, "encrypted-dashboard-data", encrypted_data),
-        encoding="utf-8",
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+        encrypted_data,
     )
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
@@ -2109,7 +2157,7 @@ def test_doctor_export_diagnostics_detect_ciphertext_tampering(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    export_manifest = _script_json(dashboard, "export-manifest")
+    export_manifest = _dashboard_json(config.pages_index_path, dashboard, "export-manifest", "export-manifest.json")
     asset_path = config.pages_index_path.parent / export_manifest["asset"]
     ciphertext = bytearray(asset_path.read_bytes())
     ciphertext[0] ^= 1
@@ -2143,11 +2191,14 @@ def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    export_manifest = _script_json(dashboard, "export-manifest")
+    export_manifest = _dashboard_json(config.pages_index_path, dashboard, "export-manifest", "export-manifest.json")
     export_manifest["plaintext_sha256"] = "0" * 64
-    config.pages_index_path.write_text(
-        _replace_script_json(dashboard, "export-manifest", export_manifest),
-        encoding="utf-8",
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "export-manifest",
+        "export-manifest.json",
+        export_manifest,
     )
 
     result = run.doctor_mod.diagnose_dashboard_artifact(
@@ -2275,7 +2326,7 @@ def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    encrypted_data = _script_json(dashboard, "encrypted-dashboard-data")
+    encrypted_data = _dashboard_json(config.pages_index_path, dashboard, "encrypted-dashboard-data", "encrypted-dashboard-data.json")
     summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
 
     assert summary["totals"]["repo_count"] == 200
@@ -2323,15 +2374,17 @@ def test_publish_plaintext_private_renders_plaintext_dashboard_for_artifact_down
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
     assert "Reponomics Dashboard" in dashboard
     assert "encrypted-dashboard-data" not in dashboard
-    assert "plaintext-dashboard-data" in dashboard
-    assert "plaintextDashboardData" in _asset_text(config.pages_index_path, "public-bootstrap.js")
+    assert 'name="reponomics-dashboard-data"' in dashboard
+    public_entry = _asset_text(config.pages_index_path, "dashboard/entry-public.js")
+    assert "createDashboardApp" in public_entry
+    assert "readJsonAsset" in public_entry
     assert "dashboardPayload" not in dashboard
     assert "Dashboard disabled" not in dashboard
     assert 'src="assets/chart.umd.min.js"' in dashboard
-    assert 'src="assets/public-bootstrap.js"' in dashboard
+    assert 'type="module" src="assets/dashboard/entry-public.js"' in dashboard
     assert (config.pages_index_path.parent / "assets" / "chart.umd.min.js").exists()
 
-    plaintext_data = _script_json(dashboard, "plaintext-dashboard-data")
+    plaintext_data = _dashboard_json(config.pages_index_path, dashboard, "plaintext-dashboard-data", "dashboard-data.json")
     summary, chunks = _decode_plaintext_dashboard_data(plaintext_data)
     repo_names = [repo["name"] for repo in summary["repos"]]
     assert plaintext_data == {
@@ -2386,7 +2439,7 @@ def test_publish_large_corpus_writes_one_plaintext_chunk_per_repo(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    plaintext_data = _script_json(dashboard, "plaintext-dashboard-data")
+    plaintext_data = _dashboard_json(config.pages_index_path, dashboard, "plaintext-dashboard-data", "dashboard-data.json")
     summary, chunks = _decode_plaintext_dashboard_data(plaintext_data)
 
     assert summary["totals"]["repo_count"] == 200
@@ -2423,9 +2476,10 @@ def test_publish_collection_quality_preview_fixture_renders_calendar_and_gap_pay
     assert 'id="calendarMonthLabel"' in dashboard
     assert "function shiftCalendarMonth(delta)" in runtime
     assert "Array.isArray(day?.repos) && day.repos.length > 0" in runtime
-    assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in dashboard
-    assert '"date":"2026-04-30","status":"gaps_detected"' in dashboard
-    assert '"date":"2026-05-14","status":"all_zero"' in dashboard
+    payload_asset = _asset_text(config.pages_index_path, "dashboard-data.json")
+    assert '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' in payload_asset
+    assert '"date":"2026-04-30","status":"gaps_detected"' in payload_asset
+    assert '"date":"2026-05-14","status":"all_zero"' in payload_asset
 
 
 def test_publish_fixture_renders_growth_metrics_in_readme_and_encrypted_dashboard_shell(
@@ -2494,7 +2548,7 @@ def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
-    export_manifest = _script_json(dashboard, "export-manifest")
+    export_manifest = _dashboard_json(config.pages_index_path, dashboard, "export-manifest", "export-manifest.json")
     assert export_manifest["version"] == 1
     assert export_manifest["cipher"] == "AES-GCM"
     assert export_manifest["kdf"] == {
@@ -2546,14 +2600,19 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert (
         config.pages_index_path.parent / "assets" / "jetbrains-mono-latin-wght-normal.woff2"
     ).is_file()
-    assert "default-src 'self'" in csp
-    assert "script-src 'self' 'sha256-" in csp
-    assert "style-src 'self'" in csp
-    assert "style-src 'self' 'sha256-" not in csp
+    assert csp == run.render_dashboard.dashboard_html.PUBLISHED_META_CSP
+    assert "default-src 'none'" in csp
+    assert "script-src 'self'" in csp
+    assert "script-src-attr 'none'" in csp
+    assert "style-src-attr 'none'" in csp
     assert "font-src 'self'" in csp
     assert "font-src 'self' data:" not in csp
+    assert "img-src 'self';" in csp
+    assert "img-src 'self' data:" not in csp
     assert "connect-src 'self'" in csp
     assert "object-src 'none'" in csp
+    assert "form-action 'none'" in csp
+    assert "frame-ancestors" not in csp
     assert "'unsafe-inline'" not in csp
     assert "<style" not in dashboard_html
     assert "onclick=" not in dashboard_html
@@ -2607,7 +2666,7 @@ def test_publish_encrypted_unlock_shell_affordances(
         config.pages_index_path, "base.css"
     )
     assert "document.querySelectorAll('.theme-toggle')" in _asset_text(
-        config.pages_index_path, "runtime-theme.js"
+        config.pages_index_path, "dashboard/theme.js"
     )
 
     assert 'class="auth-card-icon"' in dashboard
@@ -2632,7 +2691,7 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
 
-    runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
+    runtime = _asset_text(config.pages_index_path, "dashboard/entry-secure.js")
 
     expected_runtime_markers = [
         "UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:'",
@@ -2681,7 +2740,7 @@ def test_publish_dashboard_toolbar_layout_and_status_regression(
     run.run_publish(config, restore_artifact=False)
 
     base_css = _asset_text(config.pages_index_path, "base.css")
-    secure_runtime = _asset_text(config.pages_index_path, "secure-runtime.js")
+    secure_runtime = _asset_text(config.pages_index_path, "dashboard/entry-secure.js")
     assert "font-size: clamp(2.75rem, 5.2vw, 3.2rem);" in base_css
     assert base_css.count(".theme-toggle .theme-label { display: none; }") == 1
     assert "@media (max-width: 1240px) {" in base_css

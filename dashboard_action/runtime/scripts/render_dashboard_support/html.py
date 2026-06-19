@@ -6,6 +6,7 @@ import base64
 import hashlib
 import html
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Any, Mapping, TypedDict, cast
@@ -42,33 +43,78 @@ VENDORED_MONO_FONT_PATH = (
 )
 PBKDF2_ITERATIONS = 600_000
 BASE_STYLES = load_asset("base.css")
-CORE_RUNTIME_ASSETS = (
-    "runtime-state.js",
-    "runtime-data-provider.js",
-    "runtime-theme.js",
-    "runtime-format.js",
-    "runtime-selection.js",
-    "runtime-quality-calendar.js",
-    "runtime-series.js",
-    "runtime-momentum.js",
-    "runtime-chart-options.js",
-    "runtime-controls.js",
-    "runtime-charts.js",
-    "runtime-tables.js",
-    "runtime-app.js",
+DASHBOARD_MODULE_ASSETS = (
+    "dashboard/chart-adapter.js",
+    "dashboard/state.js",
+    "dashboard/data-provider.js",
+    "dashboard/theme.js",
+    "dashboard/format.js",
+    "dashboard/selection.js",
+    "dashboard/quality-calendar.js",
+    "dashboard/series.js",
+    "dashboard/momentum.js",
+    "dashboard/chart-options.js",
+    "dashboard/controls.js",
+    "dashboard/charts.js",
+    "dashboard/tables.js",
+    "dashboard/controller.js",
+    "dashboard/app.js",
+    "dashboard/json-assets.js",
+    "dashboard/theme-preload.js",
+    "dashboard/entry-public.js",
+    "dashboard/entry-secure.js",
 )
 PUBLISHED_STYLESHEET_ASSETS = ("font-face.css", "base.css")
-THEME_BOOTSTRAP_ASSET = "theme-bootstrap.js"
-PUBLIC_BOOTSTRAP_ASSET = "public-bootstrap.js"
-SECURE_RUNTIME_ASSET = "secure-runtime.js"
+STANDALONE_BUNDLE_ASSETS = (
+    "dashboard/chart-adapter.js",
+    "dashboard/state.js",
+    "dashboard/data-provider.js",
+    "dashboard/theme.js",
+    "dashboard/format.js",
+    "dashboard/selection.js",
+    "dashboard/quality-calendar.js",
+    "dashboard/series.js",
+    "dashboard/momentum.js",
+    "dashboard/chart-options.js",
+    "dashboard/controls.js",
+    "dashboard/charts.js",
+    "dashboard/tables.js",
+    "dashboard/controller.js",
+    "dashboard/app.js",
+)
+THEME_PRELOAD_ASSET = "dashboard/theme-preload.js"
+PUBLIC_ENTRY_ASSET = "dashboard/entry-public.js"
+SECURE_ENTRY_ASSET = "dashboard/entry-secure.js"
+PUBLISHED_DASHBOARD_DATA_ASSET = "dashboard-data.json"
+PUBLISHED_ENCRYPTED_DASHBOARD_DATA_ASSET = "encrypted-dashboard-data.json"
+PUBLISHED_EXPORT_MANIFEST_ASSET = "export-manifest.json"
 PUBLISHED_FONT_ASSETS = (
     (VENDORED_INTER_FONT_PATH, "inter-latin-wght-normal.woff2"),
     (VENDORED_MONO_FONT_PATH, "jetbrains-mono-latin-wght-normal.woff2"),
 )
-APP_RUNTIME_JS = "\n".join(load_asset(name) for name in CORE_RUNTIME_ASSETS)
-SECURE_RUNTIME_JS = load_asset("secure-runtime.js")
 DEMO_UNLOCK_STYLESHEET_ASSET = "demo-unlock.css"
 DEMO_UNLOCK_STYLES = load_asset(DEMO_UNLOCK_STYLESHEET_ASSET)
+PUBLISHED_META_CSP = (
+    "default-src 'none'; "
+    "base-uri 'none'; "
+    "object-src 'none'; "
+    "script-src 'self'; "
+    "script-src-elem 'self'; "
+    "script-src-attr 'none'; "
+    "style-src 'self'; "
+    "style-src-elem 'self'; "
+    "style-src-attr 'none'; "
+    "font-src 'self'; "
+    "img-src 'self'; "
+    "connect-src 'self'; "
+    "media-src 'none'; "
+    "frame-src 'none'; "
+    "child-src 'none'; "
+    "worker-src 'none'; "
+    "manifest-src 'none'; "
+    "form-action 'none'"
+)
+HEADER_CSP = PUBLISHED_META_CSP + "; frame-ancestors 'none'"
 
 
 def _font_face_rule(family: str, path: Path, weight_range: str) -> str:
@@ -377,6 +423,11 @@ def build_csp(
     return "; ".join(directives)
 
 
+def published_meta_csp() -> str:
+    """Return the CSP enforced by generated hosted dashboard HTML."""
+    return PUBLISHED_META_CSP
+
+
 def theme_bootstrap_js() -> str:
     return """(function() {
       try {
@@ -393,17 +444,17 @@ def _asset_path(name: str) -> str:
     return f"assets/{name}"
 
 
+def _json_asset_meta(name: str, asset_name: str) -> str:
+    return f'<meta name="{name}" content="{html.escape(_asset_path(asset_name), quote=True)}">'
+
+
 def _published_head_assets(
     chart_loader: str,
     encrypted: bool,
     *,
     include_demo_styles: bool = False,
 ) -> str:
-    scripts = [
-        THEME_BOOTSTRAP_ASSET,
-        *CORE_RUNTIME_ASSETS,
-        SECURE_RUNTIME_ASSET if encrypted else PUBLIC_BOOTSTRAP_ASSET,
-    ]
+    entry_asset = SECURE_ENTRY_ASSET if encrypted else PUBLIC_ENTRY_ASSET
     stylesheets = (
         *PUBLISHED_STYLESHEET_ASSETS,
         *((DEMO_UNLOCK_STYLESHEET_ASSET,) if include_demo_styles else ()),
@@ -413,37 +464,44 @@ def _published_head_assets(
         for name in stylesheets
     ]
     tags.append(f"  {chart_loader}")
-    tags.extend(
-        f'  <script defer src="{_asset_path(name)}"></script>'
-        for name in scripts
-    )
+    tags.append(f'  <script type="module" src="{_asset_path(THEME_PRELOAD_ASSET)}"></script>')
+    tags.append(f'  <script type="module" src="{_asset_path(entry_asset)}"></script>')
     return "\n".join(tags)
 
 
-def _secure_runtime_js() -> str:
-    return SECURE_RUNTIME_JS.replace("__PBKDF2_ITERATIONS__", str(PBKDF2_ITERATIONS))
-
-
-def _public_runtime_js() -> str:
-    return APP_RUNTIME_JS + "\n" + load_asset(PUBLIC_BOOTSTRAP_ASSET)
-
-
-def _encrypted_runtime_js() -> str:
-    return APP_RUNTIME_JS + "\n" + _secure_runtime_js()
-
-
 def _published_runtime_asset_content(name: str) -> str:
-    if name == SECURE_RUNTIME_ASSET:
-        return _secure_runtime_js()
+    if name == SECURE_ENTRY_ASSET:
+        return load_asset(name).replace("__PBKDF2_ITERATIONS__", str(PBKDF2_ITERATIONS))
     return load_asset(name)
 
 
 def published_runtime_assets(encrypted: bool) -> tuple[str, ...]:
-    return (
-        THEME_BOOTSTRAP_ASSET,
-        *CORE_RUNTIME_ASSETS,
-        SECURE_RUNTIME_ASSET if encrypted else PUBLIC_BOOTSTRAP_ASSET,
+    return DASHBOARD_MODULE_ASSETS
+
+
+def _standalone_module_content(name: str) -> str:
+    source = _published_runtime_asset_content(name)
+    source = re.sub(r"^import .*$\n?", "", source, flags=re.MULTILINE)
+    source = re.sub(r"^export function ", "function ", source, flags=re.MULTILINE)
+    source = re.sub(r"^export const ", "const ", source, flags=re.MULTILINE)
+    source = re.sub(r"^export \{[^}]+\};?\n?", "", source, flags=re.MULTILINE)
+    return source.strip()
+
+
+def _public_runtime_js() -> str:
+    bootstrap = """
+const plaintextDashboardData = JSON.parse(
+  document.getElementById('plaintext-dashboard-data').textContent
+);
+createDashboardApp().renderDashboard(plaintextDashboardData);
+"""
+    return "\n\n".join(
+        [*(_standalone_module_content(name) for name in STANDALONE_BUNDLE_ASSETS), bootstrap]
     )
+
+
+APP_RUNTIME_JS = _public_runtime_js()
+SECURE_RUNTIME_JS = _published_runtime_asset_content(SECURE_ENTRY_ASSET)
 
 
 def copy_published_dashboard_assets(output_path: str, *, encrypted: bool) -> None:
@@ -456,6 +514,7 @@ def copy_published_dashboard_assets(output_path: str, *, encrypted: bool) -> Non
         DEMO_UNLOCK_STYLESHEET_ASSET,
         *published_runtime_assets(encrypted),
     ):
+        (asset_dir / asset_name).parent.mkdir(parents=True, exist_ok=True)
         (asset_dir / asset_name).write_text(
             _published_runtime_asset_content(asset_name)
             if asset_name.endswith(".js")
@@ -465,6 +524,13 @@ def copy_published_dashboard_assets(output_path: str, *, encrypted: bool) -> Non
 
     for source, filename in PUBLISHED_FONT_ASSETS:
         shutil.copyfile(source, asset_dir / filename)
+
+
+def write_published_json_asset(output_path: str, asset_name: str, value: object) -> None:
+    """Write generated hosted dashboard JSON next to static dashboard assets."""
+    asset_path = Path(output_path).parent / _asset_path(asset_name)
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    asset_path.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
 
 
 def wrap_html(
@@ -492,7 +558,7 @@ def wrap_html(
         )
         tail_script = ""
         style_tag = ""
-        csp_value = build_csp([], script_blocks, allow_font_data=False)
+        csp_value = published_meta_csp()
     else:
         head_assets = f"  {chart_loader}\n  <style>{style_content}</style>\n  <script>{theme_js}</script>"
         tail_script = f"\n  <script>{runtime_js}</script>"
@@ -563,18 +629,29 @@ def build_public_html(
         },
     )
     dashboard_data_json = json.dumps(dashboard_data, separators=(",", ":"))
-    body = (
-        shell
-        + "\n  <script id=\"plaintext-dashboard-data\" type=\"application/json\">"
-        + dashboard_data_json
-        + "</script>\n"
-    )
+    if external_assets:
+        body = shell
+        extra_head = _json_asset_meta(
+            "reponomics-dashboard-data",
+            PUBLISHED_DASHBOARD_DATA_ASSET,
+        )
+        extra_csp_scripts: list[str] = []
+    else:
+        body = (
+            shell
+            + "\n  <script id=\"plaintext-dashboard-data\" type=\"application/json\">"
+            + dashboard_data_json
+            + "</script>\n"
+        )
+        extra_head = ""
+        extra_csp_scripts = [dashboard_data_json]
     return wrap_html(
         body,
         chart_loader,
         _public_runtime_js(),
+        extra_head=extra_head,
         inline_chart_js=inline_chart_js,
-        extra_csp_scripts=[dashboard_data_json],
+        extra_csp_scripts=extra_csp_scripts,
         external_assets=external_assets,
     )
 
@@ -739,23 +816,41 @@ def build_encrypted_html(
         encrypted_dashboard_data, separators=(",", ":")
     )
     export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
-    body = (
-        auth_card
-        + shell
-        + "\n  <script id=\"encrypted-dashboard-data\" type=\"application/json\">"
-        + encrypted_dashboard_data_json
-        + "</script>\n"
-        + "  <script id=\"export-manifest\" type=\"application/json\">"
-        + export_manifest_json
-        + "</script>\n"
-    )
+    extra_head_parts = ['<meta name="robots" content="noindex, nofollow">']
+    if external_assets:
+        body = auth_card + shell
+        extra_head_parts.extend(
+            [
+                _json_asset_meta(
+                    "reponomics-encrypted-dashboard-data",
+                    PUBLISHED_ENCRYPTED_DASHBOARD_DATA_ASSET,
+                ),
+                _json_asset_meta(
+                    "reponomics-export-manifest",
+                    PUBLISHED_EXPORT_MANIFEST_ASSET,
+                ),
+            ]
+        )
+        extra_csp_scripts: list[str] = []
+    else:
+        body = (
+            auth_card
+            + shell
+            + "\n  <script id=\"encrypted-dashboard-data\" type=\"application/json\">"
+            + encrypted_dashboard_data_json
+            + "</script>\n"
+            + "  <script id=\"export-manifest\" type=\"application/json\">"
+            + export_manifest_json
+            + "</script>\n"
+        )
+        extra_csp_scripts = [encrypted_dashboard_data_json, export_manifest_json]
     return wrap_html(
         body,
         chart_loader,
-        _encrypted_runtime_js(),
-        extra_head='<meta name="robots" content="noindex, nofollow">',
+        "",
+        extra_head="\n  ".join(extra_head_parts),
         body_attributes='class="auth-locked" data-screen-label="Unlock - Encrypted Pages"',
-        extra_csp_scripts=[encrypted_dashboard_data_json, export_manifest_json],
+        extra_csp_scripts=extra_csp_scripts,
         extra_styles=DEMO_UNLOCK_STYLES if demo_unlock is not None else "",
         external_assets=external_assets,
         encrypted_assets=external_assets,

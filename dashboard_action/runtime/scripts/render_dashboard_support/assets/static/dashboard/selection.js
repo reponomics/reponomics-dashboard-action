@@ -1,3 +1,14 @@
+export function installSelection(context) {
+  const document = context.document;
+  const window = context.window;
+  const DEFAULT_WINDOW = context.DEFAULT_WINDOW;
+  const WINDOW_PRESETS = context.WINDOW_PRESETS;
+  const buildRepoMetrics = (...args) => context.buildRepoMetrics(...args);
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const dashboardData = (...args) => context.dashboardData(...args);
+  const palette = context.palette;
+  const state = context.state;
+
     function escapeHtml(text) {
       const d = document.createElement('div');
       d.appendChild(document.createTextNode(text == null ? '' : String(text)));
@@ -99,3 +110,5 @@
       return formatIsoDate(cutoff);
     }
 
+  return { escapeHtml, setText, getShortName, getRepoByName, getRepoColor, isComparing, normalizeWindow, getDefaultWindow, getSelectedWindow, getWindowDays, getRangeLabel, parseIsoDate, formatIsoDate, getWindowCutoffDate };
+}

@@ -1,3 +1,8 @@
+export function installChartOptions(context) {
+  const axisTickLabel = (...args) => context.axisTickLabel(...args);
+  const formatTooltipDate = (...args) => context.formatTooltipDate(...args);
+  const getThemeColor = (...args) => context.getThemeColor(...args);
+
     function chartOptions(stacked) {
       const tick = getThemeColor('--text-muted', '#8b949e');
       const grid = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
@@ -107,3 +112,6 @@
         }
       }
     }
+
+  return { chartOptions, numericDatasetValues, stackedDatasetValues, configureYAxis };
+}

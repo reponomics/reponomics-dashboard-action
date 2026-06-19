@@ -1,3 +1,17 @@
+export function installTables(context) {
+  const document = context.document;
+  const window = context.window;
+  const buildSparklinePath = (...args) => context.buildSparklinePath(...args);
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const escapeHtml = (...args) => context.escapeHtml(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const formatSigned = (...args) => context.formatSigned(...args);
+  const getShortName = (...args) => context.getShortName(...args);
+  const renderRepoTable = (...args) => context.renderRepoTable(...args);
+  const selectRepo = (...args) => context.selectRepo(...args);
+  const state = context.state;
+  const updateDashboard = (...args) => context.updateDashboard(...args);
+
     function sortRows(rows, key, dir, labelKey) {
       const factor = dir === 'asc' ? 1 : -1;
       const numeric = key === 'count' || key === 'uniques' || key === 'share';
@@ -321,3 +335,6 @@
       }
       renderRepoTable();
     }
+
+  return { sortRows, renderSnapshotTable, renderReferrerTable, renderPathsTable, classifyInsight, renderInsights, asBool, renderCommunityCell, buildRepoSparkSVG, getRepoSortKey, sortRepos, setRepoSort };
+}

@@ -1,3 +1,17 @@
+export function installQualityCalendar(context) {
+  const document = context.document;
+  const window = context.window;
+  const currentPayload = (...args) => context.currentPayload(...args);
+  const escapeHtml = (...args) => context.escapeHtml(...args);
+  const formatIsoDate = (...args) => context.formatIsoDate(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
+  const getVisibleRepos = (...args) => context.getVisibleRepos(...args);
+  const getWindowCutoffDate = (...args) => context.getWindowCutoffDate(...args);
+  const hasTrafficLag = (...args) => context.hasTrafficLag(...args);
+  const parseIsoDate = (...args) => context.parseIsoDate(...args);
+  const state = context.state;
+
     function qualityDaysForSelectedWindow() {
       const allDays = applyVisibilityThresholdToQualityDays(
         (currentPayload()?.data_quality?.days || []).slice()
@@ -378,3 +392,5 @@
       };
     }
 
+  return { qualityDaysForSelectedWindow, summarizeQualityDayStatuses, applyVisibilityThresholdToQualityDays, monthKeyFromIsoDate, parseMonthKey, monthLabelFromKey, latestMonthKeyFallback, calendarMonthKeys, resolveCalendarMonth, daysInMonth, calendarStatusLabel, visibleTrafficReportingRanges, trafficReportingByDate, calendarStateForDay, formatCalendarDayTooltip, renderCollectionCalendar, shiftCalendarMonth, computeNoRunStats };
+}

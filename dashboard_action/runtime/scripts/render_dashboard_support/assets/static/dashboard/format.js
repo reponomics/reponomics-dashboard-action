@@ -1,3 +1,7 @@
+export function installFormat(context) {
+  const document = context.document;
+  const window = context.window;
+
     function formatNumber(value) {
       return Number(value || 0).toLocaleString();
     }
@@ -122,3 +126,5 @@
       el.textContent = label;
     }
 
+  return { formatNumber, compactNumber, axisTickLabel, formatSigned, sumArray, buildSparklinePath, renderSparkline, splitWindow, computeDelta, renderDelta };
+}

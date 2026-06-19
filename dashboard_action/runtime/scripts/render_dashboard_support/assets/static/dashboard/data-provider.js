@@ -1,3 +1,11 @@
+export function installDataProvider(context) {
+  const document = context.document;
+  const navigator = context.navigator;
+  const CHUNK_FAILURE_LABELS = context.CHUNK_FAILURE_LABELS;
+  const dashboardChunkError = (...args) => context.dashboardChunkError(...args);
+  const formatNumber = (...args) => context.formatNumber(...args);
+  const state = context.state;
+
     function createDashboardDataProvider(input) {
       const isLazy = !!(input && input.summary && (input.loadRepoChunk || input.chunks));
       const isEncrypted = !!(input && input.loadRepoChunk);
@@ -330,3 +338,6 @@
       notice.appendChild(main);
       return notice;
     }
+
+  return { createDashboardDataProvider, dashboardData, currentPayload, hasChunkLoadError, currentChunkLoadErrors, normalizeChunkLoadError, recordChunkLoadErrors, clearChunkLoadErrors, chunkDiagnosticsText, summarizeChunkErrors, renderDashboardNotice, hasTrafficLag, buildTrafficLagNotice };
+}

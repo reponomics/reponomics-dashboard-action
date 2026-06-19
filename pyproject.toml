@@ -35,7 +35,7 @@ dev = [
 include = ["dashboard_action*"]
 
 [tool.setuptools.package-data]
-"dashboard_action.runtime.scripts.render_dashboard_support.assets" = ["static/*"]
+"dashboard_action.runtime.scripts.render_dashboard_support.assets" = ["static/*", "static/dashboard/*"]
 
 [tool.mypy]
 python_version = "3.11"

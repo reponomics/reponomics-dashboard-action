@@ -74,7 +74,6 @@ def _write_setup_config(repo: Path, **overrides: str) -> None:
         "data_mode": "encrypted",
         "publish_pages_dashboard": "false",
         "publish_readme_dashboard": "false",
-        "allow_docs_sync": "true",
         "artifact_retention_days": "90",
         "use_github_app": "false",
         **overrides,
@@ -92,7 +91,6 @@ def _write_setup_config(repo: Path, **overrides: str) -> None:
         "publish_readme_dashboard: # true/false": (
             f"publish_readme_dashboard: {values['publish_readme_dashboard']}"
         ),
-        "allow_docs_sync: # true/false": f"allow_docs_sync: {values['allow_docs_sync']}",
         "artifact_retention_days: 90": (
             f"artifact_retention_days: {values['artifact_retention_days']}"
         ),

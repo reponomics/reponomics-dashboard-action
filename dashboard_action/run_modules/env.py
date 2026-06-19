@@ -10,7 +10,7 @@ from typing import Any
 from .core import (
     DOCS_ACTION_VERSION_ENV,
     DOCS_STATE_STALE,
-    DOCS_SYNC_STATE_ENV,
+    UPDATE_DOCS_STATE_ENV,
     DOCS_UPDATED_AT_ENV,
     MANAGED_DOCS_DASHBOARD_LINK_ENV,
     MANAGED_DOCS_NAMESPACE,
@@ -101,13 +101,13 @@ def _set_managed_docs_link_env(config: RuntimeConfig) -> None:
 
 
 def _set_empty_managed_docs_status_env() -> None:
-    os.environ[DOCS_SYNC_STATE_ENV] = ""
+    os.environ[UPDATE_DOCS_STATE_ENV] = ""
     os.environ[DOCS_ACTION_VERSION_ENV] = ""
     os.environ[DOCS_UPDATED_AT_ENV] = ""
 
 
 def _set_managed_docs_status_env() -> None:
-    existing_state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+    existing_state = os.environ.get(UPDATE_DOCS_STATE_ENV, "").strip()
     manifest = _read_managed_docs_manifest(existing_state)
     if manifest is None:
         return
@@ -119,7 +119,7 @@ def _set_managed_docs_status_env() -> None:
         os.environ[DOCS_UPDATED_AT_ENV] = str(manifest.get("updated_at") or "")
     if existing_state:
         return
-    os.environ[DOCS_SYNC_STATE_ENV] = (
+    os.environ[UPDATE_DOCS_STATE_ENV] = (
         managed_docs.STATE_UNCHANGED
         if manifest_action_version == VERSION
         else DOCS_STATE_STALE
@@ -136,7 +136,7 @@ def _read_managed_docs_manifest(existing_state: str) -> dict[str, Any] | None:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         if not existing_state:
-            os.environ[DOCS_SYNC_STATE_ENV] = managed_docs.STATE_MANIFEST_INCONSISTENT
+            os.environ[UPDATE_DOCS_STATE_ENV] = managed_docs.STATE_MANIFEST_INCONSISTENT
             os.environ[DOCS_ACTION_VERSION_ENV] = ""
             os.environ[DOCS_UPDATED_AT_ENV] = ""
         return None

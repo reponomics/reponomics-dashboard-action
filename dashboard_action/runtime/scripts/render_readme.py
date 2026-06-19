@@ -42,7 +42,7 @@ MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
 UPSTREAM_MANAGED_DOCS_LINK = (
     "https://github.com/reponomics/reponomics-dashboard/blob/main/docs/reponomics/README.md"
 )
-DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+UPDATE_DOCS_STATE_ENV = "REPONOMICS_UPDATE_DOCS_STATE"
 DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
 DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_LABELS = {
@@ -115,8 +115,8 @@ def _version_status_lines(status, badge_links):
     ]
 
 
-def _docs_sync_status_lines():
-    state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+def _update_docs_status_lines():
+    state = os.environ.get(UPDATE_DOCS_STATE_ENV, "").strip()
     if not state or state in {"unchanged", "written"}:
         return []
     label = DOCS_STATE_LABELS.get(state, state.replace("_", " "))
@@ -354,7 +354,7 @@ def render():
         "",
     ]
     lines.extend(_version_status_lines(version_status, version_badge_links))
-    lines.extend(_docs_sync_status_lines())
+    lines.extend(_update_docs_status_lines())
     lines.extend(
         [
             f"<sub>Latest data capture: {latest_capture}</sub>",

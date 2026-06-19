@@ -166,17 +166,17 @@ def _manifest_value(data_dir: Path, key: str) -> str:
         return ""
 
 
-def _docs_sync_output_values(
+def _update_docs_output_values(
     result: object | None,
 ) -> dict[str, str]:
     if result is None:
         return {
-            "docs-sync-state": "",
+            "update-docs-state": "",
             "docs-action-version": "",
             "docs-updated-at": "",
         }
     return {
-        "docs-sync-state": getattr(result, "state"),
+        "update-docs-state": getattr(result, "state"),
         "docs-action-version": getattr(result, "manifest_action_version"),
         "docs-updated-at": getattr(result, "docs_updated_at"),
     }
@@ -200,7 +200,7 @@ def _write_outputs(
         "schema-version": storage.SCHEMA_VERSION,
         "runtime-version": VERSION,
     }
-    outputs.update(_docs_sync_output_values(docs_result))
+    outputs.update(_update_docs_output_values(docs_result))
     output_path = _env("GITHUB_OUTPUT")
     if output_path:
         with Path(output_path).open("a", encoding="utf-8") as handle:

@@ -4,11 +4,11 @@
 > The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
 
 > [!WARNING]
-> This directory is the default location for Reponomics managed documentation. If `allow_docs_sync` is `true`, local edits in `docs/reponomics/` may be overwritten automatically when docs sync runs. Set `allow_docs_sync: false` before editing if you want to own this directory manually.
+> This directory is the default location for Reponomics managed documentation. Local edits in `docs/reponomics/` may be overwritten when the generated `update-docs` workflow runs. Disable or delete `.github/workflows/update-docs.yml` before editing if you want to own this directory manually.
 
 The manifest at `docs/reponomics/.manifest.json` records the action version for this managed-docs snapshot.
 
-`config.example.yaml` is the managed starter/reference configuration shape. New template repositories receive it once as root `config.yaml`; later docs sync updates only this managed reference copy. Use it when your repository's active `config.yaml` has been edited and you want to compare it against the current action-bundled example. New keys shown in this managed example are only usable when your copied template workflows and local action wrapper can pass them through; docs sync cannot upgrade old workflow wiring by itself.
+`config.example.yaml` is the managed starter/reference configuration shape. New template repositories receive it once as root `config.yaml`; later update-docs runs update only this managed reference copy. Use it when your repository's active `config.yaml` has been edited and you want to compare it against the current action-bundled example. New keys shown in this managed example are only usable when your copied template workflows and local action wrapper can pass them through; update-docs cannot upgrade old workflow wiring by itself.
 
 Start here:
 

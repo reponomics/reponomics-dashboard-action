@@ -1,4 +1,4 @@
-"""Managed documentation sync git integration."""
+"""Managed documentation update git integration."""
 
 from __future__ import annotations
 

@@ -42,12 +42,10 @@ CONFIG_EXAMPLE_SOURCE = Path("dashboard_action/runtime/managed_docs/config.examp
 ACTION_YML_FIXTURE = """
 inputs:
   mode:
-    description: "Runtime mode: collect, publish, rotate-key, incident-reset, docs-sync, or doctor."
-  allow-docs-sync:
-    description: "Optional managed docs sync override."
+    description: "Runtime mode: collect, publish, rotate-key, incident-reset, update-docs, or doctor."
 outputs:
-  docs-sync-state:
-    value: ${{ steps.runtime.outputs.docs-sync-state }}
+  update-docs-state:
+    value: ${{ steps.runtime.outputs.update-docs-state }}
   docs-action-version:
     value: ${{ steps.runtime.outputs.docs-action-version }}
   docs-updated-at:
@@ -82,6 +80,7 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         ".github/workflows/keepalive.yml",
         ".github/workflows/setup.yml",
         ".github/workflows/rotate-key.yml",
+        ".github/workflows/update-docs.yml",
         "CODE_OF_CONDUCT.md",
         "CONTRIBUTING.md",
         "SECURITY.md",
@@ -237,6 +236,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     keepalive = (workflows / "keepalive.yml").read_text(encoding="utf-8")
     setup = (workflows / "setup.yml").read_text(encoding="utf-8")
     rotate = (workflows / "rotate-key.yml").read_text(encoding="utf-8")
+    update_docs = (workflows / "update-docs.yml").read_text(encoding="utf-8")
     resolver = (
         output / ".github" / "scripts" / "resolve-reponomics-config.py"
     ).read_text(encoding="utf-8")
@@ -246,6 +246,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     incident_reset_workflow = yaml.safe_load(incident_reset)
     doctor_workflow = yaml.safe_load(doctor)
     rotate_workflow = yaml.safe_load(rotate)
+    update_docs_workflow = yaml.safe_load(update_docs)
 
     action_ref = f"{contract.action_repository}@{contract.default_action_ref}"
     local_action = f"uses: {template_contract.LOCAL_REPONOMICS_ACTION}"
@@ -254,12 +255,14 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         "doctor.yml": doctor,
         "incident-reset.yml": incident_reset,
         "rotate-key.yml": rotate,
+        "update-docs.yml": update_docs,
     }
     workflow_documents = [
         collect_publish_workflow,
         incident_reset_workflow,
         doctor_workflow,
         rotate_workflow,
+        update_docs_workflow,
     ]
     wrapper_inputs = set(wrapper["inputs"])
     wrapper_steps = _iter_steps(wrapper)
@@ -274,18 +277,20 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         if step.get("uses") == template_contract.LOCAL_REPONOMICS_ACTION
     }
     assert "skip_collect:" in collect_publish
-    assert "docs-sync:" in collect_publish
     assert "resolve-reponomics-config.py --require-setup" in collect_publish
     assert "REPONOMICS_SETUP_COMPLETE == 'true'" in collect_publish
-    assert "mode: docs-sync" in collect_publish
-    assert "github-token: ${{ github.token }}" in collect_publish
-    assert "allow-docs-sync" not in collect_publish
+    assert "workflow_run:" in update_docs
+    assert 'workflows: ["Collect and Publish"]' in update_docs
+    assert "github.event.workflow_run.conclusion == 'success'" in update_docs
+    assert "mode: update-docs" in update_docs
+    assert "github-token: ${{ github.token }}" in update_docs
     assert len(remote_steps) == 1
     assert remote_steps[0]["id"] == "reponomics"
     assert local_action in collect_publish
     assert local_action in doctor
     assert local_action in incident_reset
     assert local_action in rotate
+    assert local_action in update_docs
     assert f"{contract.action_repository}@" not in "\n".join(workflow_texts.values())
     assert all(
         str(input_name) in wrapper_inputs
@@ -310,8 +315,6 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: publish" in collect_publish
     assert "artifact-run-id: ${{ github.run_id }}" in collect_publish
     assert "Republish dashboard outputs" in collect_publish
-    assert "mode: docs-sync" in collect_publish
-    assert "allow-docs-sync" not in collect_publish
     assert local_action not in setup
     assert "python scripts/" not in collect_publish
     assert "python scripts/" not in doctor
@@ -322,7 +325,6 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "mode: collect" in collect_publish
     assert collect_publish_workflow["permissions"] == {"contents": "read"}
     assert doctor_workflow["permissions"] == {"contents": "read"}
-    assert "workflow_run:" not in collect_publish
     assert "workflow_dispatch:" in collect_publish
     assert "skip_collect:" in collect_publish
     assert collect_publish_workflow["jobs"]["collect"]["permissions"] == {
@@ -344,6 +346,10 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert doctor_workflow["jobs"]["doctor"]["permissions"] == {
         "contents": "read",
         "actions": "read",
+    }
+    assert update_docs_workflow["permissions"] == {"contents": "read"}
+    assert update_docs_workflow["jobs"]["update-docs"]["permissions"] == {
+        "contents": "write",
     }
     assert "artifact_run_id:" in doctor
     assert "Validate artifact run ID" in doctor
@@ -478,8 +484,7 @@ def test_setup_workflow_resolves_data_modes():
     assert "cp README.md README.backup.md" not in setup
     assert "cat > README.md <<'MD'" in setup
     assert "This repository was generated from the [Reponomics Dashboard template repo]" in setup
-    assert "allow_docs_sync: false" in setup
-    assert "Managed docs sync" in setup
+    assert ".github/workflows/update-docs.yml" in setup
     assert ": > .reponomics/setup-complete" in setup
     assert "git add README.md .reponomics/setup-complete" in setup
     assert '"data_mode": os.environ["DATA_MODE"]' not in setup
@@ -1339,9 +1344,8 @@ def test_template_consumer_e2e_resolves_composite_runtime_env():
     env = template_consumer_e2e._resolve_runtime_env(
         action,
         provided_inputs={
-            "mode": "docs-sync",
+            "mode": "update-docs",
             "github-token": "ghp_runtime",
-            "allow-docs-sync": "true",
         },
         github={
             "action_ref": "v0",
@@ -1349,26 +1353,10 @@ def test_template_consumer_e2e_resolves_composite_runtime_env():
         },
     )
 
-    assert env["REPONOMICS_MODE"] == "docs-sync"
+    assert env["REPONOMICS_MODE"] == "update-docs"
     assert env["REPONOMICS_GITHUB_TOKEN"] == "ghp_runtime"
-    assert env["REPONOMICS_ALLOW_DOCS_SYNC"] == "true"
     assert env["REPONOMICS_ACTION_REF"] == "v0"
     assert env["REPONOMICS_ACTION_REPOSITORY"] == "reponomics/reponomics-dashboard-action"
-
-
-def test_template_consumer_e2e_rejects_broken_composite_runtime_mapping():
-    action = yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
-    runtime_step = next(
-        step
-        for step in action["runs"]["steps"]
-        if step.get("name") == template_consumer_e2e.RUNTIME_STEP_NAME
-    )
-    runtime_step["env"]["REPONOMICS_ALLOW_DOCS_SYNC"] = "${{ inputs.docs-sync }}"
-
-    error = template_consumer_e2e.runtime_step_contract_error(action)
-
-    assert "REPONOMICS_ALLOW_DOCS_SYNC" in error
-    assert "inputs.allow-docs-sync" in error
 
 
 def test_template_consumer_e2e_rejects_unsupported_composite_runtime_shell():

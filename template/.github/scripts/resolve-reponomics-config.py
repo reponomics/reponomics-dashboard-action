@@ -16,7 +16,6 @@ CONFIG_KEYS = {
     "data_mode": "DATA_MODE",
     "publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD",
     "publish_readme_dashboard": "PUBLISH_README_DASHBOARD",
-    "allow_docs_sync": "ALLOW_DOCS_SYNC",
     "artifact_retention_days": "RETENTION_DAYS",
     "use_github_app": "USE_GITHUB_APP",
 }
@@ -26,7 +25,6 @@ REQUIRED_KEYS = (
     "data_mode",
     "publish_pages_dashboard",
     "publish_readme_dashboard",
-    "allow_docs_sync",
 )
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
@@ -171,10 +169,6 @@ def _resolve(config_path: Path) -> dict[str, str]:
         _required_scalar(scalars, "publish_readme_dashboard"),
         name="publish_readme_dashboard",
     )
-    allow_docs_sync = _bool(
-        _required_scalar(scalars, "allow_docs_sync"),
-        name="allow_docs_sync",
-    )
     use_github_app = _bool(
         _required_scalar(scalars, "use_github_app"),
         name="use_github_app",
@@ -198,7 +192,6 @@ def _resolve(config_path: Path) -> dict[str, str]:
         "DATA_MODE": data_mode,
         "PUBLISH_PAGES_DASHBOARD": publish_pages,
         "PUBLISH_README_DASHBOARD": publish_readme,
-        "ALLOW_DOCS_SYNC": allow_docs_sync,
         "RETENTION_DAYS": str(retention_days),
         "USE_GITHUB_APP": use_github_app,
         "COLLECTION_AUTH_MODE": collection_auth_mode,

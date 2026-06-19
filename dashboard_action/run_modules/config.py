@@ -23,7 +23,6 @@ REQUIRED_SETUP_CONFIG_KEYS = (
     "data_mode",
     "publish_pages_dashboard",
     "publish_readme_dashboard",
-    "allow_docs_sync",
 )
 DEFAULTED_CONFIG_KEYS = (
     "artifact_retention_days",
@@ -174,17 +173,9 @@ def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str
         "data_mode": _config_data_mode(payload),
         "publish_pages_dashboard": _config_bool(payload, "publish_pages_dashboard"),
         "publish_readme_dashboard": _config_bool(payload, "publish_readme_dashboard"),
-        "allow_docs_sync": _config_bool(payload, "allow_docs_sync"),
         "artifact_retention_days": _config_retention_days(payload),
         "use_github_app": _config_bool(payload, "use_github_app"),
     }
-
-
-def _config_allow_docs_sync(config_path: Path) -> bool:
-    configured = _load_runtime_config_values(config_path)["allow_docs_sync"]
-    if not isinstance(configured, bool):
-        raise ActionError("allow_docs_sync in config.yaml must be a YAML boolean.")
-    return configured
 
 
 def _reject_config_mismatch(
@@ -254,15 +245,6 @@ def _retention_days_from_env_or_config(configured: dict[str, bool | int | str]) 
             config_value=config_value,
         )
     return config_value
-
-
-def _allow_docs_sync_from_env(configured: dict[str, bool | int | str]) -> bool:
-    return _bool_from_env_or_config(
-        "REPONOMICS_ALLOW_DOCS_SYNC",
-        configured,
-        config_key="allow_docs_sync",
-        input_name="allow-docs-sync",
-    )
 
 
 def _repo_is_public() -> bool:
@@ -344,7 +326,6 @@ def load_config_from_env() -> RuntimeConfig:
             config_key="publish_readme_dashboard",
             input_name="generate-readme",
         ),
-        allow_docs_sync=_allow_docs_sync_from_env(configured),
         pages_index_path=Path("docs/index.html"),
         readme_path=Path(_env("REPONOMICS_README_PATH", "README.md")),
         incident_confirm_mode=_env("REPONOMICS_INCIDENT_CONFIRM_MODE"),

@@ -15,6 +15,7 @@ class WorkflowName(StrEnum):
     KEEP_ALIVE = "Keep Alive"
     ROTATE_KEY = "Rotate Key"
     SETUP = "Setup"
+    UPDATE_DOCS = "Update Docs"
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,11 @@ TEMPLATE_WORKFLOWS = (
         "template/.github/workflows/setup.yml",
         ".github/workflows/setup.yml",
         WorkflowName.SETUP,
+    ),
+    TemplateWorkflow(
+        "template/.github/workflows/update-docs.yml",
+        ".github/workflows/update-docs.yml",
+        WorkflowName.UPDATE_DOCS,
     ),
 )
 

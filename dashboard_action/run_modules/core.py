@@ -22,12 +22,12 @@ MANAGED_DOCS_NAMESPACE = Path("docs") / "reponomics"
 MANAGED_DOCS_BUNDLE_DIR = ROOT / "runtime" / "managed_docs"
 MANAGED_DOCS_README_LINK_ENV = "REPONOMICS_MANAGED_DOCS_README_LINK"
 MANAGED_DOCS_DASHBOARD_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
-DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+UPDATE_DOCS_STATE_ENV = "REPONOMICS_UPDATE_DOCS_STATE"
 DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
 DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_STALE = "stale"
 
-VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "docs-sync", "doctor"}
+VALID_MODES = {"collect", "publish", "rotate-key", "incident-reset", "update-docs", "doctor"}
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 
 if str(SCRIPTS_DIR) not in sys.path:
@@ -55,7 +55,6 @@ class RuntimeConfig:
     artifact_run_id: str
     publish_pages_requested: bool
     generate_readme: bool
-    allow_docs_sync: bool
     pages_index_path: Path
     readme_path: Path
     incident_confirm_mode: str

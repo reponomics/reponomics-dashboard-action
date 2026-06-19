@@ -5,7 +5,7 @@
 
 This is the setup README for your Reponomics dashboard repository. It helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
 
-The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs sync are owned by the versioned action referenced by the local wrapper at `.github/actions/reponomics/action.yml`.
+The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs update are owned by the versioned action referenced by the local wrapper at `.github/actions/reponomics/action.yml`.
 
 ```yaml
 uses: ./.github/actions/reponomics
@@ -24,7 +24,7 @@ If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.man
 
 Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.
 
-The `.reponomics/setup-complete` marker is an empty, non-secret file and does not contain dashboard data. It is a git-tracked switch that tells the generated workflows the repository has completed initial setup. If it is deleted, collect, publish, rotate-key, doctor, incident-reset, docs-sync, and keepalive workflows will treat setup as incomplete and skip their normal work until setup writes the marker again. If you intentionally complete `config.yaml` and choose to manage setup manually, recreating the empty marker is acceptable; normal setup writes it for you.
+The `.reponomics/setup-complete` marker is an empty, non-secret file and does not contain dashboard data. It is a git-tracked switch that tells the generated workflows the repository has completed initial setup. If it is deleted, collect, publish, rotate-key, doctor, incident-reset, update-docs, and keepalive workflows will treat setup as incomplete and skip their normal work until setup writes the marker again. If you intentionally complete `config.yaml` and choose to manage setup manually, recreating the empty marker is acceptable; normal setup writes it for you.
 
 ## Configuration
 
@@ -36,7 +36,6 @@ i_have_read_the_readme:   # true/false
 data_mode:                # encrypted/plaintext
 publish_pages_dashboard:  # true/false
 publish_readme_dashboard: # true/false (must be false for public repos)
-allow_docs_sync:          # true/false
 ###
 
 artifact_retention_days: 90 # integer between 14-90
@@ -87,6 +86,6 @@ For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics
 
 ## Managed Docs
 
-Reponomics may update managed local documentation under `docs/reponomics/` before future collect runs. It writes only that namespace, commits with `[skip ci]`, and treats missing write permission as advisory. Set `allow_docs_sync: false` before editing `docs/reponomics/` yourself.
+Reponomics may update managed local documentation under `docs/reponomics/` after successful collect-and-publish runs. It writes only that namespace and commits with `[skip ci]`. Disable or delete `.github/workflows/update-docs.yml` before editing `docs/reponomics/` yourself.
 
-The generated repository ships this setup README as `README.backup.md` before setup writes the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs sync.
+The generated repository ships this setup README as `README.backup.md` before setup writes the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs update.

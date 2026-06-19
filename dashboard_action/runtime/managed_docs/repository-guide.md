@@ -5,7 +5,7 @@
 
 The Reponomics Dashboard is a GitHub-native repository traffic and growth dashboard. It collects views, clones, top referrers, popular paths, and repository growth counters, then renders static dashboard output during the `publish` workflow.
 
-This generated repository is intentionally thin. The workflows call the local Reponomics wrapper at `.github/actions/reponomics/action.yml`; that wrapper calls the configured `reponomics-dashboard-action` release. The action owns collection, artifact restore/upload, schema migration, encryption, README rendering, dashboard rendering, CSV export packaging, dashboard key rotation, incident reset behavior, and managed local documentation sync.
+This generated repository is intentionally thin. The workflows call the local Reponomics wrapper at `.github/actions/reponomics/action.yml`; that wrapper calls the configured `reponomics-dashboard-action` release. The action owns collection, artifact restore/upload, schema migration, encryption, README rendering, dashboard rendering, CSV export packaging, dashboard key rotation, incident reset behavior, and managed local documentation updates.
 
 Template repositories do not require local Python for normal use. Workflows run in GitHub Actions and delegate runtime behavior to `reponomics/reponomics-dashboard-action`.
 
@@ -49,7 +49,7 @@ Advanced option: use a user-owned GitHub App installation token for collection i
 
 `.reponomics/setup-complete` is an empty, non-secret marker file. Setup writes it after validating `config.yaml` and required secrets. Generated operational workflows treat its presence as the setup-complete signal; deleting it pauses normal workflow work until setup writes it again. If you intentionally complete `config.yaml` and manage setup manually, recreating the empty marker is acceptable.
 
-`allow_docs_sync` controls whether Reponomics may update `docs/reponomics/` before collection. Set `allow_docs_sync: false` before editing that directory yourself. Managed docs sync writes only that namespace, commits with `[skip ci]`, and reports missing write permission without failing collection by default.
+The generated `update-docs` workflow updates Reponomics-managed local documentation under `docs/reponomics/` after successful collect-and-publish runs. It writes only that namespace and commits with `[skip ci]`. Disable or delete `.github/workflows/update-docs.yml` before editing that directory yourself.
 
 ## Data Modes
 
@@ -73,7 +73,7 @@ The canonical data store is the `dashboard-data` GitHub Actions artifact.
 - `publish` restores retained data, migrates it to the runtime's current retained-data schema, renders dashboard output, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for encrypted mode only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
 - `rotate-key` restores encrypted retained state, decrypts with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, and publishes rotated encrypted outputs.
 - `incident-reset` is a manual emergency workflow for suspected dashboard-key exposure. Make the dashboard repository private and disable any exposed Pages dashboard first. The action restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, uploads the new retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts.
-- `docs-sync` runs before collection and writes the action-bundled managed documentation to `docs/reponomics/` when enabled.
+- `update-docs` runs after successful collect-and-publish runs and writes the action-bundled managed documentation to `docs/reponomics/`.
 - `keepalive` runs monthly, updates `.reponomics/keepalive.md`, and tries to create a persistent data safety reminder issue so scheduled collection is less likely to be silently disabled.
 
 Git history is used for configuration, workflow shells, the static setup README, and optional private-repository metric README output. It is not the analytics database.

@@ -183,7 +183,6 @@ def _config(tmp_path: Path, **overrides) -> run.RuntimeConfig:
         "artifact_run_id": "",
         "publish_pages_requested": True,
         "generate_readme": False,
-        "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",
@@ -203,7 +202,6 @@ def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
         "data_mode": "encrypted",
         "publish_pages_dashboard": True,
         "publish_readme_dashboard": False,
-        "allow_docs_sync": True,
         "artifact_retention_days": 90,
         "use_github_app": False,
     }
@@ -667,64 +665,6 @@ def test_input_normalization_from_env(
     assert config.publish_pages is True
     assert config.retention_days == 30
     assert config.generate_readme is False
-    assert config.allow_docs_sync is True
-
-
-def test_allow_docs_sync_uses_config_when_input_is_unset(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    config_path = tmp_path / "config.yaml"
-    _write_runtime_config(config_path, allow_docs_sync=False)
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
-
-    config = run.load_config_from_env()
-
-    assert config.allow_docs_sync is False
-
-
-def test_allow_docs_sync_input_must_match_config(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    config_path = tmp_path / "config.yaml"
-    _write_runtime_config(config_path, allow_docs_sync=False)
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.setenv("REPONOMICS_ALLOW_DOCS_SYNC", "true")
-
-    with pytest.raises(run.ActionError, match="allow-docs-sync"):
-        run.load_config_from_env()
-
-
-def test_allow_docs_sync_rejects_non_boolean_config(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    config_path = tmp_path / "config.yaml"
-    config_path.write_text(
-        "\n".join(
-            [
-                "i_have_read_the_readme: true",
-                "data_mode: encrypted",
-                "publish_pages_dashboard: true",
-                "publish_readme_dashboard: false",
-                'allow_docs_sync: "false"',
-                "artifact_retention_days: 90",
-                "use_github_app: false",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
-    monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
-    monkeypatch.delenv("REPONOMICS_ALLOW_DOCS_SYNC", raising=False)
-
-    with pytest.raises(run.ActionError, match="allow_docs_sync"):
-        run.load_config_from_env()
 
 
 def test_use_github_app_input_normalization_from_env(
@@ -845,7 +785,7 @@ def test_runtime_config_requires_setup_fields(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("allow_docs_sync: true\n", encoding="utf-8")
+    config_path.write_text("max_repos: 200\n", encoding="utf-8")
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
 
@@ -953,7 +893,7 @@ def test_runtime_outputs_include_pages_path(
     output = output_path.read_text(encoding="utf-8")
     assert "publish-pages=true" in output
     assert f"pages-path={config.pages_index_path.parent.as_posix()}" in output
-    assert "docs-sync-reason=" not in output
+    assert "update-docs-reason=" not in output
     assert "docs-action-version=" in output
     assert "docs-updated-at=" in output
 
@@ -997,14 +937,14 @@ def test_generate_readme_stages_readme_and_svg_assets_only(
     assert all(export_asset.as_posix() not in call for call in calls)
 
 
-def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
+def test_update_docs_mode_writes_outputs_and_commits_managed_namespace(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     calls: list[list[str]] = []
     output_path = tmp_path / "github-output.txt"
     summary_path = tmp_path / "summary.md"
-    config = _config(tmp_path, mode="docs-sync")
+    config = _config(tmp_path, mode="update-docs")
 
     def fake_run(args, **kwargs):
         command = list(args)
@@ -1020,13 +960,13 @@ def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary_path))
     monkeypatch.setattr(run.subprocess, "run", fake_run)
 
-    run.run_docs_sync(config)
+    run.run_update_docs(config)
 
     output = output_path.read_text(encoding="utf-8")
     summary = summary_path.read_text(encoding="utf-8")
     assert (tmp_path / "docs" / "reponomics" / "README.md").is_file()
     assert (tmp_path / "docs" / "reponomics" / ".manifest.json").is_file()
-    assert "docs-sync-state=written" in output
+    assert "update-docs-state=written" in output
     assert f"docs-action-version={run.VERSION}" in output
     assert "docs-updated-at=" in output
     assert "Managed Reponomics docs" in summary
@@ -1035,12 +975,12 @@ def test_docs_sync_mode_writes_outputs_and_commits_managed_namespace(
     assert ["git", "push"] in calls
 
 
-def test_docs_sync_mode_reports_permission_missing_for_push_failure(
+def test_update_docs_mode_reports_permission_missing_for_push_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     output_path = tmp_path / "github-output.txt"
-    config = _config(tmp_path, mode="docs-sync")
+    config = _config(tmp_path, mode="update-docs")
 
     def fake_run(args, **kwargs):
         command = list(args)
@@ -1056,11 +996,11 @@ def test_docs_sync_mode_reports_permission_missing_for_push_failure(
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
     monkeypatch.setattr(run.subprocess, "run", fake_run)
 
-    run.run_docs_sync(config)
+    run.run_update_docs(config)
 
     output = output_path.read_text(encoding="utf-8")
-    assert "docs-sync-state=permission_missing" in output
-    assert "docs-sync-reason=" not in output
+    assert "update-docs-state=permission_missing" in output
+    assert "update-docs-reason=" not in output
     assert f"docs-action-version={run.VERSION}" in output
 
 
@@ -2976,7 +2916,7 @@ def test_publish_surfaces_blocked_managed_docs_status(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(run, "VERSION", VERSION_STATUS_TEST_VERSION)
-    monkeypatch.setenv("REPONOMICS_DOCS_SYNC_STATE", "manifest_inconsistent")
+    monkeypatch.setenv("REPONOMICS_UPDATE_DOCS_STATE", "manifest_inconsistent")
     managed_docs_dir = tmp_path / "docs" / "reponomics"
     managed_docs_dir.mkdir(parents=True)
     (managed_docs_dir / "README.md").write_text("local docs\n", encoding="utf-8")

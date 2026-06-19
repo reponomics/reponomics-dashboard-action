@@ -31,7 +31,6 @@ RUNTIME_STEP_SHELL = "bash"
 REQUIRED_COMPOSITE_ENV = {
     "REPONOMICS_MODE": "${{ inputs.mode }}",
     "REPONOMICS_GITHUB_TOKEN": "${{ inputs.github-token }}",
-    "REPONOMICS_ALLOW_DOCS_SYNC": "${{ inputs.allow-docs-sync }}",
     "REPONOMICS_ACTION_REF": "${{ github.action_ref }}",
     "REPONOMICS_ACTION_REPOSITORY": "${{ github.action_repository }}",
 }
@@ -102,7 +101,6 @@ def build_config(mode):
         "action_repository": "reponomics/reponomics-dashboard-action",
         # Compatibility across action revisions used by the template contract tests.
         "use_github_app": False,
-        "allow_docs_sync": True,
         "update_notices": False,
     }
     accepted_runtime_fields = set(getattr(run.RuntimeConfig, "__dataclass_fields__", {}))
@@ -116,10 +114,10 @@ os.environ["GITHUB_OUTPUT"] = (consumer_repo / ".e2e-github-output").as_posix()
 os.chdir(consumer_repo)
 
 try:
-    if hasattr(run, "run_docs_sync"):
-        docs_config = build_config("docs-sync")
+    if hasattr(run, "run_update_docs"):
+        docs_config = build_config("update-docs")
         run.validate_config(docs_config)
-        run.run_docs_sync(docs_config)
+        run.run_update_docs(docs_config)
     config = build_config("publish")
     run.validate_config(config)
     run.run_publish(config, restore_artifact=False)
@@ -234,7 +232,6 @@ def _write_setup_config(
     data_mode: str = "encrypted",
     publish_pages_dashboard: bool = True,
     publish_readme_dashboard: bool = False,
-    allow_docs_sync: bool = True,
     artifact_retention_days: int = 90,
     use_github_app: bool = False,
 ) -> None:
@@ -248,7 +245,6 @@ def _write_setup_config(
             "data_mode": data_mode,
             "publish_pages_dashboard": publish_pages_dashboard,
             "publish_readme_dashboard": publish_readme_dashboard,
-            "allow_docs_sync": allow_docs_sync,
             "artifact_retention_days": artifact_retention_days,
             "use_github_app": use_github_app,
         }
@@ -384,9 +380,8 @@ def _invoke_composite_runtime_step(
     runtime_env = _resolve_runtime_env(
         action,
         provided_inputs={
-            "mode": "docs-sync",
+            "mode": "update-docs",
             "github-token": github["token"],
-            "allow-docs-sync": "true",
         },
         github=github,
     )
@@ -541,15 +536,15 @@ def run_composite_boundary_e2e(
         outputs = _read_github_output(output_path)
         if outputs.get("docs-action-version") is None:
             raise TemplateConsumerE2EError("Composite boundary did not write docs-action-version")
-        if outputs.get("docs-sync-state") not in {"written", "updated", "current"}:
+        if outputs.get("update-docs-state") not in {"written", "updated", "unchanged"}:
             raise TemplateConsumerE2EError(
-                f"Unexpected docs-sync-state from composite boundary: {outputs.get('docs-sync-state')!r}"
+                f"Unexpected update-docs-state from composite boundary: {outputs.get('update-docs-state')!r}"
             )
         if (consumer_dir / "docs" / "reponomics" / "README.md").read_text(
             encoding="utf-8"
         ) == "stale managed docs\n":
             raise TemplateConsumerE2EError("Composite boundary did not refresh managed docs")
-        print("Template action boundary e2e passed: docs-sync composite runtime step")
+        print("Template action boundary e2e passed: update-docs composite runtime step")
     finally:
         if keep_temp:
             print(f"Kept composite boundary temp directory: {temp_root}")

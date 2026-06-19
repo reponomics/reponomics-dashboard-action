@@ -84,7 +84,7 @@ _load_access_mode = dashboard_access.load_access_mode
 
 VERSION_STATUS_ENV = dashboard_status.VERSION_STATUS_ENV
 MANAGED_DOCS_LINK_ENV = dashboard_status.MANAGED_DOCS_LINK_ENV
-DOCS_SYNC_STATE_ENV = dashboard_status.DOCS_SYNC_STATE_ENV
+UPDATE_DOCS_STATE_ENV = dashboard_status.UPDATE_DOCS_STATE_ENV
 DOCS_ACTION_VERSION_ENV = dashboard_status.DOCS_ACTION_VERSION_ENV
 DOCS_UPDATED_AT_ENV = dashboard_status.DOCS_UPDATED_AT_ENV
 DOCS_STATE_LABELS = dashboard_status.DOCS_STATE_LABELS
@@ -92,7 +92,7 @@ _display_version = dashboard_status.display_version
 _format_docs_timestamp = dashboard_status.format_docs_timestamp
 _load_version_status = dashboard_status.load_version_status
 _render_docs_status_detail = dashboard_status.render_docs_status_detail
-_render_docs_sync_status = dashboard_status.render_docs_sync_status
+_render_update_docs_status = dashboard_status.render_update_docs_status
 _render_version_badges = dashboard_status.render_version_badges
 
 DASHBOARD_KEY_ENV = "DASHBOARD_KEY"

@@ -118,7 +118,7 @@ def _render_production_outputs(
     monkeypatch.setattr(run.render_dashboard, "datetime", FixedDashboardDatetime)
     for env_name in (
         run.DOCS_ACTION_VERSION_ENV,
-        run.DOCS_SYNC_STATE_ENV,
+        run.UPDATE_DOCS_STATE_ENV,
         run.DOCS_UPDATED_AT_ENV,
     ):
         monkeypatch.delenv(env_name, raising=False)
@@ -151,7 +151,6 @@ def _render_production_outputs(
         artifact_run_id="",
         publish_pages_requested=True,
         generate_readme=True,
-        allow_docs_sync=True,
         pages_index_path=workdir / "docs" / "index.html",
         readme_path=workdir / "README.md",
         incident_confirm_mode="",

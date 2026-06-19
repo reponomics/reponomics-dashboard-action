@@ -28,7 +28,6 @@ from .run_modules.validation import (
 )
 from .run_modules.config import (
     _choice,
-    _config_allow_docs_sync,
     _env,
     _first_env,
     _normalize_data_mode,
@@ -42,7 +41,7 @@ from .run_modules.core import (
     COLLECT_ROLLBACK_ARTIFACTS,
     DOCS_ACTION_VERSION_ENV,
     DOCS_STATE_STALE,
-    DOCS_SYNC_STATE_ENV,
+    UPDATE_DOCS_STATE_ENV,
     DOCS_UPDATED_AT_ENV,
     INCIDENT_API_MAX_RETRIES,
     INCIDENT_API_TIMEOUT_SECONDS,
@@ -88,7 +87,7 @@ from .run_modules.github import _github_repository, _github_run_id
 from .run_modules.github_artifacts import _artifact_sort_key
 from .run_modules.io import (
     _decrypt_if_needed,
-    _docs_sync_output_values,
+    _update_docs_output_values,
     _encrypt_if_needed,
     _git_commit_readme,
     _manifest_value,
@@ -164,9 +163,9 @@ def _git_commit_managed_docs(
     return docs_mod._git_commit_managed_docs(config, result)
 
 
-def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
+def _summarize_update_docs(result: managed_docs.ManagedDocsResult) -> None:
     _sync_version()
-    summaries_mod._summarize_docs_sync(result)
+    summaries_mod._summarize_update_docs(result)
 
 
 def _write_outputs(
@@ -356,7 +355,7 @@ def run_collect_retention_cleanup(config: RuntimeConfig) -> None:
     _summarize_active_retention_cleanup(result)
 
 
-def run_docs_sync(config: RuntimeConfig) -> None:
+def run_update_docs(config: RuntimeConfig) -> None:
     _sync_version()
     _patch_runtime_paths(config)
     before = _snapshot_outputs(config)
@@ -366,12 +365,12 @@ def run_docs_sync(config: RuntimeConfig) -> None:
             bundle_dir=MANAGED_DOCS_BUNDLE_DIR,
             action_repository=config.action_repository or version_status.ACTION_REPOSITORY,
             action_version=VERSION,
-            allowed=config.allow_docs_sync,
+            allowed=True,
         )
     except managed_docs.ManagedDocsError as exc:
         raise ActionError(str(exc)) from exc
     result = _git_commit_managed_docs(config, result)
-    _summarize_docs_sync(result)
+    _summarize_update_docs(result)
     _write_outputs(config, before, docs_result=result)
 
 
@@ -717,8 +716,8 @@ def _dispatch(config: RuntimeConfig) -> None:
         run_publish(config)
     elif config.mode == "rotate-key":
         run_rotate_key(config)
-    elif config.mode == "docs-sync":
-        run_docs_sync(config)
+    elif config.mode == "update-docs":
+        run_update_docs(config)
     elif config.mode == "doctor":
         run_doctor(config)
     elif _parse_bool(

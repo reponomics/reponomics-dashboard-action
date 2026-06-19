@@ -19,31 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  docs-sync:
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: reponomics-docs-sync-${{ github.ref }}
-      cancel-in-progress: false
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-
-      - name: Resolve Reponomics configuration
-        run: python .github/scripts/resolve-reponomics-config.py --require-setup
-
-      - name: Sync managed Reponomics docs
-        if: env.REPONOMICS_SETUP_COMPLETE == 'true'
-        uses: ./.github/actions/reponomics
-        with:
-          mode: docs-sync
-          github-token: ${{ github.token }}
-
   collect:
-    needs: docs-sync
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.skip_collect) }}
     runs-on: ubuntu-latest
     permissions:

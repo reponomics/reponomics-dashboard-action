@@ -90,7 +90,7 @@ def _summarize_active_retention_cleanup(result: ActiveRetentionCleanupResult) ->
     )
 
 
-def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
+def _summarize_update_docs(result: managed_docs.ManagedDocsResult) -> None:
     lines = [
         "## Managed Reponomics docs",
         "",
@@ -106,7 +106,7 @@ def _summarize_docs_sync(result: managed_docs.ManagedDocsResult) -> None:
         lines.extend(
             [
                 "",
-                "Grant `contents: write` to the docs sync job or disable docs sync with `allow_docs_sync: false` in `config.yaml`.",
+                "Grant `contents: write` to the update-docs job or disable the update-docs workflow.",
             ]
         )
     elif result.state == managed_docs.STATE_MANIFEST_INCONSISTENT:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import difflib
+import json
 import os
 import re
 from collections.abc import Sequence
@@ -178,6 +179,17 @@ def _render_production_outputs(
 def _normalize(value: str) -> str:
     lines = value.replace("\r\n", "\n").splitlines()
     return "\n".join(line.rstrip() for line in lines).rstrip() + "\n"
+
+
+def _normalize_json_file(path: Path) -> str:
+    return (
+        json.dumps(
+            json.loads(path.read_text(encoding="utf-8")),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
 
 
 def _assert_snapshot(actual: str, path: Path) -> None:
@@ -485,6 +497,12 @@ def test_production_dashboard_outputs_match_scenario_snapshots(
     _assert_snapshot(rendered.readme, snapshot_dir / "README.snapshot.md")
     _assert_readme_asset_snapshots(rendered, snapshot_dir)
     _assert_snapshot(rendered.dashboard, snapshot_dir / "dashboard.snapshot.html")
+    _assert_snapshot(
+        _normalize_json_file(
+            rendered.workdir / "docs" / "assets" / "dashboard-data.json"
+        ),
+        snapshot_dir / "dashboard-data.snapshot.json",
+    )
 
 
 @pytest.mark.parametrize(

@@ -18,16 +18,16 @@ from .core import (
 )
 
 
-REQUIRED_SETUP_CONFIG_KEYS = (
+EXPLICIT_DECISION_CONFIG_KEYS = (
     "i_have_read_the_readme",
     "data_mode",
     "publish_pages_dashboard",
     "publish_readme_dashboard",
 )
-DEFAULTED_CONFIG_KEYS = (
-    "artifact_retention_days",
-    "use_github_app",
-)
+DEFAULT_CONFIG_VALUES = {
+    "artifact_retention_days": 90,
+    "use_github_app": False,
+}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
 
@@ -129,10 +129,17 @@ def _load_config_yaml(config_path: Path) -> dict[str, object]:
     return payload
 
 
-def _config_bool(payload: dict[str, object], key: str) -> bool:
-    value = payload[key]
+def _config_bool(
+    payload: dict[str, object],
+    key: str,
+    *,
+    default: bool | None = None,
+) -> bool:
+    value = payload.get(key, default)
     if isinstance(value, bool):
         return value
+    if value is None and default is not None:
+        return default
     raise ActionError(f"{key} in config.yaml must be a YAML boolean.")
 
 
@@ -144,7 +151,12 @@ def _config_data_mode(payload: dict[str, object]) -> str:
 
 
 def _config_retention_days(payload: dict[str, object]) -> int:
-    value = payload["artifact_retention_days"]
+    value = payload.get(
+        "artifact_retention_days",
+        DEFAULT_CONFIG_VALUES["artifact_retention_days"],
+    )
+    if value is None:
+        value = DEFAULT_CONFIG_VALUES["artifact_retention_days"]
     if isinstance(value, bool) or not isinstance(value, int):
         raise ActionError("artifact_retention_days in config.yaml must be an integer.")
     return _parse_retention_days(str(value))
@@ -152,17 +164,10 @@ def _config_retention_days(payload: dict[str, object]) -> int:
 
 def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str]:
     payload = _load_config_yaml(config_path)
-    missing = [key for key in REQUIRED_SETUP_CONFIG_KEYS if key not in payload]
+    missing = [key for key in EXPLICIT_DECISION_CONFIG_KEYS if key not in payload]
     if missing:
         raise ActionError(
-            "config.yaml is missing required setup field(s): " + ", ".join(missing)
-        )
-    missing_defaulted = [key for key in DEFAULTED_CONFIG_KEYS if key not in payload]
-    if missing_defaulted:
-        raise ActionError(
-            "config.yaml is missing defaulted field(s): "
-            + ", ".join(missing_defaulted)
-            + ". Restore them from docs/reponomics/config.example.yaml or set explicit values."
+            "config.yaml is missing explicit decision field(s): " + ", ".join(missing)
         )
 
     read_readme = _config_bool(payload, "i_have_read_the_readme")
@@ -174,7 +179,11 @@ def _load_runtime_config_values(config_path: Path) -> dict[str, bool | int | str
         "publish_pages_dashboard": _config_bool(payload, "publish_pages_dashboard"),
         "publish_readme_dashboard": _config_bool(payload, "publish_readme_dashboard"),
         "artifact_retention_days": _config_retention_days(payload),
-        "use_github_app": _config_bool(payload, "use_github_app"),
+        "use_github_app": _config_bool(
+            payload,
+            "use_github_app",
+            default=bool(DEFAULT_CONFIG_VALUES["use_github_app"]),
+        ),
     }
 
 

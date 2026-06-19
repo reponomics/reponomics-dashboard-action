@@ -17,7 +17,7 @@ inputs:
   use-github-app:
     description: Advanced option for collect mode. Set true when collection-token is a user-owned GitHub App installation token minted in the workflow.
     required: false
-    default: "false"
+    default: ""
   github-token:
     description: "Token used for GitHub artifact/repository workflow operations. Required for collect artifact cleanup and incident-reset history purge; pass the caller workflow token through this input."
     required: false
@@ -53,7 +53,7 @@ inputs:
   data-mode:
     description: "Data storage mode: encrypted or plaintext. Encrypted mode stores retained CSV artifacts and dashboard payloads encrypted with a dashboard secret. Plaintext mode stores retained CSV artifacts without encryption and is private-repository only."
     required: false
-    default: encrypted
+    default: ""
   config-path:
     description: Repository selection config path.
     required: false
@@ -61,11 +61,11 @@ inputs:
   retention-days:
     description: GitHub Actions artifact retention period, from 14 to 90 days.
     required: false
-    default: "90"
+    default: ""
   publish-pages:
     description: "Set false to render dashboard output without deploying GitHub Pages. Plaintext mode always disables Pages deployment."
     required: false
-    default: "true"
+    default: ""
   artifact-run-id:
     description: Optional workflow run ID whose dashboard-data artifact should be restored. Blank restores the latest available dashboard-data artifact.
     required: false
@@ -77,7 +77,7 @@ inputs:
   generate-readme:
     description: Generate private-repository README dashboard output and commit it back to the caller repository.
     required: false
-    default: "false"
+    default: ""
   readme-path:
     description: README output path.
     required: false
@@ -114,6 +114,9 @@ outputs:
   runtime-version:
     description: Reponomics action runtime version.
     value: ${{ steps.runtime.outputs.runtime-version }}
+  retention-days:
+    description: Resolved artifact retention period.
+    value: ${{ steps.runtime.outputs.retention-days }}
   update-docs-state:
     description: Managed documentation update state.
     value: ${{ steps.runtime.outputs.update-docs-state }}
@@ -177,7 +180,7 @@ runs:
       with:
         name: html-dashboard-encrypted
         path: ${{ steps.runtime.outputs.pages-path }}
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
 
     - name: Deploy GitHub Pages
       id: deploy-pages
@@ -192,7 +195,7 @@ runs:
       with:
         name: html-dashboard-plaintext
         path: ${{ steps.runtime.outputs.pages-path }}
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
     - name: Upload encrypted dashboard artifact
@@ -201,7 +204,7 @@ runs:
       with:
         name: html-dashboard-encrypted
         path: ${{ steps.runtime.outputs.pages-path }}
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
     - name: Upload doctor diagnostic report
@@ -210,7 +213,7 @@ runs:
       with:
         name: reponomics-doctor-report
         path: ${{ steps.runtime.outputs.doctor-report-path }}
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
     - name: Upload encrypted dashboard data artifact
@@ -219,7 +222,7 @@ runs:
       with:
         name: dashboard-data
         path: .dashboard-data-artifact/dashboard-data.enc
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
     - name: Upload dashboard data artifact
@@ -228,7 +231,7 @@ runs:
       with:
         name: dashboard-data
         path: data
-        retention-days: ${{ inputs.retention-days }}
+        retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
     - name: Clean up superseded dashboard data artifacts

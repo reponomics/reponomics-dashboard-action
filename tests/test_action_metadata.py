@@ -642,7 +642,7 @@ def test_publish_pages_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert action["inputs"]["publish-pages"]["default"] == "true"
+    assert action["inputs"]["publish-pages"]["default"] == ""
     assert runtime_env["REPONOMICS_PUBLISH_PAGES"] == "${{ inputs.publish-pages }}"
     assert action["inputs"]["require-collect-provenance"]["default"] == "false"
     assert "REPONOMICS_REQUIRE_COLLECT_PROVENANCE" not in runtime_env
@@ -652,5 +652,5 @@ def test_use_github_app_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert action["inputs"]["use-github-app"]["default"] == "false"
+    assert action["inputs"]["use-github-app"]["default"] == ""
     assert runtime_env["REPONOMICS_USE_GITHUB_APP"] == "${{ inputs.use-github-app }}"

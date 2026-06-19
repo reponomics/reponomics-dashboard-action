@@ -230,9 +230,32 @@ def test_setup_config_resolver_fails_closed_when_required_fields_are_blank(
     result = _run_resolver(repo, tmp_path, private=True)
 
     assert result.returncode == 1
-    assert "Complete the required setup fields in config.yaml" in result.stderr
+    assert "Complete the explicit decision fields in config.yaml" in result.stderr
     assert "i_have_read_the_readme" in result.stderr
     assert "publish_pages_dashboard" in result.stderr
+
+
+def test_setup_config_resolver_defaults_optional_fields(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    build_template.build_template(repo)
+    _write_setup_config(repo)
+    config_path = repo / "config.yaml"
+    config_path.write_text(
+        "\n".join(
+            line
+            for line in config_path.read_text(encoding="utf-8").splitlines()
+            if not line.startswith(("artifact_retention_days:", "use_github_app:"))
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = _run_resolver(repo, tmp_path, private=True)
+
+    assert result.returncode == 0
+    env = _read_env_file(tmp_path / "github-env")
+    assert env["RETENTION_DAYS"] == "90"
+    assert env["USE_GITHUB_APP"] == "false"
 
 
 def test_setup_config_resolver_rejects_public_plaintext(tmp_path: Path) -> None:

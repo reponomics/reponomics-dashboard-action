@@ -20,12 +20,16 @@ CONFIG_KEYS = {
     "use_github_app": "USE_GITHUB_APP",
 }
 
-REQUIRED_KEYS = (
+EXPLICIT_DECISION_KEYS = (
     "i_have_read_the_readme",
     "data_mode",
     "publish_pages_dashboard",
     "publish_readme_dashboard",
 )
+DEFAULT_CONFIG_VALUES = {
+    "artifact_retention_days": "90",
+    "use_github_app": "false",
+}
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
@@ -126,13 +130,20 @@ def _required_scalar(scalars: dict[str, str], key: str) -> str:
     return value
 
 
+def _defaulted_scalar(scalars: dict[str, str], key: str) -> str:
+    value = scalars.get(key, "").strip()
+    if value:
+        return value
+    return DEFAULT_CONFIG_VALUES[key]
+
+
 def _resolve(config_path: Path) -> dict[str, str]:
     scalars = _load_top_level_scalars(config_path)
-    missing = [key for key in REQUIRED_KEYS if not scalars.get(key, "").strip()]
+    missing = [key for key in EXPLICIT_DECISION_KEYS if not scalars.get(key, "").strip()]
     if missing:
         formatted = ", ".join(missing)
         raise ValueError(
-            "Complete the required setup fields in config.yaml before running setup: "
+            "Complete the explicit decision fields in config.yaml before running setup: "
             + formatted
             + "."
         )
@@ -152,13 +163,13 @@ def _resolve(config_path: Path) -> dict[str, str]:
         raise ValueError(f"data_mode must be one of: {allowed}.")
 
     try:
-        retention_days = int(_required_scalar(scalars, "artifact_retention_days"))
+        retention_days = int(_defaulted_scalar(scalars, "artifact_retention_days"))
     except ValueError as exc:
         raise ValueError("artifact_retention_days must be an integer.") from exc
     if retention_days < MIN_RETENTION_DAYS or retention_days > MAX_RETENTION_DAYS:
         raise ValueError(
             "artifact_retention_days must be between "
-            f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
+            + f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
         )
 
     publish_pages = _bool(
@@ -170,7 +181,7 @@ def _resolve(config_path: Path) -> dict[str, str]:
         name="publish_readme_dashboard",
     )
     use_github_app = _bool(
-        _required_scalar(scalars, "use_github_app"),
+        _defaulted_scalar(scalars, "use_github_app"),
         name="use_github_app",
     )
 

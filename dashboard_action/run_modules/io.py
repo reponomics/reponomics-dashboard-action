@@ -199,6 +199,7 @@ def _write_outputs(
         "dashboard-updated": str(before.get("dashboard") != after.get("dashboard")).lower(),
         "schema-version": storage.SCHEMA_VERSION,
         "runtime-version": VERSION,
+        "retention-days": str(config.retention_days),
     }
     outputs.update(_update_docs_output_values(docs_result))
     output_path = _env("GITHUB_OUTPUT")

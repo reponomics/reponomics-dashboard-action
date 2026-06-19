@@ -548,7 +548,8 @@ def test_required_fields_do_not_have_default_value():
     resolver_globals: dict[str, object] = {"__name__": "resolve_reponomics_config_test"}
     exec(compile(resolver, "resolve-reponomics-config.py", "exec"), resolver_globals)
     resolver_config_keys = resolver_globals["CONFIG_KEYS"]
-    resolver_required_keys = tuple(resolver_globals["REQUIRED_KEYS"])
+    resolver_explicit_decision_keys = tuple(resolver_globals["EXPLICIT_DECISION_KEYS"])
+    resolver_default_config_values = resolver_globals["DEFAULT_CONFIG_VALUES"]
 
     expected_required_keys = tuple(
         key
@@ -561,9 +562,13 @@ def test_required_fields_do_not_have_default_value():
         if key in template_payload and template_payload[key] is not None
     )
 
-    assert expected_required_keys == runtime_config.REQUIRED_SETUP_CONFIG_KEYS
-    assert expected_defaulted_keys == runtime_config.DEFAULTED_CONFIG_KEYS
-    assert expected_required_keys == resolver_required_keys
+    assert expected_required_keys == runtime_config.EXPLICIT_DECISION_CONFIG_KEYS
+    assert expected_defaulted_keys == tuple(runtime_config.DEFAULT_CONFIG_VALUES)
+    assert expected_required_keys == resolver_explicit_decision_keys
+    assert resolver_default_config_values == {
+        key: str(value).lower() if isinstance(value, bool) else str(value)
+        for key, value in runtime_config.DEFAULT_CONFIG_VALUES.items()
+    }
     assert template_payload["artifact_retention_days"] == 90
     assert template_payload["use_github_app"] is False
     assert "artifact_retention_days" not in expected_required_keys

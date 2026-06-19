@@ -789,15 +789,13 @@ def test_runtime_config_requires_setup_fields(
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
 
-    with pytest.raises(run.ActionError, match="missing required setup field"):
+    with pytest.raises(run.ActionError, match="missing explicit decision field"):
         run.load_config_from_env()
 
 
-@pytest.mark.parametrize("missing_key", ["artifact_retention_days", "use_github_app"])
-def test_runtime_config_rejects_missing_defaulted_config_fields(
+def test_runtime_config_defaults_optional_config_fields(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    missing_key: str,
 ) -> None:
     config_path = tmp_path / "config.yaml"
     _write_runtime_config(config_path)
@@ -805,7 +803,7 @@ def test_runtime_config_rejects_missing_defaulted_config_fields(
         "\n".join(
             line
             for line in config_path.read_text(encoding="utf-8").splitlines()
-            if not line.startswith(f"{missing_key}:")
+            if not line.startswith(("artifact_retention_days:", "use_github_app:"))
         )
         + "\n",
         encoding="utf-8",
@@ -813,8 +811,10 @@ def test_runtime_config_rejects_missing_defaulted_config_fields(
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
 
-    with pytest.raises(run.ActionError, match=f"missing defaulted field.*{missing_key}"):
-        run.load_config_from_env()
+    config = run.load_config_from_env()
+
+    assert config.retention_days == 90
+    assert config.use_github_app is False
 
 
 def test_runtime_config_rejects_duplicate_setup_keys(

@@ -119,7 +119,7 @@ Every public action release also creates a template acceptance release, even for
 
 If a user or organization requires SHA-pinned Actions, the generated template metadata should point them to `.reponomics/template-provenance.json` for the accepted action repository, version, tag, SHA, and default compatible ref associated with that template snapshot. `docs/reponomics/.manifest.json` also records the managed-docs action version. SHA-pinning is an opt-in policy choice; users who pin own the update cadence that the default floating compatible ref normally handles.
 
-The template version is `template-contract.yml` `template_version`. Normal template publication creates an immutable source tag and a generated-repository GitHub Release whose tag is exactly:
+The template version is `template-contract.yml` `template_version`. For template-only releases, maintainers should use `.github/workflows/prepare-template-release.yml` to create the release-prep PR that bumps this value; do not hand-edit the contract unless repairing automation. Normal template publication creates an immutable source tag and a generated-repository GitHub Release whose tag is exactly:
 
 ```text
 reponomics-dashboard-v<template_version>
@@ -136,16 +136,17 @@ The workflow intentionally does not upload assets to a GitHub Release after publ
 For a template-only release:
 
 1. Open a PR with the template-source changes.
-2. Bump `template-contract.yml` `template_version` in that PR according to the template impact.
-3. Add a `## Template release notes` section to the PR body with the release notes to publish.
-4. Confirm CI is green.
-5. Run `.github/workflows/pre-release-validation.yml` on the candidate release ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
-6. Review and merge the PR as the effective template release approval.
-7. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It verifies the matching generated repository release if it already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.
-8. Confirm `reponomics-dashboard` `main` has a new generated publication commit containing the expected `Source-Commit`, `Template-Version`, `Payload-Digest`, and `Accepted-Action` trailers.
-9. Confirm the generated release tag points to that generated commit.
-10. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
-11. Refresh the demo if the public showcase should reflect the new template before the next scheduled daily refresh.
+2. Confirm CI is green.
+3. Merge the template-source PR.
+4. Run `.github/workflows/prepare-template-release.yml` from `main` with `release_type` set to `patch`, `minor`, or `major`. The workflow derives release notes from merged PRs since the previous source template tag, preferring each PR's `## Template release notes` section and falling back to PR titles.
+5. Review the generated `chore: prepare template release reponomics-dashboard-vX.Y.Z` PR. That PR bumps only `template-contract.yml` and carries the generated `## Template release notes` section used by the public generated-template release.
+6. Run `.github/workflows/pre-release-validation.yml` on the release-prep PR ref when the change has user-visible setup, workflow, managed-docs, or runtime-contract impact.
+7. Review and merge the release-prep PR as the effective template release approval.
+8. Let `.github/workflows/template-release.yml` run from the merged `main` commit. It verifies the matching generated repository release if it already exists; otherwise it reads the merged PR body, runs `make template-release-gates`, creates the immutable source tag, publishes the generated repository, and creates `reponomics-dashboard-vX.Y.Z` in `reponomics/reponomics-dashboard`, where `X.Y.Z` equals `template-contract.yml`.
+9. Confirm `reponomics-dashboard` `main` has a new generated publication commit containing the expected `Source-Commit`, `Template-Version`, `Payload-Digest`, and `Accepted-Action` trailers.
+10. Confirm the generated release tag points to that generated commit.
+11. Download or inspect the workflow artifact and attestations if release evidence needs to be verified.
+12. Refresh the demo if the public showcase should reflect the new template before the next scheduled daily refresh.
 
 For a coupled action/template release where the template requires new action behavior:
 

@@ -1,0 +1,153 @@
+name: Prepare Template Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Template SemVer bump"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      base_ref:
+        description: "Source ref to prepare from"
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-template-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  prepare-template-release:
+    name: Prepare template release PR
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Get release app bot user ID
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ inputs.base_ref }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Prepare template release contract
+        id: prepare
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          previous_version="$(
+            venv/bin/python -c 'from scripts import template_contract; print(template_contract.load_contract().template_version)'
+          )"
+          previous_tag="reponomics-dashboard-v${previous_version}"
+          base_sha="$(git rev-parse HEAD)"
+          mkdir -p .tmp
+
+          if git rev-parse -q --verify "refs/tags/${previous_tag}^{commit}" >/dev/null; then
+            previous_sha="$(git rev-parse "refs/tags/${previous_tag}^{commit}")"
+          elif git ls-remote --exit-code --tags origin "refs/tags/${previous_tag}" >/dev/null 2>&1; then
+            git fetch --quiet --no-tags origin "refs/tags/${previous_tag}:refs/tags/${previous_tag}"
+            previous_sha="$(git rev-parse "refs/tags/${previous_tag}^{commit}")"
+          else
+            previous_sha=""
+          fi
+
+          if [ -n "${previous_sha}" ]; then
+            mapfile -t commits < <(git rev-list --reverse "${previous_sha}..${base_sha}")
+          else
+            mapfile -t commits < <(git rev-list --reverse "${base_sha}")
+          fi
+
+          printf '[]\n' > .tmp/template-release-prs.json
+          for commit in "${commits[@]}"; do
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/commits/${commit}/pulls" \
+              --jq '[.[] | select(.merged_at != null) | {number, title, url: .html_url, body}]' \
+              > ".tmp/prs-${commit}.json"
+            jq -s 'add | unique_by(.number)' \
+              .tmp/template-release-prs.json \
+              ".tmp/prs-${commit}.json" \
+              > .tmp/template-release-prs.next.json
+            mv .tmp/template-release-prs.next.json .tmp/template-release-prs.json
+          done
+
+          venv/bin/python scripts/prepare_template_release.py \
+            --release-type "${{ inputs.release_type }}" \
+            --release-notes-source .tmp/template-release-prs.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Open template release PR
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+          BODY: ${{ steps.prepare.outputs.body }}
+          BRANCH: ${{ steps.prepare.outputs.branch }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TITLE: ${{ steps.prepare.outputs.title }}
+        run: |
+          set -euo pipefail
+
+          body_file=".tmp/template-release-pr.md"
+          mkdir -p .tmp
+          printf '%s\n' "${BODY}" > "${body_file}"
+
+          git add template-contract.yml
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git checkout -B "${BRANCH}"
+          git commit -m "${TITLE}"
+          git fetch origin "refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
+          git push --force-with-lease origin "HEAD:${BRANCH}"
+
+          if gh pr view "${BRANCH}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh pr edit "${BRANCH}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${TITLE}" \
+              --body-file "${body_file}"
+          else
+            gh pr create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --head "${BRANCH}" \
+              --base "${BASE_REF#refs/heads/}" \
+              --title "${TITLE}" \
+              --body-file "${body_file}"
+          fi

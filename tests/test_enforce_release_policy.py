@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -8,7 +9,17 @@ from scripts import enforce_release_policy
 
 
 def _git(repo: Path, *args: str) -> None:
-    subprocess.check_call(["git", *args], cwd=repo)
+    env = os.environ.copy()
+    env.update(
+        {
+            "EDITOR": ":",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_EDITOR": ":",
+            "VISUAL": ":",
+        }
+    )
+    subprocess.check_call(["git", *args], cwd=repo, env=env)
 
 
 def _write_manifest(repo: Path, version: str) -> None:
@@ -57,7 +68,7 @@ def test_major_release_policy_allows_matching_release_as() -> None:
 
 
 def test_release_policy_from_git_checks_major_manifest_bump_messages(tmp_path: Path) -> None:
-    _git(tmp_path, "init")
+    _git(tmp_path, "-c", "init.defaultBranch=main", "init")
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "config", "commit.gpgSign", "false")

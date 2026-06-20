@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.25.0...v0.25.1) (2026-06-20)
+
+
+### Bug Fixes
+
+* tolerate missing generated template release tag ([#158](https://github.com/reponomics/reponomics-dashboard-action/issues/158)) ([691d1b5](https://github.com/reponomics/reponomics-dashboard-action/commit/691d1b510e50d3243fd44bd203926493aa169de5))
+
 ## [0.25.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.24.1...v0.25.0) (2026-06-20)
 
 

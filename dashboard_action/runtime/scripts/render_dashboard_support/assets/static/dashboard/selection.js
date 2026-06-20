@@ -1,6 +1,5 @@
 export function installSelection(context) {
   const document = context.document;
-  const window = context.window;
   const DEFAULT_WINDOW = context.DEFAULT_WINDOW;
   const WINDOW_PRESETS = context.WINDOW_PRESETS;
   const buildRepoMetrics = (...args) => context.buildRepoMetrics(...args);

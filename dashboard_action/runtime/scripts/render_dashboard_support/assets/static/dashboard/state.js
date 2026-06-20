@@ -1,5 +1,4 @@
 export function installState(context) {
-  const window = context.window;
   const dashboardData = (...args) => context.dashboardData(...args);
 
 

@@ -1,6 +1,5 @@
 export function installMomentum(context) {
   const document = context.document;
-  const window = context.window;
   const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
   const buildAggregateSeries = (...args) => context.buildAggregateSeries(...args);
   const escapeHtml = (...args) => context.escapeHtml(...args);

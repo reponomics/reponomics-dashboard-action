@@ -99,6 +99,9 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
     for relative_path in required:
         assert (output / relative_path).exists()
 
+    assert not (output / "docs/index.html").exists()
+    assert not (output / "docs/assets").exists()
+
     generated_readme = (output / "README.md").read_text(encoding="utf-8")
     assert generated_readme == Path("template/README.template.md").read_text(
         encoding="utf-8"

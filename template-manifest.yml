@@ -36,6 +36,8 @@ forbidden:
   - data
   - demo-data
   - dist
+  - docs/assets
+  - docs/index.html
   - "*.log"
   - docs/BRANCH_MODEL.md
   - docs/GENERATED_REPOSITORY_MODEL.md

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.26.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.25.1...v0.26.0) (2026-06-20)
+
+
+### Features
+
+* add auto-doctor functionality ([#165](https://github.com/reponomics/reponomics-dashboard-action/issues/165)) ([4f5de55](https://github.com/reponomics/reponomics-dashboard-action/commit/4f5de55c7d68de9458ac1e1a0dc6fbaae9ebe415))
+
+
+### Bug Fixes
+
+* demo publication flow ([#162](https://github.com/reponomics/reponomics-dashboard-action/issues/162)) ([2fc80f0](https://github.com/reponomics/reponomics-dashboard-action/commit/2fc80f06e9d784447021a25dffe50b522b4025ef))
+
 ## [0.25.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.25.0...v0.25.1) (2026-06-20)
 
 

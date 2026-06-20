@@ -1,6 +1,5 @@
 export function installControls(context) {
   const document = context.document;
-  const window = context.window;
   const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
   const METRICS = context.METRICS;
   const formatNumber = (...args) => context.formatNumber(...args);

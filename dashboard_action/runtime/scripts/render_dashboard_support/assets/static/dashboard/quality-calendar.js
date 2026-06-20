@@ -1,6 +1,5 @@
 export function installQualityCalendar(context) {
   const document = context.document;
-  const window = context.window;
   const currentPayload = (...args) => context.currentPayload(...args);
   const escapeHtml = (...args) => context.escapeHtml(...args);
   const formatIsoDate = (...args) => context.formatIsoDate(...args);
@@ -8,7 +7,6 @@ export function installQualityCalendar(context) {
   const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
   const getVisibleRepos = (...args) => context.getVisibleRepos(...args);
   const getWindowCutoffDate = (...args) => context.getWindowCutoffDate(...args);
-  const hasTrafficLag = (...args) => context.hasTrafficLag(...args);
   const parseIsoDate = (...args) => context.parseIsoDate(...args);
   const state = context.state;
 

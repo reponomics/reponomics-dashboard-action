@@ -1,6 +1,5 @@
 export function installCharts(context) {
   const document = context.document;
-  const window = context.window;
   const activateRepo = (...args) => context.activateRepo(...args);
   const buildWeekdaySummaryFromSeries = (...args) => context.buildWeekdaySummaryFromSeries(...args);
   const chartOptions = (...args) => context.chartOptions(...args);

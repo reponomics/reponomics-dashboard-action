@@ -1,6 +1,5 @@
 export function installFormat(context) {
   const document = context.document;
-  const window = context.window;
 
     function formatNumber(value) {
       return Number(value || 0).toLocaleString();

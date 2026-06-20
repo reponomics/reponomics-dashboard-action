@@ -1,20 +1,20 @@
 # Demo Repository
 
-`reponomics-dashboard-demo` is a public generated showcase repository. It is not a development repository, not a user template, and not a third SemVer product. Its job is to give prospective users a concrete preview of the post-setup Reponomics experience: a public README dashboard, a GitHub Pages dashboard shell, artifact-backed retained data, and a data profile rich enough to show the dashboard's main workflows.
+`reponomics-dashboard-demo` is a public generated showcase repository. It is not a development repository, not a user template, and not a third SemVer product. Its job is to give prospective users a concrete preview of the post-setup Reponomics experience: a GitHub Pages dashboard, artifact-backed retained data, and a data profile rich enough to show the dashboard's main workflows.
 
 The demo is generated from this source repository. Maintainers should not hand-maintain the demo repository except for emergency recovery.
 
 ## Key Properties
 
 - The demo repository is public.
-- The README dashboard is committed to the demo repository.
-- The Pages dashboard is published with GitHub Pages Actions.
+- The README is committed to the demo repository as static explanatory text.
+- The Pages dashboard is generated and published by GitHub Pages Actions.
 - The dashboard data is encrypted and stored as a `dashboard-data` Actions artifact in `reponomics-dashboard-demo`.
 - The public demo key is shown in the Pages unlock UI so visitors can unlock the demo without reading separate instructions.
 - The data is synthetic, curated, and date-shifted so the dashboard tells a useful product story without exposing live repository analytics.
 - The generated demo output includes `.reponomics/demo-provenance.json`, which records source commit, template version, dataset revision, publication-tree digest, and retained-data seed evidence.
 
-The useful product truth is that Reponomics dashboard data is artifact-backed, while README and Pages output are rendered surfaces. In the demo, the Pages shell and unlock affordance are public by design; the encrypted data remains separate from the committed repository tree.
+The useful product truth is that Reponomics dashboard data is artifact-backed, while Pages output is a rendered surface. In the demo, the public key is embedded in the demo-only target workflow; the encrypted data and rendered Pages shell remain separate from the committed repository tree.
 
 ## Design Boundary
 
@@ -30,9 +30,9 @@ The demo is generated from:
 
 - `dist/template`, produced by `make build-template`;
 - `demo/dataset.yml`, the deterministic synthetic dataset source;
-- `scripts/build_demo_repo.py`, which materializes canonical CSV data as an intermediate, renders showcase outputs, writes the encrypted seed artifact, prunes retained data from the publish tree, and writes demo provenance;
+- `scripts/build_demo_repo.py`, which materializes canonical CSV data as an intermediate, writes the encrypted seed artifact, writes the configured demo repository tree, prunes retained data from the publish tree, and writes demo provenance;
 - `scripts/publish_demo_repo.py`, which validates and force-publishes the generated demo tree to `reponomics-dashboard-demo`;
-- `dashboard_action/runtime/scripts/render_dashboard.py` and `render_readme.py`, the same renderers used by the product.
+- the generated local action wrapper, which invokes the product runtime during the target seed-and-publish workflow.
 
 The dataset uses a relative 90-day window. By default, builds use the current UTC date as `as_of`; pass `--as-of YYYY-MM-DD` to `scripts/build_demo_repo.py` for reproducible local inspection.
 
@@ -40,9 +40,8 @@ The dataset uses a relative 90-day window. By default, builds use the current UT
 
 The generated demo publish tree contains:
 
-- `README.md`, including a public synthetic-demo notice and rendered README dashboard;
-- `docs/index.html`, the Pages dashboard shell with the public demo key panel;
-- `docs/assets/`, including vendored dashboard assets needed by the shell;
+- `README.md`, including a public synthetic-demo notice;
+- `config.yaml`, preconfigured for encrypted Pages publication;
 - `.github/workflows/seed-and-publish-demo-dashboard.yml`, the demo-only target workflow;
 - `.reponomics/demo-provenance.json`, the publication-tree and retained-data evidence.
 
@@ -50,6 +49,8 @@ The generated demo publish tree must not contain:
 
 - `data/`;
 - `dist/`;
+- `docs/index.html`;
+- `docs/assets/`;
 - `.dashboard-data-artifact/`;
 - real traffic data or customer/internal brand-risk terms.
 
@@ -64,24 +65,24 @@ Implementation sequence:
 3. Materialize synthetic canonical dashboard data under `dist/demo/data/` as an intermediate render input.
 4. Produce `dist/demo-seed/dashboard-data.enc` using the same encrypted artifact format as the action runtime.
 5. Generate `.github/workflows/seed-and-publish-demo-dashboard.yml` into the demo tree.
-6. Render the public demo README and Pages dashboard shell from the source builder.
-7. Prune retained data and build-only output from the demo repository tree.
+6. Write a setup-ready demo `config.yaml` and public synthetic-demo README notice.
+7. Prune retained data, rendered Pages output, and build-only output from the demo repository tree.
 8. Compute demo provenance over the pruned publication tree and record retained-data seed evidence separately.
 9. Publish the generated demo repository tree to `reponomics-dashboard-demo` without `data/` or `dist/`.
-10. Dispatch the generated demo-only target workflow, which imports the encrypted seed into `reponomics-dashboard-demo` Actions artifact storage and deploys the committed dashboard shell through GitHub Pages Actions.
+10. Dispatch the generated demo-only target workflow, which imports the encrypted seed into `reponomics-dashboard-demo` Actions artifact storage and runs the normal publish path to generate and deploy the Pages dashboard through GitHub Pages Actions.
 
 The source publication workflow uploads two source artifacts:
 
 - `generated-demo-repo`: the generated demo repository tree plus the source commit file;
 - `generated-demo-dashboard-data`: the encrypted retained-data seed.
 
-The target artifact-import workflow uses `actions/download-artifact` with `github-token`, `repository`, and `run-id`. It passes the target workflow's `${{ github.token }}` as the explicit `github-token` input. This was validated against public source artifact run `27471925728` and target demo run `27472044670`: the target repo `GITHUB_TOKEN` could download the public source artifact, store it as `dashboard-data`, and deploy Pages.
+The target artifact-import workflow uses `actions/download-artifact` with `github-token`, `repository`, and `run-id`. It passes the target workflow's `${{ github.token }}` as the explicit `github-token` input. After storing the downloaded seed as `dashboard-data`, it calls the generated local Reponomics action wrapper in `publish` mode with `artifact-run-id: ${{ github.run_id }}` so the dashboard shell and runtime assets are generated during the workflow and uploaded as the Pages artifact.
 
 ## Public Demo Key
 
-The Pages dashboard shell is public. The dashboard data remains encrypted. The demo key is displayed openly in the shell because visitors should be able to unlock the demo from the page itself.
+The Pages dashboard shell is public. The dashboard data remains encrypted. The demo key is included openly in the demo workflow because visitors should be able to unlock the demo from the page itself.
 
-The demo unlock panel is rendered only when `build_encrypted_html(..., demo_unlock=...)` receives demo metadata. Normal action-driven encrypted dashboards do not pass that metadata and do not render the panel.
+The generated demo workflow passes the public demo key as the dashboard secret. Normal user dashboards use repository secrets instead.
 
 ## Local Commands
 
@@ -91,7 +92,7 @@ Build and verify the demo:
 make verify-demo
 ```
 
-Preview the generated files under `dist/demo/`. The Pages dashboard shell is at `dist/demo/docs/index.html`; for browser APIs that require HTTP, serve `dist/demo/` or `dist/demo/docs/` over a local web server.
+Preview the generated repository files under `dist/demo/`. The Pages dashboard shell is not committed there; it is generated by the target seed-and-publish workflow.
 
 The encrypted retained-data seed is written to `dist/demo-seed/dashboard-data.enc`. It is uploaded by the source publication workflow as `generated-demo-dashboard-data` and imported by the target demo workflow as `dashboard-data`.
 

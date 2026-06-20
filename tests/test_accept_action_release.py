@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -8,36 +9,22 @@ from scripts import template_contract
 from scripts import template_release_notes
 
 
-def _write_root(tmp_path: Path, *, template_version: str = "0.10.0") -> Path:
+def _bump_version(version: str, release_type: str) -> str:
+    return prepare_template_release.bump_version(version, release_type)
+
+
+def _write_root(tmp_path: Path, *, template_version: str | None = None) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
     (tmp_path / "action.yml").write_text(
         Path("action.yml").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
+    payload = yaml.safe_load(Path("template-contract.yml").read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    if template_version is not None:
+        payload["template_version"] = template_version
     (tmp_path / "template-contract.yml").write_text(
-        "\n".join(
-            [
-                "schema_version: 1",
-                f"template_version: {template_version}",
-                "action_repository: reponomics/reponomics-dashboard-action",
-                "default_action_ref: v0",
-                "compatible_action_major: 0",
-                "accepted_action:",
-                "  repository: reponomics/reponomics-dashboard-action",
-                "  version: 0.23.5",
-                "  tag: v0.23.5",
-                "  sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "  default_ref: v0",
-                "minimum_compatible_template_version: 0.10.0",
-                "protected_template_refs:",
-                "  - ref: reponomics-dashboard-v0.10.0",
-                "    template_version: 0.10.0",
-                "    source_commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "    status: required",
-                "managed_docs_namespace: docs/reponomics",
-                "",
-            ]
-        ),
+        yaml.safe_dump(payload, sort_keys=False),
         encoding="utf-8",
     )
     return tmp_path
@@ -49,23 +36,50 @@ def _contract_payload(root: Path) -> dict:
     return payload
 
 
+def _accepted_action_version(root: Path) -> str:
+    return str(_contract_payload(root)["accepted_action"]["version"])
+
+
+def _contract_for_notes(
+    *,
+    template_version: str = "0.10.1",
+    accepted_action_version: str = "0.23.6",
+    accepted_action_sha: str = "b" * 40,
+) -> template_contract.TemplateContract:
+    contract = template_contract.load_contract()
+    accepted_action = replace(
+        contract.accepted_action,
+        version=accepted_action_version,
+        tag=f"v{accepted_action_version}",
+        sha=accepted_action_sha,
+    )
+    return replace(
+        contract,
+        template_version=template_version,
+        accepted_action=accepted_action,
+    )
+
+
 def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path):
     root = _write_root(tmp_path)
+    previous_template = _contract_payload(root)["template_version"]
+    action_version = _bump_version(_accepted_action_version(root), "patch")
+    expected_template = _bump_version(previous_template, "patch")
 
     payload, changed = accept_action_release.accept_action_release(
         root=root,
-        action_version="0.23.6",
+        action_version=action_version,
         action_sha="b" * 40,
     )
 
     assert changed is True
-    assert payload["template_version"] == "0.10.1"
+    assert payload["template_version"] == expected_template
     written = _contract_payload(root)
-    assert written["template_version"] == "0.10.1"
+    assert written["template_version"] == expected_template
     assert written["accepted_action"] == {
         "repository": "reponomics/reponomics-dashboard-action",
-        "version": "0.23.6",
-        "tag": "v0.23.6",
+        "version": action_version,
+        "tag": f"v{action_version}",
         "sha": "b" * 40,
         "default_ref": "v0",
     }
@@ -73,20 +87,23 @@ def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path)
 
 def test_accept_action_release_bumps_template_minor_for_action_minor(tmp_path):
     root = _write_root(tmp_path)
+    action_version = _bump_version(_accepted_action_version(root), "minor")
+    expected_template = _bump_version(_contract_payload(root)["template_version"], "minor")
 
     payload, changed = accept_action_release.accept_action_release(
         root=root,
-        action_version="0.24.0",
+        action_version=action_version,
         action_sha="b" * 40,
     )
 
     assert changed is True
-    assert payload["template_version"] == "0.11.0"
+    assert payload["template_version"] == expected_template
 
 
 def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, monkeypatch):
     root = _write_root(tmp_path, template_version="0.11.0")
     monkeypatch.setattr(template_contract, "VERSION", "1.0.0")
+    expected_template = _bump_version(_contract_payload(root)["template_version"], "major")
 
     payload, changed = accept_action_release.accept_action_release(
         root=root,
@@ -95,7 +112,7 @@ def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, m
     )
 
     assert changed is True
-    assert payload["template_version"] == "1.0.0"
+    assert payload["template_version"] == expected_template
     assert payload["compatible_action_major"] == 1
     assert payload["default_action_ref"] == "v1"
     assert payload["accepted_action"] == {
@@ -106,36 +123,40 @@ def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, m
         "default_ref": "v1",
     }
     written = _contract_payload(root)
-    assert written["template_version"] == "1.0.0"
+    assert written["template_version"] == expected_template
     assert written["compatible_action_major"] == 1
     assert written["default_action_ref"] == "v1"
 
 
 def test_accept_action_release_is_idempotent_when_action_already_accepted(tmp_path):
     root = _write_root(tmp_path)
+    action_version = _bump_version(_accepted_action_version(root), "patch")
+    expected_template = _bump_version(_contract_payload(root)["template_version"], "patch")
     accept_action_release.accept_action_release(
         root=root,
-        action_version="0.23.6",
+        action_version=action_version,
         action_sha="b" * 40,
     )
 
     payload, changed = accept_action_release.accept_action_release(
         root=root,
-        action_version="0.23.6",
+        action_version=action_version,
         action_sha="b" * 40,
     )
 
     assert changed is False
-    assert payload["template_version"] == "0.10.1"
+    assert payload["template_version"] == expected_template
 
 
 def test_accept_action_release_writes_workflow_outputs_and_notes(tmp_path):
     root = _write_root(tmp_path)
     output = tmp_path / "github-output.txt"
     notes = tmp_path / "notes.md"
+    action_version = _bump_version(_accepted_action_version(root), "patch")
+    expected_template = _bump_version(_contract_payload(root)["template_version"], "patch")
     payload, changed = accept_action_release.accept_action_release(
         root=root,
-        action_version="0.23.6",
+        action_version=action_version,
         action_sha="b" * 40,
     )
 
@@ -143,26 +164,32 @@ def test_accept_action_release_writes_workflow_outputs_and_notes(tmp_path):
     accept_action_release._write_release_notes(notes, payload)
 
     assert "changed=true" in output.read_text(encoding="utf-8")
-    assert "template_tag=reponomics-dashboard-v0.10.1" in output.read_text(encoding="utf-8")
     assert (
-        "Updated `reponomics/reponomics-dashboard-action` to `v0.23.6` (`bbbbbbb`)."
+        f"template_tag=reponomics-dashboard-v{expected_template}"
+        in output.read_text(encoding="utf-8")
+    )
+    assert (
+        f"Updated `reponomics/reponomics-dashboard-action` to `v{action_version}` (`bbbbbbb`)."
         in notes.read_text(encoding="utf-8")
     )
 
 
 def test_prepare_template_release_bumps_template_patch_only(tmp_path):
     root = _write_root(tmp_path)
+    previous = _contract_payload(root)["template_version"]
+    expected = _bump_version(previous, "patch")
+    accepted_action_version = _accepted_action_version(root)
 
-    payload, previous, current = prepare_template_release.prepare_template_release(
+    payload, returned_previous, current = prepare_template_release.prepare_template_release(
         root=root,
         release_type="patch",
     )
 
-    assert previous == "0.10.0"
-    assert current == "0.10.1"
-    assert payload["template_version"] == "0.10.1"
-    assert payload["accepted_action"]["version"] == "0.23.5"
-    assert _contract_payload(root)["template_version"] == "0.10.1"
+    assert returned_previous == previous
+    assert current == expected
+    assert payload["template_version"] == expected
+    assert payload["accepted_action"]["version"] == accepted_action_version
+    assert _contract_payload(root)["template_version"] == expected
 
 
 def test_prepare_template_release_bumps_minor_and_major(tmp_path):
@@ -251,28 +278,7 @@ def test_prepare_template_release_uses_merged_pr_notes_source(tmp_path):
 def test_template_release_notes_writes_contract_metadata(tmp_path):
     output = tmp_path / "github-output.txt"
     notes = tmp_path / "notes.md"
-    contract = template_contract.TemplateContract(
-        template_version="0.10.1",
-        action_repository=template_contract.ACTION_REPOSITORY,
-        default_action_ref="v0",
-        compatible_action_major=0,
-        accepted_action=template_contract.AcceptedActionRelease(
-            repository=template_contract.ACTION_REPOSITORY,
-            version="0.23.6",
-            tag="v0.23.6",
-            sha="b" * 40,
-            default_ref="v0",
-        ),
-        minimum_compatible_template_version="0.10.0",
-        protected_template_refs=(
-            template_contract.ProtectedTemplateRef(
-                ref="reponomics-dashboard-v0.10.0",
-                template_version="0.10.0",
-                source_commit="a" * 40,
-            ),
-        ),
-        managed_docs_namespace=Path("docs/reponomics"),
-    )
+    contract = _contract_for_notes()
 
     template_release_notes.write_outputs(output, contract)
     template_release_notes.write_notes(notes, contract)
@@ -289,28 +295,7 @@ def test_template_release_notes_writes_contract_metadata(tmp_path):
 
 def test_template_release_notes_can_use_pr_body_section(tmp_path):
     notes = tmp_path / "notes.md"
-    contract = template_contract.TemplateContract(
-        template_version="0.10.1",
-        action_repository=template_contract.ACTION_REPOSITORY,
-        default_action_ref="v0",
-        compatible_action_major=0,
-        accepted_action=template_contract.AcceptedActionRelease(
-            repository=template_contract.ACTION_REPOSITORY,
-            version="0.23.6",
-            tag="v0.23.6",
-            sha="b" * 40,
-            default_ref="v0",
-        ),
-        minimum_compatible_template_version="0.10.0",
-        protected_template_refs=(
-            template_contract.ProtectedTemplateRef(
-                ref="reponomics-dashboard-v0.10.0",
-                template_version="0.10.0",
-                source_commit="a" * 40,
-            ),
-        ),
-        managed_docs_namespace=Path("docs/reponomics"),
-    )
+    contract = _contract_for_notes()
     body = "\n".join(
         [
             "Template PR overview.",

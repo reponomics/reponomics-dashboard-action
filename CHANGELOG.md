@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.24.1...v0.25.0) (2026-06-20)
+
+
+### Features
+
+* replace docs-sync with update-docs ([#155](https://github.com/reponomics/reponomics-dashboard-action/issues/155)) ([d4b5966](https://github.com/reponomics/reponomics-dashboard-action/commit/d4b59667ba429926717982fdb355d27322971877))
+
 ## [0.24.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.24.0...v0.24.1) (2026-06-19)
 
 

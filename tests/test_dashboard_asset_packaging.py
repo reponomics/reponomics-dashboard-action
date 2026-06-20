@@ -57,6 +57,7 @@ def test_dashboard_static_assets_are_included_in_built_wheel(tmp_path: Path) -> 
         "dashboard/json-assets.js",
         "dashboard/momentum.js",
         "dashboard/quality-calendar.js",
+        "dashboard/secure-core.js",
         "dashboard/selection.js",
         "dashboard/series.js",
         "dashboard/state.js",

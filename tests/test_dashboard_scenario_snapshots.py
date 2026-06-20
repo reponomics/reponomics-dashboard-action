@@ -356,6 +356,7 @@ def _assert_dashboard_contract(rendered: RenderedScenario) -> None:
     assert (assets_dir / "dashboard" / "theme-preload.js").is_file()
     assert (assets_dir / "dashboard" / "entry-public.js").is_file()
     assert (assets_dir / "dashboard" / "app.js").is_file()
+    assert (assets_dir / "dashboard" / "secure-core.js").is_file()
     assert (assets_dir / "dashboard-data.json").is_file()
     assert (assets_dir / "inter-latin-wght-normal.woff2").is_file()
     assert (assets_dir / "jetbrains-mono-latin-wght-normal.woff2").is_file()

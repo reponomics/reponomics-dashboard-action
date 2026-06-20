@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
-.PHONY: test js-test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
+.PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
@@ -12,6 +12,7 @@ PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 NODE ?= node
 PIPX ?= pipx
+JS_SMOKE_PYTHON ?= python3
 ANTIPASTA := $(VENV)/bin/antipasta
 PIP_AUDIT := $(VENV)/bin/pip-audit
 PIP_COMPILE := $(VENV)/bin/pip-compile
@@ -170,6 +171,12 @@ test: install js-test ## Run tests
 
 js-test: ## Run JavaScript module tests
 	$(NODE) --test tests/js/*.test.mjs
+
+js-coverage: ## Run JavaScript module tests with Node coverage reporting
+	$(NODE) --test --experimental-test-coverage tests/js/*.test.mjs
+
+js-smoke: ## Check dashboard JavaScript syntax and flattened secure runtime assembly
+	NODE=$(NODE) $(JS_SMOKE_PYTHON) scripts/check_dashboard_js_smoke.py
 
 coverage: install ## Run tests with coverage report
 	$(PYTHON) -m pytest tests -v --cov=dashboard_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)

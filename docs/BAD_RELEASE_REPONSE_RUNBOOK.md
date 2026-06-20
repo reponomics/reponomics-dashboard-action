@@ -11,7 +11,11 @@ This runbook covers failures across:
 - generated template release/publication: `reponomics/reponomics-dashboard`
 - generated template provenance and release artifacts
 
-The guiding rule is: immutable release history is not rewritten. Recovery happens through rerunning failed workflows when the approved source is still correct, or through corrective patch releases when the approved source was wrong.
+The guiding rule is: immutable release history is not rewritten. Recovery happens
+through rerunning failed workflows only when the same approved source and same
+release tooling can complete the already-approved publication. If a failed
+publication requires changing source-controlled release tooling, release over it
+with a new source SHA and new template version.
 
 ## Release-Readiness Requirements
 
@@ -33,7 +37,11 @@ Use this operational runbook before and after public launch. Do not defer recove
 - Floating action refs may move to corrective releases after validation.
 - Generated template repo `main` should advance through append-only generated publication commits from the protected publication workflow.
 - Previous generated template snapshots should remain reachable through generated `main` history and generated-template release tags.
-- Recovery uses reruns from the same approved source when the source is correct, or corrective patch releases when the source is wrong.
+- Recovery uses reruns from the same approved source when the source and
+  source-controlled release tooling are both still correct.
+- If the source template tag exists but generated template publication failed,
+  and recovery requires changing source-controlled release tooling, leave that
+  template version failed and supersede it with a new template version.
 
 ## Public Readiness And Versioning
 
@@ -107,7 +115,8 @@ Public note: normally just the eventual template release note, e.g. `Updated act
 
 ## 4. Template Acceptance PR Merged But Template Release Failed
 
-Impact: `main` says the template version should be released, but no matching source tag or generated repository release exists.
+Impact: `main` says the template version should be released, but no matching
+source tag or generated repository release exists.
 
 Response:
 
@@ -126,11 +135,22 @@ Impact: source tag or generated repository release exists, but `reponomics/repon
 Response:
 
 - Inspect `template-release.yml` failure.
-- If the failure occurred before the protected `publish-template-release` job, fix and rerun `template-release.yml`; a healthy rerun should not request deployment approval when the generated release already exists and verifies.
-- If failure occurred after approval but before release creation, rerun `template-release.yml` from the same approved source. The publication helper should verify an existing release tag against the expected payload without moving newer generated `main` backward.
+- If the failure occurred before the protected `publish-template-release` job and
+  the checked-in release tooling does not need to change, fix the external
+  condition and rerun `template-release.yml` from the same source.
+- If failure occurred after approval but before release creation, rerun
+  `template-release.yml` from the same approved source only when the same source
+  tree can complete publication. The publication helper should verify an
+  existing release tag against the expected payload without moving newer
+  generated `main` backward.
+- If the source template tag exists and publication failed because
+  source-controlled release tooling was wrong, do not publish that same template
+  version with later tooling. Keep the source tag as the failed immutable
+  boundary, merge the tooling fix, and publish the next template version.
 - If publication partially pushed, compare generated repo `Source-Commit`, `Template-Version`, `Payload-Digest`, `Accepted-Action`, and `.reponomics/template-provenance.json`.
 - Rerun publication only through `template-release.yml` from the same approved source commit or source tag, unless an incident-specific repair plan is explicitly approved.
-- Do not create a new template version unless the template payload itself must change.
+- Create a new template version when recovery requires a new source SHA, even if
+  the generated template payload would otherwise be identical.
 
 Public note: not required unless users could copy the stale/broken generated repository during the incident window.
 
@@ -245,6 +265,9 @@ Compatibility reset: this release raises the minimum compatible template version
 - If a bad action may affect existing users through floating refs, publish a corrective action patch release and move the floating refs.
 - Do not move `minimum_compatible_template_version` in response to a bad release. Move it only for an intentional compatibility reset.
 - Do not use manual publication as normal rollback. Operator repair should be explicit and scoped to the incident.
+- Do not complete a failed source-tagged template publication with a later source
+  tree. If the fix lives in source-controlled release tooling, supersede the
+  failed template version with a new version.
 
 ## Minimum Maintainer Checklist During Incident
 

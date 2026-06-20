@@ -550,7 +550,6 @@ def _write_demo_config(output_dir: Path) -> None:
         "data_mode": "encrypted",
         "publish_pages_dashboard": True,
         "publish_readme_dashboard": False,
-        "allow_docs_sync": False,
         "artifact_retention_days": 90,
         "use_github_app": False,
         "include_only": [],

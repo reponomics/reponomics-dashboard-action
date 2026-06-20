@@ -142,10 +142,28 @@ def _commit_message(
 
 
 def _remote_tag_commit(worktree: Path, tag: str) -> str:
-    output = _output(
-        ["git", "ls-remote", "--tags", "target", f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}"],
-        worktree,
+    result = subprocess.run(
+        [
+            "git",
+            "ls-remote",
+            "--tags",
+            "target",
+            f"refs/tags/{tag}",
+            f"refs/tags/{tag}^{{}}",
+        ],
+        cwd=worktree,
+        text=True,
+        capture_output=True,
+        check=False,
     )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "couldn't find remote ref" in stderr and f"refs/tags/{tag}" in stderr:
+            return ""
+        detail = f": {stderr}" if stderr else ""
+        raise PublishError(f"git ls-remote failed for release tag {tag}{detail}")
+
+    output = result.stdout.strip()
     peeled = ""
     direct = ""
     for line in output.splitlines():

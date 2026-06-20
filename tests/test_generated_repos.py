@@ -1960,6 +1960,29 @@ def test_publish_appends_generated_main_and_tags_release_commit(tmp_path):
     assert output_values["target_branch"] == "main"
 
 
+def test_remote_tag_commit_treats_missing_github_tag_as_absent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fake_run(*args, **kwargs):  # noqa: ANN001, ANN202
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=128,
+            stdout="",
+            stderr="fatal: couldn't find remote ref refs/tags/reponomics-dashboard-v0.12.0^{}\n",
+        )
+
+    monkeypatch.setattr(publish_generated_repo.subprocess, "run", fake_run)
+
+    assert (
+        publish_generated_repo._remote_tag_commit(
+            tmp_path,
+            "reponomics-dashboard-v0.12.0",
+        )
+        == ""
+    )
+
+
 def test_publish_existing_release_tag_verifies_without_mutating_newer_main(tmp_path):
     output = tmp_path / "template"
     newer_output = tmp_path / "newer-template"

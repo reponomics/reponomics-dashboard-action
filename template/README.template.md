@@ -40,6 +40,8 @@ publish_readme_dashboard: # true/false (must be false for public repos)
 
 artifact_retention_days: 90 # integer between 14-90
 
+auto_doctor_every_n_days: 0 # 0 disables; otherwise integer between 1-30
+
 max_repos: 200
 
 include_only:
@@ -59,7 +61,7 @@ include_private: true
 use_github_app: false
 ```
 
-The template starts with `artifact_retention_days: 90` and `use_github_app: false`; both are validated by setup and workflow runs.
+The template starts with `artifact_retention_days: 90`, `use_github_app: false`, and `auto_doctor_every_n_days: 0`; these are validated by setup and workflow runs. Set `auto_doctor_every_n_days` to `1` through `30` to check the marker and run doctor as part of the collect-and-publish cadence when that many UTC days have elapsed since the last successful auto-doctor.
 
 If `include_only` is non-empty, Reponomics tracks exactly those repositories and ignores the automatic pool. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).
 

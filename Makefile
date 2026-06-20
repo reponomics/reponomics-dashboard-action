@@ -2,7 +2,7 @@
 
 .PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
 .PHONY: test js-test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
-.PHONY: lint type-check
+.PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
@@ -11,6 +11,7 @@ VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 NODE ?= node
+PIPX ?= pipx
 ANTIPASTA := $(VENV)/bin/antipasta
 PIP_AUDIT := $(VENV)/bin/pip-audit
 PIP_COMPILE := $(VENV)/bin/pip-compile
@@ -21,6 +22,12 @@ RUNTIME_LOCK := requirements-runtime.txt
 PIP_INSTALL_FLAGS := --upgrade --upgrade-strategy eager
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
+MDFORMAT_VERSION ?= 1.0.0
+MDFORMAT_GFM_VERSION ?= 1.0.0
+MDFORMAT_SPEC ?= mdformat==$(MDFORMAT_VERSION)
+MDFORMAT_WITH ?= mdformat-gfm==$(MDFORMAT_GFM_VERSION)
+MDFORMAT_ARGS ?= --wrap no --number --extensions gfm
+MARKDOWN_FILES ?= $(shell git ls-files 'docs/**/*.md')
 COLLECTION_QUALITY_PREVIEW_FIXTURE := tests/fixtures/collection_quality_preview
 COLLECTION_QUALITY_PREVIEW_OUTPUT := .tmp/collection_quality_preview
 TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
@@ -201,6 +208,9 @@ lint: install ## Run lint checks
 
 type-check: install ## Run static type checks
 	$(PYTHON) -m mypy
+
+markdown-format: ## Format tracked Markdown with mdformat via pipx
+	$(PIPX) run --spec '$(MDFORMAT_SPEC)' --with '$(MDFORMAT_WITH)' mdformat $(MDFORMAT_ARGS) $(MARKDOWN_FILES)
 
 validate: validate-action validate-workflows validate-runtime-lock validate-vendored-assets ## Run validation checks
 

@@ -88,6 +88,7 @@ def build_config(mode):
         "config_path": consumer_repo / "config.yaml",
         "data_dir": data_dir,
         "retention_days": 90,
+        "auto_doctor_every_n_days": 0,
         "artifact_run_id": "",
         "generate_readme": profile["generate_readme"],
         "publish_pages_requested": profile.get("expected_publish_pages", True),

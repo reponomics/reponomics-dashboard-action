@@ -7,6 +7,12 @@ on:
         description: "Workflow run ID containing the dashboard and dashboard-data artifacts to inspect"
         type: string
         required: true
+  workflow_call:
+    inputs:
+      artifact_run_id:
+        description: "Workflow run ID containing the dashboard and dashboard-data artifacts to inspect"
+        type: string
+        required: true
 
 permissions:
   contents: read

@@ -38,6 +38,11 @@ artifact_retention_days: 90
 # to query the GitHub API instead of a Personal Access Token (PAT).
 # Reponomics does not offer a public app for the Reponomics Dashboard.
 use_github_app: false
+#
+# Set to 0 to disable automatic doctor diagnostics, or choose an integer from
+# 1 to 30 to run doctor as part of the collect-and-publish cadence when at
+# least that many UTC days have elapsed since the last successful auto-doctor.
+auto_doctor_every_n_days: 0
 # * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
 # REPOSITORY SELECTION ------------------------------------------------------- *
 # * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *

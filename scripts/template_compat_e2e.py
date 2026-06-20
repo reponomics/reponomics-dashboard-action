@@ -81,6 +81,7 @@ def config_for(root: Path, fixture: Path, mode: str, *, next_secret: str = ""):
         config_path=fixture / "config.yaml",
         data_dir=fixture / "data",
         retention_days=90,
+        auto_doctor_every_n_days=0,
         artifact_run_id="",
         publish_pages_requested=True,
         generate_readme=False,

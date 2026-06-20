@@ -149,6 +149,7 @@ def _render_production_outputs(
         config_path=workdir / "config.yaml",
         data_dir=data_dir,
         retention_days=90,
+        auto_doctor_every_n_days=0,
         artifact_run_id="",
         publish_pages_requested=True,
         generate_readme=True,

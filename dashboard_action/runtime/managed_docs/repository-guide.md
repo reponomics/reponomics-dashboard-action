@@ -74,6 +74,7 @@ The canonical data store is the `dashboard-data` GitHub Actions artifact.
 - `rotate-key` restores encrypted retained state, decrypts with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, and publishes rotated encrypted outputs.
 - `incident-reset` is a manual emergency workflow for suspected dashboard-key exposure. Make the dashboard repository private and disable any exposed Pages dashboard first. The action restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, uploads the new retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts.
 - `update-docs` runs after successful collect-and-publish runs and writes the action-bundled managed documentation to `docs/reponomics/`.
+- `auto-doctor` is an optional diagnostic in the collect-and-publish cadence. Set `auto_doctor_every_n_days` in `config.yaml` to `1` through `30` to check the marker and run doctor when that many UTC days have elapsed since the last successful auto-doctor; keep it `0` to disable it.
 - `keepalive` runs monthly, updates `.reponomics/keepalive.md`, and tries to create a persistent data safety reminder issue so scheduled collection is less likely to be silently disabled.
 
 Git history is used for configuration, workflow shells, the static setup README, and optional private-repository metric README output. It is not the analytics database.

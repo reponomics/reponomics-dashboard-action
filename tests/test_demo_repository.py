@@ -168,7 +168,7 @@ def test_demo_verifier_rejects_brand_risk_terms_in_generated_output(tmp_path: Pa
 
 
 def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Path) -> None:
-    build_demo_repo._write_demo_workflow(tmp_path)
+    build_demo_repo._write_demo_workflow(tmp_path, "public-demo-key")
 
     workflow = (tmp_path / build_demo_repo.DEMO_PAGES_WORKFLOW).read_text(encoding="utf-8")
     assert "COLLECTION_TOKEN" not in workflow
@@ -180,10 +180,12 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     assert "actions/download-artifact@" in workflow
     assert "actions/upload-artifact@" in workflow
     assert "name: dashboard-data" in workflow
-    assert "actions/upload-pages-artifact@" in workflow
-    assert "actions/deploy-pages@" in workflow
-    assert "# v6.0.0" in workflow
-    assert "# v5.0.0" in workflow
+    assert "mode: publish" in workflow
+    assert "artifact-run-id: ${{ github.run_id }}" in workflow
+    assert "dashboard-secret: ${{ env.DEMO_DASHBOARD_KEY }}" in workflow
+    assert "public-demo-key" in workflow
+    assert "actions/upload-pages-artifact@" not in workflow
+    assert "actions/deploy-pages@" not in workflow
     assert "permissions: {}" in workflow
     assert "reponomics/reponomics-dashboard-action@" not in workflow
 

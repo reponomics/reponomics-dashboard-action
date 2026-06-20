@@ -33,8 +33,6 @@ if str(RUNTIME_SCRIPTS_DIR) not in sys.path:
 
 from scripts import template_contract, template_provenance  # noqa: E402
 
-import render_dashboard  # noqa: E402
-import render_readme  # noqa: E402
 import storage  # noqa: E402
 import traffic_reporting  # noqa: E402
 import crypto_artifact  # noqa: E402
@@ -52,7 +50,7 @@ DEMO_SEED_DASHBOARD_DATA_ARTIFACT_NAME = "dashboard-data"
 DEMO_SEED_ARTIFACT_PATH = Path("dashboard-data.enc")
 DEMO_EXCLUDED_PAYLOAD_PATHS = frozenset({DEMO_PROVENANCE_PATH.as_posix()})
 DEMO_README_NOTICE = """\
-> **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, the Pages dashboard key is intentionally public, and this README dashboard is published because no private repository metrics are present.
+> **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, and the Pages dashboard key is intentionally public.
 
 """
 DEMO_OWNER = "reponomics-demo"
@@ -425,7 +423,7 @@ def _materialize_data(output_dir: Path, dataset: dict[str, Any], as_of: date) ->
     (data_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_demo_workflow(output_dir: Path) -> None:
+def _write_demo_workflow(output_dir: Path, demo_key: str = "public-demo-key") -> None:
     workflow = """\
 name: Seed And Publish Demo Dashboard
 
@@ -499,20 +497,20 @@ jobs:
           retention-days: 90
           overwrite: true
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Publish demo dashboard
+        uses: ./.github/actions/reponomics
+        env:
+          DEMO_DASHBOARD_KEY: __DEMO_DASHBOARD_KEY_JSON__
         with:
-          enablement: "false"
-
-      - name: Upload demo dashboard artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: docs
-
-      - name: Deploy demo dashboard
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
-"""
+          mode: publish
+          artifact-run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+          dashboard-secret: ${{ env.DEMO_DASHBOARD_KEY }}
+          data-mode: encrypted
+          retention-days: "90"
+          publish-pages: "true"
+          generate-readme: "false"
+""".replace("__DEMO_DASHBOARD_KEY_JSON__", json.dumps(demo_key))
     path = output_dir / DEMO_TARGET_WORKFLOW
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(workflow, encoding="utf-8")
@@ -544,6 +542,27 @@ def _write_encrypted_seed_artifact(data_dir: Path, seed_output_dir: Path, datase
 def _prune_retained_data_from_publish_tree(output_dir: Path) -> None:
     for relative in ("data", "dist", ".dashboard-data-artifact"):
         shutil.rmtree(output_dir / relative, ignore_errors=True)
+
+
+def _write_demo_config(output_dir: Path) -> None:
+    payload = {
+        "i_have_read_the_readme": True,
+        "data_mode": "encrypted",
+        "publish_pages_dashboard": True,
+        "publish_readme_dashboard": False,
+        "artifact_retention_days": 90,
+        "use_github_app": False,
+        "include_only": [],
+        "exclude": [],
+        "max_repos": 200,
+        "include_others": True,
+        "include_new": False,
+        "include_private": True,
+    }
+    (output_dir / "config.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 def _write_demo_provenance(
@@ -590,35 +609,6 @@ def _write_demo_provenance(
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _render_demo_outputs(output_dir: Path, dataset: dict[str, Any]) -> None:
-    os.environ["DASHBOARD_KEY"] = str(dataset["demo_key"])
-    os.environ["DASHBOARD_ACCESS_MODE"] = "encrypted"
-    os.environ["REPONOMICS_MANAGED_DOCS_README_LINK"] = "docs/reponomics/README.md"
-    os.environ["REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"] = "reponomics/README.md"
-    os.environ["REPONOMICS_VERSION_STATUS"] = json.dumps(
-        {
-            "state": "demo",
-            "current_version": "demo",
-            "current_ref": "reponomics-demo",
-            "latest_version": "",
-            "latest_url": "",
-            "action_repository": "reponomics/reponomics-dashboard-action",
-        },
-        separators=(",", ":"),
-    )
-    with _pushd(output_dir):
-        render_dashboard.render(
-            demo_unlock={
-                "label": "Public demo key",
-                "key": str(dataset["demo_key"]),
-                "note": "This demo uses synthetic data. The key is intentionally public and must not be reused.",
-                "button_label": "Unlock demo dashboard",
-            }
-        )
-        render_readme.render()
-    _prepend_readme_notice(output_dir / "README.md")
-
-
 def _assert_csv_headers(data_dir: Path) -> None:
     for filename, (fields, _date_field) in storage.CSV_REGISTRY.items():
         _assert_csv_header(data_dir / filename, fields)
@@ -633,8 +623,9 @@ def build_demo(output_dir: Path, dataset_path: Path, as_of: date, seed_output_di
     _materialize_data(output_dir, dataset, as_of)
     _assert_csv_headers(output_dir / "data")
     seed_artifact_path = _write_encrypted_seed_artifact(output_dir / "data", seed_output_dir, dataset)
-    _write_demo_workflow(output_dir)
-    _render_demo_outputs(output_dir, dataset)
+    _write_demo_config(output_dir)
+    _write_demo_workflow(output_dir, str(dataset["demo_key"]))
+    _prepend_readme_notice(output_dir / "README.md")
     _prune_retained_data_from_publish_tree(output_dir)
     _write_demo_provenance(output_dir, dataset, as_of, seed_artifact_path=seed_artifact_path)
     verify_demo(output_dir, dataset_path, seed_output_dir=seed_output_dir)
@@ -671,8 +662,7 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     dataset = _load_dataset(dataset_path)
     required = [
         output_dir / "README.md",
-        output_dir / "docs/index.html",
-        output_dir / "docs/assets/chart.umd.min.js",
+        output_dir / "config.yaml",
         output_dir / DEMO_TARGET_WORKFLOW,
         output_dir / DEMO_PROVENANCE_PATH,
     ]
@@ -682,20 +672,29 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     for relative in ("data", "dist", ".dashboard-data-artifact"):
         if (output_dir / relative).exists():
             raise DemoBuildError(f"Generated demo publish tree must not include {relative}/.")
+    for relative in ("docs/index.html", "docs/assets"):
+        if (output_dir / relative).exists():
+            raise DemoBuildError(f"Generated demo publish tree must not include {relative}.")
     seed_path = seed_output_dir / DEMO_SEED_ARTIFACT_PATH
     _load_encrypted_seed(seed_path)
     readme = (output_dir / "README.md").read_text(encoding="utf-8")
-    html = (output_dir / "docs/index.html").read_text(encoding="utf-8")
+    config = yaml.safe_load((output_dir / "config.yaml").read_text(encoding="utf-8"))
     workflow = (output_dir / DEMO_TARGET_WORKFLOW).read_text(encoding="utf-8")
     if "Public synthetic demo" not in readme:
         raise DemoBuildError("Demo README is missing synthetic-data disclosure.")
-    if "demo-unlock-panel" not in html or "Unlock demo dashboard" not in html:
-        raise DemoBuildError("Demo Pages dashboard is missing the public demo unlock panel.")
-    if str(dataset["demo_key"]) not in html:
-        raise DemoBuildError("Demo Pages dashboard does not expose the configured public demo key.")
+    if config.get("i_have_read_the_readme") is not True:
+        raise DemoBuildError("Demo config must be setup-ready.")
+    if config.get("data_mode") != "encrypted" or config.get("publish_pages_dashboard") is not True:
+        raise DemoBuildError("Demo config must publish encrypted Pages.")
+    if config.get("publish_readme_dashboard") is not False:
+        raise DemoBuildError("Demo config must not publish a README dashboard.")
+    if str(dataset["demo_key"]) not in workflow:
+        raise DemoBuildError("Demo Pages workflow does not expose the configured public demo key.")
     _assert_no_demo_brand_risk_terms(output_dir)
     if "COLLECTION_TOKEN" in workflow or "DASHBOARD_SECRET_DO_NOT_REPLACE" in workflow:
         raise DemoBuildError("Demo workflow must not require collection or dashboard secrets.")
+    if "mode: publish" not in workflow or "artifact-run-id: ${{ github.run_id }}" not in workflow:
+        raise DemoBuildError("Demo workflow must render Pages through the publish runtime.")
     provenance = json.loads((output_dir / DEMO_PROVENANCE_PATH).read_text(encoding="utf-8"))
     if provenance.get("dataset_revision") != dataset.get("dataset_revision"):
         raise DemoBuildError("Demo provenance dataset_revision does not match dataset.yml.")

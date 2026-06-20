@@ -29,8 +29,7 @@ LOCAL_REPONOMICS_ACTION = "./.github/actions/reponomics"
 TEMPLATE_ACTION_WRAPPER_PATH = Path(".github/actions/reponomics/action.yml")
 MANAGED_DOCS_MANIFEST_NAME = ".manifest.json"
 MANAGED_DOCS_MANIFEST_SCHEMA_VERSION = 1
-REQUIRED_ACTION_INPUTS = {"allow-docs-sync"}
-REQUIRED_ACTION_OUTPUTS = {"docs-sync-state", "docs-action-version", "docs-updated-at"}
+REQUIRED_ACTION_OUTPUTS = {"update-docs-state", "docs-action-version", "docs-updated-at"}
 REQUIRED_TEMPLATE_WRAPPER_INPUTS = {
     "artifact-run-id",
     "collection-token",
@@ -188,18 +187,12 @@ def validate_action_metadata(action_yml: str) -> None:
     if not isinstance(inputs, dict) or not isinstance(outputs, dict):
         raise TemplateContractError("action.yml must declare inputs and outputs")
     mode = inputs.get("mode")
-    if not isinstance(mode, dict) or "docs-sync" not in str(mode.get("description") or ""):
-        raise TemplateContractError("action.yml mode input must document docs-sync")
-    missing_inputs = REQUIRED_ACTION_INPUTS - set(inputs)
-    if missing_inputs:
-        raise TemplateContractError(
-            "action.yml is missing required docs-sync input(s): "
-            + ", ".join(sorted(missing_inputs))
-        )
+    if not isinstance(mode, dict) or "update-docs" not in str(mode.get("description") or ""):
+        raise TemplateContractError("action.yml mode input must document update-docs")
     missing_outputs = REQUIRED_ACTION_OUTPUTS - set(outputs)
     if missing_outputs:
         raise TemplateContractError(
-            "action.yml is missing required docs-sync output(s): "
+            "action.yml is missing required update-docs output(s): "
             + ", ".join(sorted(missing_outputs))
         )
 

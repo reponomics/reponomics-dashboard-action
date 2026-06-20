@@ -10,7 +10,7 @@ from typing import TypedDict
 
 VERSION_STATUS_ENV = "REPONOMICS_VERSION_STATUS_JSON"
 MANAGED_DOCS_LINK_ENV = "REPONOMICS_MANAGED_DOCS_DASHBOARD_LINK"
-DOCS_SYNC_STATE_ENV = "REPONOMICS_DOCS_SYNC_STATE"
+UPDATE_DOCS_STATE_ENV = "REPONOMICS_UPDATE_DOCS_STATE"
 DOCS_ACTION_VERSION_ENV = "REPONOMICS_DOCS_ACTION_VERSION"
 DOCS_UPDATED_AT_ENV = "REPONOMICS_DOCS_UPDATED_AT"
 DOCS_STATE_LABELS = {
@@ -93,7 +93,7 @@ def render_version_badges() -> str:
     )
     current_value = html.escape(current_display)
     latest_value = html.escape(latest_value)
-    docs_status = render_docs_sync_status()
+    docs_status = render_update_docs_status()
     return (
         '        <div class="action-version-badges" role="group" '
         + 'aria-label="Reponomics action version status">\n'
@@ -110,8 +110,8 @@ def render_version_badges() -> str:
     )
 
 
-def render_docs_sync_status() -> str:
-    state = os.environ.get(DOCS_SYNC_STATE_ENV, "").strip()
+def render_update_docs_status() -> str:
+    state = os.environ.get(UPDATE_DOCS_STATE_ENV, "").strip()
     if not state or state in {"unchanged", "written"}:
         return ""
     label = html.escape(DOCS_STATE_LABELS.get(state, state.replace("_", " ")))

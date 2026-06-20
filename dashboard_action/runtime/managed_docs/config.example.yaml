@@ -24,11 +24,6 @@ publish_pages_dashboard: # true/false                                         #
 # the repository README. Only available for private repos.                    #
 publish_readme_dashboard: # true/false                                        #
 #                                                                             #
-# Set to `true` if you want to receive automatic updates to the Dashboard     #
-# documentation files in `docs/reponomics/` - updates will be written         #
-# directly to that directory by the action when it runs collection.           #
-allow_docs_sync: # true/false                                                 #
-#                                                                             #
 # $#$#$#$#$#$\\\\\\\\\\\\\\\ ?????????????????? ///////////////$#$#$#$#$#$#   #
 # $#$#$#$#$#$/////////////// ?????????????????? \\\\\\\\\\\\\\\$#$#$#$#$#$#   #
 #

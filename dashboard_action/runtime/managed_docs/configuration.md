@@ -26,7 +26,6 @@ The setup fields at the top of `config.yaml` represent important user preference
 
 - `publish_readme_dashboard`: required boolean; when `true`, publish a markdown/SVG metrics dashboard to the repository `README.md`; only supported in private repositories.
 
-- `allow_docs_sync`: required boolean; when `true`, allow the action to update managed documentation in `docs/reponomics/`.
 
 - `artifact_retention_days`: integer from `14` to `90`; controls GitHub Actions artifact expiry, not how long the dashboard can keep collecting data.
 

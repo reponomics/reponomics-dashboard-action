@@ -8,26 +8,94 @@ import json
 import os
 import re
 import sys
+from enum import Enum
 from pathlib import Path
+from typing import Any
 
 
+class ConfigOptionSpec:
+    __slots__ = ("config_key", "workflow_env_var", "default", "explicit_decision")
+
+    def __init__(
+        self,
+        *,
+        config_key: str,
+        workflow_env_var: str,
+        default: Any = None,
+        explicit_decision: bool = False,
+    ) -> None:
+        self.config_key = config_key
+        self.workflow_env_var = workflow_env_var
+        self.default = default
+        self.explicit_decision = explicit_decision
+
+
+class ConfigOption(Enum):
+    I_HAVE_READ_README = ConfigOptionSpec(
+        config_key="i_have_read_the_readme",
+        workflow_env_var="I_HAVE_READ_THE_README",
+        explicit_decision=True,
+    )
+    DATA_MODE = ConfigOptionSpec(
+        config_key="data_mode",
+        workflow_env_var="DATA_MODE",
+        explicit_decision=True,
+    )
+    PUBLISH_PAGES = ConfigOptionSpec(
+        config_key="publish_pages_dashboard",
+        workflow_env_var="PUBLISH_PAGES_DASHBOARD",
+        explicit_decision=True,
+    )
+    PUBLISH_README = ConfigOptionSpec(
+        config_key="publish_readme_dashboard",
+        workflow_env_var="PUBLISH_README_DASHBOARD",
+        explicit_decision=True,
+    )
+    RETENTION_DAYS = ConfigOptionSpec(
+        config_key="artifact_retention_days",
+        workflow_env_var="RETENTION_DAYS",
+        default="90",
+    )
+    USE_GITHUB_APP = ConfigOptionSpec(
+        config_key="use_github_app",
+        workflow_env_var="USE_GITHUB_APP",
+        default="false",
+    )
+
+    @property
+    def config_key(self) -> str:
+        return self.value.config_key
+
+    @property
+    def workflow_env_var(self) -> str:
+        return self.value.workflow_env_var
+
+    @property
+    def default(self) -> Any:
+        return self.value.default
+
+    @property
+    def explicit_decision(self) -> bool:
+        return self.value.explicit_decision
+
+
+CONFIG_OPTIONS = tuple(ConfigOption)
+EXPLICIT_DECISION_OPTIONS = tuple(
+    option for option in CONFIG_OPTIONS if option.explicit_decision
+)
+DEFAULTED_OPTIONS = tuple(
+    option for option in CONFIG_OPTIONS if not option.explicit_decision
+)
 CONFIG_KEYS = {
-    "i_have_read_the_readme": "I_HAVE_READ_THE_README",
-    "data_mode": "DATA_MODE",
-    "publish_pages_dashboard": "PUBLISH_PAGES_DASHBOARD",
-    "publish_readme_dashboard": "PUBLISH_README_DASHBOARD",
-    "allow_docs_sync": "ALLOW_DOCS_SYNC",
-    "artifact_retention_days": "RETENTION_DAYS",
-    "use_github_app": "USE_GITHUB_APP",
+    option.config_key: option.workflow_env_var for option in CONFIG_OPTIONS
 }
 
-REQUIRED_KEYS = (
-    "i_have_read_the_readme",
-    "data_mode",
-    "publish_pages_dashboard",
-    "publish_readme_dashboard",
-    "allow_docs_sync",
+EXPLICIT_DECISION_KEYS = tuple(
+    option.config_key for option in EXPLICIT_DECISION_OPTIONS
 )
+DEFAULT_CONFIG_VALUES = {
+    option.config_key: option.default for option in DEFAULTED_OPTIONS
+}
 VALID_DATA_MODES = {"encrypted", "plaintext"}
 MIN_RETENTION_DAYS = 14
 MAX_RETENTION_DAYS = 90
@@ -128,56 +196,61 @@ def _required_scalar(scalars: dict[str, str], key: str) -> str:
     return value
 
 
+def _defaulted_scalar(scalars: dict[str, str], key: str) -> str:
+    value = scalars.get(key, "").strip()
+    if value:
+        return value
+    return DEFAULT_CONFIG_VALUES[key]
+
+
 def _resolve(config_path: Path) -> dict[str, str]:
     scalars = _load_top_level_scalars(config_path)
-    missing = [key for key in REQUIRED_KEYS if not scalars.get(key, "").strip()]
+    missing = [key for key in EXPLICIT_DECISION_KEYS if not scalars.get(key, "").strip()]
     if missing:
         formatted = ", ".join(missing)
         raise ValueError(
-            "Complete the required setup fields in config.yaml before running setup: "
+            "Complete the explicit decision fields in config.yaml before running setup: "
             + formatted
             + "."
         )
 
     read_readme = _bool(
-        _required_scalar(scalars, "i_have_read_the_readme"),
-        name="i_have_read_the_readme",
+        _required_scalar(scalars, ConfigOption.I_HAVE_READ_README.config_key),
+        name=ConfigOption.I_HAVE_READ_README.config_key,
     )
     if read_readme != "true":
         raise ValueError(
             "i_have_read_the_readme must be true before setup can proceed."
         )
 
-    data_mode = _required_scalar(scalars, "data_mode").lower()
+    data_mode = _required_scalar(scalars, ConfigOption.DATA_MODE.config_key).lower()
     if data_mode not in VALID_DATA_MODES:
         allowed = ", ".join(sorted(VALID_DATA_MODES))
         raise ValueError(f"data_mode must be one of: {allowed}.")
 
     try:
-        retention_days = int(_required_scalar(scalars, "artifact_retention_days"))
+        retention_days = int(
+            _defaulted_scalar(scalars, ConfigOption.RETENTION_DAYS.config_key)
+        )
     except ValueError as exc:
         raise ValueError("artifact_retention_days must be an integer.") from exc
     if retention_days < MIN_RETENTION_DAYS or retention_days > MAX_RETENTION_DAYS:
         raise ValueError(
             "artifact_retention_days must be between "
-            f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
+            + f"{MIN_RETENTION_DAYS} and {MAX_RETENTION_DAYS}."
         )
 
     publish_pages = _bool(
-        _required_scalar(scalars, "publish_pages_dashboard"),
-        name="publish_pages_dashboard",
+        _required_scalar(scalars, ConfigOption.PUBLISH_PAGES.config_key),
+        name=ConfigOption.PUBLISH_PAGES.config_key,
     )
     publish_readme = _bool(
-        _required_scalar(scalars, "publish_readme_dashboard"),
-        name="publish_readme_dashboard",
-    )
-    allow_docs_sync = _bool(
-        _required_scalar(scalars, "allow_docs_sync"),
-        name="allow_docs_sync",
+        _required_scalar(scalars, ConfigOption.PUBLISH_README.config_key),
+        name=ConfigOption.PUBLISH_README.config_key,
     )
     use_github_app = _bool(
-        _required_scalar(scalars, "use_github_app"),
-        name="use_github_app",
+        _defaulted_scalar(scalars, ConfigOption.USE_GITHUB_APP.config_key),
+        name=ConfigOption.USE_GITHUB_APP.config_key,
     )
 
     repo_private = _repo_is_private()
@@ -194,13 +267,12 @@ def _resolve(config_path: Path) -> dict[str, str]:
 
     collection_auth_mode = "github_app" if use_github_app == "true" else "pat"
     return {
-        "I_HAVE_READ_THE_README": read_readme,
-        "DATA_MODE": data_mode,
-        "PUBLISH_PAGES_DASHBOARD": publish_pages,
-        "PUBLISH_README_DASHBOARD": publish_readme,
-        "ALLOW_DOCS_SYNC": allow_docs_sync,
-        "RETENTION_DAYS": str(retention_days),
-        "USE_GITHUB_APP": use_github_app,
+        ConfigOption.I_HAVE_READ_README.workflow_env_var: read_readme,
+        ConfigOption.DATA_MODE.workflow_env_var: data_mode,
+        ConfigOption.PUBLISH_PAGES.workflow_env_var: publish_pages,
+        ConfigOption.PUBLISH_README.workflow_env_var: publish_readme,
+        ConfigOption.RETENTION_DAYS.workflow_env_var: str(retention_days),
+        ConfigOption.USE_GITHUB_APP.workflow_env_var: use_github_app,
         "COLLECTION_AUTH_MODE": collection_auth_mode,
     }
 

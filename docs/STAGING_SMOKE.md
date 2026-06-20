@@ -285,12 +285,12 @@ Protocol:
 4. Run local gates: make validate-workflows, make verify-workflow-classification, make verify-template, make validate-template-action-ref, make template-smoke, make template-consumer-e2e, make publish-template-staging-dry-run. If this is the first empty-repository bootstrap pass and preflight failures match the expected bootstrap checklist, run the local gate driver with `STAGING_SMOKE_ALLOW_BOOTSTRAP=1`.
 5. Confirm or run the staging template publication workflow for the intended source ref.
 6. Reset the encrypted fresh consumer repo codebase from the staging template with `make staging-smoke-reset-fresh CONFIRM_TARGET=<exact encrypted fresh repo>`. This force-pushes the git tree/history only; repository settings and Actions secrets should persist. Do not preserve prior commits as evidence for this profile.
-7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. After each fresh codebase reset, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: true`, `allow_docs_sync: true`, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup to validate config and write the setup marker.
+7. During bootstrap, configure encrypted fresh repo secrets and variables. During recurring smoke, rely on preflight to verify those persistent secrets exist. After each fresh codebase reset, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: true`, ``, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup to validate config and write the setup marker.
 8. Review `config.yaml` in the encrypted fresh repo before setup. If this smoke pass should cover a specific repository set, commit that config change before running collect-and-publish with skip_collect=false.
 9. Validate encrypted fresh outputs: setup marker, docs manifest, README dashboard, dashboard-data artifact, Pages deployment, docs/index.html and assets, collect/publish summaries, no unexpected workflow failures.
 10. Run encrypted key rotation: set DASHBOARD_NEXT_SECRET, dispatch rotate-key with confirm_rotation=true, wait for completion, promote the next key into DASHBOARD_SECRET_DO_NOT_REPLACE, remove DASHBOARD_NEXT_SECRET, then run collect-and-publish again.
 11. Run make staging-smoke-browser-checklist, then browser-test encrypted Pages dashboard with the active dashboard key. Confirm unlock succeeds, charts render, repo selector works, a non-traffic growth metric renders, a traffic metric does not appear clipped, and the collection calendar has expected statuses.
-12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: plaintext`, `publish_pages_dashboard: false`, `publish_readme_dashboard: true`, `allow_docs_sync: true`, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup.
+12. For the plain history repo, preserve existing history. If it is not initialized, seed it from the staging template once with `make staging-smoke-seed-plain-history CONFIRM_TARGET=<exact plain history repo>`. During bootstrap, configure the collection credential, fill and commit `config.yaml` with `i_have_read_the_readme: true`, `data_mode: plaintext`, `publish_pages_dashboard: false`, `publish_readme_dashboard: true`, ``, `artifact_retention_days: 90`, and `use_github_app: false`, then run setup.
 13. During bootstrap, review `config.yaml` in the plain history repo before setup and commit any intended repository selection before the first retained-data run. During recurring smoke, preserve the existing config.
 14. Run collect-and-publish on the plain history repo with skip_collect=false.
 15. Validate plaintext history outputs: README dashboard, dashboard-data artifact containing retained plaintext data, html-dashboard-plaintext artifact, absent Pages configuration, docs manifest, and no unexpected workflow failures.
@@ -322,7 +322,6 @@ For recurring smoke passes, do not re-enter these persistent secrets unless inte
 - `data_mode`: `encrypted`
 - `publish_pages_dashboard`: `true`
 - `publish_readme_dashboard`: `true`
-- `allow_docs_sync`: `true`
 - `artifact_retention_days`: `90`
 - `use_github_app`: `false`
 
@@ -367,7 +366,6 @@ During bootstrap, fill and commit `config.yaml` with:
 - `data_mode`: `plaintext`
 - `publish_pages_dashboard`: `false`
 - `publish_readme_dashboard`: `true`
-- `allow_docs_sync`: `true`
 - `artifact_retention_days`: `90`
 - `use_github_app`: `false`
 

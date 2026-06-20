@@ -12,7 +12,7 @@ inputs:
   use-github-app:
     description: Set true when collection-token is a GitHub App installation token minted in the workflow.
     required: false
-    default: "false"
+    default: ""
   github-token:
     description: Token used for GitHub artifact and repository workflow operations.
     required: false
@@ -48,15 +48,15 @@ inputs:
   data-mode:
     description: Data storage mode.
     required: false
-    default: encrypted
+    default: ""
   retention-days:
     description: GitHub Actions artifact retention period.
     required: false
-    default: "90"
+    default: ""
   publish-pages:
     description: Set false to render dashboard output without deploying GitHub Pages.
     required: false
-    default: "true"
+    default: ""
   artifact-run-id:
     description: Optional workflow run ID whose dashboard-data artifact should be restored.
     required: false
@@ -64,7 +64,7 @@ inputs:
   generate-readme:
     description: Generate private-repository README dashboard output.
     required: false
-    default: "false"
+    default: ""
 
 runs:
   using: composite

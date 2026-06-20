@@ -281,7 +281,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
                 "Before setup, edit and commit config.yaml in the fresh repo with",
                 "i_have_read_the_readme=true, data_mode=encrypted,",
                 "publish_pages_dashboard=true, publish_readme_dashboard=true,",
-                "allow_docs_sync=true, artifact_retention_days=90, and",
+                ", artifact_retention_days=90, and",
                 "use_github_app=false.",
                 "Repo settings and secrets persist, but setup now validates config",
                 "and writes only the setup marker and post-setup README.",
@@ -367,7 +367,7 @@ def build_plan(args: argparse.Namespace) -> list[Operation]:
                 "Otherwise preserve commits and existing artifacts.",
                 "Then commit config.yaml with i_have_read_the_readme=true,",
                 "data_mode=plaintext, publish_pages_dashboard=false,",
-                "publish_readme_dashboard=true, allow_docs_sync=true,",
+                "publish_readme_dashboard=true,",
                 "artifact_retention_days=90, and use_github_app=false before setup.",
             ),
             (

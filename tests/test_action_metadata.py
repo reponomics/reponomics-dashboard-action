@@ -4,6 +4,7 @@ import tomllib
 
 import yaml
 
+from dashboard_action.run_modules.config_options import ACTION_CONFIG_OPTIONS
 from dashboard_action.run_modules.core import VERSION
 from scripts import template_contract
 
@@ -22,7 +23,7 @@ ENCRYPTED_DASHBOARD_ARTIFACT_IF = (
     "steps.runtime.outputs.publish-pages == 'false' && " +
     "steps.runtime.outputs.data-mode == 'encrypted' }}"
 )
-DATA_MODE_EXCLUSION = "inputs.mode != 'docs-sync'"
+DATA_MODE_EXCLUSION = "inputs.mode != 'update-docs'"
 
 
 def _action() -> dict:
@@ -566,17 +567,14 @@ def test_publish_pages_replaces_dashboard_mode_output() -> None:
     assert "GitHub Pages" in description
 
 
-def test_allow_docs_sync_metadata_contract() -> None:
+def test_update_docs_metadata_contract() -> None:
     action = _action()
     inputs = action["inputs"]
     outputs = action["outputs"]
-    runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert "docs-sync" in inputs["mode"]["description"]
-    assert inputs["allow-docs-sync"]["default"] == ""
-    assert runtime_env["REPONOMICS_ALLOW_DOCS_SYNC"] == "${{ inputs.allow-docs-sync }}"
-    assert outputs["docs-sync-state"]["value"] == "${{ steps.runtime.outputs.docs-sync-state }}"
-    assert "docs-sync-reason" not in outputs
+    assert "update-docs" in inputs["mode"]["description"]
+    assert outputs["update-docs-state"]["value"] == "${{ steps.runtime.outputs.update-docs-state }}"
+    assert "update-docs-reason" not in outputs
     assert outputs["docs-action-version"]["value"] == "${{ steps.runtime.outputs.docs-action-version }}"
     assert outputs["docs-updated-at"]["value"] == "${{ steps.runtime.outputs.docs-updated-at }}"
 
@@ -645,15 +643,20 @@ def test_publish_pages_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert action["inputs"]["publish-pages"]["default"] == "true"
+    assert action["inputs"]["publish-pages"]["default"] == ""
     assert runtime_env["REPONOMICS_PUBLISH_PAGES"] == "${{ inputs.publish-pages }}"
     assert action["inputs"]["require-collect-provenance"]["default"] == "false"
     assert "REPONOMICS_REQUIRE_COLLECT_PROVENANCE" not in runtime_env
 
 
-def test_use_github_app_input_metadata_contract() -> None:
+def test_config_option_input_metadata_contract() -> None:
     action = _action()
     runtime_env = _step_by_name("Run Reponomics runtime")["env"]
 
-    assert action["inputs"]["use-github-app"]["default"] == "false"
-    assert runtime_env["REPONOMICS_USE_GITHUB_APP"] == "${{ inputs.use-github-app }}"
+    for option in ACTION_CONFIG_OPTIONS:
+        assert option.action_input is not None
+        assert option.runtime_env_var is not None
+        assert action["inputs"][option.action_input]["default"] == ""
+        assert runtime_env[option.runtime_env_var] == (
+            f"${{{{ inputs.{option.action_input} }}}}"
+        )

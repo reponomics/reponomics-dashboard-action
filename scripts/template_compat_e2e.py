@@ -84,7 +84,6 @@ def config_for(root: Path, fixture: Path, mode: str, *, next_secret: str = ""):
         artifact_run_id="",
         publish_pages_requested=True,
         generate_readme=False,
-        allow_docs_sync=True,
         pages_index_path=root / "docs" / mode / "index.html",
         readme_path=root / f"README-{mode}.md",
         incident_confirm_mode="",

@@ -40,7 +40,7 @@ def _restore_run_environment() -> Any:
         "REPONOMICS_USE_GITHUB_APP",
         "RETENTION_DAYS",
         run.DOCS_ACTION_VERSION_ENV,
-        run.DOCS_SYNC_STATE_ENV,
+        run.UPDATE_DOCS_STATE_ENV,
         run.DOCS_UPDATED_AT_ENV,
     }
     before = {key: os.environ.get(key) for key in keys}
@@ -58,7 +58,6 @@ def _write_runtime_config(config_path: Path, **overrides: Any) -> None:
         "data_mode": "encrypted",
         "publish_pages_dashboard": True,
         "publish_readme_dashboard": False,
-        "allow_docs_sync": True,
         "artifact_retention_days": 90,
         "use_github_app": False,
     }
@@ -225,23 +224,6 @@ def test_load_config_reads_comparison_secret(
 
     monkeypatch.setenv("REPONOMICS_COMPARISON_SECRET", "input-comparison")
     assert run.load_config_from_env().comparison_secret == "input-comparison"
-
-
-def test_allow_docs_sync_config_file_errors_and_values(tmp_path: Path) -> None:
-    config_path = tmp_path / "config.yaml"
-    with pytest.raises(run.ActionError, match="Required config file is missing"):
-        run._config_allow_docs_sync(config_path)
-
-    _write_runtime_config(config_path, allow_docs_sync=False)
-    assert run._config_allow_docs_sync(config_path) is False
-
-    _write_runtime_config(config_path, allow_docs_sync="not-a-bool")
-    with pytest.raises(run.ActionError, match="allow_docs_sync"):
-        run._config_allow_docs_sync(config_path)
-
-    config_path.write_text("allow_docs_sync: [", encoding="utf-8")
-    with pytest.raises(run.ActionError, match="Could not read runtime configuration"):
-        run._config_allow_docs_sync(config_path)
 
 
 def test_restore_artifact_skips_without_github_context(
@@ -441,31 +423,31 @@ def test_set_managed_docs_status_env_handles_absent_invalid_current_and_stale(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv(run.DOCS_SYNC_STATE_ENV, raising=False)
+    monkeypatch.delenv(run.UPDATE_DOCS_STATE_ENV, raising=False)
     run._set_managed_docs_status_env()
-    assert run.os.environ[run.DOCS_SYNC_STATE_ENV] == ""
+    assert run.os.environ[run.UPDATE_DOCS_STATE_ENV] == ""
 
     namespace = tmp_path / run.MANAGED_DOCS_NAMESPACE
     namespace.mkdir(parents=True)
     manifest_path = namespace / run.managed_docs.MANIFEST_NAME
     manifest_path.write_text("{not-json", encoding="utf-8")
     run._set_managed_docs_status_env()
-    assert run.os.environ[run.DOCS_SYNC_STATE_ENV] == run.managed_docs.STATE_MANIFEST_INCONSISTENT
+    assert run.os.environ[run.UPDATE_DOCS_STATE_ENV] == run.managed_docs.STATE_MANIFEST_INCONSISTENT
 
-    monkeypatch.delenv(run.DOCS_SYNC_STATE_ENV, raising=False)
+    monkeypatch.delenv(run.UPDATE_DOCS_STATE_ENV, raising=False)
     manifest_path.write_text(
         json.dumps({"action_version": run.VERSION, "updated_at": "2026-06-06T12:00:00Z"}),
         encoding="utf-8",
     )
     run._set_managed_docs_status_env()
-    assert run.os.environ[run.DOCS_SYNC_STATE_ENV] == run.managed_docs.STATE_UNCHANGED
+    assert run.os.environ[run.UPDATE_DOCS_STATE_ENV] == run.managed_docs.STATE_UNCHANGED
     assert run.os.environ[run.DOCS_ACTION_VERSION_ENV] == run.VERSION
 
-    monkeypatch.delenv(run.DOCS_SYNC_STATE_ENV, raising=False)
+    monkeypatch.delenv(run.UPDATE_DOCS_STATE_ENV, raising=False)
     monkeypatch.delenv(run.DOCS_ACTION_VERSION_ENV, raising=False)
     manifest_path.write_text(json.dumps({"action_version": "0.1.0"}), encoding="utf-8")
     run._set_managed_docs_status_env()
-    assert run.os.environ[run.DOCS_SYNC_STATE_ENV] == run.DOCS_STATE_STALE
+    assert run.os.environ[run.UPDATE_DOCS_STATE_ENV] == run.DOCS_STATE_STALE
 
 
 def test_run_scoped_artifact_restore_paginates_artifacts() -> None:
@@ -503,7 +485,7 @@ def test_incident_and_docs_summaries_write_to_stdout(
     run._summarize_incident_reset_prepared()
     run._summarize_incident_reset_purge(run.IncidentPurgeResult(3, 2, 1, 1))
     run._summarize_active_retention_cleanup(run.ActiveRetentionCleanupResult(4, 2, 2, 1))
-    run._summarize_docs_sync(
+    run._summarize_update_docs(
         run.managed_docs.ManagedDocsResult(
             state=run.managed_docs.STATE_PUSH_RACE,
             reason="push race",
@@ -626,24 +608,24 @@ def test_main_dispatches_incident_reset_purge_only(
     assert called == ["incident-reset", "purge:incident-reset"]
 
 
-def test_main_dispatches_docs_sync_mode(
+def test_main_dispatches_update_docs_mode(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     called: list[str] = []
-    config = _config_for_run_tests(tmp_path, mode="docs-sync")
+    config = _config_for_run_tests(tmp_path, mode="update-docs")
 
     monkeypatch.setattr(run, "validate_config", lambda received: called.append(received.mode))
     monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
     monkeypatch.setattr(
         run,
-        "run_docs_sync",
+        "run_update_docs",
         lambda received: called.append(f"docs:{received.mode}"),
     )
 
     run.main(lambda: config)
 
-    assert called == ["docs-sync", "docs:docs-sync"]
+    assert called == ["update-docs", "docs:update-docs"]
 
 
 def test_main_dispatches_doctor_mode(
@@ -846,7 +828,6 @@ def _config_for_run_tests(tmp_path: Path, **overrides: Any) -> run.RuntimeConfig
         "artifact_run_id": "",
         "publish_pages_requested": True,
         "generate_readme": False,
-        "allow_docs_sync": True,
         "pages_index_path": tmp_path / "docs" / "index.html",
         "readme_path": tmp_path / "README.md",
         "incident_confirm_mode": "",

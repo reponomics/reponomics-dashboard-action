@@ -45,27 +45,33 @@ Guardrails:
 ### 1) Keep placeholder-only behavior in plain mode
 
 Pros:
+
 - smallest implementation surface.
 
 Cons:
+
 - poor UX for private plain users.
 - forces manual CSV analysis for basic dashboard review.
 
 ### 2) Add a new input to opt into plain dashboard artifacts
 
 Pros:
+
 - explicit opt-in control.
 
 Cons:
+
 - increases user decision complexity for behavior that should be default within private plain mode.
 - conflicts with the product goal of minimizing privacy-surface misconfiguration.
 
 ### 3) Re-enable plaintext Pages publication for plain mode
 
 Pros:
+
 - direct hosted viewing.
 
 Cons:
+
 - violates established policy to avoid accidental public plaintext disclosure.
 
 ## Non-Goals

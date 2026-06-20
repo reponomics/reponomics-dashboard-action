@@ -92,7 +92,7 @@ Users who disable docs sync or remove write permission can still use the dashboa
 - What public and opt-in signals should the project use to estimate adoption without implying a precise install count?
 - When, if ever, should optional PR mode be added?
 
----
+______________________________________________________________________
 
 ## Appendix A: Proposed Emendments (2026-05-29)
 

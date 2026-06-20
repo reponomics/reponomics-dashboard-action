@@ -40,8 +40,7 @@ The mode is intentionally destructive and requires explicit triple confirmation 
 - `github-token` with `actions: write`
 - GitHub Actions runtime context with `GITHUB_REPOSITORY` and `GITHUB_RUN_ID`
 
-The recommended operational response is to make the dashboard repository private
-and disable any published Pages dashboard before running `incident-reset`.
+The recommended operational response is to make the dashboard repository private and disable any published Pages dashboard before running `incident-reset`.
 
 ## Scope Clarification
 
@@ -85,26 +84,32 @@ If required repository/run context is missing or malformed, the mode fails fast 
 ### 1) Keep only rotate-key
 
 Pros:
+
 - simpler runtime surface
 
 Cons:
+
 - leaves old decryptable artifacts/runs intact after secret exposure
 
 ### 2) Add purge-only mode without re-encryption
 
 Pros:
+
 - narrow feature scope
 
 Cons:
+
 - easier to destroy history without establishing new encrypted continuity
 - increases operator sequencing mistakes during incidents
 
 ### 3) Require manual API cleanup outside the action
 
 Pros:
+
 - no destructive mode in product surface
 
 Cons:
+
 - high operator burden and inconsistent execution during emergencies
 - weak reproducibility and auditability
 
@@ -122,14 +127,6 @@ Implemented in `dashboard_action/run.py`, exposed in `action.yml`, documented in
 
 ## Implementation Update, 2026-06-05
 
-The composite action now separates reset preparation from purge execution.
-`run_incident_reset` restores, decrypts, re-encrypts, and stages the new
-encrypted retained artifact. The composite action uploads that new
-`dashboard-data` artifact before invoking the post-upload purge step. This
-preserves a recovery checkpoint before destructive cleanup begins.
+The composite action now separates reset preparation from purge execution. `run_incident_reset` restores, decrypts, re-encrypts, and stages the new encrypted retained artifact. The composite action uploads that new `dashboard-data` artifact before invoking the post-upload purge step. This preserves a recovery checkpoint before destructive cleanup begins.
 
-The purge step is now artifact-driven rather than workflow-id-driven. It finds
-old `dashboard-data` artifacts repository-wide, deletes their associated
-workflow runs, and relies on GitHub's run deletion behavior to delete run-owned
-artifacts. Direct artifact deletion remains only a fallback for old artifacts
-that do not report an associated workflow run id.
+The purge step is now artifact-driven rather than workflow-id-driven. It finds old `dashboard-data` artifacts repository-wide, deletes their associated workflow runs, and relies on GitHub's run deletion behavior to delete run-owned artifacts. Direct artifact deletion remains only a fallback for old artifacts that do not report an associated workflow run id.

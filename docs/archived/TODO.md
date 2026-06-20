@@ -5,7 +5,7 @@ This file is closed out as a historical checklist. Future-facing work now lives 
 ## Encrypted Dashboard Hardening
 
 - [x] Validate encrypted dashboard payload metadata before WebCrypto work. The browser runtime should reject unexpected payload versions, cipher names, KDF names, KDF hashes, KDF iterations, salt sizes, IV sizes, and empty ciphertexts instead of trusting attacker-controlled payload fields.
-- [x] Prefer generated high-entropy dashboard secrets in user guidance. Recommend `openssl rand -hex 32` as the simple shell-safe default, while noting that equivalent generated base64 secrets are cryptographically fine but easier to mishandle. [NOTE: Data model has been clarified by three-way distinction: `strong`, `casual`, or `plain` (unencrypted).]
+- [x] Prefer generated high-entropy dashboard secrets in user guidance. Recommend `openssl rand -hex 32` as the simple shell-safe default, while noting that equivalent generated base64 secrets are cryptographically fine but easier to mishandle. \[NOTE: Data model has been clarified by three-way distinction: `strong`, `casual`, or `plain` (unencrypted).\]
 - [x] Vendor Chart.js from a pinned npm tarball and validate the vendored bytes, license, upstream tarball integrity, and OSV vulnerability status through `make validate-vendored-assets`.
 - [x] Render Pages output against the same-origin `assets/chart.umd.min.js` file and assert generated dashboard HTML does not reference remote JavaScript. Do not inline Chart.js into the Pages HTML; keeping it as a same-origin script is the cleaner CSP direction.
 - [x] Keep retained data and generated dashboard output out of git. Dashboard delivery is via GitHub Pages artifacts for encrypted modes and workflow artifacts for private `plain` mode.

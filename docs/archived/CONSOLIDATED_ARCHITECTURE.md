@@ -4,12 +4,12 @@
 
 The Reponomics Dashboard project publishes two independently versioned products that are tightly coupled, one public demo surface, and one promotional splash page. The core pieces consist of:
 
-- `reponomics-dashboard`: the primary user-facing offering - a template repository that provides the basic scaffolding to support the Dashboard - its main functional surface is the set of workflows that consume the Dashboard Action; it also houses important repo owner documentation, and the owner's configuration files. 
+- `reponomics-dashboard`: the primary user-facing offering - a template repository that provides the basic scaffolding to support the Dashboard - its main functional surface is the set of workflows that consume the Dashboard Action; it also houses important repo owner documentation, and the owner's configuration files.
 - `reponomics-dashboard-action`: the GitHub Marketplace action that implements the runtime for the core Dashboard feature offerings.
 - `reponomics-dashboard-demo`: a public demo repository that uses synthetic data to show prospective Dashboard repo owners the set of features that the Reponomics Dashboard has to offer.
 - `reponomics-dashboard-web`: a promotional splash page that gives a public presence to the Dashboard project outside of GitHub - it presents an overview of the project and highlights the core functionality.
 
-The `@reponomics/reponomics-dashboard-action` repository is the development repository responsible for maintaing the template repo, the GitHub action, and the demo repo. It is also the repository that Dashboard owners, project contributors, and potential collaborators are invited to use to file issues (feature enhancements, bug reports), make PRs, and review more detailed technical literature. Because it is part of the supply chain for the other products, it strives to follow Open Source best practices to the greatest extent, and produces the necessary provenance artifacts, attestations, immutable releases, and other outputs necessary for the project to establish publicly verifiable evidence regarding the claims that are made about the project. 
+The `@reponomics/reponomics-dashboard-action` repository is the development repository responsible for maintaing the template repo, the GitHub action, and the demo repo. It is also the repository that Dashboard owners, project contributors, and potential collaborators are invited to use to file issues (feature enhancements, bug reports), make PRs, and review more detailed technical literature. Because it is part of the supply chain for the other products, it strives to follow Open Source best practices to the greatest extent, and produces the necessary provenance artifacts, attestations, immutable releases, and other outputs necessary for the project to establish publicly verifiable evidence regarding the claims that are made about the project.
 
 The dashboard-action repo is also the repo that is referenced by workflows that consume the action:
 
@@ -19,8 +19,7 @@ uses: reponomics/reponomics-dashboard-action@v0
 
 The reason for this bifurcated design (template + action) is due to the goal of providing maintainers with a data dashboard that is completely under their control, and at the same time offering feature updates, security patches, and bug fixes. Since the product is a data dashboard repo, a template repo is a natural way to package it. However, after copying a template, the repo owner has virtually no connection to that template. (The template repo is not "upstream" of its copies.) So, the template needs some sort of distribution channel. Since the majority of the functionality comes from the workflows (querying the GitHub API, collecting and storing the data, etc.), it is the _action_ that is the primary functional core, or "runtime", for the Reponomics Dashboard, and the template repo is supposed to be only a thin compatibility layer.
 
-> [!NOTE]
-> Maintainers who copy the Dashboard template should be referred to as "owners" when speaking in that mode, although they may also be referred to as "users" of the Dashboard action. "Consumer" is the most generic label, if one is needed, although this also applies to the workflows themselves. This is only stylistic advice.
+> [!NOTE] Maintainers who copy the Dashboard template should be referred to as "owners" when speaking in that mode, although they may also be referred to as "users" of the Dashboard action. "Consumer" is the most generic label, if one is needed, although this also applies to the workflows themselves. This is only stylistic advice.
 
 ## Compatibility
 
@@ -54,22 +53,22 @@ The core directory structure is as follows:
 
 The major areas of responsibility are:
 
-| Area | Responsibility |
-| --- | --- |
-| `action.yml` | Public composite action interface. This is the Marketplace product entry point. |
-| `dashboard_action/` | Action runtime package, mode dispatch, collection, publish, doctor, incident reset, managed docs sync, provenance, and rendering. |
-| `dashboard_action/runtime/managed_docs/` | Source bundle for user-facing managed documentation that ships into generated repositories and can be refreshed by the action. |
-| `template/` | Hand-maintained source for files that belong in the generated dashboard template repository. |
-| `template-manifest.yml` | Explicit shipped-file allowlist plus forbidden-path guard for generated template output. |
-| `template-contract.yml` | Template product metadata and action compatibility contract. |
-| `scripts/build_template.py` | Builds `dist/template` from `template/`, overlays managed docs, and verifies output. |
-| `scripts/template_contract.py` | Validates local action/template compatibility, managed docs snapshots, and action references in generated output. |
-| `scripts/publish_generated_repo.py` | Publishes a generated output tree to `reponomics-dashboard` with target safety checks. |
-| `scripts/template_consumer_e2e.py` and `scripts/smoke_template_release.py` | Local generated-template validation against the current action source. |
-| Demo tooling | Builds and publishes `reponomics-dashboard-demo` from the generated template plus explicit synthetic data, demo fixtures, and demo-only publication overrides. |
-| `tests/` | Action runtime tests, generated-template tests, scenario snapshots, security/contract checks, and compatibility fixtures. |
-| `.github/workflows/` | CI, release, template publish, pre-release validation, and repository hygiene workflows. |
-| `docs/` | Maintainer documentation for this development repository. |
+| Area                                                                       | Responsibility                                                                                                                                                 |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action.yml`                                                               | Public composite action interface. This is the Marketplace product entry point.                                                                                |
+| `dashboard_action/`                                                        | Action runtime package, mode dispatch, collection, publish, doctor, incident reset, managed docs sync, provenance, and rendering.                              |
+| `dashboard_action/runtime/managed_docs/`                                   | Source bundle for user-facing managed documentation that ships into generated repositories and can be refreshed by the action.                                 |
+| `template/`                                                                | Hand-maintained source for files that belong in the generated dashboard template repository.                                                                   |
+| `template-manifest.yml`                                                    | Explicit shipped-file allowlist plus forbidden-path guard for generated template output.                                                                       |
+| `template-contract.yml`                                                    | Template product metadata and action compatibility contract.                                                                                                   |
+| `scripts/build_template.py`                                                | Builds `dist/template` from `template/`, overlays managed docs, and verifies output.                                                                           |
+| `scripts/template_contract.py`                                             | Validates local action/template compatibility, managed docs snapshots, and action references in generated output.                                              |
+| `scripts/publish_generated_repo.py`                                        | Publishes a generated output tree to `reponomics-dashboard` with target safety checks.                                                                         |
+| `scripts/template_consumer_e2e.py` and `scripts/smoke_template_release.py` | Local generated-template validation against the current action source.                                                                                         |
+| Demo tooling                                                               | Builds and publishes `reponomics-dashboard-demo` from the generated template plus explicit synthetic data, demo fixtures, and demo-only publication overrides. |
+| `tests/`                                                                   | Action runtime tests, generated-template tests, scenario snapshots, security/contract checks, and compatibility fixtures.                                      |
+| `.github/workflows/`                                                       | CI, release, template publish, pre-release validation, and repository hygiene workflows.                                                                       |
+| `docs/`                                                                    | Maintainer documentation for this development repository.                                                                                                      |
 
 ## Product Boundaries
 
@@ -114,7 +113,6 @@ source tree at commit S
 
 Because the template repository has nothing very interesting to show when it is first copied, the demo repository is maintained as a faithful replica of the current template, seeded with synthetic data. It is intended to deviate from the genuine template to the smallest extent possible - the synthetic data is encrypted according to the same protocols, with the minor difference that the unlock key is printed directly to the unlock screen (normal templates don't expost this, for obvious reasons).
 
-
 - use the same repository layout as a real generated template repository
 - use the same repository layout, rendering paths, encrypted artifact format, Pages publication path, and managed docs surface wherever possible
 - replace live GitHub collection with deterministic synthetic canonical data for a manicured portfolio of repositories
@@ -123,7 +121,7 @@ Because the template repository has nothing very interesting to show when it is 
 - use encrypted dashboard mode with an intentionally public demo key so visitors can unlock the Pages dashboard
 - label the public demo key unmistakably as a demo credential that must never be reused
 
-The demo repository should be treated as a public showroom and, to some degree, a secondary integration test surface, not as a third semantically versioned product. It is regenerated every day so that the synthetic data can be advanced in time by one day, giving the impression that it is always "up to date". 
+The demo repository should be treated as a public showroom and, to some degree, a secondary integration test surface, not as a third semantically versioned product. It is regenerated every day so that the synthetic data can be advanced in time by one day, giving the impression that it is always "up to date".
 
 ## Development Tooling
 
@@ -155,15 +153,15 @@ The testing model should prove three things:
 
 Current and recommended layers:
 
-| Layer | Purpose |
-| --- | --- |
-| Unit tests | Runtime modes, GitHub API handling, artifact lineage, crypto, config parsing, render helpers, managed docs sync. |
-| Generated-repo tests | Verify manifest behavior, forbidden paths, generated workflows, managed docs snapshots, action references, and publication safety. |
-| Scenario snapshots | Hold dashboard output stable across representative data shapes. |
-| Template smoke | Exercise generated template workflow shape and release/publish assumptions cheaply. |
-| Template consumer e2e | Build a generated template and run it against the local action source, closing the old action-repo-to-dashboard-dev gap. |
-| Demo build/verify | Build a public demo repository from the generated template, materialize curated synthetic repository data, render README and Pages outputs, verify retained data is not committed, verify demo provenance, and check publication drift. |
-| Compatibility fixtures | Future requirement: preserve old published template contracts and run new action versions against them. |
+| Layer                  | Purpose                                                                                                                                                                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit tests             | Runtime modes, GitHub API handling, artifact lineage, crypto, config parsing, render helpers, managed docs sync.                                                                                                                        |
+| Generated-repo tests   | Verify manifest behavior, forbidden paths, generated workflows, managed docs snapshots, action references, and publication safety.                                                                                                      |
+| Scenario snapshots     | Hold dashboard output stable across representative data shapes.                                                                                                                                                                         |
+| Template smoke         | Exercise generated template workflow shape and release/publish assumptions cheaply.                                                                                                                                                     |
+| Template consumer e2e  | Build a generated template and run it against the local action source, closing the old action-repo-to-dashboard-dev gap.                                                                                                                |
+| Demo build/verify      | Build a public demo repository from the generated template, materialize curated synthetic repository data, render README and Pages outputs, verify retained data is not committed, verify demo provenance, and check publication drift. |
+| Compatibility fixtures | Future requirement: preserve old published template contracts and run new action versions against them.                                                                                                                                 |
 
 The largest remaining architectural testing gap is historical compatibility. Before public release, create at least one fixture representing the first published template surface. After each template release, retain a minimal fixture that captures:
 
@@ -348,15 +346,15 @@ Release Please may still help as process tooling if configured narrowly, for exa
 
 ### Suggested Action Release Flow
 
-1. Merge PRs to `main` after CI passes.
-2. Release Please opens or updates the action release PR for action-affecting changes.
-3. Before merging the release PR, run pre-release validation for the candidate ref when action/template behavior is touched.
-4. Publish the action release `vX.Y.Z`.
-5. Move floating `vX` and `vX.Y` tags.
-6. Open or update a follow-up template acceptance PR that records the released action version, tag, immutable SHA, and default compatible ref in `template-contract.yml`.
-7. Review and merge the template acceptance PR as the effective template release approval.
-8. Let `template-release.yml` run the template release gates from the merged commit and create the matching `reponomics-dashboard-vX.Y.Z` release.
-9. Let `publish-template.yml` publish the accepted template projection.
+01. Merge PRs to `main` after CI passes.
+02. Release Please opens or updates the action release PR for action-affecting changes.
+03. Before merging the release PR, run pre-release validation for the candidate ref when action/template behavior is touched.
+04. Publish the action release `vX.Y.Z`.
+05. Move floating `vX` and `vX.Y` tags.
+06. Open or update a follow-up template acceptance PR that records the released action version, tag, immutable SHA, and default compatible ref in `template-contract.yml`.
+07. Review and merge the template acceptance PR as the effective template release approval.
+08. Let `template-release.yml` run the template release gates from the merged commit and create the matching `reponomics-dashboard-vX.Y.Z` release.
+09. Let `publish-template.yml` publish the accepted template projection.
 10. Once historical compatibility fixtures exist, confirm they pass against the released action major.
 
 ### Suggested Template Release Flow
@@ -440,41 +438,25 @@ The demo should disclose which action version, template version, source commit, 
 
 ## Product And Test Boundary Constraints
 
-The consolidated repository should be understood as one source repository with
-two product projections, not as two independently rebased product trees:
+The consolidated repository should be understood as one source repository with two product projections, not as two independently rebased product trees:
 
-- Action product projection: `action.yml`, `dashboard_action/`, runtime
-  dependency locks/assets, runtime managed-docs bundle, and action release
-  metadata.
-- Template product projection: `template/`, `template-contract.yml`,
-  `template-manifest.yml`, template build/publish scripts, and generated-template
-  tests.
-- Shared contract/support layer: managed docs, action metadata consumed by
-  generated workflows, Make targets, release workflows, and bridge tests.
-- Maintainer-only material: non-shipping docs, repository hygiene workflows, and
-  local tooling.
+- Action product projection: `action.yml`, `dashboard_action/`, runtime dependency locks/assets, runtime managed-docs bundle, and action release metadata.
+- Template product projection: `template/`, `template-contract.yml`, `template-manifest.yml`, template build/publish scripts, and generated-template tests.
+- Shared contract/support layer: managed docs, action metadata consumed by generated workflows, Make targets, release workflows, and bridge tests.
+- Maintainer-only material: non-shipping docs, repository hygiene workflows, and local tooling.
 
 The mainline invariant is:
 
-> Every merge to `main` must leave the repository in a state where both products
-> can be built and validated from that same commit.
+> Every merge to `main` must leave the repository in a state where both products can be built and validated from that same commit.
 
-That does not require every deep test from both product pyramids to run on every
-PR forever. It does require the mainline merge gate to be an AND over the
-defined releasability contract for the current release phase:
+That does not require every deep test from both product pyramids to run on every PR forever. It does require the mainline merge gate to be an AND over the defined releasability contract for the current release phase:
 
 - shared source gates such as linting, typing, unit tests, and workflow parsing;
 - action core gates for action/runtime behavior;
-- template core gates such as build, verify, workflow classification, and
-  generated workflow syntax;
-- action/template bridge gates proving the generated template from the candidate
-  commit can invoke the action from the same candidate commit through the public
-  contract.
+- template core gates such as build, verify, workflow classification, and generated workflow syntax;
+- action/template bridge gates proving the generated template from the candidate commit can invoke the action from the same candidate commit through the public contract.
 
-Deeper product-specific checks may be path-aware or release-only once they become
-expensive, but bridge tests should block action-side PRs. A runtime change that
-breaks copied generated templates is an action regression even when no template
-files changed.
+Deeper product-specific checks may be path-aware or release-only once they become expensive, but bridge tests should block action-side PRs. A runtime change that breaks copied generated templates is an action regression even when no template files changed.
 
 The direct generated-template consumer e2e and the composite action boundary e2e are separate bridge checks. The direct runtime e2e proves that generated consumer repositories still work against the local runtime under realistic template data/config conditions. The composite boundary e2e proves that `action.yml` maps generated workflow inputs into the expected `REPONOMICS_*` environment and executes the runtime command through the composite action surface. They do not both need to run routinely for every PR: run the direct bridge as the regular generated-template behavior gate, and run the composite boundary gate when `action.yml`, generated workflow `with:` blocks, action input names/defaults, or runtime env-loading changes. Product release candidates may run both as an explicit pre-release confidence check.
 
@@ -484,36 +466,20 @@ As a search aid, action input changes often touch `action.yml`, `dashboard_actio
 
 Compatibility fixtures should be phased by release maturity:
 
-- Before beta, compatibility fixtures are regression canaries only. They should
-  not prevent intentional last-minute breaking changes while there are no public
-  users.
-- At beta, keep fixtures for beta surfaces and treat backwards compatibility
-  within the `v0` line as a real commitment once live beta users exist. A
-  breaking beta reset should be explicitly announced and coordinated.
-- At public release, preserve the first public generated template surface as a
-  hard compatibility target for the declared compatible action major.
-- After public release, every template release should retain a minimal fixture
-  capturing generated workflows, `config.yaml` shape, managed-docs manifest
-  schema, relevant action refs/inputs, and representative setup state.
+- Before beta, compatibility fixtures are regression canaries only. They should not prevent intentional last-minute breaking changes while there are no public users.
+- At beta, keep fixtures for beta surfaces and treat backwards compatibility within the `v0` line as a real commitment once live beta users exist. A breaking beta reset should be explicitly announced and coordinated.
+- At public release, preserve the first public generated template surface as a hard compatibility target for the declared compatible action major.
+- After public release, every template release should retain a minimal fixture capturing generated workflows, `config.yaml` shape, managed-docs manifest schema, relevant action refs/inputs, and representative setup state.
 
-Colocated tests are acceptable, but they need explicit ownership and isolation
-to avoid environment pollution:
+Colocated tests are acceptable, but they need explicit ownership and isolation to avoid environment pollution:
 
-- Prefer clear test groupings such as `action`, `template`, `bridge`, and
-  `release` through directories, markers, or CI jobs.
-- Consumer-repository simulations should run under `tmp_path` or temporary git
-  repositories, not by mutating the source repo root.
-- Tests that patch cwd, environment variables, runtime paths, module globals, or
-  `sys.path` should restore them through fixtures such as `monkeypatch`.
-- Tests should not depend on order or shared generated state. Root-level writes
-  should be limited to explicit Make targets like `build-template`.
-- CI jobs may separate action, template, and bridge checks for process isolation
-  and clearer ownership even when the tests live in one `tests/` tree.
+- Prefer clear test groupings such as `action`, `template`, `bridge`, and `release` through directories, markers, or CI jobs.
+- Consumer-repository simulations should run under `tmp_path` or temporary git repositories, not by mutating the source repo root.
+- Tests that patch cwd, environment variables, runtime paths, module globals, or `sys.path` should restore them through fixtures such as `monkeypatch`.
+- Tests should not depend on order or shared generated state. Root-level writes should be limited to explicit Make targets like `build-template`.
+- CI jobs may separate action, template, and bridge checks for process isolation and clearer ownership even when the tests live in one `tests/` tree.
 
-This framing keeps concerns separated without pretending the products are
-physically independent. The repository remains one source of truth, while the
-action and template remain separate products with explicit projection and bridge
-boundaries.
+This framing keeps concerns separated without pretending the products are physically independent. The repository remains one source of truth, while the action and template remain separate products with explicit projection and bridge boundaries.
 
 ## Current Gaps To Close
 

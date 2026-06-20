@@ -60,6 +60,7 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/controller.js",
     "dashboard/app.js",
     "dashboard/json-assets.js",
+    "dashboard/secure-core.js",
     "dashboard/theme-preload.js",
     "dashboard/entry-public.js",
     "dashboard/entry-secure.js",
@@ -82,9 +83,14 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/controller.js",
     "dashboard/app.js",
 )
+SECURE_STANDALONE_BUNDLE_ASSETS = (
+    *STANDALONE_BUNDLE_ASSETS,
+    "dashboard/secure-core.js",
+)
 THEME_PRELOAD_ASSET = "dashboard/theme-preload.js"
 PUBLIC_ENTRY_ASSET = "dashboard/entry-public.js"
 SECURE_ENTRY_ASSET = "dashboard/entry-secure.js"
+SECURE_CORE_ASSET = "dashboard/secure-core.js"
 PUBLISHED_DASHBOARD_DATA_ASSET = "dashboard-data.json"
 PUBLISHED_ENCRYPTED_DASHBOARD_DATA_ASSET = "encrypted-dashboard-data.json"
 PUBLISHED_EXPORT_MANIFEST_ASSET = "export-manifest.json"
@@ -472,7 +478,7 @@ def _published_head_assets(
 
 
 def _published_runtime_asset_content(name: str) -> str:
-    if name == SECURE_ENTRY_ASSET:
+    if name in {SECURE_ENTRY_ASSET, SECURE_CORE_ASSET}:
         return load_asset(name).replace("__PBKDF2_ITERATIONS__", str(PBKDF2_ITERATIONS))
     return load_asset(name)
 
@@ -522,14 +528,14 @@ const exportManifestPayload = readEmbeddedJson('export-manifest');
     )
     return "\n\n".join(
         [
-            *(_standalone_module_content(name) for name in STANDALONE_BUNDLE_ASSETS),
+            *(_standalone_module_content(name) for name in SECURE_STANDALONE_BUNDLE_ASSETS),
             source.strip(),
         ]
     )
 
 
 APP_RUNTIME_JS = _public_runtime_js()
-SECURE_RUNTIME_JS = _published_runtime_asset_content(SECURE_ENTRY_ASSET)
+SECURE_RUNTIME_JS = _secure_runtime_js()
 
 
 def copy_published_dashboard_assets(output_path: str, *, encrypted: bool) -> None:

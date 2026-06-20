@@ -50,6 +50,7 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
     "assets/dashboard/controller.js",
     "assets/dashboard/app.js",
     "assets/dashboard/json-assets.js",
+    "assets/dashboard/secure-core.js",
     "assets/dashboard/theme-preload.js",
     "assets/dashboard/entry-public.js",
     "assets/dashboard/entry-secure.js",
@@ -1445,8 +1446,10 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert 'id="export-hash-button"' in dashboard
     assert "How download verification works" in dashboard
     secure_runtime = _asset_text(config.pages_index_path, "dashboard/entry-secure.js")
-    assert "validateEncryptedDashboardData" in secure_runtime
-    assert "EXPECTED_KDF_ITERATIONS = 600000" in secure_runtime
+    secure_core = _asset_text(config.pages_index_path, "dashboard/secure-core.js")
+    assert "decryptDashboardData" in secure_runtime
+    assert "validateEncryptedDashboardData" in secure_core
+    assert "EXPECTED_KDF_ITERATIONS = 600000" in secure_core
     assert 'src="assets/chart.umd.min.js"' in dashboard
     assert 'type="module" src="assets/dashboard/entry-secure.js"' in dashboard
     assert "cdn.jsdelivr.net" not in dashboard
@@ -2692,12 +2695,19 @@ def test_publish_encrypted_unlock_failure_throttling_runtime(
     run.run_publish(config, restore_artifact=False)
 
     runtime = _asset_text(config.pages_index_path, "dashboard/entry-secure.js")
+    secure_core = _asset_text(config.pages_index_path, "dashboard/secure-core.js")
 
-    expected_runtime_markers = [
+    expected_secure_core_markers = [
         "UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:'",
         "UNLOCK_DELAY_STARTS_AT = 3",
         "UNLOCK_DELAY_BASE_MS = 2000",
         "UNLOCK_DELAY_MAX_MS = 30000",
+        "function nextUnlockDelayMs(failures)",
+    ]
+    for marker in expected_secure_core_markers:
+        assert marker in secure_core
+
+    expected_runtime_markers = [
         "function unlockAttemptStorageKey()",
         "function startUnlockDelay(delayMs, prefix)",
         "localStorage.setItem(unlockAttemptStorageKey(), JSON.stringify(state))",

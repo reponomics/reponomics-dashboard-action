@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
+import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+
+globalThis.__PBKDF2_ITERATIONS__ = 600000;
+const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
 
 function fakeElement() {
   return {
@@ -95,6 +99,84 @@ function fakeHost() {
           update() {},
         };
       },
+    },
+  };
+}
+
+function base64(bytes) {
+  return Buffer.from(bytes).toString('base64');
+}
+
+function base64url(bytes) {
+  return base64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function validEncryptedToken() {
+  return `${base64url(new Uint8Array(12).fill(2))}.${base64url(new Uint8Array([3, 4, 5]))}`;
+}
+
+function validEncryptedData() {
+  return {
+    version: secureCore.EXPECTED_DASHBOARD_DATA_VERSION,
+    cipher: secureCore.EXPECTED_CIPHER,
+    kdf: {
+      name: secureCore.EXPECTED_KDF_NAME,
+      hash: secureCore.EXPECTED_KDF_HASH,
+      iterations: secureCore.EXPECTED_KDF_ITERATIONS,
+    },
+    encoding: 'gzip+json',
+    salt: base64(new Uint8Array(16).fill(1)),
+    summary: validEncryptedToken(),
+    chunks: { c0001: validEncryptedToken() },
+    chunk_count: 1,
+  };
+}
+
+function validExportManifest() {
+  return {
+    version: 1,
+    cipher: secureCore.EXPECTED_CIPHER,
+    kdf: {
+      name: secureCore.EXPECTED_KDF_NAME,
+      hash: secureCore.EXPECTED_KDF_HASH,
+      iterations: secureCore.EXPECTED_KDF_ITERATIONS,
+    },
+    asset: 'assets/export-data-abcdef1234567890.enc',
+    filename: 'traffic-export.zip',
+    ciphertext_size: 3,
+    ciphertext_sha256: 'a'.repeat(64),
+    plaintext_sha256: 'b'.repeat(64),
+    salt: base64(new Uint8Array(16).fill(1)),
+    iv: base64(new Uint8Array(12).fill(2)),
+  };
+}
+
+function dataProviderContext() {
+  const state = {
+    dashboardData: null,
+    chunkLoadErrors: {},
+  };
+  const CHUNK_FAILURE_LABELS = {
+    missing: 'Missing chunk',
+    decrypt: 'Decrypt/integrity failure',
+    decompress: 'Decompression failure',
+    parse: 'JSON parse failure',
+    schema: 'Schema mismatch',
+    runtime: 'Runtime failure',
+  };
+  return {
+    document: fakeDocument(),
+    navigator: {},
+    CHUNK_FAILURE_LABELS,
+    formatNumber(value) {
+      return String(value);
+    },
+    state,
+    dashboardChunkError(stage, message, details) {
+      const error = new Error(message);
+      error.dashboardDataStage = stage || 'runtime';
+      Object.assign(error, details || {});
+      return error;
     },
   };
 }
@@ -229,4 +311,172 @@ test('series helpers preserve selected-window and growth aggregation contracts',
       forks_delta: [0, 0],
     },
   );
+});
+
+test('secure core validates encrypted dashboard and export metadata contracts', () => {
+  const data = validEncryptedData();
+  const validated = secureCore.validateEncryptedDashboardData(data);
+
+  assert.deepEqual(Array.from(validated.salt), Array(16).fill(1));
+  assert.throws(
+    () => secureCore.validateEncryptedDashboardData({ ...data, chunk_count: 2 }),
+    /Invalid encrypted dashboard data/,
+  );
+  assert.throws(
+    () => secureCore.validateEncryptedDashboardData({
+      ...data,
+      chunks: { repo1: validEncryptedToken() },
+    }),
+    /Invalid encrypted dashboard data/,
+  );
+
+  const manifest = secureCore.validateEncryptedExportManifest(validExportManifest());
+  assert.deepEqual(Array.from(manifest.salt), Array(16).fill(1));
+  assert.deepEqual(Array.from(manifest.iv), Array(12).fill(2));
+  assert.throws(
+    () => secureCore.validateEncryptedExportManifest({
+      ...validExportManifest(),
+      asset: 'assets/export-data-not-hex.enc',
+    }),
+    /Invalid encrypted export metadata/,
+  );
+});
+
+test('secure core formats delay, storage, filenames, and digests deterministically', async () => {
+  assert.equal(secureCore.nextUnlockDelayMs(0), 0);
+  assert.equal(secureCore.nextUnlockDelayMs(2), 0);
+  assert.equal(secureCore.nextUnlockDelayMs(3), 2000);
+  assert.equal(secureCore.nextUnlockDelayMs(4), 4000);
+  assert.equal(secureCore.nextUnlockDelayMs(20), 30000);
+  assert.equal(secureCore.formatDelay(1), '1 second');
+  assert.equal(secureCore.formatDelay(2), '2 seconds');
+
+  assert.equal(
+    secureCore.unlockAttemptStorageKey({
+      version: 2,
+      cipher: 'AES-GCM',
+      salt: 'salt',
+      summary: '123456789012345678901234567890123456',
+      chunk_count: 7,
+    }),
+    'reponomics-unlock-attempts:2:AES-GCM:salt:12345678901234567890123456789012:7',
+  );
+  assert.equal(
+    secureCore.buildExportFilename(
+      'My Export.zip',
+      new Date('2026-06-20T12:34:56.789Z'),
+    ),
+    'My-Export-20260620T123456Z.zip',
+  );
+  assert.deepEqual(Array.from(secureCore.b64urlToBytes('-_8')), [251, 255]);
+  assert.equal(secureCore.bytesToHex(new Uint8Array([0, 15, 255])), '000fff');
+  assert.equal(
+    await secureCore.sha256Hex(new TextEncoder().encode('abc')),
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+  );
+});
+
+test('data provider loads lazy plaintext chunks once and exposes loaded rows', async () => {
+  const context = dataProviderContext();
+  const helpers = installDataProvider(context);
+  const provider = helpers.createDashboardDataProvider({
+    summary: {
+      meta: { default_min_activity: 2 },
+      repos: [{ name: 'owner/repo-a' }],
+      repo_chunks: { 'owner/repo-a': 'c0001' },
+    },
+    chunks: {
+      c0001: JSON.stringify({
+        repo: 'owner/repo-a',
+        repo_series: { dates: ['2026-06-20'], views: [7] },
+        repo_weekday: { Monday: 3 },
+        repo_referrers: [{ referrer: 'example.com', views: 5 }],
+        repo_paths: [{ path: '/', views: 4 }],
+        growth: {
+          per_repo: { stars: 11 },
+          series: { dates: ['2026-06-20'], stargazers: [11] },
+        },
+      }),
+    },
+  });
+  context.state.dashboardData = provider;
+
+  assert.equal(provider.isLazy(), true);
+  assert.equal(provider.isRepoLoaded('owner/repo-a'), false);
+  const firstLoad = provider.loadRepo('owner/repo-a');
+  const secondLoad = provider.loadRepo('owner/repo-a');
+  assert.strictEqual(firstLoad, secondLoad);
+  await firstLoad;
+
+  assert.equal(provider.isRepoLoaded('owner/repo-a'), true);
+  assert.deepEqual(provider.getRepoSeries('owner/repo-a'), {
+    dates: ['2026-06-20'],
+    views: [7],
+  });
+  assert.deepEqual(provider.getRepoReferrers('owner/repo-a'), [
+    { referrer: 'example.com', views: 5 },
+  ]);
+  assert.deepEqual(provider.getRepoPaths('owner/repo-a'), [{ path: '/', views: 4 }]);
+  assert.deepEqual(provider.getRepoGrowth('owner/repo-a'), {
+    stars: 11,
+    series: { dates: ['2026-06-20'], stargazers: [11] },
+  });
+});
+
+test('data provider reports chunk schema diagnostics without loading bad chunks', async () => {
+  const context = dataProviderContext();
+  const helpers = installDataProvider(context);
+  const provider = helpers.createDashboardDataProvider({
+    summary: {
+      repos: [{ name: 'owner/repo-a' }],
+      repo_chunks: { 'owner/repo-a': 'c0001' },
+    },
+    chunks: {
+      c0001: JSON.stringify({ repo: 'owner/repo-a' }),
+    },
+  });
+  context.state.dashboardData = provider;
+
+  assert.throws(
+    () => provider.loadRepo('owner/repo-a'),
+    (error) => {
+      assert.equal(error.dashboardDataStage, 'schema');
+      assert.equal(error.chunkId, 'c0001');
+      assert.equal(error.missingField, 'repo_series');
+      return true;
+    },
+  );
+
+  const diagnostic = helpers.normalizeChunkLoadError(
+    'owner/repo-a',
+    Object.assign(new Error('bad json'), {
+      dashboardDataStage: 'parse',
+      originalName: 'SyntaxError',
+      originalMessage: 'Unexpected token',
+    }),
+  );
+  assert.deepEqual(diagnostic, {
+    repoName: 'owner/repo-a',
+    chunkId: 'c0001',
+    mode: 'plaintext',
+    stage: 'parse',
+    label: 'JSON parse failure',
+    summaryDecrypted: false,
+    exceptionName: 'SyntaxError',
+    exceptionMessage: 'Unexpected token',
+    missingField: '',
+  });
+  assert.equal(
+    helpers.chunkDiagnosticsText([diagnostic]),
+    [
+      'repo=owner/repo-a',
+      'chunk_id=c0001',
+      'mode=plaintext',
+      'stage=parse',
+      'summary_decrypted=false',
+      'exception_name=SyntaxError',
+      'exception_message=Unexpected token',
+    ].join('\n'),
+  );
+  assert.equal(helpers.summarizeChunkErrors([diagnostic]), '1 json parse failure');
 });

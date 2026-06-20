@@ -40,6 +40,29 @@ def test_dashboard_static_assets_are_included_in_built_wheel(tmp_path: Path) -> 
     assert f"{script_root}/status.py" in names
 
     asset_root = f"{script_root}/assets/static"
-    assert f"{asset_root}/base.css" in names
-    assert f"{asset_root}/app-runtime.js" in names
-    assert f"{asset_root}/secure-runtime.js" in names
+    expected_assets = {
+        "base.css",
+        "demo-unlock.css",
+        "font-face.css",
+        "dashboard/app.js",
+        "dashboard/chart-adapter.js",
+        "dashboard/chart-options.js",
+        "dashboard/charts.js",
+        "dashboard/controller.js",
+        "dashboard/controls.js",
+        "dashboard/data-provider.js",
+        "dashboard/entry-public.js",
+        "dashboard/entry-secure.js",
+        "dashboard/format.js",
+        "dashboard/json-assets.js",
+        "dashboard/momentum.js",
+        "dashboard/quality-calendar.js",
+        "dashboard/selection.js",
+        "dashboard/series.js",
+        "dashboard/state.js",
+        "dashboard/tables.js",
+        "dashboard/theme-preload.js",
+        "dashboard/theme.js",
+    }
+    for asset_name in expected_assets:
+        assert f"{asset_root}/{asset_name}" in names

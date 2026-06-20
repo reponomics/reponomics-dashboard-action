@@ -45,6 +45,19 @@ def test_encrypted_html_omits_demo_unlock_by_default() -> None:
     assert "Public demo key" not in html
 
 
+def test_encrypted_html_embedded_mode_includes_unlock_runtime() -> None:
+    html = _encrypted_html()
+
+    assert '<script id="encrypted-dashboard-data" type="application/json">' in html
+    assert '<script id="export-manifest" type="application/json">' in html
+    assert "function readEmbeddedJson(id)" in html
+    assert "const encryptedDashboardData = readEmbeddedJson('encrypted-dashboard-data');" in html
+    assert "decryptDashboardData" in html
+    assert "unlockForm.addEventListener('submit'" in html
+    assert "import { createDashboardApp }" not in html
+    assert "await readJsonAsset" not in html
+
+
 def test_encrypted_html_renders_escaped_demo_unlock_panel() -> None:
     html = _encrypted_html(
         demo_unlock={

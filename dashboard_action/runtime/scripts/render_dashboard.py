@@ -33,12 +33,14 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from render_dashboard_support import access as dashboard_access
+from render_dashboard_support import html as dashboard_html
 from render_dashboard_support import status as dashboard_status
-from render_dashboard_support.assets import load_asset
 from render_dashboard_support.html import (
     DemoUnlockMetadata,
     build_encrypted_html as _build_encrypted_html,
     build_public_html as _build_public_html,
+    copy_published_dashboard_assets as _copy_published_dashboard_assets,
+    write_published_json_asset as _write_published_json_asset,
 )
 
 import storage
@@ -109,12 +111,9 @@ DASHBOARD_DATA_VERSION = 2
 ENCRYPTED_DASHBOARD_DATA_VERSION = DASHBOARD_DATA_VERSION
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
-BASE_STYLES = load_asset("base.css")
-
-APP_RUNTIME_JS = load_asset("app-runtime.js")
-
-SECURE_RUNTIME_JS = load_asset("secure-runtime.js")
-
+BASE_STYLES = dashboard_html.BASE_STYLES
+APP_RUNTIME_JS = dashboard_html.APP_RUNTIME_JS
+SECURE_RUNTIME_JS = dashboard_html.SECURE_RUNTIME_JS
 
 def _load_vendored_chart_js():
     """Load vendored Chart.js and escape closing script tags defensively."""
@@ -635,16 +634,37 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         export_manifest = _build_encrypted_export_manifest(
             PAGE_INDEX_OUTPUT_PATH, dashboard_key
         )
+        encrypted_dashboard_data = _build_encrypted_dashboard_data(payload, dashboard_key)
+        _copy_published_dashboard_assets(PAGE_INDEX_OUTPUT_PATH, encrypted=True)
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_ENCRYPTED_DASHBOARD_DATA_ASSET,
+            encrypted_dashboard_data,
+        )
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_EXPORT_MANIFEST_ASSET,
+            export_manifest,
+        )
         published_html = _build_encrypted_html(
-            _build_encrypted_dashboard_data(payload, dashboard_key),
+            encrypted_dashboard_data,
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
             export_manifest,
             demo_unlock=demo_unlock,
+            external_assets=True,
         )
     else:
+        plaintext_dashboard_data = _build_plaintext_dashboard_data(payload)
+        _copy_published_dashboard_assets(PAGE_INDEX_OUTPUT_PATH, encrypted=False)
+        _write_published_json_asset(
+            PAGE_INDEX_OUTPUT_PATH,
+            dashboard_html.PUBLISHED_DASHBOARD_DATA_ASSET,
+            plaintext_dashboard_data,
+        )
         published_html = _build_public_html(
-            _build_plaintext_dashboard_data(payload),
+            plaintext_dashboard_data,
             f'<script src="{_publish_vendored_chart_js(PAGE_INDEX_OUTPUT_PATH)}"></script>',
+            external_assets=True,
         )
 
     os.makedirs(os.path.dirname(PAGE_INDEX_OUTPUT_PATH), exist_ok=True)

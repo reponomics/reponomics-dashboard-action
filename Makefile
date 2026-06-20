@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
-.PHONY: test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
+.PHONY: test js-test coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
@@ -10,6 +10,7 @@
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
+NODE ?= node
 ANTIPASTA := $(VENV)/bin/antipasta
 PIP_AUDIT := $(VENV)/bin/pip-audit
 PIP_COMPILE := $(VENV)/bin/pip-compile
@@ -157,8 +158,11 @@ pre-commit-install: install ## Install local pre-commit hooks
 pre-commit-run: install ## Run pre-commit hooks against all files
 	$(PRE_COMMIT) run --all-files
 
-test: install ## Run tests
+test: install js-test ## Run tests
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests -v
+
+js-test: ## Run JavaScript module tests
+	$(NODE) --test tests/js/*.test.mjs
 
 coverage: install ## Run tests with coverage report
 	$(PYTHON) -m pytest tests -v --cov=dashboard_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)
@@ -300,10 +304,11 @@ preview-collection-quality-dashboard: install ## Render dashboard from collectio
 		$(abspath $(PYTHON)) -m dashboard_action.run
 	@test -s $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
 	@test -s $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/assets/chart.umd.min.js
+	@test -s $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/assets/dashboard-data.json
 	@grep -q 'src="assets/chart.umd.min.js"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
 	@grep -q 'id="calendarMonthLabel"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
-	@grep -q '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
-	@grep -q '"date":"2026-04-30","status":"gaps_detected"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html
+	@grep -q '"message":"Collection gaps detected in the latest run: 1 skipped, 0 error(s), 1/2 repos collected."' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/assets/dashboard-data.json
+	@grep -q '"date":"2026-04-30","status":"gaps_detected"' $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/assets/dashboard-data.json
 	@echo "Preview ready: $(COLLECTION_QUALITY_PREVIEW_OUTPUT)/docs/index.html"
 
 dashboard-scenario-snapshots: install ## Check production dashboard scenario snapshots

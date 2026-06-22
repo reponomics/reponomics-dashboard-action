@@ -1418,13 +1418,13 @@
       margin-bottom: 1.1rem;
     }
     .auth-hero h1 {
-      font-size: clamp(3rem, 6.5vw, 4.6rem);
+      font-size: min(4.35rem, 18vw);
       line-height: 0.86;
     }
     .auth-hero .auth-brand-line {
       /* color: var(--text); */
       font-family: 'Inter', sans-serif;
-      font-size: clamp(2.65rem, 5.9vw, 4.35rem);
+      font-size: min(4.2rem, 17vw);
       font-weight: 850;
       letter-spacing: -0.045em;
       line-height: 0.86;
@@ -1433,15 +1433,16 @@
     }
     .auth-hero .auth-brand-line-own {
       /* color: var(--text); */
-      font-size: clamp(2.9rem, 6.3vw, 4.7rem);
+      font-size: min(4.35rem, 18vw);
       font-weight: 900;
       letter-spacing: 0.02em;
       line-height: 0.3;
     }
     .auth-hero .auth-brand-line-dashboard {
       color: var(--text-muted);
-      font-size: clamp(2.55rem, 5.7vw, 3.25rem);
+      font-size: min(4rem, 16.5vw);
       font-weight: 820;
+      letter-spacing: 0.02em;
     }
     .auth-hero .sub {
       color: var(--text-muted);
@@ -1590,65 +1591,145 @@
       color: var(--text-dim);
     }
     .auth-button {
-      border: none;
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      border: 1px solid rgba(88, 166, 255, 0.48);
       border-radius: 12px;
-      background: var(--accent);
-      color: #ffffff;
-      padding: 0 1.5rem;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 38%),
+        linear-gradient(135deg, #182235 0%, #0d1420 48%, #070b11 100%);
+      color: #dceaff;
+      padding: 0 1.55rem;
       min-height: 48px;
       font-family: 'Inter', sans-serif;
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 850;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.55rem;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
-      transition: background 160ms ease, box-shadow 180ms ease, transform 120ms ease;
+      gap: 0.62rem;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+      box-shadow:
+        0 12px 28px rgba(1, 4, 9, 0.34),
+        0 0 0 1px rgba(88, 166, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.22);
+      transition: border-color 220ms ease, box-shadow 240ms ease, color 220ms ease, transform 160ms ease;
+    }
+    .auth-button::before {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      z-index: -1;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      background:
+        linear-gradient(90deg, rgba(88, 166, 255, 0), rgba(88, 166, 255, 0.16), rgba(88, 166, 255, 0));
+      opacity: 0.58;
+      transition: opacity 220ms ease, transform 240ms ease;
     }
     .auth-button:not(:disabled):hover {
-      background: #2f7df5;
-      box-shadow: 0 4px 14px rgba(31, 111, 235, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.20);
-      transform: translateY(-1px);
+      border-color: rgba(121, 192, 255, 0.72);
+      color: #ffffff;
+      box-shadow:
+        0 16px 34px rgba(31, 111, 235, 0.22),
+        0 0 0 1px rgba(121, 192, 255, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.18);
+      transform: translateY(-1px) scale(1.015);
+    }
+    .auth-button:not(:disabled):hover::before {
+      opacity: 1;
+      transform: translateX(8%);
     }
     .auth-button:active {
       transform: translateY(1px);
     }
-    .auth-button:disabled:not(.is-unlocked) {
+    .auth-button:disabled:not(.is-unlocked):not(.is-unlocking) {
       background: var(--border);
       color: var(--text-muted);
       cursor: not-allowed;
       transform: none;
     }
+    .auth-button .lock-svg,
+    .auth-button .btn-label-default,
+    .auth-button .btn-label-success {
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+    .auth-button:not(:disabled):hover .lock-svg,
+    .auth-button:not(:disabled):hover .btn-label-default {
+      transform: scale(1.06);
+    }
     .auth-button .lock-shackle {
       transform-box: fill-box;
-      transform-origin: 75% 100%;
-      transition: transform 220ms ease;
+      transform-origin: 76% 100%;
+      stroke-width: 2.05;
+      transition: transform 260ms cubic-bezier(.2, .8, .2, 1);
+    }
+    .auth-button .lock-shackle-glint,
+    .auth-button .lock-hairline {
+      opacity: 0.58;
+      stroke-width: 1;
+    }
+    .auth-button .lock-body {
+      fill: rgba(255, 255, 255, 0.035);
+      stroke-width: 1.9;
     }
     .auth-button:not(:disabled):hover .lock-shackle {
-      transform: translateX(1.2px) rotate(-12deg);
+      transform: translateY(-2.1px) scaleY(1.18);
     }
     .auth-button .lock-check {
       stroke-dasharray: 12;
       stroke-dashoffset: 12;
+      stroke-width: 2.15;
     }
     .auth-button .btn-label-success {
       display: none;
     }
+    .auth-button.is-unlocking {
+      border-color: rgba(121, 192, 255, 0.70);
+      color: #ffffff;
+      cursor: wait;
+      box-shadow:
+        0 16px 34px rgba(31, 111, 235, 0.22),
+        0 0 0 1px rgba(121, 192, 255, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.18);
+    }
+    .auth-button.is-unlocking .lock-shackle {
+      transform: translateY(-2.1px) scaleY(1.18);
+    }
     .auth-button.is-unlocked {
-      background: #1a7f37;
+      border-color: rgba(63, 185, 80, 0.74);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(135deg, #12351f 0%, #0d2a19 48%, #07150d 100%);
       color: #ffffff;
       cursor: default;
       pointer-events: none;
       transform: none;
-      box-shadow: 0 4px 16px rgba(63, 185, 80, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      box-shadow:
+        0 16px 34px rgba(63, 185, 80, 0.22),
+        0 0 0 1px rgba(63, 185, 80, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.18);
     }
     .auth-button.is-unlocked .lock-shackle {
-      transform: translateX(1.4px) rotate(-22deg);
+      animation: unlockButtonShackle 2100ms cubic-bezier(.18, .92, .2, 1) forwards;
     }
     .auth-button.is-unlocked .lock-check {
-      animation: drawUnlockCheck 420ms 110ms ease forwards;
+      animation: drawUnlockCheck 520ms 1400ms ease forwards;
+    }
+    .auth-button.is-rejected {
+      border-color: rgba(248, 81, 73, 0.74);
+      animation: authButtonReject 460ms cubic-bezier(.36, .07, .19, .97);
+    }
+    .auth-card.is-rejected {
+      animation: authRejectShudder 460ms cubic-bezier(.36, .07, .19, .97);
     }
     .auth-button.is-unlocked .btn-label-default {
       display: none;
@@ -1658,6 +1739,28 @@
     }
     @keyframes drawUnlockCheck {
       to { stroke-dashoffset: 0; }
+    }
+    @keyframes unlockButtonShackle {
+      0% { transform: translateY(-2.1px) scaleY(1.18); }
+      24% { transform: translateY(-8px) scaleY(1.2); }
+      44% { transform: translate(1.8px, -8.4px) rotate(-18deg) scaleY(1.04); }
+      70% { transform: translate(3.4px, -6.8px) rotate(-34deg); }
+      100% { transform: translate(3.6px, -6.4px) rotate(-38deg); }
+    }
+    @keyframes authRejectShudder {
+      0%, 100% { transform: translateX(0); }
+      16% { transform: translateX(-7px); }
+      32% { transform: translateX(6px); }
+      48% { transform: translateX(-4px); }
+      64% { transform: translateX(3px); }
+      80% { transform: translateX(-1.5px); }
+    }
+    @keyframes authButtonReject {
+      0%, 100% { transform: translateX(0); }
+      18% { transform: translateX(-4px); }
+      36% { transform: translateX(3px); }
+      54% { transform: translateX(-2px); }
+      72% { transform: translateX(1px); }
     }
     .auth-card .auth-status {
       min-height: 1.2rem;
@@ -1852,22 +1955,6 @@
     }
     @media (max-width: 720px) {
       body { padding: 1rem; }
-      .auth-hero h1 {
-        font-size: clamp(3.25rem, 13.9vw, 4.35rem);
-      }
-      .auth-hero .auth-brand-line {
-        font-size: clamp(2.25rem, 11.8vw, 3.35rem);
-      }
-      .auth-hero .auth-brand-line-own {
-        font-size: clamp(2.45rem, 12.8vw, 3.8rem);
-        letter-spacing: 0.1em;
-        line-height: 0.5;
-      }
-      .auth-hero .auth-brand-line-dashboard {
-        font-size: clamp(2.2rem, 11.2vw, 3.05rem);
-        letter-spacing: 0.1em;
-        line-height: 1.1;
-      }
       .auth-theme-toggle {
         top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
         right: calc(env(safe-area-inset-right, 0px) + 0.75rem);
@@ -1972,9 +2059,19 @@
     @media (prefers-reduced-motion: reduce) {
       .stat-spark path.line { animation: none; }
       .pulse-dot { animation: none; }
+      .auth-button.is-unlocked .lock-shackle,
       .auth-button.is-unlocked .lock-check {
         animation: none;
+      }
+      .auth-button.is-unlocked .lock-shackle {
+        transform: translate(3.6px, -6.4px) rotate(-38deg);
+      }
+      .auth-button.is-unlocked .lock-check {
         stroke-dashoffset: 0;
+      }
+      .auth-button.is-rejected,
+      .auth-card.is-rejected {
+        animation: none;
       }
       .auth-meta .glyph {
         animation: none;

@@ -17,6 +17,7 @@ const exportManifestPayload = await readJsonAsset(
 
     const authShell = document.getElementById('auth-shell');
     const unlockForm = document.getElementById('unlock-form');
+    const unlockCard = document.getElementById('unlock-card');
     const dashboardKeyInput = document.getElementById('dashboard-key');
     const demoUnlockButton = document.getElementById('demo-unlock-button');
     const demoUnlockKey = document.getElementById('demo-unlock-key');
@@ -28,7 +29,7 @@ const exportManifestPayload = await readJsonAsset(
     const exportStatus = document.getElementById('export-status');
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
-    const UNLOCK_SUCCESS_DELAY_MS = 1500;
+    const UNLOCK_SUCCESS_DELAY_MS = 3000;
     let unlockedExportKey = null;
     let unlockDelayTimer = null;
 
@@ -75,14 +76,28 @@ const exportManifestPayload = await readJsonAsset(
     }
 
     async function playSuccessfulUnlock() {
+      unlockButton.classList.remove('is-unlocking');
       unlockButton.classList.add('is-unlocked');
       unlockButton.setAttribute('aria-busy', 'true');
-      setUnlockStatus('Dashboard decrypted.', 'success');
+      setUnlockStatus('Dashboard unlocked.', 'success');
       await wait(UNLOCK_SUCCESS_DELAY_MS);
     }
 
+    function playRejectedUnlock() {
+      unlockCard.classList.remove('is-rejected');
+      unlockButton.classList.remove('is-rejected');
+      void unlockCard.offsetWidth;
+      unlockCard.classList.add('is-rejected');
+      unlockButton.classList.add('is-rejected');
+      setTimeout(function() {
+        unlockCard.classList.remove('is-rejected');
+        unlockButton.classList.remove('is-rejected');
+      }, 520);
+    }
+
     function resetUnlockButtonState() {
-      unlockButton.classList.remove('is-unlocked');
+      unlockButton.classList.remove('is-unlocking', 'is-unlocked', 'is-rejected');
+      unlockCard.classList.remove('is-rejected');
       unlockButton.removeAttribute('aria-busy');
     }
 
@@ -303,7 +318,8 @@ const exportManifestPayload = await readJsonAsset(
       }
 
       unlockButton.disabled = true;
-      setUnlockStatus('Unlocking dashboard...', 'pending');
+      unlockButton.classList.add('is-unlocking');
+      setUnlockStatus('Checking lock...', 'pending');
 
       try {
         let dashboardKey = dashboardKeyInput.value;
@@ -332,6 +348,7 @@ const exportManifestPayload = await readJsonAsset(
         setUnlockStatus('', '');
       } catch (error) {
         resetUnlockButtonState();
+        playRejectedUnlock();
         const failures = attemptState.failures + 1;
         const delayMs = nextUnlockDelayMs(failures);
         writeUnlockAttemptState({

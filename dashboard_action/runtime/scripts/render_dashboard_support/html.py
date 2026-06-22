@@ -814,13 +814,17 @@ def build_encrypted_html(
               >
             </div>
             <button class="auth-button" id="unlock-button" type="submit">
-              <svg class="lock-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-                <path class="lock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"></path>
-                <rect x="5" y="11" width="14" height="9" rx="2.5"></rect>
+              <svg class="lock-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <g class="lock-shackle">
+                  <path d="M7.6 11V7.4a4.4 4.4 0 0 1 8.8 0V11"></path>
+                  <path class="lock-shackle-glint" d="M9.4 6.9a2.75 2.75 0 0 1 5.2 0"></path>
+                </g>
+                <rect class="lock-body" x="4.8" y="10.8" width="14.4" height="9.2" rx="2.4"></rect>
+                <path class="lock-hairline" d="M7.6 14.2h8.8"></path>
                 <path class="lock-check" d="M9.4 15.6l1.8 1.8 3.4-3.4"></path>
               </svg>
-              <span class="btn-label-default">Unlock</span>
-              <span class="btn-label-success">Decrypted</span>
+              <span class="btn-label-default">Locked</span>
+              <span class="btn-label-success">Unlocked</span>
             </button>
           </form>
 

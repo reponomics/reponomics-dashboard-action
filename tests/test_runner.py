@@ -2724,15 +2724,19 @@ def test_publish_encrypted_unlock_shell_affordances(
     )
     assert 'class="tick tl"' in dashboard
     assert 'class="lock-shackle"' in dashboard
-    assert 'class="btn-label-success">Decrypted</span>' in dashboard
+    assert 'class="btn-label-default">Locked</span>' in dashboard
+    assert 'class="btn-label-success">Unlocked</span>' in dashboard
 
     base_css = _asset_text(config.pages_index_path, "base.css")
     assert "animation: authDotPulse 2.4s ease-in-out infinite;" in base_css
+    assert ".auth-button.is-unlocking .lock-shackle" in base_css
     assert ".auth-button.is-unlocked .lock-shackle" in base_css
+    assert "@keyframes authRejectShudder" in base_css
 
     runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
-    assert "const UNLOCK_SUCCESS_DELAY_MS = 1500;" in runtime
+    assert "const UNLOCK_SUCCESS_DELAY_MS = 3000;" in runtime
     assert "await playSuccessfulUnlock();" in runtime
+    assert "function playRejectedUnlock()" in runtime
 
     assert '<a href="https://github.com/reponomics">Forgot your password?</a>' in dashboard
     assert (

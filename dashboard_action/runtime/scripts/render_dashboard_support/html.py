@@ -757,11 +757,6 @@ def build_encrypted_html(
                 <span class="theme-label">Theme</span>
               </button>
             </div>
-            <p class="sub">
-              Encrypted Pages mode for private growth analytics. The dashboard
-              data is encrypted with your key and decrypted locally &mdash;
-              nothing leaves your browser.
-            </p>
           </div>
         </div>
 
@@ -832,11 +827,11 @@ def build_encrypted_html(
 
           <div class="auth-meta">
             <span class="meta-item"><span class="glyph"></span>AES-GCM &middot; PBKDF2-SHA256 &middot; {PBKDF2_ITERATIONS:,} iterations</span>
-            <span class="meta-item"><span class="glyph"></span>Decryption is strictly client-side</span>
+            <span class="meta-item"><span class="glyph"></span>Client-side decryption</span>
           </div>
 
           <div class="auth-help-row">
-            <a href="https://github.com/reponomics">Forgot your password?</a>
+            <a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">Problems unlocking your dashboard? Click here</a>
           </div>
         </div>
 

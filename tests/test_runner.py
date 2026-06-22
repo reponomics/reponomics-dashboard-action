@@ -2739,7 +2739,13 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert "await playSuccessfulUnlock();" in runtime
     assert "function playRejectedUnlock()" in runtime
 
-    assert '<a href="https://github.com/reponomics">Forgot your password?</a>' in dashboard
+    assert "Encrypted Pages mode for private growth analytics." not in dashboard
+    assert "Client-side decryption" in dashboard
+    assert (
+        '<a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">'
+        + "Problems unlocking your dashboard? Click here</a>"
+        in dashboard
+    )
     assert (
         '<a class="brand-name" href="https://github.com/reponomics">Reponomics</a>'
         in dashboard

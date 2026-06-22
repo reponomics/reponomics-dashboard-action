@@ -211,6 +211,42 @@ def test_ci_runs_generated_template_gates() -> None:
     assert "make publish-template-dry-run" in commands
 
 
+def test_ci_type_checks_minimum_supported_python_only() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["python"]["steps"]
+    type_check = next(step for step in steps if step["name"] == "Type check")
+    test_step = next(step for step in steps if step["name"] == "Test")
+
+    assert workflow["jobs"]["python"]["strategy"]["matrix"]["python-version"] == [
+        "3.11",
+        "3.12",
+        "3.13",
+    ]
+    assert type_check["if"] == "${{ matrix.python-version == '3.11' }}"
+    assert test_step["run"] == "make test"
+    assert "if" not in test_step
+
+
+def test_ci_runs_javascript_dashboard_gates() -> None:
+    workflow_text = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    job = workflow["jobs"]["javascript"]
+    steps = job["steps"]
+    commands = [step["run"] for step in steps if "run" in step]
+    setup_node = next(step for step in steps if step["name"] == "Set up Node")
+
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["name"] == "JavaScript dashboard"
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert setup_node["uses"] == (
+        "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
+    )
+    assert setup_node["with"]["node-version"] == "24"
+    assert "make js-test" in commands
+    assert "make js-coverage" in commands
+    assert "make js-smoke" in commands
+
+
 def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     workflow_text = Path(".github/workflows/pre-release-validation.yml").read_text(
         encoding="utf-8"

@@ -741,8 +741,9 @@ def build_encrypted_html(
           <div class="hero-copy auth-hero">
             <div class="auth-hero-head">
               <div class="brand-lockup">
+                <div class="brand-eyebrow auth-brand-line auth-brand-line-own">Your</div>
                 <h1 class="brand">reponomics<span class="accent">.</span></h1>
-                <div class="brand-eyebrow">Dashboard</div>
+                <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
               </div>
               <button
                 class="auth-theme-toggle theme-toggle"
@@ -767,11 +768,16 @@ def build_encrypted_html(
         <div class="card auth-card" id="unlock-card">
           <div class="auth-card-heading">
             <span class="auth-card-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" width="22" height="22" focusable="false">
-                <g transform="rotate(45 16 16)">
-                  <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
-                </g>
-                <path d="M9 19 L13 15 L17 18 L23 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <span class="tick tl"></span>
+              <span class="tick tr"></span>
+              <span class="tick bl"></span>
+              <span class="tick br"></span>
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M11 16a1 1 0 1 0 2 0 1 1 0 0 0-2 0"></path>
+                <path d="M8 11V7a4 4 0 1 1 8 0v4"></path>
+                <path d="M5 11h11a2 2 0 0 1 2 2v3"></path>
+                <path d="M15 19l2 2 4-4"></path>
+                <path d="M5 11a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h6"></path>
               </svg>
             </span>
             <div class="auth-card-copy">
@@ -807,7 +813,15 @@ def build_encrypted_html(
                 aria-label="Dashboard key"
               >
             </div>
-            <button class="auth-button" id="unlock-button" type="submit">Unlock</button>
+            <button class="auth-button" id="unlock-button" type="submit">
+              <svg class="lock-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path class="lock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                <rect x="5" y="11" width="14" height="9" rx="2.5"></rect>
+                <path class="lock-check" d="M9.4 15.6l1.8 1.8 3.4-3.4"></path>
+              </svg>
+              <span class="btn-label-default">Unlock</span>
+              <span class="btn-label-success">Decrypted</span>
+            </button>
           </form>
 
           <div class="auth-status" id="unlock-status" aria-live="polite"></div>

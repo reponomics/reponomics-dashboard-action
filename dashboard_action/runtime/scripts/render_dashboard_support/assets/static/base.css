@@ -1412,13 +1412,34 @@
       display: block;
     }
     .auth-hero .brand-lockup {
-      margin-bottom: 1rem;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.42rem;
+      margin-bottom: 1.1rem;
     }
     .auth-hero h1 {
       font-size: clamp(3rem, 6.5vw, 4.6rem);
+      line-height: 0.86;
     }
-    .auth-hero .brand-eyebrow {
-      font-size: 0.88rem;
+    .auth-hero .auth-brand-line {
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(2.65rem, 5.9vw, 4.35rem);
+      font-weight: 850;
+      letter-spacing: -0.045em;
+      line-height: 0.86;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .auth-hero .auth-brand-line-own {
+      color: var(--text);
+      font-size: clamp(2.9rem, 6.3vw, 3.5rem);
+      font-weight: 900;
+    }
+    .auth-hero .auth-brand-line-dashboard {
+      color: var(--text-muted);
+      font-size: clamp(2.55rem, 5.7vw, 3.25rem);
+      font-weight: 820;
     }
     .auth-hero .sub {
       color: var(--text-muted);
@@ -1467,16 +1488,41 @@
       margin-bottom: 1.1rem;
     }
     .auth-card-icon {
-      width: 2.15rem;
-      height: 2.15rem;
-      margin-top: 0.05rem;
+      position: relative;
+      width: 3.25rem;
+      height: 3.25rem;
+      margin-top: 0.02rem;
       border: 1px solid rgba(31, 111, 235, 0.28);
-      border-radius: 11px;
-      background: rgba(31, 111, 235, 0.10);
+      border-radius: 15px;
+      background: rgba(31, 111, 235, 0.12);
       color: var(--accent);
       display: grid;
       place-items: center;
       flex: 0 0 auto;
+    }
+    .auth-card-icon::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(31, 111, 235, 0.30);
+      border-radius: 11px;
+      pointer-events: none;
+    }
+    .auth-card-icon .tick {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-color: rgba(31, 111, 235, 0.55);
+      border-style: solid;
+      border-width: 0;
+    }
+    .auth-card-icon .tick.tl { top: 6px; left: 6px; border-top-width: 1px; border-left-width: 1px; }
+    .auth-card-icon .tick.tr { top: 6px; right: 6px; border-top-width: 1px; border-right-width: 1px; }
+    .auth-card-icon .tick.bl { bottom: 6px; left: 6px; border-bottom-width: 1px; border-left-width: 1px; }
+    .auth-card-icon .tick.br { bottom: 6px; right: 6px; border-bottom-width: 1px; border-right-width: 1px; }
+    .auth-card-icon svg {
+      position: relative;
+      z-index: 1;
     }
     .auth-card-copy {
       min-width: 0;
@@ -1550,22 +1596,66 @@
       min-height: 48px;
       font-family: 'Inter', sans-serif;
       font-size: 0.95rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: filter 150ms ease, transform 120ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      transition: background 160ms ease, box-shadow 180ms ease, transform 120ms ease;
     }
-    .auth-button:hover {
-      filter: brightness(1.08);
+    .auth-button:not(:disabled):hover {
+      background: #2f7df5;
+      box-shadow: 0 4px 14px rgba(31, 111, 235, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+      transform: translateY(-1px);
     }
     .auth-button:active {
       transform: translateY(1px);
     }
-    .auth-button:disabled {
+    .auth-button:disabled:not(.is-unlocked) {
       background: var(--border);
       color: var(--text-muted);
       cursor: not-allowed;
-      filter: none;
       transform: none;
+    }
+    .auth-button .lock-shackle {
+      transform-box: fill-box;
+      transform-origin: 75% 100%;
+      transition: transform 220ms ease;
+    }
+    .auth-button:not(:disabled):hover .lock-shackle {
+      transform: translateX(1.2px) rotate(-12deg);
+    }
+    .auth-button .lock-check {
+      stroke-dasharray: 12;
+      stroke-dashoffset: 12;
+    }
+    .auth-button .btn-label-success {
+      display: none;
+    }
+    .auth-button.is-unlocked {
+      background: #1a7f37;
+      color: #ffffff;
+      cursor: default;
+      pointer-events: none;
+      transform: none;
+      box-shadow: 0 4px 16px rgba(63, 185, 80, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+    .auth-button.is-unlocked .lock-shackle {
+      transform: translateX(1.4px) rotate(-22deg);
+    }
+    .auth-button.is-unlocked .lock-check {
+      animation: drawUnlockCheck 420ms 110ms ease forwards;
+    }
+    .auth-button.is-unlocked .btn-label-default {
+      display: none;
+    }
+    .auth-button.is-unlocked .btn-label-success {
+      display: inline;
+    }
+    @keyframes drawUnlockCheck {
+      to { stroke-dashoffset: 0; }
     }
     .auth-card .auth-status {
       min-height: 1.2rem;
@@ -1603,6 +1693,15 @@
       border-radius: 999px;
       background: var(--c-positive);
       flex: 0 0 auto;
+      box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.42);
+      animation: authDotPulse 2.4s ease-in-out infinite;
+    }
+    .auth-meta .meta-item:nth-child(2) .glyph {
+      animation-delay: 1.2s;
+    }
+    @keyframes authDotPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.42); }
+      50% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
     }
     .auth-help-row {
       display: flex;
@@ -1754,6 +1853,15 @@
       .auth-hero h1 {
         font-size: clamp(3.25rem, 13vw, 4.35rem);
       }
+      .auth-hero .auth-brand-line {
+        font-size: clamp(2.25rem, 11.8vw, 3.35rem);
+      }
+      .auth-hero .auth-brand-line-own {
+        font-size: clamp(2.45rem, 12.8vw, 3.5rem);
+      }
+      .auth-hero .auth-brand-line-dashboard {
+        font-size: clamp(2.2rem, 11.2vw, 3.05rem);
+      }
       .auth-theme-toggle {
         top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
         right: calc(env(safe-area-inset-right, 0px) + 0.75rem);
@@ -1858,5 +1966,13 @@
     @media (prefers-reduced-motion: reduce) {
       .stat-spark path.line { animation: none; }
       .pulse-dot { animation: none; }
+      .auth-button.is-unlocked .lock-check {
+        animation: none;
+        stroke-dashoffset: 0;
+      }
+      .auth-meta .glyph {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.14);
+      }
       * { transition-duration: 0.001ms !important; }
     }

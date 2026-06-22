@@ -28,6 +28,7 @@ const exportManifestPayload = await readJsonAsset(
     const exportStatus = document.getElementById('export-status');
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
+    const UNLOCK_SUCCESS_DELAY_MS = 1500;
     let unlockedExportKey = null;
     let unlockDelayTimer = null;
 
@@ -65,6 +66,24 @@ const exportManifestPayload = await readJsonAsset(
       try {
         localStorage.removeItem(unlockAttemptStorageKey());
       } catch (_error) { /* ignore */ }
+    }
+
+    function wait(ms) {
+      return new Promise(function(resolve) {
+        setTimeout(resolve, ms);
+      });
+    }
+
+    async function playSuccessfulUnlock() {
+      unlockButton.classList.add('is-unlocked');
+      unlockButton.setAttribute('aria-busy', 'true');
+      setUnlockStatus('Dashboard decrypted.', 'success');
+      await wait(UNLOCK_SUCCESS_DELAY_MS);
+    }
+
+    function resetUnlockButtonState() {
+      unlockButton.classList.remove('is-unlocked');
+      unlockButton.removeAttribute('aria-busy');
     }
 
     function startUnlockDelay(delayMs, prefix) {
@@ -266,6 +285,7 @@ const exportManifestPayload = await readJsonAsset(
     }
 
     async function unlockWithCurrentInput() {
+      resetUnlockButtonState();
       if (!dashboardKeyInput.value) {
         setUnlockStatus('Enter the dashboard key.', 'error');
         return;
@@ -286,7 +306,7 @@ const exportManifestPayload = await readJsonAsset(
       setUnlockStatus('Unlocking dashboard...', 'pending');
 
       try {
-        const dashboardKey = dashboardKeyInput.value;
+        let dashboardKey = dashboardKeyInput.value;
         const payload = await decryptDashboardData(
           dashboardKey,
           encryptedDashboardData
@@ -296,19 +316,22 @@ const exportManifestPayload = await readJsonAsset(
         } catch (_error) {
           unlockedExportKey = null;
         }
+        dashboardKey = '';
         dashboardKeyInput.value = '';
-        authShell.style.display = 'none';
-        document.body.classList.remove('auth-locked');
-        document.body.removeAttribute('data-screen-label');
-        app.renderDashboard(payload);
-        enableExport();
         if (unlockDelayTimer) {
           clearTimeout(unlockDelayTimer);
           unlockDelayTimer = null;
         }
         resetUnlockAttemptState();
+        await playSuccessfulUnlock();
+        authShell.style.display = 'none';
+        document.body.classList.remove('auth-locked');
+        document.body.removeAttribute('data-screen-label');
+        app.renderDashboard(payload);
+        enableExport();
         setUnlockStatus('', '');
       } catch (error) {
+        resetUnlockButtonState();
         const failures = attemptState.failures + 1;
         const delayMs = nextUnlockDelayMs(failures);
         writeUnlockAttemptState({

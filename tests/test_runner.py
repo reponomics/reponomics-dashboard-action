@@ -2717,6 +2717,22 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert 'class="auth-card-icon"' in dashboard
     assert 'class="auth-mark"' not in dashboard
     assert "max-width: 52ch;" not in dashboard
+    assert 'class="brand-eyebrow auth-brand-line auth-brand-line-own">Your</div>' in dashboard
+    assert (
+        'class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>'
+        in dashboard
+    )
+    assert 'class="tick tl"' in dashboard
+    assert 'class="lock-shackle"' in dashboard
+    assert 'class="btn-label-success">Decrypted</span>' in dashboard
+
+    base_css = _asset_text(config.pages_index_path, "base.css")
+    assert "animation: authDotPulse 2.4s ease-in-out infinite;" in base_css
+    assert ".auth-button.is-unlocked .lock-shackle" in base_css
+
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
+    assert "const UNLOCK_SUCCESS_DELAY_MS = 1500;" in runtime
+    assert "await playSuccessfulUnlock();" in runtime
 
     assert '<a href="https://github.com/reponomics">Forgot your password?</a>' in dashboard
     assert (

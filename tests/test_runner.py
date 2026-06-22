@@ -2722,6 +2722,7 @@ def test_publish_encrypted_unlock_shell_affordances(
         'class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>'
         in dashboard
     )
+    assert "Enter your dashboard key below." in dashboard
     assert 'class="tick tl"' in dashboard
     assert 'class="lock-shackle"' in dashboard
     assert 'class="btn-label-default">Locked</span>' in dashboard

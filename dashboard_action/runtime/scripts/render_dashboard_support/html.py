@@ -778,8 +778,7 @@ def build_encrypted_html(
             <div class="auth-card-copy">
               <h2 class="auth-card-title">Unlock Dashboard</h2>
               <p class="auth-card-sub">
-                Enter your dashboard key to decrypt the latest dashboard snapshot
-                in this browser.
+                Enter your dashboard key below.
               </p>
 	            </div>
 	          </div>

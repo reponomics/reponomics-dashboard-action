@@ -2729,6 +2729,7 @@ def test_publish_encrypted_unlock_shell_affordances(
 
     base_css = _asset_text(config.pages_index_path, "base.css")
     assert "animation: authDotPulse 2.4s ease-in-out infinite;" in base_css
+    assert '[data-theme="light"] .auth-button' in base_css
     assert ".auth-button.is-unlocking .lock-shackle" in base_css
     assert ".auth-button.is-unlocked .lock-shackle" in base_css
     assert "@keyframes authRejectShudder" in base_css

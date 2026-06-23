@@ -1752,7 +1752,10 @@
         0 20px 42px rgba(0, 0, 0, 0.48);
       transform: translate(-50%, -50%) rotate(-8deg);
       transform-origin: center;
-      transition: transform 1600ms cubic-bezier(.18, .92, .2, 1), border-color 900ms ease, box-shadow 900ms ease;
+      transition:
+        transform 2200ms cubic-bezier(.55, .02, .18, 1),
+        border-color 1100ms ease,
+        box-shadow 1100ms ease;
     }
     .auth-vault-spoke {
       position: absolute;
@@ -1813,7 +1816,7 @@
         0 20px 42px rgba(0, 0, 0, 0.38),
         0 0 38px rgba(195, 148, 61, 0.10),
         0 0 42px rgba(47, 129, 247, 0.055);
-      transform: translate(-50%, -50%) rotate(-38deg) scale(1.025);
+      transform: translate(-50%, -50%) rotate(-58deg) scale(1.025);
     }
     .auth-card > * {
       z-index: 1;

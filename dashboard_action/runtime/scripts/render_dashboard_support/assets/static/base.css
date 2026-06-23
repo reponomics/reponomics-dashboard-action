@@ -1374,31 +1374,31 @@
       padding: 1rem 0;
     }
     body.auth-locked {
-      --bg: #020304;
-      --bg-raised: #08090b;
-      --bg-card: #0b0d10;
-      --bg-card-2: #050608;
-      --border: rgba(130, 145, 166, 0.24);
-      --border-soft: rgba(130, 145, 166, 0.12);
+      --bg: #010203;
+      --bg-raised: #05070a;
+      --bg-card: #080a0d;
+      --bg-card-2: #030406;
+      --border: rgba(120, 136, 158, 0.20);
+      --border-soft: rgba(120, 136, 158, 0.10);
       --text: #edf4fb;
       --text-muted: #9aa7b8;
       --text-dim: #667284;
       --accent: #2f81f7;
       --c-positive: #3fb950;
       --c-negative: #f85149;
-      --vault-black: #020304;
-      --vault-950: #05070a;
-      --vault-900: #090c11;
-      --vault-850: #10151c;
-      --vault-800: #19202a;
-      --vault-700: #27313f;
-      --vault-gold: #d8a542;
-      --vault-gold-bright: #f1cf7a;
-      --vault-gold-soft: rgba(216, 165, 66, 0.22);
+      --vault-black: #010203;
+      --vault-950: #030507;
+      --vault-900: #06090d;
+      --vault-850: #0d1218;
+      --vault-800: #141a23;
+      --vault-700: #222b38;
+      --vault-gold: #c3943d;
+      --vault-gold-bright: #e6c36b;
+      --vault-gold-soft: rgba(195, 148, 61, 0.16);
       --secure-led: #2f81f7;
       --secure-led-bright: #68b5ff;
       --secure-led-soft: rgba(47, 129, 247, 0.22);
-      --secure-edge: rgba(161, 178, 198, 0.20);
+      --secure-edge: rgba(145, 162, 186, 0.16);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -1408,10 +1408,10 @@
       overflow-x: hidden;
       color-scheme: dark;
       background:
-        radial-gradient(900px 520px at 50% -12%, rgba(216, 165, 66, 0.11), transparent 62%),
-        radial-gradient(720px 620px at -14% 52%, rgba(47, 129, 247, 0.052), transparent 68%),
-        radial-gradient(720px 620px at 114% 56%, rgba(104, 181, 255, 0.036), transparent 70%),
-        linear-gradient(180deg, #030405 0%, #020304 54%, #010202 100%);
+        radial-gradient(900px 520px at 50% -14%, rgba(195, 148, 61, 0.064), transparent 64%),
+        radial-gradient(760px 620px at -16% 52%, rgba(47, 129, 247, 0.038), transparent 70%),
+        radial-gradient(720px 620px at 116% 58%, rgba(104, 181, 255, 0.026), transparent 72%),
+        linear-gradient(180deg, #020303 0%, #010203 56%, #010101 100%);
     }
     body.auth-locked > footer {
       display: none;
@@ -1440,42 +1440,46 @@
       width: 940px;
       aspect-ratio: 1;
       border-radius: 50%;
-      opacity: 0.52;
+      opacity: 0.46;
       transform: translate(-50%, -50%) rotate(-4deg);
       background:
-        conic-gradient(from -18deg,
-          rgba(255, 255, 255, 0.07) 0deg 10deg,
-          transparent 10deg 54deg,
-          rgba(216, 165, 66, 0.12) 54deg 63deg,
-          transparent 63deg 128deg,
-          rgba(104, 181, 255, 0.08) 128deg 137deg,
-          transparent 137deg 218deg,
-          rgba(255, 255, 255, 0.045) 218deg 227deg,
-          transparent 227deg 360deg),
-        radial-gradient(circle at 49% 52%, transparent 0 35%, rgba(161, 178, 198, 0.16) 35.2% 35.8%, transparent 36% 52%, rgba(216, 165, 66, 0.10) 52.2% 52.7%, transparent 53% 69%, rgba(161, 178, 198, 0.11) 69.2% 69.7%, transparent 70%),
-        radial-gradient(circle at 48% 45%, rgba(255, 255, 255, 0.075), transparent 34%),
-        linear-gradient(145deg, #202833 0%, #11171f 34%, #05070a 78%);
+        conic-gradient(from -24deg,
+          transparent 0deg 32deg,
+          rgba(255, 255, 255, 0.030) 32deg 37deg,
+          transparent 37deg 69deg,
+          rgba(195, 148, 61, 0.044) 69deg 75deg,
+          transparent 75deg 137deg,
+          rgba(104, 181, 255, 0.030) 137deg 141deg,
+          transparent 141deg 226deg,
+          rgba(255, 255, 255, 0.020) 226deg 231deg,
+          transparent 231deg 360deg),
+        repeating-conic-gradient(from 9deg, rgba(255, 255, 255, 0.009) 0deg 0.55deg, transparent 0.7deg 10deg),
+        radial-gradient(circle at 49% 52%, transparent 0 34.7%, rgba(145, 162, 186, 0.105) 35% 35.45%, transparent 35.8% 51.6%, rgba(195, 148, 61, 0.060) 51.9% 52.25%, transparent 52.6% 68.5%, rgba(145, 162, 186, 0.075) 68.9% 69.25%, transparent 69.7%),
+        radial-gradient(ellipse at 44% 38%, rgba(255, 255, 255, 0.050), transparent 28%),
+        radial-gradient(ellipse at 62% 72%, rgba(0, 0, 0, 0.34), transparent 36%),
+        linear-gradient(145deg, #18202a 0%, #0c1118 35%, #020304 82%);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.045),
-        inset 0 0 0 24px rgba(0, 0, 0, 0.20),
-        inset 42px 32px 90px rgba(255, 255, 255, 0.035),
-        inset -64px -64px 130px rgba(0, 0, 0, 0.74),
-        0 34px 110px rgba(0, 0, 0, 0.60);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.032),
+        inset 0 0 0 24px rgba(0, 0, 0, 0.28),
+        inset 38px 30px 86px rgba(255, 255, 255, 0.026),
+        inset -72px -72px 136px rgba(0, 0, 0, 0.82),
+        0 34px 118px rgba(0, 0, 0, 0.68);
     }
     #auth-shell::after {
       z-index: 0;
       inset: 0;
-      opacity: 0.78;
+      opacity: 0.86;
       background:
-        radial-gradient(760px 520px at 50% 54%, transparent 48%, rgba(0, 0, 0, 0.42) 100%),
-        linear-gradient(90deg, transparent calc(50% - 500px), rgba(255, 255, 255, 0.024) calc(50% - 498px), transparent calc(50% - 472px), transparent calc(50% + 472px), rgba(255, 255, 255, 0.022) calc(50% + 498px), transparent calc(50% + 500px));
+        radial-gradient(760px 520px at 50% 54%, transparent 45%, rgba(0, 0, 0, 0.52) 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18%, rgba(0, 0, 0, 0.20) 100%),
+        linear-gradient(90deg, transparent calc(50% - 500px), rgba(255, 255, 255, 0.016) calc(50% - 498px), transparent calc(50% - 472px), transparent calc(50% + 472px), rgba(255, 255, 255, 0.014) calc(50% + 498px), transparent calc(50% + 500px));
     }
     #auth-shell.is-opening::before {
-      opacity: 0.70;
+      opacity: 0.58;
       transform: translate(-50%, -50%) rotate(-12deg) scale(1.035);
     }
     #auth-shell.is-opening::after {
-      opacity: 0.92;
+      opacity: 0.88;
     }
     .auth-page {
       position: relative;
@@ -1569,26 +1573,28 @@
       border: 0;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 51% 51%, rgba(104, 181, 255, 0.12) 0 1px, transparent 2px),
-        radial-gradient(circle at 51% 49%, rgba(216, 165, 66, 0.10), transparent 18%),
-        radial-gradient(circle at 48% 43%, rgba(255, 255, 255, 0.10), transparent 26%),
-        radial-gradient(circle at 50% 52%, transparent 0 27%, rgba(161, 178, 198, 0.20) 27.2% 28.1%, transparent 28.4% 45%, rgba(216, 165, 66, 0.16) 45.2% 45.9%, transparent 46.2% 61%, rgba(161, 178, 198, 0.15) 61.2% 61.9%, transparent 62.2%),
-        conic-gradient(from 14deg,
-          rgba(255, 255, 255, 0.09) 0deg 15deg,
-          transparent 15deg 71deg,
-          rgba(216, 165, 66, 0.13) 71deg 82deg,
-          transparent 82deg 156deg,
-          rgba(104, 181, 255, 0.08) 156deg 166deg,
-          transparent 166deg 254deg,
-          rgba(255, 255, 255, 0.055) 254deg 264deg,
-          transparent 264deg 360deg),
-        linear-gradient(145deg, var(--vault-800) 0%, var(--vault-900) 42%, var(--vault-black) 100%);
+        radial-gradient(circle at 51% 51%, rgba(104, 181, 255, 0.055) 0 1px, transparent 2px),
+        radial-gradient(circle at 52% 49%, rgba(195, 148, 61, 0.050), transparent 17%),
+        radial-gradient(ellipse at 45% 38%, rgba(255, 255, 255, 0.060), transparent 27%),
+        radial-gradient(circle at 50% 52%, transparent 0 26.7%, rgba(145, 162, 186, 0.130) 27.1% 27.9%, transparent 28.3% 44.5%, rgba(195, 148, 61, 0.090) 45% 45.55%, transparent 46.1% 60.4%, rgba(145, 162, 186, 0.095) 61% 61.55%, transparent 62.1%),
+        repeating-conic-gradient(from 17deg, rgba(255, 255, 255, 0.012) 0deg 0.45deg, transparent 0.65deg 8.5deg),
+        conic-gradient(from 19deg,
+          transparent 0deg 43deg,
+          rgba(255, 255, 255, 0.022) 43deg 47deg,
+          transparent 47deg 92deg,
+          rgba(195, 148, 61, 0.038) 92deg 97deg,
+          transparent 97deg 171deg,
+          rgba(104, 181, 255, 0.026) 171deg 175deg,
+          transparent 175deg 271deg,
+          rgba(255, 255, 255, 0.016) 271deg 276deg,
+          transparent 276deg 360deg),
+        linear-gradient(145deg, var(--vault-800) 0%, var(--vault-900) 44%, var(--vault-black) 100%);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.050),
-        inset 0 0 0 18px rgba(0, 0, 0, 0.20),
-        inset 34px 28px 82px rgba(255, 255, 255, 0.040),
-        inset -54px -58px 120px rgba(0, 0, 0, 0.78),
-        0 32px 90px rgba(0, 0, 0, 0.52);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.038),
+        inset 0 0 0 18px rgba(0, 0, 0, 0.28),
+        inset 32px 26px 80px rgba(255, 255, 255, 0.028),
+        inset -62px -64px 124px rgba(0, 0, 0, 0.84),
+        0 34px 96px rgba(0, 0, 0, 0.62);
       transform-origin: center;
       transition: transform 1100ms cubic-bezier(.18, .92, .2, 1);
     }
@@ -1600,12 +1606,12 @@
       border: 1px solid rgba(255, 255, 255, 0.070);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 50% 50%, transparent 0 39%, rgba(0, 0, 0, 0.38) 39.4% 41.2%, transparent 41.8%),
-        conic-gradient(from -28deg, transparent 0deg 38deg, rgba(216, 165, 66, 0.10) 38deg 48deg, transparent 48deg 148deg, rgba(255, 255, 255, 0.045) 148deg 158deg, transparent 158deg 360deg);
+        radial-gradient(circle at 50% 50%, transparent 0 38.5%, rgba(0, 0, 0, 0.46) 39.1% 41.1%, transparent 41.8%),
+        conic-gradient(from -31deg, transparent 0deg 35deg, rgba(195, 148, 61, 0.050) 35deg 42deg, transparent 42deg 137deg, rgba(255, 255, 255, 0.026) 137deg 145deg, transparent 145deg 262deg, rgba(104, 181, 255, 0.018) 262deg 267deg, transparent 267deg 360deg);
       box-shadow:
-        inset 0 0 0 12px rgba(0, 0, 0, 0.16),
-        inset 0 24px 46px rgba(255, 255, 255, 0.026),
-        inset 0 -42px 58px rgba(0, 0, 0, 0.48);
+        inset 0 0 0 12px rgba(0, 0, 0, 0.22),
+        inset 0 24px 46px rgba(255, 255, 255, 0.018),
+        inset 0 -44px 62px rgba(0, 0, 0, 0.56);
       pointer-events: none;
     }
     .auth-card::after {
@@ -1615,13 +1621,14 @@
       inset: 33.5%;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 35%, rgba(255, 255, 255, 0.075), transparent 26%),
-        radial-gradient(circle, rgba(216, 165, 66, 0.075), transparent 64%),
-        linear-gradient(145deg, rgba(23, 29, 38, 0.72), rgba(2, 3, 4, 0.82));
+        radial-gradient(circle at 41% 35%, rgba(255, 255, 255, 0.055), transparent 27%),
+        radial-gradient(circle, rgba(195, 148, 61, 0.045), transparent 65%),
+        radial-gradient(circle at 54% 52%, rgba(47, 129, 247, 0.035), transparent 44%),
+        linear-gradient(145deg, rgba(17, 23, 31, 0.76), rgba(1, 2, 3, 0.88));
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.055),
-        inset 0 -22px 34px rgba(0, 0, 0, 0.52),
-        0 22px 42px rgba(0, 0, 0, 0.34);
+        inset 0 1px 0 rgba(255, 255, 255, 0.040),
+        inset 0 -24px 38px rgba(0, 0, 0, 0.58),
+        0 22px 42px rgba(0, 0, 0, 0.40);
       pointer-events: none;
     }
     .auth-vault-face {
@@ -1630,6 +1637,35 @@
       z-index: 1;
       pointer-events: none;
     }
+    .auth-vault-face::before,
+    .auth-vault-face::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .auth-vault-face::before {
+      opacity: 0.48;
+      background:
+        linear-gradient(101deg, transparent 0 27%, rgba(255, 255, 255, 0.026) 27.2% 27.45%, transparent 27.8% 100%),
+        linear-gradient(76deg, transparent 0 62%, rgba(195, 148, 61, 0.024) 62.1% 62.36%, transparent 62.75% 100%),
+        radial-gradient(circle at 23% 50%, rgba(255, 255, 255, 0.030) 0 0.7px, transparent 1.5px),
+        radial-gradient(circle at 72% 25%, rgba(255, 255, 255, 0.026) 0 0.65px, transparent 1.45px),
+        radial-gradient(circle at 61% 83%, rgba(145, 162, 186, 0.025) 0 0.75px, transparent 1.6px);
+      background-size: auto, auto, 17px 13px, 23px 19px, 29px 21px;
+      mask-image: radial-gradient(circle, black 0 67%, transparent 82%);
+      -webkit-mask-image: radial-gradient(circle, black 0 67%, transparent 82%);
+    }
+    .auth-vault-face::after {
+      opacity: 0.52;
+      background:
+        radial-gradient(ellipse at 42% 36%, rgba(255, 255, 255, 0.028), transparent 22%),
+        radial-gradient(ellipse at 67% 64%, rgba(0, 0, 0, 0.26), transparent 30%),
+        linear-gradient(172deg, transparent 0 45%, rgba(0, 0, 0, 0.18) 45.2% 46.8%, transparent 47.2% 100%);
+      mask-image: radial-gradient(circle, transparent 0 19%, black 25% 70%, transparent 82%);
+      -webkit-mask-image: radial-gradient(circle, transparent 0 19%, black 25% 70%, transparent 82%);
+    }
     .auth-vault-ring {
       position: absolute;
       border-radius: 50%;
@@ -1637,16 +1673,16 @@
     }
     .auth-vault-ring-outer {
       inset: 4.4%;
-      border: 1px solid rgba(216, 165, 66, 0.14);
+      border: 1px solid rgba(195, 148, 61, 0.095);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.025),
-        0 0 24px rgba(216, 165, 66, 0.06);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+        0 0 22px rgba(195, 148, 61, 0.035);
     }
     .auth-vault-ring-inner {
-      inset: 22%;
-      border: 1px solid rgba(104, 181, 255, 0.13);
-      transform: translate(-1.2%, 1%) rotate(5deg);
-      box-shadow: 0 0 26px rgba(47, 129, 247, 0.06);
+      inset: 21.8% 22.4% 22.2% 21.7%;
+      border: 1px solid rgba(104, 181, 255, 0.088);
+      transform: translate(-1.4%, 1.2%) rotate(5deg);
+      box-shadow: 0 0 24px rgba(47, 129, 247, 0.036);
     }
     .auth-vault-bolt {
       position: absolute;
@@ -1654,39 +1690,41 @@
       aspect-ratio: 1;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.42), transparent 26%),
-        linear-gradient(145deg, #374353, #080b10 68%);
+        radial-gradient(circle at 32% 25%, rgba(255, 255, 255, 0.32), transparent 24%),
+        radial-gradient(circle at 62% 68%, rgba(0, 0, 0, 0.46), transparent 42%),
+        linear-gradient(145deg, #2a3545, #05070b 70%);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-        0 1px 0 rgba(255, 255, 255, 0.06),
-        0 8px 14px rgba(0, 0, 0, 0.34);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+        0 1px 0 rgba(255, 255, 255, 0.040),
+        0 8px 14px rgba(0, 0, 0, 0.42);
     }
-    .auth-vault-bolt-one { top: 8.6%; left: 49%; }
-    .auth-vault-bolt-two { top: 18.4%; right: 24.6%; }
-    .auth-vault-bolt-three { top: 43.8%; right: 10.2%; }
-    .auth-vault-bolt-four { right: 20.8%; bottom: 22%; }
-    .auth-vault-bolt-five { left: 50.8%; bottom: 10%; }
-    .auth-vault-bolt-six { left: 21.4%; bottom: 20.2%; }
-    .auth-vault-bolt-seven { left: 9.8%; top: 46.2%; }
-    .auth-vault-bolt-eight { left: 23.6%; top: 17.2%; }
+    .auth-vault-bolt-one { top: 8.4%; left: 48.7%; transform: scale(0.92); }
+    .auth-vault-bolt-two { top: 18.9%; right: 24.1%; transform: scale(1.08); }
+    .auth-vault-bolt-three { top: 43.2%; right: 9.8%; transform: scale(0.86); }
+    .auth-vault-bolt-four { right: 20.2%; bottom: 22.8%; transform: scale(1.03); }
+    .auth-vault-bolt-five { left: 51.2%; bottom: 9.7%; transform: scale(0.94); }
+    .auth-vault-bolt-six { left: 20.9%; bottom: 19.6%; transform: scale(1.1); }
+    .auth-vault-bolt-seven { left: 9.5%; top: 46.8%; transform: scale(0.9); }
+    .auth-vault-bolt-eight { left: 23.1%; top: 16.8%; transform: scale(1.02); }
     .auth-vault-wheel {
       position: absolute;
       left: 50%;
       top: 50%;
       width: clamp(10rem, 31%, 15rem);
       aspect-ratio: 1;
-      border: 1px solid rgba(216, 165, 66, 0.22);
+      border: 1px solid rgba(195, 148, 61, 0.16);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 42% 35%, rgba(255, 255, 255, 0.14), transparent 24%),
+        radial-gradient(circle at 41% 34%, rgba(255, 255, 255, 0.092), transparent 24%),
         radial-gradient(circle, var(--vault-800) 0 27%, transparent 28%),
-        radial-gradient(circle, transparent 0 58%, rgba(216, 165, 66, 0.12) 59% 60%, transparent 61%),
-        linear-gradient(145deg, #1c2430, #07090d 76%);
+        radial-gradient(circle, transparent 0 57%, rgba(195, 148, 61, 0.070) 58.3% 59.2%, transparent 60.3%),
+        repeating-conic-gradient(from 6deg, rgba(255, 255, 255, 0.014) 0deg 0.7deg, transparent 0.9deg 18deg),
+        linear-gradient(145deg, #151d28, #05070a 78%);
       box-shadow:
-        inset 0 0 0 10px rgba(0, 0, 0, 0.22),
-        inset 0 18px 30px rgba(255, 255, 255, 0.030),
-        inset 0 -28px 42px rgba(0, 0, 0, 0.54),
-        0 20px 42px rgba(0, 0, 0, 0.42);
+        inset 0 0 0 10px rgba(0, 0, 0, 0.30),
+        inset 0 18px 30px rgba(255, 255, 255, 0.022),
+        inset 0 -30px 44px rgba(0, 0, 0, 0.60),
+        0 20px 42px rgba(0, 0, 0, 0.48);
       transform: translate(-50%, -50%) rotate(-8deg);
       transform-origin: center;
       transition: transform 1600ms cubic-bezier(.18, .92, .2, 1), border-color 900ms ease, box-shadow 900ms ease;
@@ -1699,42 +1737,43 @@
       height: clamp(0.42rem, 1.1vmin, 0.68rem);
       border-radius: 999px;
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.015)),
-        linear-gradient(90deg, #384557, #111821);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.010)),
+        linear-gradient(90deg, #2e3a4b, #0c121a);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.10),
-        inset 0 -6px 8px rgba(0, 0, 0, 0.36),
-        0 8px 16px rgba(0, 0, 0, 0.30);
+        inset 0 1px 0 rgba(255, 255, 255, 0.070),
+        inset 0 -6px 8px rgba(0, 0, 0, 0.42),
+        0 8px 16px rgba(0, 0, 0, 0.34);
       transform-origin: 0 50%;
     }
-    .auth-vault-spoke-a { transform: rotate(2deg); }
-    .auth-vault-spoke-b { transform: rotate(88deg); }
-    .auth-vault-spoke-c { transform: rotate(176deg); }
-    .auth-vault-spoke-d { transform: rotate(266deg); }
+    .auth-vault-spoke-a { width: 42%; transform: rotate(-3deg); }
+    .auth-vault-spoke-b { width: 44%; transform: rotate(91deg); }
+    .auth-vault-spoke-c { width: 41%; transform: rotate(181deg); }
+    .auth-vault-spoke-d { width: 43.5%; transform: rotate(269deg); }
     .auth-vault-hub {
       position: absolute;
       inset: 34%;
-      border: 1px solid rgba(216, 165, 66, 0.24);
+      border: 1px solid rgba(195, 148, 61, 0.17);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 38% 32%, rgba(255, 255, 255, 0.22), transparent 30%),
-        linear-gradient(145deg, #313b49, #080b10 72%);
+        radial-gradient(circle at 38% 31%, rgba(255, 255, 255, 0.16), transparent 30%),
+        linear-gradient(145deg, #26313f, #05070a 74%);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.16),
-        inset 0 -12px 20px rgba(0, 0, 0, 0.45),
-        0 12px 28px rgba(0, 0, 0, 0.34);
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        inset 0 -13px 22px rgba(0, 0, 0, 0.52),
+        0 12px 28px rgba(0, 0, 0, 0.42);
     }
     .auth-card.is-opening {
       transform: translateY(-3px) scale(0.992);
     }
     .auth-card.is-opening .auth-vault-wheel {
-      border-color: rgba(241, 207, 122, 0.48);
+      border-color: rgba(230, 195, 107, 0.36);
       box-shadow:
-        inset 0 0 0 10px rgba(0, 0, 0, 0.18),
-        inset 0 18px 30px rgba(255, 255, 255, 0.045),
-        inset 0 -28px 42px rgba(0, 0, 0, 0.46),
-        0 20px 42px rgba(0, 0, 0, 0.34),
-        0 0 54px rgba(216, 165, 66, 0.18);
+        inset 0 0 0 10px rgba(0, 0, 0, 0.24),
+        inset 0 18px 30px rgba(255, 255, 255, 0.034),
+        inset 0 -28px 42px rgba(0, 0, 0, 0.52),
+        0 20px 42px rgba(0, 0, 0, 0.38),
+        0 0 38px rgba(195, 148, 61, 0.10),
+        0 0 42px rgba(47, 129, 247, 0.055);
       transform: translate(-50%, -50%) rotate(-38deg) scale(1.025);
     }
     .auth-card > * {
@@ -1770,28 +1809,41 @@
       align-items: stretch;
       width: min(35.5rem, calc(100vw - 2rem));
       padding: 0.55rem;
-      border: 1px solid rgba(216, 165, 66, 0.24);
-      border-radius: 18px;
+      border: 1px solid rgba(195, 148, 61, 0.18);
+      border-radius: 16px;
       transform: translate(-50%, -50%);
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.064), rgba(255, 255, 255, 0.010) 42%, rgba(0, 0, 0, 0.46)),
-        linear-gradient(90deg, rgba(216, 165, 66, 0.13), rgba(104, 181, 255, 0.075) 52%, rgba(216, 165, 66, 0.095)),
-        rgba(3, 5, 7, 0.86);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.006) 44%, rgba(0, 0, 0, 0.56)),
+        linear-gradient(90deg, rgba(195, 148, 61, 0.075), rgba(104, 181, 255, 0.045) 52%, rgba(195, 148, 61, 0.055)),
+        rgba(1, 3, 5, 0.92);
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.075),
-        inset 0 20px 30px rgba(0, 0, 0, 0.52),
-        inset 0 -16px 24px rgba(0, 0, 0, 0.54),
-        0 18px 36px rgba(0, 0, 0, 0.34),
-        0 0 34px rgba(216, 165, 66, 0.055);
+        inset 0 1px 0 rgba(255, 255, 255, 0.052),
+        inset 0 18px 28px rgba(0, 0, 0, 0.60),
+        inset 0 -18px 28px rgba(0, 0, 0, 0.62),
+        0 10px 0 rgba(0, 0, 0, 0.20),
+        0 18px 38px rgba(0, 0, 0, 0.42),
+        0 0 22px rgba(195, 148, 61, 0.032);
     }
     .auth-form::before {
       content: "";
       position: absolute;
       inset: 1px;
       z-index: 0;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.055);
-      opacity: 0.82;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.036);
+      opacity: 0.74;
+      pointer-events: none;
+    }
+    .auth-form::after {
+      content: "";
+      position: absolute;
+      left: 0.8rem;
+      right: 0.8rem;
+      bottom: 0.35rem;
+      z-index: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(195, 148, 61, 0.22), rgba(104, 181, 255, 0.12), transparent);
+      opacity: 0.58;
       pointer-events: none;
     }
     .auth-form > * {
@@ -1810,10 +1862,10 @@
       min-width: 0;
       min-height: 50px;
       background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(255, 255, 255, 0.018)),
-        rgba(1, 4, 9, 0.84);
-      border: 1px solid rgba(104, 181, 255, 0.24);
-      border-radius: 12px;
+        linear-gradient(180deg, rgba(0, 0, 0, 0.40), rgba(255, 255, 255, 0.010)),
+        rgba(0, 2, 5, 0.90);
+      border: 1px solid rgba(104, 181, 255, 0.19);
+      border-radius: 10px;
       color: var(--secure-led-bright);
       padding: 0.86rem 1rem;
       caret-color: var(--secure-led-bright);
@@ -1821,17 +1873,18 @@
       font-size: 1rem;
       letter-spacing: 0.045em;
       box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.040),
-        inset 0 12px 20px rgba(0, 0, 0, 0.42);
+        inset 0 1px 0 rgba(255, 255, 255, 0.028),
+        inset 0 14px 22px rgba(0, 0, 0, 0.52),
+        inset 0 -1px 0 rgba(104, 181, 255, 0.050);
       transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .auth-input:focus {
       outline: none;
       border-color: rgba(104, 181, 255, 0.82);
       box-shadow:
-        0 0 0 3px rgba(47, 129, 247, 0.20),
-        inset 0 12px 22px rgba(0, 0, 0, 0.36),
-        inset 0 0 22px rgba(47, 129, 247, 0.12);
+        0 0 0 3px rgba(47, 129, 247, 0.18),
+        inset 0 13px 24px rgba(0, 0, 0, 0.42),
+        inset 0 0 22px rgba(47, 129, 247, 0.10);
     }
     .auth-input::placeholder {
       color: var(--text-dim);
@@ -1842,12 +1895,12 @@
       position: relative;
       isolation: isolate;
       overflow: hidden;
-      border: 1px solid rgba(241, 207, 122, 0.46);
-      border-radius: 12px;
+      border: 1px solid rgba(230, 195, 107, 0.34);
+      border-radius: 10px;
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.040) 44%, rgba(0, 0, 0, 0.22)),
-        linear-gradient(135deg, #4a3715 0%, #1f1709 52%, #090703 100%);
-      color: #fff2ca;
+        linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.025) 45%, rgba(0, 0, 0, 0.30)),
+        linear-gradient(135deg, #33250d 0%, #171006 52%, #070502 100%);
+      color: #f3dfad;
       padding: 0 1.55rem;
       min-height: 50px;
       font-family: 'Inter', sans-serif;
@@ -1862,9 +1915,9 @@
       gap: 0.62rem;
       text-shadow: 0 1px 0 rgba(0, 0, 0, 0.52);
       box-shadow:
-        0 12px 24px rgba(0, 0, 0, 0.36),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        inset 0 -12px 20px rgba(0, 0, 0, 0.26);
+        0 12px 24px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.34);
       transition: border-color 220ms ease, box-shadow 240ms ease, color 220ms ease, transform 160ms ease;
     }
     .auth-button::before {
@@ -1872,18 +1925,18 @@
       position: absolute;
       inset: 1px;
       z-index: -1;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.075);
-      opacity: 0.72;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.052);
+      opacity: 0.62;
       transition: opacity 220ms ease;
     }
     .auth-button:not(:disabled):hover {
       border-color: rgba(241, 207, 122, 0.84);
       color: #ffffff;
       box-shadow:
-        0 14px 30px rgba(216, 165, 66, 0.20),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        inset 0 -12px 20px rgba(0, 0, 0, 0.20);
+        0 14px 30px rgba(195, 148, 61, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.17),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.26);
       transform: translateY(-1px);
     }
     .auth-button:not(:disabled):hover::before {
@@ -1943,9 +1996,9 @@
       color: #ffffff;
       cursor: wait;
       box-shadow:
-        0 14px 30px rgba(216, 165, 66, 0.20),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22),
-        inset 0 -12px 20px rgba(0, 0, 0, 0.20);
+        0 14px 30px rgba(195, 148, 61, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.17),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.26);
     }
     .auth-button.is-unlocking .lock-shackle {
       transform: translateY(-2.1px) scaleY(1.18);

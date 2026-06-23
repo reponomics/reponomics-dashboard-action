@@ -23,7 +23,6 @@ const exportManifestPayload = await readJsonAsset(
     const demoUnlockKey = document.getElementById('demo-unlock-key');
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
-    const authThemeToggle = document.getElementById('auth-theme-toggle');
     const exportButton = document.getElementById('export-button');
     const exportHashButton = document.getElementById('export-hash-button');
     const exportStatus = document.getElementById('export-status');
@@ -298,11 +297,6 @@ const exportManifestPayload = await readJsonAsset(
       } else {
         dashboardKeyInput.focus();
       }
-    }
-
-    if (authThemeToggle) {
-      authThemeToggle.addEventListener('click', app.toggleTheme);
-      app.applyTheme(app.preferredTheme(), false);
     }
 
     async function unlockWithCurrentInput() {

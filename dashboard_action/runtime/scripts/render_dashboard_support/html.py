@@ -744,43 +744,30 @@ def build_encrypted_html(
                 <h1 class="brand">reponomics<span class="accent">.</span></h1>
                 <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
               </div>
-              <button
-                class="auth-theme-toggle theme-toggle"
-                id="auth-theme-toggle"
-                type="button"
-                aria-label="Toggle light/dark theme"
-                aria-pressed="false"
-                title="Toggle theme"
-              >
-                <span class="theme-icon" aria-hidden="true">◐</span>
-                <span class="theme-label">Theme</span>
-              </button>
             </div>
           </div>
         </div>
 
-        <div class="card auth-card auth-access-console" id="unlock-card">
-          <div class="auth-card-heading">
-            <span class="auth-card-icon" aria-hidden="true">
-              <span class="tick tl"></span>
-              <span class="tick tr"></span>
-              <span class="tick bl"></span>
-              <span class="tick br"></span>
-              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                <path d="M11 16a1 1 0 1 0 2 0 1 1 0 0 0-2 0"></path>
-                <path d="M8 11V7a4 4 0 1 1 8 0v4"></path>
-                <path d="M5 11h11a2 2 0 0 1 2 2v3"></path>
-                <path d="M15 19l2 2 4-4"></path>
-                <path d="M5 11a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h6"></path>
-              </svg>
+        <div class="auth-card auth-vault-door" id="unlock-card">
+          <div class="auth-vault-face" aria-hidden="true">
+            <span class="auth-vault-ring auth-vault-ring-outer"></span>
+            <span class="auth-vault-ring auth-vault-ring-inner"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-one"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-two"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-three"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-four"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-five"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-six"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-seven"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-eight"></span>
+            <span class="auth-vault-wheel">
+              <span class="auth-vault-spoke auth-vault-spoke-a"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-b"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-c"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-d"></span>
+              <span class="auth-vault-hub"></span>
             </span>
-            <div class="auth-card-copy">
-              <h2 class="auth-card-title">Secure Dashboard</h2>
-              <p class="auth-card-sub">
-                Enter your dashboard key below.
-              </p>
-	            </div>
-	          </div>
+          </div>
 
 {demo_unlock_panel}
 
@@ -802,7 +789,7 @@ def build_encrypted_html(
                 type="password"
                 name="dashboard-key"
                 autocomplete="current-password"
-                placeholder="Enter dashboard key"
+                placeholder="Dashboard key"
                 aria-label="Dashboard key"
               >
             </div>
@@ -816,32 +803,17 @@ def build_encrypted_html(
                 <path class="lock-hairline" d="M7.6 14.2h8.8"></path>
                 <path class="lock-check" d="M9.4 15.6l1.8 1.8 3.4-3.4"></path>
               </svg>
-              <span class="btn-label-default">Locked</span>
+              <span class="btn-label-default">Unlock</span>
               <span class="btn-label-success">Unlocked</span>
             </button>
           </form>
 
           <div class="auth-status" id="unlock-status" aria-live="polite"></div>
 
-          <div class="auth-meta">
-            <span class="meta-item"><span class="glyph"></span>AES-GCM &middot; PBKDF2-SHA256 &middot; {PBKDF2_ITERATIONS:,} iterations</span>
-            <span class="meta-item"><span class="glyph"></span>Client-side decryption</span>
-          </div>
-
           <div class="auth-help-row">
             <a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">Problems unlocking your dashboard? Click here</a>
           </div>
         </div>
-
-        <footer class="auth-footer">
-          <div class="footer-line">
-            <span>Built with</span>
-            <a class="brand-name" href="https://github.com/reponomics">Reponomics</a>
-            <span class="dot">&middot;</span>
-            <span>self-hosted, no trackers, no cost</span>
-          </div>
-          <div class="footer-subline">Made for indie hackers shipping across many repos</div>
-        </footer>
       </div>
     </div>
   </div>

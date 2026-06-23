@@ -741,7 +741,6 @@ def build_encrypted_html(
           <div class="hero-copy auth-hero">
             <div class="auth-hero-head">
               <div class="brand-lockup">
-                <div class="brand-eyebrow auth-brand-line auth-brand-line-own">Your</div>
                 <h1 class="brand">reponomics<span class="accent">.</span></h1>
                 <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
               </div>

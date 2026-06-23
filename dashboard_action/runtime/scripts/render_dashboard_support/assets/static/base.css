@@ -1518,6 +1518,7 @@
       font-size: 4.35rem;
       line-height: 0.9;
       letter-spacing: 0;
+      margin-left: 10px;
       text-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
     }
     .auth-hero .auth-brand-line {
@@ -1530,17 +1531,11 @@
       text-transform: uppercase;
       text-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
     }
-    .auth-hero .auth-brand-line-own {
-      font-size: 4.15rem;
-      font-weight: 900;
-      letter-spacing: 0;
-      line-height: 0.45;
-    }
     .auth-hero .auth-brand-line-dashboard {
       color: var(--text-muted);
       font-size: 3.85rem;
-      font-weight: 820;
-      letter-spacing: 0;
+      font-weight: 500;
+      letter-spacing: 0.04em;
     }
     .auth-hero .sub {
       color: var(--text-muted);

@@ -737,17 +737,6 @@ def build_encrypted_html(
   <div id="auth-shell">
     <div class="auth-page">
       <div class="auth-wrap">
-        <div class="hero">
-          <div class="hero-copy auth-hero">
-            <div class="auth-hero-head">
-              <div class="brand-lockup">
-                <h1 class="brand">reponomics<span class="accent">.</span></h1>
-                <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="auth-card auth-vault-door" id="unlock-card">
           <div class="auth-vault-face" aria-hidden="true">
             <span class="auth-vault-ring auth-vault-ring-outer"></span>
@@ -767,6 +756,17 @@ def build_encrypted_html(
               <span class="auth-vault-spoke auth-vault-spoke-d"></span>
               <span class="auth-vault-hub"></span>
             </span>
+          </div>
+
+          <div class="hero">
+            <div class="hero-copy auth-hero">
+              <div class="auth-hero-head">
+                <div class="brand-lockup">
+                  <h1 class="brand">reponomics<span class="accent">.</span></h1>
+                  <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
+                </div>
+              </div>
+            </div>
           </div>
 
 {demo_unlock_panel}

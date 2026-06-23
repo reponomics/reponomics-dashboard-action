@@ -2737,7 +2737,8 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert 'class="btn-label-success">Unlocked</span>' in dashboard
 
     assert "color-scheme: dark;" in base_css
-    assert "width: min(760px, calc(100vw - 2rem), 82svh);" in base_css
+    assert "width: 760px;" in base_css
+    assert "max-width: none;" in base_css
     assert "min-height: 100svh;" in base_css
     assert ".auth-data-line.primary" not in base_css
     assert "@keyframes authDataFloat" not in base_css

@@ -759,7 +759,7 @@ def build_encrypted_html(
           </div>
         </div>
 
-        <div class="card auth-card auth-vault-plate" id="unlock-card">
+        <div class="card auth-card auth-access-console" id="unlock-card">
           <div class="auth-card-heading">
             <span class="auth-card-icon" aria-hidden="true">
               <span class="tick tl"></span>
@@ -775,7 +775,7 @@ def build_encrypted_html(
               </svg>
             </span>
             <div class="auth-card-copy">
-              <h2 class="auth-card-title">Sealed Dashboard</h2>
+              <h2 class="auth-card-title">Secure Dashboard</h2>
               <p class="auth-card-sub">
                 Enter your dashboard key below.
               </p>

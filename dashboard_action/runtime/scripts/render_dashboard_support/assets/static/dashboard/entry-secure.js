@@ -76,14 +76,19 @@ const exportManifestPayload = await readJsonAsset(
     }
 
     async function playSuccessfulUnlock() {
+      authShell.classList.add('is-opening');
+      unlockCard.classList.add('is-opening');
       unlockButton.classList.remove('is-unlocking');
       unlockButton.classList.add('is-unlocked');
       unlockButton.setAttribute('aria-busy', 'true');
+      dashboardKeyInput.blur();
       setUnlockStatus('Dashboard unlocked.', 'success');
       await wait(UNLOCK_SUCCESS_DELAY_MS);
     }
 
     function playRejectedUnlock() {
+      authShell.classList.remove('is-opening');
+      unlockCard.classList.remove('is-opening');
       unlockCard.classList.remove('is-rejected');
       unlockButton.classList.remove('is-rejected');
       void unlockCard.offsetWidth;
@@ -97,7 +102,8 @@ const exportManifestPayload = await readJsonAsset(
 
     function resetUnlockButtonState() {
       unlockButton.classList.remove('is-unlocking', 'is-unlocked', 'is-rejected');
-      unlockCard.classList.remove('is-rejected');
+      unlockCard.classList.remove('is-rejected', 'is-opening');
+      authShell.classList.remove('is-opening');
       unlockButton.removeAttribute('aria-busy');
     }
 

@@ -2751,7 +2751,7 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert "@keyframes authRejectShudder" in base_css
 
     runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
-    assert "const UNLOCK_SUCCESS_DELAY_MS = 2400;" in runtime
+    assert "const UNLOCK_SUCCESS_DELAY_MS = 3400;" in runtime
     assert "const AUTH_REVEAL_FADE_MS = 680;" in runtime
     assert "await playSuccessfulUnlock();" in runtime
     assert "authShell.classList.add('is-revealing');" in runtime

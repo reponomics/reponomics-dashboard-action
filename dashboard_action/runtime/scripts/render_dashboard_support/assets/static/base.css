@@ -1739,6 +1739,7 @@
       aspect-ratio: 1;
       border: 1px solid rgba(195, 148, 61, 0.16);
       border-radius: 50%;
+      isolation: isolate;
       background:
         radial-gradient(circle at 41% 34%, rgba(255, 255, 255, 0.092), transparent 24%),
         radial-gradient(circle, var(--vault-800) 0 27%, transparent 28%),
@@ -1753,9 +1754,35 @@
       transform: translate(-50%, -50%) rotate(-8deg);
       transform-origin: center;
       transition:
-        transform 2200ms cubic-bezier(.55, .02, .18, 1),
-        border-color 1100ms ease,
-        box-shadow 1100ms ease;
+        transform 3400ms cubic-bezier(.62, .03, .2, 1),
+        border-color 1500ms ease,
+        box-shadow 1500ms ease;
+    }
+    .auth-vault-wheel::before {
+      content: "";
+      position: absolute;
+      inset: -17%;
+      z-index: -1;
+      border-radius: 50%;
+      opacity: 0;
+      background:
+        radial-gradient(circle, transparent 0 48%, rgba(230, 195, 107, 0.42) 57%, rgba(195, 148, 61, 0.18) 63%, transparent 72%),
+        conic-gradient(from 12deg, transparent 0deg 56deg, rgba(230, 195, 107, 0.22) 56deg 94deg, transparent 94deg 190deg, rgba(195, 148, 61, 0.14) 190deg 232deg, transparent 232deg 360deg);
+      filter: blur(12px);
+      transform: scale(0.86);
+      transition:
+        opacity 2400ms ease-in,
+        transform 3400ms cubic-bezier(.62, .03, .2, 1);
+    }
+    .auth-vault-wheel::after {
+      content: "";
+      position: absolute;
+      inset: -3.5%;
+      border-radius: 50%;
+      opacity: 0;
+      background: radial-gradient(circle, transparent 0 56%, rgba(230, 195, 107, 0.38) 58%, rgba(230, 195, 107, 0.14) 61%, transparent 65%);
+      filter: blur(4px);
+      transition: opacity 2200ms ease-in;
     }
     .auth-vault-spoke {
       position: absolute;
@@ -1808,15 +1835,22 @@
         transform 680ms cubic-bezier(.18, .92, .2, 1);
     }
     .auth-card.is-opening .auth-vault-wheel {
-      border-color: rgba(230, 195, 107, 0.36);
+      border-color: rgba(230, 195, 107, 0.44);
       box-shadow:
         inset 0 0 0 10px rgba(0, 0, 0, 0.24),
         inset 0 18px 30px rgba(255, 255, 255, 0.034),
         inset 0 -28px 42px rgba(0, 0, 0, 0.52),
         0 20px 42px rgba(0, 0, 0, 0.38),
-        0 0 38px rgba(195, 148, 61, 0.10),
+        0 0 48px rgba(195, 148, 61, 0.16),
         0 0 42px rgba(47, 129, 247, 0.055);
-      transform: translate(-50%, -50%) rotate(-58deg) scale(1.025);
+      transform: translate(-50%, -50%) rotate(-72deg) scale(1.025);
+    }
+    .auth-card.is-opening .auth-vault-wheel::before {
+      opacity: 0.58;
+      transform: scale(1);
+    }
+    .auth-card.is-opening .auth-vault-wheel::after {
+      opacity: 0.76;
     }
     .auth-card > * {
       z-index: 1;
@@ -2463,6 +2497,10 @@
       }
       .auth-card.is-opening .auth-vault-wheel {
         transform: translate(-50%, -50%) rotate(-8deg);
+      }
+      .auth-card.is-opening .auth-vault-wheel::before,
+      .auth-card.is-opening .auth-vault-wheel::after {
+        opacity: 0;
       }
       .auth-button.is-unlocked .lock-shackle,
       .auth-button.is-unlocked .lock-check {

@@ -1,13 +1,13 @@
 schema_version: 1
-template_version: 0.13.0
+template_version: 0.14.0
 action_repository: reponomics/reponomics-dashboard-action
 default_action_ref: v0
 compatible_action_major: 0
 accepted_action:
   repository: reponomics/reponomics-dashboard-action
-  version: 0.26.0
-  tag: v0.26.0
-  sha: 0513156ad31ca1a7eb1d134ff7c219d2821c9b9d
+  version: 0.27.0
+  tag: v0.27.0
+  sha: a5216e3c71de0dcbb733d9dfdd6652a675b4eb4a
   default_ref: v0
 minimum_compatible_template_version: 0.10.0
 protected_template_refs:

@@ -17,17 +17,20 @@ const exportManifestPayload = await readJsonAsset(
 
     const authShell = document.getElementById('auth-shell');
     const unlockForm = document.getElementById('unlock-form');
+    const unlockCard = document.getElementById('unlock-card');
     const dashboardKeyInput = document.getElementById('dashboard-key');
     const demoUnlockButton = document.getElementById('demo-unlock-button');
     const demoUnlockKey = document.getElementById('demo-unlock-key');
     const unlockButton = document.getElementById('unlock-button');
     const unlockStatus = document.getElementById('unlock-status');
-    const authThemeToggle = document.getElementById('auth-theme-toggle');
     const exportButton = document.getElementById('export-button');
     const exportHashButton = document.getElementById('export-hash-button');
     const exportStatus = document.getElementById('export-status');
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
+    const UNLOCK_SUCCESS_DELAY_MS = 3400;
+    const REDUCED_MOTION_UNLOCK_SUCCESS_DELAY_MS = 0;
+    const AUTH_REVEAL_FADE_MS = 680;
     let unlockedExportKey = null;
     let unlockDelayTimer = null;
 
@@ -65,6 +68,60 @@ const exportManifestPayload = await readJsonAsset(
       try {
         localStorage.removeItem(unlockAttemptStorageKey());
       } catch (_error) { /* ignore */ }
+    }
+
+    function wait(ms) {
+      return new Promise(function(resolve) {
+        setTimeout(resolve, ms);
+      });
+    }
+
+    function prefersReducedMotion() {
+      return Boolean(
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      );
+    }
+
+    function unlockSuccessDelayMs() {
+      return prefersReducedMotion()
+        ? REDUCED_MOTION_UNLOCK_SUCCESS_DELAY_MS
+        : UNLOCK_SUCCESS_DELAY_MS;
+    }
+
+    async function playSuccessfulUnlock() {
+      authShell.classList.add('is-opening');
+      unlockCard.classList.add('is-opening');
+      unlockButton.classList.remove('is-unlocking');
+      unlockButton.classList.add('is-unlocked');
+      unlockButton.setAttribute('aria-busy', 'true');
+      dashboardKeyInput.blur();
+      setUnlockStatus('Dashboard unlocked.', 'success');
+      const successDelayMs = unlockSuccessDelayMs();
+      if (successDelayMs > 0) {
+        await wait(successDelayMs);
+      }
+    }
+
+    function playRejectedUnlock() {
+      authShell.classList.remove('is-opening');
+      unlockCard.classList.remove('is-opening');
+      unlockCard.classList.remove('is-rejected');
+      unlockButton.classList.remove('is-rejected');
+      void unlockCard.offsetWidth;
+      unlockCard.classList.add('is-rejected');
+      unlockButton.classList.add('is-rejected');
+      setTimeout(function() {
+        unlockCard.classList.remove('is-rejected');
+        unlockButton.classList.remove('is-rejected');
+      }, 520);
+    }
+
+    function resetUnlockButtonState() {
+      unlockButton.classList.remove('is-unlocking', 'is-unlocked', 'is-rejected');
+      unlockCard.classList.remove('is-rejected', 'is-opening');
+      authShell.classList.remove('is-opening', 'is-revealing');
+      unlockButton.removeAttribute('aria-busy');
     }
 
     function startUnlockDelay(delayMs, prefix) {
@@ -260,12 +317,8 @@ const exportManifestPayload = await readJsonAsset(
       }
     }
 
-    if (authThemeToggle) {
-      authThemeToggle.addEventListener('click', app.toggleTheme);
-      app.applyTheme(app.preferredTheme(), false);
-    }
-
     async function unlockWithCurrentInput() {
+      resetUnlockButtonState();
       if (!dashboardKeyInput.value) {
         setUnlockStatus('Enter the dashboard key.', 'error');
         return;
@@ -283,10 +336,11 @@ const exportManifestPayload = await readJsonAsset(
       }
 
       unlockButton.disabled = true;
-      setUnlockStatus('Unlocking dashboard...', 'pending');
+      unlockButton.classList.add('is-unlocking');
+      setUnlockStatus('Checking lock...', 'pending');
 
       try {
-        const dashboardKey = dashboardKeyInput.value;
+        let dashboardKey = dashboardKeyInput.value;
         const payload = await decryptDashboardData(
           dashboardKey,
           encryptedDashboardData
@@ -297,18 +351,23 @@ const exportManifestPayload = await readJsonAsset(
           unlockedExportKey = null;
         }
         dashboardKeyInput.value = '';
-        authShell.style.display = 'none';
-        document.body.classList.remove('auth-locked');
-        document.body.removeAttribute('data-screen-label');
-        app.renderDashboard(payload);
-        enableExport();
         if (unlockDelayTimer) {
           clearTimeout(unlockDelayTimer);
           unlockDelayTimer = null;
         }
         resetUnlockAttemptState();
+        await playSuccessfulUnlock();
+        authShell.classList.add('is-revealing');
+        app.renderDashboard(payload);
+        enableExport();
+        document.body.classList.remove('auth-locked');
+        document.body.removeAttribute('data-screen-label');
+        await wait(AUTH_REVEAL_FADE_MS);
+        authShell.style.display = 'none';
         setUnlockStatus('', '');
       } catch (error) {
+        resetUnlockButtonState();
+        playRejectedUnlock();
         const failures = attemptState.failures + 1;
         const delayMs = nextUnlockDelayMs(failures);
         writeUnlockAttemptState({

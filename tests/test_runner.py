@@ -2703,26 +2703,73 @@ def test_publish_encrypted_unlock_shell_affordances(
     run.run_publish(config, restore_artifact=False)
 
     dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    base_css = _asset_text(config.pages_index_path, "base.css")
 
     assert '<body class="auth-locked" data-screen-label="Unlock - Encrypted Pages">' in dashboard
-    assert 'class="auth-theme-toggle theme-toggle"' in dashboard
-    assert 'id="auth-theme-toggle"' in dashboard
-    assert "right: calc(env(safe-area-inset-right, 0px) + 1rem);" in _asset_text(
-        config.pages_index_path, "base.css"
+    assert 'class="auth-theme-toggle theme-toggle"' not in dashboard
+    assert 'id="auth-theme-toggle"' not in dashboard
+    assert "authThemeToggle" not in _asset_text(
+        config.pages_index_path, "dashboard/entry-secure.js"
     )
+    assert 'class="auth-data-preview" aria-hidden="true"' not in dashboard
+    assert 'class="auth-data auth-data-left"' not in dashboard
+    assert 'class="auth-data auth-data-right"' not in dashboard
+    assert 'class="auth-data auth-data-lower"' not in dashboard
     assert "document.querySelectorAll('.theme-toggle')" in _asset_text(
         config.pages_index_path, "dashboard/theme.js"
     )
 
-    assert 'class="auth-card-icon"' in dashboard
+    assert 'class="auth-card auth-vault-door" id="unlock-card"' in dashboard
+    assert 'class="auth-vault-wheel"' in dashboard
+    assert 'class="auth-vault-hub"' in dashboard
+    assert 'class="auth-card-icon"' not in dashboard
     assert 'class="auth-mark"' not in dashboard
     assert "max-width: 52ch;" not in dashboard
-
-    assert '<a href="https://github.com/reponomics">Forgot your password?</a>' in dashboard
+    assert 'class="brand-eyebrow auth-brand-line auth-brand-line-own">Your</div>' not in dashboard
     assert (
-        '<a class="brand-name" href="https://github.com/reponomics">Reponomics</a>'
+        'class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>'
         in dashboard
     )
+    assert "Enter your dashboard key below." not in dashboard
+    assert 'class="tick tl"' not in dashboard
+    assert 'class="lock-shackle"' in dashboard
+    assert 'class="btn-label-default">Unlock</span>' in dashboard
+    assert 'class="btn-label-success">Unlocked</span>' in dashboard
+
+    assert "color-scheme: dark;" in base_css
+    assert "width: 760px;" in base_css
+    assert "max-width: none;" in base_css
+    assert "min-height: 100svh;" in base_css
+    assert ".auth-data-line.primary" not in base_css
+    assert "@keyframes authDataFloat" not in base_css
+    assert ".auth-vault-wheel" in base_css
+    assert ".auth-card.is-opening .auth-vault-wheel" in base_css
+    assert "animation: authDotPulse 2.4s ease-in-out infinite;" not in base_css
+    assert '[data-theme="light"] .auth-button' not in base_css
+    assert ".auth-button.is-unlocking .lock-shackle" in base_css
+    assert ".auth-button.is-unlocked .lock-shackle" in base_css
+    assert "@keyframes authRejectShudder" in base_css
+
+    runtime = _published_runtime_text(config.pages_index_path, encrypted=True)
+    assert "const UNLOCK_SUCCESS_DELAY_MS = 3400;" in runtime
+    assert "const REDUCED_MOTION_UNLOCK_SUCCESS_DELAY_MS = 0;" in runtime
+    assert "window.matchMedia('(prefers-reduced-motion: reduce)').matches" in runtime
+    assert "const successDelayMs = unlockSuccessDelayMs();" in runtime
+    assert "if (successDelayMs > 0)" in runtime
+    assert "const AUTH_REVEAL_FADE_MS = 680;" in runtime
+    assert "await playSuccessfulUnlock();" in runtime
+    assert "authShell.classList.add('is-revealing');" in runtime
+    assert "function playRejectedUnlock()" in runtime
+
+    assert "Encrypted Pages mode for private growth analytics." not in dashboard
+    assert "Client-side decryption" not in dashboard
+    assert "AES-GCM" not in dashboard
+    assert (
+        '<a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">'
+        + "Problems unlocking your dashboard? Click here</a>"
+        in dashboard
+    )
+    assert '<a class="brand-name" href="https://github.com/reponomics">Reponomics</a>' not in dashboard
 
 
 def test_publish_encrypted_unlock_failure_throttling_runtime(

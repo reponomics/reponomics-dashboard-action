@@ -737,51 +737,37 @@ def build_encrypted_html(
   <div id="auth-shell">
     <div class="auth-page">
       <div class="auth-wrap">
-        <div class="hero">
-          <div class="hero-copy auth-hero">
-            <div class="auth-hero-head">
-              <div class="brand-lockup">
-                <h1 class="brand">reponomics<span class="accent">.</span></h1>
-                <div class="brand-eyebrow">Dashboard</div>
-              </div>
-              <button
-                class="auth-theme-toggle theme-toggle"
-                id="auth-theme-toggle"
-                type="button"
-                aria-label="Toggle light/dark theme"
-                aria-pressed="false"
-                title="Toggle theme"
-              >
-                <span class="theme-icon" aria-hidden="true">◐</span>
-                <span class="theme-label">Theme</span>
-              </button>
-            </div>
-            <p class="sub">
-              Encrypted Pages mode for private growth analytics. The dashboard
-              data is encrypted with your key and decrypted locally &mdash;
-              nothing leaves your browser.
-            </p>
-          </div>
-        </div>
-
-        <div class="card auth-card" id="unlock-card">
-          <div class="auth-card-heading">
-            <span class="auth-card-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" width="22" height="22" focusable="false">
-                <g transform="rotate(45 16 16)">
-                  <rect x="6" y="6" width="20" height="20" rx="4.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
-                </g>
-                <path d="M9 19 L13 15 L17 18 L23 11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
+        <div class="auth-card auth-vault-door" id="unlock-card">
+          <div class="auth-vault-face" aria-hidden="true">
+            <span class="auth-vault-ring auth-vault-ring-outer"></span>
+            <span class="auth-vault-ring auth-vault-ring-inner"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-one"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-two"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-three"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-four"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-five"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-six"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-seven"></span>
+            <span class="auth-vault-bolt auth-vault-bolt-eight"></span>
+            <span class="auth-vault-wheel">
+              <span class="auth-vault-spoke auth-vault-spoke-a"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-b"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-c"></span>
+              <span class="auth-vault-spoke auth-vault-spoke-d"></span>
+              <span class="auth-vault-hub"></span>
             </span>
-            <div class="auth-card-copy">
-              <h2 class="auth-card-title">Unlock Dashboard</h2>
-              <p class="auth-card-sub">
-                Enter your dashboard key to decrypt the latest dashboard snapshot
-                in this browser.
-              </p>
-	            </div>
-	          </div>
+          </div>
+
+          <div class="hero">
+            <div class="hero-copy auth-hero">
+              <div class="auth-hero-head">
+                <div class="brand-lockup">
+                  <h1 class="brand">reponomics<span class="accent">.</span></h1>
+                  <div class="brand-eyebrow auth-brand-line auth-brand-line-dashboard">Dashboard</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
 {demo_unlock_panel}
 
@@ -803,34 +789,31 @@ def build_encrypted_html(
                 type="password"
                 name="dashboard-key"
                 autocomplete="current-password"
-                placeholder="Enter dashboard key"
+                placeholder="Dashboard key"
                 aria-label="Dashboard key"
               >
             </div>
-            <button class="auth-button" id="unlock-button" type="submit">Unlock</button>
+            <button class="auth-button" id="unlock-button" type="submit">
+              <svg class="lock-svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <g class="lock-shackle">
+                  <path d="M7.6 11V7.4a4.4 4.4 0 0 1 8.8 0V11"></path>
+                  <path class="lock-shackle-glint" d="M9.4 6.9a2.75 2.75 0 0 1 5.2 0"></path>
+                </g>
+                <rect class="lock-body" x="4.8" y="10.8" width="14.4" height="9.2" rx="2.4"></rect>
+                <path class="lock-hairline" d="M7.6 14.2h8.8"></path>
+                <path class="lock-check" d="M9.4 15.6l1.8 1.8 3.4-3.4"></path>
+              </svg>
+              <span class="btn-label-default">Unlock</span>
+              <span class="btn-label-success">Unlocked</span>
+            </button>
           </form>
 
           <div class="auth-status" id="unlock-status" aria-live="polite"></div>
 
-          <div class="auth-meta">
-            <span class="meta-item"><span class="glyph"></span>AES-GCM &middot; PBKDF2-SHA256 &middot; {PBKDF2_ITERATIONS:,} iterations</span>
-            <span class="meta-item"><span class="glyph"></span>Decryption is strictly client-side</span>
-          </div>
-
           <div class="auth-help-row">
-            <a href="https://github.com/reponomics">Forgot your password?</a>
+            <a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">Problems unlocking your dashboard? Click here</a>
           </div>
         </div>
-
-        <footer class="auth-footer">
-          <div class="footer-line">
-            <span>Built with</span>
-            <a class="brand-name" href="https://github.com/reponomics">Reponomics</a>
-            <span class="dot">&middot;</span>
-            <span>self-hosted, no trackers, no cost</span>
-          </div>
-          <div class="footer-subline">Made for indie hackers shipping across many repos</div>
-        </footer>
       </div>
     </div>
   </div>

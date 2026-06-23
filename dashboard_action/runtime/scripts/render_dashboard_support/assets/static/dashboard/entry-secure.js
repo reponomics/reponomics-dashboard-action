@@ -29,6 +29,7 @@ const exportManifestPayload = await readJsonAsset(
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
     const UNLOCK_SUCCESS_DELAY_MS = 3400;
+    const REDUCED_MOTION_UNLOCK_SUCCESS_DELAY_MS = 0;
     const AUTH_REVEAL_FADE_MS = 680;
     let unlockedExportKey = null;
     let unlockDelayTimer = null;
@@ -75,6 +76,19 @@ const exportManifestPayload = await readJsonAsset(
       });
     }
 
+    function prefersReducedMotion() {
+      return Boolean(
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      );
+    }
+
+    function unlockSuccessDelayMs() {
+      return prefersReducedMotion()
+        ? REDUCED_MOTION_UNLOCK_SUCCESS_DELAY_MS
+        : UNLOCK_SUCCESS_DELAY_MS;
+    }
+
     async function playSuccessfulUnlock() {
       authShell.classList.add('is-opening');
       unlockCard.classList.add('is-opening');
@@ -83,7 +97,10 @@ const exportManifestPayload = await readJsonAsset(
       unlockButton.setAttribute('aria-busy', 'true');
       dashboardKeyInput.blur();
       setUnlockStatus('Dashboard unlocked.', 'success');
-      await wait(UNLOCK_SUCCESS_DELAY_MS);
+      const successDelayMs = unlockSuccessDelayMs();
+      if (successDelayMs > 0) {
+        await wait(successDelayMs);
+      }
     }
 
     function playRejectedUnlock() {

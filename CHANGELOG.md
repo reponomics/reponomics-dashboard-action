@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.26.0...v0.27.0) (2026-06-23)
+
+
+### Features
+
+* unlock screen redesign ([#169](https://github.com/reponomics/reponomics-dashboard-action/issues/169)) ([557ff51](https://github.com/reponomics/reponomics-dashboard-action/commit/557ff51217bbc4da102050f305347fa2a19442b2))
+
 ## [0.26.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.25.1...v0.26.0) (2026-06-20)
 
 

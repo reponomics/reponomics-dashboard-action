@@ -350,7 +350,6 @@ const exportManifestPayload = await readJsonAsset(
         } catch (_error) {
           unlockedExportKey = null;
         }
-        dashboardKey = '';
         dashboardKeyInput.value = '';
         if (unlockDelayTimer) {
           clearTimeout(unlockDelayTimer);

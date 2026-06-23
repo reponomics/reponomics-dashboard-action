@@ -28,7 +28,8 @@ const exportManifestPayload = await readJsonAsset(
     const exportStatus = document.getElementById('export-status');
     const EXPORT_BUTTON_LABEL = '📄 Export to CSV';
     const EXPORT_BUTTON_WORKING_LABEL = 'Preparing…';
-    const UNLOCK_SUCCESS_DELAY_MS = 3000;
+    const UNLOCK_SUCCESS_DELAY_MS = 2400;
+    const AUTH_REVEAL_FADE_MS = 680;
     let unlockedExportKey = null;
     let unlockDelayTimer = null;
 
@@ -102,7 +103,7 @@ const exportManifestPayload = await readJsonAsset(
     function resetUnlockButtonState() {
       unlockButton.classList.remove('is-unlocking', 'is-unlocked', 'is-rejected');
       unlockCard.classList.remove('is-rejected', 'is-opening');
-      authShell.classList.remove('is-opening');
+      authShell.classList.remove('is-opening', 'is-revealing');
       unlockButton.removeAttribute('aria-busy');
     }
 
@@ -340,11 +341,13 @@ const exportManifestPayload = await readJsonAsset(
         }
         resetUnlockAttemptState();
         await playSuccessfulUnlock();
-        authShell.style.display = 'none';
-        document.body.classList.remove('auth-locked');
-        document.body.removeAttribute('data-screen-label');
+        authShell.classList.add('is-revealing');
         app.renderDashboard(payload);
         enableExport();
+        document.body.classList.remove('auth-locked');
+        document.body.removeAttribute('data-screen-label');
+        await wait(AUTH_REVEAL_FADE_MS);
+        authShell.style.display = 'none';
         setUnlockStatus('', '');
       } catch (error) {
         resetUnlockButtonState();

@@ -1428,7 +1428,7 @@
       position: fixed;
       left: 50%;
       top: 48%;
-      width: min(820px, 88vmin);
+      width: 820px;
       aspect-ratio: 1;
       border-radius: 50%;
       pointer-events: none;
@@ -1463,7 +1463,7 @@
     }
     #auth-shell::after {
       z-index: 0;
-      width: min(700px, 74vmin);
+      width: 700px;
       opacity: 0.20;
       background:
         linear-gradient(115deg, transparent 0 38%, var(--vault-gold-soft) 44%, rgba(240, 193, 90, 0.34) 49%, var(--vault-gold-soft) 54%, transparent 62%),
@@ -2206,11 +2206,9 @@
       }
       #auth-shell::before {
         top: 44%;
-        width: 34rem;
       }
       #auth-shell::after {
         top: 45%;
-        width: 28rem;
       }
       .auth-page {
         place-items: start center;
@@ -2222,21 +2220,6 @@
       .auth-hero .brand-lockup {
         gap: 0.25rem;
         margin-bottom: 0.75rem;
-      }
-      .auth-hero h1 {
-        font-size: 3rem;
-        line-height: 0.92;
-      }
-      .auth-hero .auth-brand-line {
-        font-size: 2.7rem;
-        line-height: 0.92;
-      }
-      .auth-hero .auth-brand-line-own {
-        font-size: 2.85rem;
-        line-height: 0.55;
-      }
-      .auth-hero .auth-brand-line-dashboard {
-        font-size: 2.55rem;
       }
       .auth-theme-toggle {
         top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
@@ -2338,18 +2321,6 @@
     @media (max-width: 480px) {
       .auth-page {
         padding-inline: 0.75rem;
-      }
-      .auth-hero h1 {
-        font-size: 2.38rem;
-      }
-      .auth-hero .auth-brand-line {
-        font-size: 2.1rem;
-      }
-      .auth-hero .auth-brand-line-own {
-        font-size: 2.24rem;
-      }
-      .auth-hero .auth-brand-line-dashboard {
-        font-size: 2rem;
       }
       .auth-card-heading {
         align-items: center;

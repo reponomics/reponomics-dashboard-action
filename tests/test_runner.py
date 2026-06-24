@@ -322,6 +322,7 @@ def _reset_collect_runtime_state() -> Generator[None, None, None]:
 
 
 def _stub_context_collectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
@@ -4295,6 +4296,99 @@ def test_collect_release_context_shapes_release_and_asset_rows(
     ]
 
 
+def test_collect_commit_history_shapes_api_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/commits?per_page=100&sha=main"
+        return [
+            {
+                "sha": "def456",
+                "parents": [{"sha": "abc123"}],
+                "author": {"login": "dev"},
+                "committer": {"login": "maintainer"},
+                "commit": {
+                    "message": "Fix parser edge case (#12)\n\nBody text",
+                    "author": {
+                        "name": "Dev Example",
+                        "email": "DEV@example.com",
+                        "date": "2026-06-02T08:00:00Z",
+                    },
+                    "committer": {"date": "2026-06-02T09:00:00Z"},
+                },
+            },
+            {
+                "sha": "abc123",
+                "parents": [],
+                "author": {"login": "dev"},
+                "committer": {"login": "dev"},
+                "commit": {
+                    "message": "Add parser",
+                    "author": {
+                        "name": "Dev Example",
+                        "email": "dev@example.com",
+                        "date": "2026-06-01T08:00:00Z",
+                    },
+                    "committer": {"date": "2026-06-01T09:00:00Z"},
+                },
+            },
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    rows = run.collect_mod.collect_commit_history(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+        default_branch="main",
+    )
+
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "sha": "abc123",
+            "parent_sha": "",
+            "committed_at": "2026-06-01T09:00:00Z",
+            "authored_at": "2026-06-01T08:00:00Z",
+            "author_name": "Dev Example",
+            "author_email_hash": hashlib.sha256(b"dev@example.com").hexdigest(),
+            "author_login": "dev",
+            "committer_login": "dev",
+            "message_subject": "Add parser",
+            "message_body_hash": "",
+            "files_changed": "",
+            "additions": "",
+            "deletions": "",
+            "changed_paths_sample": "",
+            "classification": "feature",
+            "associated_pr_number": "",
+            "source": "github-commits-api",
+            "captured_at": "2026-06-03T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "sha": "def456",
+            "parent_sha": "abc123",
+            "committed_at": "2026-06-02T09:00:00Z",
+            "authored_at": "2026-06-02T08:00:00Z",
+            "author_name": "Dev Example",
+            "author_email_hash": hashlib.sha256(b"dev@example.com").hexdigest(),
+            "author_login": "dev",
+            "committer_login": "maintainer",
+            "message_subject": "Fix parser edge case (#12)",
+            "message_body_hash": hashlib.sha256(b"Body text").hexdigest(),
+            "files_changed": "",
+            "additions": "",
+            "deletions": "",
+            "changed_paths_sample": "",
+            "classification": "fix",
+            "associated_pr_number": "12",
+            "source": "github-commits-api",
+            "captured_at": "2026-06-03T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+
+
 def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -4441,12 +4535,28 @@ def test_collect_appends_context_rows_for_selected_repo(
             "stargazers_count": 15,
             "subscribers_count": 3,
             "forks_count": 2,
+            "default_branch": "main",
         },
     )
     monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_commit_history",
+        lambda repo, headers, captured_at, default_branch: [
+            {
+                "repo": repo,
+                "sha": "abc123",
+                "committed_at": "2026-05-31T09:00:00Z",
+                "message_subject": f"Add analytics on {default_branch}",
+                "classification": "feature",
+                "captured_at": captured_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
     monkeypatch.setattr(run.collect_mod, "collect_release_context", collect_release_context)
     monkeypatch.setattr(
         run.collect_mod,
@@ -4498,14 +4608,15 @@ def test_collect_appends_context_rows_for_selected_repo(
         with (config.data_dir / filename).open(newline="", encoding="utf-8") as handle:
             return list(csv.DictReader(handle))
 
+    assert rows("repo-commits.csv")[-1]["message_subject"] == "Add analytics on main"
     assert rows("repo-releases.csv")[-1]["tag_name"] == "v1.2.3"
     assert rows("repo-release-assets.csv")[-1]["name"] == "tool.tar.gz"
     assert rows("repo-languages.csv")[-1]["language"] == "Python"
     assert rows("repo-topics.csv")[-1]["topic"] == "analytics"
     assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
     event_rows = rows("repo-event-index.csv")
-    assert event_rows[-1]["event_id"] == "release:99"
-    assert event_rows[-1]["source_table"] == "repo-releases.csv"
+    event_ids = {row["event_id"] for row in event_rows}
+    assert {"commit:abc123", "release:99"}.issubset(event_ids)
 
 
 def test_collect_context_failure_records_warning_without_failing_collection(
@@ -4551,6 +4662,7 @@ def test_collect_context_failure_records_warning_without_failing_collection(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", raise_topics_error)

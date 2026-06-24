@@ -17,6 +17,7 @@ from storage import (
     LOG_FIELDS,
     PATH_FIELDS,
     REFERRER_FIELDS,
+    REPO_COMMIT_FIELDS,
     REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     REPO_LANGUAGE_FIELDS,
     REPO_METRIC_FIELDS,
@@ -46,6 +47,7 @@ class CollectionDependencies:
     collect_views_clones: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_referrers: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_paths: Callable[[str, Headers, str], list[dict[str, Any]]]
+    collect_commit_history: Callable[[str, Headers, str, str], Rows]
     collect_release_context: Callable[[str, Headers, str], tuple[Rows, Rows]]
     collect_languages: Callable[[str, Headers, str], Rows]
     collect_topics: Callable[[str, Headers, str], Rows]
@@ -180,7 +182,7 @@ def _collect_artifacts(
         source=metric_source,
     )
     deps.append_csv(os.path.join(deps.data_dir, "repo-metrics.csv"), metric_rows, REPO_METRIC_FIELDS)
-    context_rows = _collect_context_artifacts(repo, run, deps)
+    context_rows = _collect_context_artifacts(repo, run, deps, detail or {})
     return {
         "traffic": vc_rows,
         "referrers": ref_rows,
@@ -198,7 +200,20 @@ def _collect_context_artifacts(
     repo: str,
     run: CollectionRun,
     deps: CollectionDependencies,
+    detail: RepoMetadata,
 ) -> dict[str, Rows]:
+    commit_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "commits",
+        lambda selected_repo, headers, captured_at: deps.collect_commit_history(
+            selected_repo,
+            headers,
+            captured_at,
+            str(detail.get("default_branch") or ""),
+        ),
+    )
     release_rows, release_asset_rows = _release_context_rows(repo, run, deps)
     language_rows = _context_rows(repo, run, deps, "languages", deps.collect_languages)
     topic_rows = _context_rows(repo, run, deps, "topics", deps.collect_topics)
@@ -208,6 +223,11 @@ def _collect_context_artifacts(
         deps,
         "issue/pr snapshot",
         deps.collect_issue_pr_snapshot,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-commits.csv"),
+        commit_rows,
+        REPO_COMMIT_FIELDS,
     )
     deps.append_csv(
         os.path.join(deps.data_dir, "repo-releases.csv"),
@@ -231,6 +251,7 @@ def _collect_context_artifacts(
         REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     )
     return {
+        "commits": commit_rows,
         "releases": release_rows,
         "release_assets": release_asset_rows,
         "languages": language_rows,
@@ -284,6 +305,7 @@ def _record_success(
         len(artifacts[key])
         for key in (
             "releases",
+            "commits",
             "release_assets",
             "languages",
             "topics",

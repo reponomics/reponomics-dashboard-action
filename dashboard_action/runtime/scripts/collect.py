@@ -35,6 +35,7 @@ from collect_modules.constants import (
     TOKEN_VALIDATION_URL as TOKEN_VALIDATION_URL,
 )
 from collect_modules.endpoints import (
+    collect_commit_history as _endpoints_collect_commit_history,
     collect_issue_pr_snapshot as _endpoints_collect_issue_pr_snapshot,
     collect_languages as _endpoints_collect_languages,
     collect_paths as _endpoints_collect_paths,
@@ -337,6 +338,21 @@ def collect_release_context(
     )
 
 
+def collect_commit_history(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    default_branch: str = "",
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_commit_history(
+        repo,
+        headers,
+        captured_at,
+        default_branch=default_branch,
+        fetch_json=fetch_json,
+    )
+
+
 def collect_languages(
     repo: str,
     headers: Headers,
@@ -409,6 +425,7 @@ def _collection_dependencies() -> CollectionDependencies:
         collect_views_clones=collect_views_clones,
         collect_referrers=collect_referrers,
         collect_paths=collect_paths,
+        collect_commit_history=collect_commit_history,
         collect_release_context=collect_release_context,
         collect_languages=collect_languages,
         collect_topics=collect_topics,

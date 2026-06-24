@@ -1,6 +1,7 @@
 """GitHub API endpoint row-shaping facade."""
 
 from collect_modules.context_endpoints import (
+    collect_commit_history,
     collect_issue_pr_snapshot,
     collect_languages,
     collect_release_context,
@@ -22,6 +23,7 @@ from collect_modules.traffic_endpoints import (
 )
 
 __all__ = [
+    "collect_commit_history",
     "collect_issue_pr_snapshot",
     "collect_languages",
     "collect_paths",

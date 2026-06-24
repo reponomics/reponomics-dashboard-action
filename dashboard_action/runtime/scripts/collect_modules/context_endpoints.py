@@ -5,11 +5,76 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
+from collect_modules.git_history import _associated_pr_number, _classify_commit
 from collect_modules.types import Headers
 from storage import SCHEMA_VERSION
+
+
+def collect_commit_history(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    *,
+    default_branch: str = "",
+    fetch_json: Callable[..., Any],
+) -> list[dict[str, Any]]:
+    """Fetch a lightweight default-branch commit spine from the GitHub API."""
+    url = f"https://api.github.com/repos/{repo}/commits?per_page=100"
+    if default_branch:
+        url += f"&sha={quote(default_branch, safe='')}"
+    data = fetch_json(url, headers)
+    if not isinstance(data, list):
+        raise requests.HTTPError(
+            f"Unexpected commits response for {repo}: {type(data).__name__}"
+        )
+    return [
+        _commit_history_row(repo, commit, captured_at)
+        for commit in reversed(data)
+        if isinstance(commit, dict)
+    ]
+
+
+def _commit_history_row(
+    repo: str,
+    commit: dict[str, Any],
+    captured_at: str,
+) -> dict[str, Any]:
+    commit_payload = commit.get("commit")
+    if not isinstance(commit_payload, dict):
+        commit_payload = {}
+    author = commit_payload.get("author")
+    if not isinstance(author, dict):
+        author = {}
+    committer = commit_payload.get("committer")
+    if not isinstance(committer, dict):
+        committer = {}
+    subject, body = _split_commit_message(str(commit_payload.get("message") or ""))
+    return {
+        "repo": repo,
+        "sha": commit.get("sha", ""),
+        "parent_sha": _parent_sha(commit.get("parents")),
+        "committed_at": committer.get("date", ""),
+        "authored_at": author.get("date", ""),
+        "author_name": author.get("name", ""),
+        "author_email_hash": _hash_text(str(author.get("email") or "").lower().strip()),
+        "author_login": _login(commit.get("author")),
+        "committer_login": _login(commit.get("committer")),
+        "message_subject": subject,
+        "message_body_hash": _hash_text(body.strip()),
+        "files_changed": "",
+        "additions": "",
+        "deletions": "",
+        "changed_paths_sample": "",
+        "classification": _classify_commit(subject, []),
+        "associated_pr_number": _associated_pr_number(subject, body),
+        "source": "github-commits-api",
+        "captured_at": captured_at,
+        "schema_version": SCHEMA_VERSION,
+    }
 
 
 def collect_release_context(
@@ -196,6 +261,22 @@ def _login(value: Any) -> str:
     if isinstance(value, dict):
         return str(value.get("login") or "")
     return ""
+
+
+def _parent_sha(value: Any) -> str:
+    if not isinstance(value, list) or not value:
+        return ""
+    parent = value[0]
+    if not isinstance(parent, dict):
+        return ""
+    return str(parent.get("sha") or "")
+
+
+def _split_commit_message(message: str) -> tuple[str, str]:
+    lines = message.replace("\r\n", "\n").splitlines()
+    if not lines:
+        return "", ""
+    return lines[0], "\n".join(lines[1:]).strip()
 
 
 def _int(value: Any) -> int:

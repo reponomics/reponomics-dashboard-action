@@ -38,6 +38,9 @@ The manifest includes:
 
 Lineage verification is semantic, not byte-for-byte CSV comparison. CSV order, normalization, deduplication, and compatible schema additions may change bytes without losing data.
 
+For a table-oriented relationship diagram of the retained CSV packet, see
+[Retained Data ERD](./RETAINED_DATA_ERD.md).
+
 Each registered CSV needs a row identity:
 
 - `traffic-log.csv`: `repo`, `ts`, `captured_at`

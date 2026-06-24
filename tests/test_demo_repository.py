@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from dashboard_action.run_modules import io as runtime_io
 from scripts.repo_paths import find_repo_root
 
 
@@ -69,6 +70,7 @@ def test_encrypted_html_renders_escaped_demo_unlock_panel() -> None:
     )
 
     assert 'id="demo-unlock-panel"' in html
+    assert 'class="auth-card auth-vault-door has-demo-unlock"' in html
     assert 'id="demo-unlock-key"' in html
     assert "Public &lt;demo&gt; key" in html
     assert "demo-key-&quot;quoted&quot;" in html
@@ -117,6 +119,30 @@ def test_public_action_surface_has_no_demo_unlock_input() -> None:
     assert "demo-unlock" not in inputs
     assert "demo-key" not in inputs
     assert "allow-public-readme" not in inputs
+
+
+def test_runtime_demo_unlock_metadata_is_internal_env_gated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    monkeypatch.delenv(runtime_io.DEMO_UNLOCK_KEY_ENV, raising=False)
+
+    def fake_render(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(runtime_io.render_dashboard, "render", fake_render)
+    runtime_io._render_outputs(object(), generate_readme=False)  # type: ignore[arg-type]
+    assert captured["demo_unlock"] is None
+
+    monkeypatch.setenv(runtime_io.DEMO_UNLOCK_KEY_ENV, "public-demo-key")
+    runtime_io._render_outputs(object(), generate_readme=False)  # type: ignore[arg-type]
+    assert captured["demo_unlock"] == {
+        "label": "Public demo key",
+        "key": "public-demo-key",
+        "note": "Synthetic data. This key is intentionally public and must not be reused.",
+        "button_label": "Use key",
+    }
 
 
 def test_demo_dataset_has_single_owner_and_expected_size() -> None:
@@ -183,6 +209,8 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     assert "mode: publish" in workflow
     assert "artifact-run-id: ${{ github.run_id }}" in workflow
     assert "dashboard-secret: ${{ env.DEMO_DASHBOARD_KEY }}" in workflow
+    assert "REPONOMICS_DEMO_UNLOCK_KEY: __DEMO_DASHBOARD_KEY_JSON__" not in workflow
+    assert 'REPONOMICS_DEMO_UNLOCK_KEY: "public-demo-key"' in workflow
     assert 'generate-readme: "false"' in workflow
     assert "public-demo-key" in workflow
     assert "actions/upload-pages-artifact@" not in workflow

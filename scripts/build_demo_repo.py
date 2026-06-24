@@ -503,6 +503,7 @@ jobs:
         uses: ./.github/actions/reponomics
         env:
           DEMO_DASHBOARD_KEY: __DEMO_DASHBOARD_KEY_JSON__
+          REPONOMICS_DEMO_UNLOCK_KEY: __DEMO_DASHBOARD_KEY_JSON__
         with:
           mode: publish
           artifact-run-id: ${{ github.run_id }}

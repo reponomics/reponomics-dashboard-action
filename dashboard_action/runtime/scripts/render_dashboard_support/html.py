@@ -733,11 +733,14 @@ def build_encrypted_html(
 ) -> str:
     """Build the encrypted published dashboard HTML."""
     demo_unlock_panel = _build_demo_unlock_panel(demo_unlock)
+    auth_card_classes = "auth-card auth-vault-door"
+    if demo_unlock_panel:
+        auth_card_classes += " has-demo-unlock"
     auth_card = f"""
   <div id="auth-shell">
     <div class="auth-page">
       <div class="auth-wrap">
-        <div class="auth-card auth-vault-door" id="unlock-card">
+        <div class="{auth_card_classes}" id="unlock-card">
           <div class="auth-vault-face" aria-hidden="true">
             <span class="auth-vault-ring auth-vault-ring-outer"></span>
             <span class="auth-vault-ring auth-vault-ring-inner"></span>

@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 import requests
 
-from collect_modules.git_history import _associated_pr_number, _classify_commit
+from collect_modules.commit_context import associated_pr_number, classify_commit
 from collect_modules.types import Headers
 from storage import SCHEMA_VERSION
 
@@ -91,8 +91,8 @@ def _commit_history_row(
         "additions": "",
         "deletions": "",
         "changed_paths_sample": "",
-        "classification": _classify_commit(subject, []),
-        "associated_pr_number": _associated_pr_number(subject, body),
+        "classification": classify_commit(subject, []),
+        "associated_pr_number": associated_pr_number(subject, body),
         "source": "github-commits-api",
         "captured_at": captured_at,
         "schema_version": SCHEMA_VERSION,

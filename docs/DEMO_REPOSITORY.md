@@ -134,3 +134,77 @@ A future enhancement can generate a current 90-day packet and a previous 89-day 
 - Keep retained canonical CSV data out of the published git tree.
 - Keep demo unlock behavior out of `action.yml` and the public action input surface.
 - If renderer APIs change, `make verify-demo` should fail before publication.
+
+## Appendix: Detailed Publication Flow As Of June 24, 2026
+
+This appendix is intentionally redundant with the `Publication Flow` and `GitHub Workflow` sections above. It captures a more procedural maintainer rundown of the current implementation as of June 24, 2026; if it ever disagrees with the implementation, treat that as documentation drift to investigate rather than a separate product contract.
+
+End to end, the demo publication flow is:
+
+- Source workflow starts in `reponomics-dashboard-action` via `.github/workflows/publish-demo.yml`.
+  It runs either on schedule or manual dispatch with `confirm_demo_publish: true`.
+
+- The workflow resolves an allowed source ref: `main`, `demo-stable`, or a release tag.
+
+- It checks out that source ref and runs the demo build gates:
+  `make verify-demo` and `make publish-demo-dry-run`.
+
+- `scripts/build_demo_repo.py` builds `dist/template`, then copies it into `dist/demo`.
+
+- The builder materializes synthetic canonical CSV data under `dist/demo/data/` as an intermediate input only.
+
+- The builder encrypts that synthetic retained data into:
+  `dist/demo-seed/dashboard-data.enc`.
+
+- The builder writes demo `config.yaml` into `dist/demo` with:
+  `data_mode: encrypted`, `publish_pages_dashboard: true`, and `publish_readme_dashboard: false`.
+
+- The builder writes the target repo workflow:
+  `.github/workflows/seed-and-publish-demo-dashboard.yml`.
+
+- The builder source-renders the README dashboard and its SVG assets into the demo repo tree.
+  This is the one committed dashboard surface.
+
+- The builder prunes publication-only forbidden material from `dist/demo`:
+  no `data/`, no `dist/`, no `.dashboard-data-artifact/`, no `docs/index.html`, and no non-SVG HTML dashboard assets.
+
+- The builder writes `.reponomics/demo-provenance.json`, including source commit, dataset revision, tree digest, and retained-data seed evidence.
+
+- The source workflow packages `dist/demo` as `demo-repo.tar.gz`.
+
+- The source workflow uploads two source-run artifacts:
+  `generated-demo-repo` containing the generated repo tree and source commit file, and `generated-demo-dashboard-data` containing `dashboard-data.enc`.
+
+- The `publish-demo` job downloads `generated-demo-repo` and validates the tree shape again.
+
+- The source workflow mints a dedicated GitHub App token scoped to `reponomics/reponomics-dashboard-demo`.
+
+- It initializes a temporary git repo from the generated tree, commits it, and force-pushes with lease to `reponomics-dashboard-demo/main`.
+
+- After pushing the repo tree, it dispatches the generated target workflow in `reponomics-dashboard-demo`, passing the source repository and source workflow run ID.
+
+- The target workflow checks out `reponomics-dashboard-demo`.
+
+- It downloads `generated-demo-dashboard-data` from the source workflow run into `.dashboard-data-artifact/dashboard-data.enc`.
+
+- It validates that the seed is a supported encrypted artifact payload.
+
+- It uploads that same encrypted seed into the demo repo's own Actions artifact storage as `dashboard-data`.
+
+- It calls the generated local wrapper action in publish mode:
+  `mode: publish`, `artifact-run-id: ${{ github.run_id }}`, `data-mode: encrypted`, `publish-pages: "true"`, `generate-readme: "false"`.
+
+- The public demo key is passed as the normal `dashboard-secret`, and also as `REPONOMICS_DEMO_UNLOCK_KEY` so the unlock UI can display the demo key.
+
+- The wrapper calls the versioned `reponomics/reponomics-dashboard-action@v0`.
+
+- The real action runtime restores the `dashboard-data` artifact from the target workflow's current run.
+
+- The runtime decrypts the retained data with the dashboard secret, renders the encrypted HTML dashboard shell and assets under the Pages output directory, and injects only the demo unlock panel metadata into the HTML.
+
+- The action then runs its normal Pages steps:
+  `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`.
+
+- GitHub Pages publishes the rendered encrypted HTML dashboard site from that Pages artifact.
+
+The key boundary is: the demo repo commit contains the README dashboard and SVG README assets, but the HTML dashboard and retained data are not committed. The retained data lives as an encrypted Actions artifact, and the HTML dashboard is generated during the target publish workflow and handed to GitHub Pages as a Pages artifact.

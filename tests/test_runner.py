@@ -4391,6 +4391,32 @@ def test_collect_commit_history_shapes_api_rows(monkeypatch: pytest.MonkeyPatch)
     ]
 
 
+def test_collect_commit_history_classifies_conventional_api_subjects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/commits?per_page=100"
+        return [
+            {"sha": "test123", "commit": {"message": "test(parser): cover edge case"}},
+            {"sha": "ci123", "commit": {"message": "ci: pin workflow action"}},
+            {"sha": "docs123", "commit": {"message": "docs(readme): clarify setup"}},
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    rows = run.collect_mod.collect_commit_history(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    )
+
+    assert {row["message_subject"]: row["classification"] for row in rows} == {
+        "docs(readme): clarify setup": "docs",
+        "ci: pin workflow action": "ci",
+        "test(parser): cover edge case": "tests",
+    }
+
+
 def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -5505,6 +5531,51 @@ def test_contextual_data_dedup_helpers_preserve_latest_identity_rows() -> None:
             {"repo": "demo/app", "event_id": "commit:abc", "title": "new"},
         ]
     ) == [{"repo": "demo/app", "event_id": "commit:abc", "title": "new"}]
+
+
+def test_release_retention_keeps_recent_drafts_without_published_at(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(run.bootstrap, "DATA_DIR", data_dir.as_posix())
+    run.bootstrap.bootstrap()
+    recent_created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _write_csv(
+        data_dir / "repo-releases.csv",
+        run.storage.REPO_RELEASE_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "release_id": "99",
+                "node_id": "R_99",
+                "tag_name": "v1.2.3-draft",
+                "target_commitish": "main",
+                "target_sha": "",
+                "name": "v1.2.3 draft",
+                "draft": "True",
+                "prerelease": "False",
+                "immutable": "",
+                "created_at": recent_created_at,
+                "published_at": "",
+                "author_login": "maintainer",
+                "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3-draft",
+                "asset_count": "0",
+                "asset_download_count": "0",
+                "body_hash": "",
+                "captured_at": recent_created_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(run.merge, "DATA_DIR", data_dir.as_posix())
+    run.merge.trim_all()
+
+    with (data_dir / "repo-releases.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["release_id"] == "99"
+    assert rows[0]["published_at"] == ""
 
 
 def test_schema_migration_handles_file_field_renames_and_defaults(

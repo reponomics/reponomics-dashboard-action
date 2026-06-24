@@ -168,7 +168,7 @@ CSV_REGISTRY = {
     "collection-days.csv":   (COLLECTION_DAY_FIELDS, "ts"),
     "traffic-coverage.csv":  (TRAFFIC_COVERAGE_FIELDS, "ts"),
     "repo-commits.csv":      (REPO_COMMIT_FIELDS, "committed_at"),
-    "repo-releases.csv":     (REPO_RELEASE_FIELDS, "published_at"),
+    "repo-releases.csv":     (REPO_RELEASE_FIELDS, "created_at"),
     "repo-release-assets.csv": (
         REPO_RELEASE_ASSET_FIELDS,
         "captured_at",

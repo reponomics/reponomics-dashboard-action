@@ -168,6 +168,9 @@ def _associated_pr_number(subject: str, body: str) -> str:
 def _classify_commit(subject: str, paths: list[str]) -> str:
     lowered_subject = subject.lower()
     lowered_paths = [path.lower() for path in paths]
+    subject_kind = _conventional_subject_kind(lowered_subject)
+    if subject_kind in {"docs", "ci", "test", "tests"}:
+        return "tests" if subject_kind == "test" else subject_kind
     if _any_path_prefix(lowered_paths, ("docs/", "doc/")) or any(
         path.endswith((".md", ".mdx", ".rst")) for path in lowered_paths
     ):
@@ -189,6 +192,13 @@ def _classify_commit(subject: str, paths: list[str]) -> str:
     if any(token in lowered_subject for token in ("refactor", "cleanup", "simplify")):
         return "refactor"
     return "unknown"
+
+
+def _conventional_subject_kind(lowered_subject: str) -> str:
+    match = re.match(r"^(?P<kind>[a-z]+)(?:\([^)]+\))?!?:", lowered_subject)
+    if match:
+        return match.group("kind")
+    return ""
 
 
 def _any_path_prefix(paths: list[str], prefixes: tuple[str, ...]) -> bool:

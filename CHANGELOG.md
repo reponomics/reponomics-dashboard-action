@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.27.0...v0.27.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* demo repo publication ([#172](https://github.com/reponomics/reponomics-dashboard-action/issues/172)) ([90c5b8c](https://github.com/reponomics/reponomics-dashboard-action/commit/90c5b8c80997b3e2cd9214a026908eb3211faaa9))
+
 ## [0.27.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.26.0...v0.27.0) (2026-06-23)
 
 

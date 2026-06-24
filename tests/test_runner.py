@@ -55,6 +55,18 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
     "assets/dashboard/entry-public.js",
     "assets/dashboard/entry-secure.js",
 ]
+CONTEXTUAL_DATA_FILES = {
+    "repo-commits.csv",
+    "repo-releases.csv",
+    "repo-release-assets.csv",
+    "repo-languages.csv",
+    "repo-topics.csv",
+    "repo-issue-pr-snapshots.csv",
+    "repo-code-frequency-weekly.csv",
+    "repo-contributor-activity-weekly.csv",
+    "collection-endpoints.csv",
+    "repo-event-index.csv",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -1140,6 +1152,15 @@ def test_bootstrap_creates_empty_data_files_and_manifest(
             reader = csv.reader(handle)
             assert next(reader) == fieldnames
             assert list(reader) == []
+
+
+def test_registered_csvs_have_lineage_identity_and_retention_fields() -> None:
+    assert set(run.storage.CSV_REGISTRY) == set(run.lineage.ROW_IDENTITY_FIELDS)
+
+    for filename, (fieldnames, date_field) in run.storage.CSV_REGISTRY.items():
+        assert date_field in fieldnames, filename
+        for identity_field in run.lineage.ROW_IDENTITY_FIELDS[filename]:
+            assert identity_field in fieldnames, filename
 
 
 def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -4815,6 +4836,85 @@ def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
     assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
     assert manifest["files"] == list(run.storage.CSV_REGISTRY.keys())
     assert manifest["created_at"] == "2026-05-01T12:00:00Z"
+
+
+def test_schema_migration_creates_contextual_data_headers(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "3",
+                "files": ["repo-metrics.csv"],
+                "created_at": "2026-05-01T12:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert run.storage.migrate_schema(data_dir.as_posix()) is True
+
+    for filename in sorted(CONTEXTUAL_DATA_FILES):
+        path = data_dir / filename
+        assert path.exists(), filename
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.reader(handle)
+            assert next(reader) == run.storage.CSV_REGISTRY[filename][0]
+            assert list(reader) == []
+
+    manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    assert set(CONTEXTUAL_DATA_FILES).issubset(manifest["files"])
+
+
+def test_contextual_data_dedup_helpers_preserve_latest_identity_rows() -> None:
+    assert run.storage.dedup_repo_commits(
+        [
+            {"repo": "demo/app", "sha": "abc", "message_subject": "old"},
+            {"repo": "demo/app", "sha": "abc", "message_subject": "new"},
+        ]
+    ) == [{"repo": "demo/app", "sha": "abc", "message_subject": "new"}]
+    assert run.storage.dedup_repo_release_assets(
+        [
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "download_count": "1",
+            },
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "download_count": "2",
+            },
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-02T00:00:00Z",
+                "download_count": "3",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "asset_id": "10",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "download_count": "2",
+        },
+        {
+            "repo": "demo/app",
+            "asset_id": "10",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "download_count": "3",
+        },
+    ]
+    assert run.storage.dedup_repo_event_index(
+        [
+            {"repo": "demo/app", "event_id": "commit:abc", "title": "old"},
+            {"repo": "demo/app", "event_id": "commit:abc", "title": "new"},
+        ]
+    ) == [{"repo": "demo/app", "event_id": "commit:abc", "title": "new"}]
 
 
 def test_schema_migration_handles_file_field_renames_and_defaults(

@@ -28,6 +28,16 @@ from storage import (
     dedup_collection_status,
     dedup_collection_days,
     dedup_traffic_coverage,
+    dedup_repo_commits,
+    dedup_repo_releases,
+    dedup_repo_release_assets,
+    dedup_repo_languages,
+    dedup_repo_topics,
+    dedup_repo_issue_pr_snapshots,
+    dedup_repo_code_frequency_weekly,
+    dedup_repo_contributor_activity_weekly,
+    dedup_collection_endpoints,
+    dedup_repo_event_index,
 )
 from traffic_reporting import collection_day_rows, traffic_coverage_rows
 
@@ -41,6 +51,16 @@ _DEDUP_FNS = {
     "collection-status.csv": dedup_collection_status,
     "collection-days.csv":   dedup_collection_days,
     "traffic-coverage.csv":  dedup_traffic_coverage,
+    "repo-commits.csv":      dedup_repo_commits,
+    "repo-releases.csv":     dedup_repo_releases,
+    "repo-release-assets.csv": dedup_repo_release_assets,
+    "repo-languages.csv":    dedup_repo_languages,
+    "repo-topics.csv":       dedup_repo_topics,
+    "repo-issue-pr-snapshots.csv": dedup_repo_issue_pr_snapshots,
+    "repo-code-frequency-weekly.csv": dedup_repo_code_frequency_weekly,
+    "repo-contributor-activity-weekly.csv": dedup_repo_contributor_activity_weekly,
+    "collection-endpoints.csv": dedup_collection_endpoints,
+    "repo-event-index.csv":  dedup_repo_event_index,
 }
 
 

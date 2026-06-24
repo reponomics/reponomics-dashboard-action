@@ -387,6 +387,14 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) ->
         writer.writerows(rows)
 
 
+def _ensure_empty_registered_csvs(data_dir: Path) -> None:
+    """Create empty canonical files for retained families not yet in demo data."""
+    for filename, (fields, _date_field) in storage.CSV_REGISTRY.items():
+        path = data_dir / filename
+        if not path.exists():
+            _write_csv(path, [], fields)
+
+
 def _materialize_data(output_dir: Path, dataset: dict[str, Any], as_of: date) -> None:
     specs = _repo_specs(dataset)
     window_days = int(dataset.get("window_days", 90))
@@ -415,6 +423,7 @@ def _materialize_data(output_dir: Path, dataset: dict[str, Any], as_of: date) ->
         traffic_reporting.traffic_coverage_rows(daily_rows, status_rows),
         storage.TRAFFIC_COVERAGE_FIELDS,
     )
+    _ensure_empty_registered_csvs(data_dir)
     manifest = storage._default_manifest()
     manifest["created_at"] = f"{start.isoformat()}T12:00:00Z"
     manifest["last_updated"] = f"{as_of.isoformat()}T12:00:00Z"

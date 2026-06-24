@@ -25,6 +25,16 @@ ROW_IDENTITY_FIELDS = {
     "collection-status.csv": ("repo", "captured_at", "status"),
     "collection-days.csv": ("ts",),
     "traffic-coverage.csv": ("repo", "ts"),
+    "repo-commits.csv": ("repo", "sha"),
+    "repo-releases.csv": ("repo", "release_id"),
+    "repo-release-assets.csv": ("repo", "asset_id", "captured_at"),
+    "repo-languages.csv": ("repo", "captured_at", "language"),
+    "repo-topics.csv": ("repo", "captured_at", "topic"),
+    "repo-issue-pr-snapshots.csv": ("repo", "captured_at"),
+    "repo-code-frequency-weekly.csv": ("repo", "week_start"),
+    "repo-contributor-activity-weekly.csv": ("repo", "author_id", "week_start"),
+    "collection-endpoints.csv": ("repo", "captured_at", "endpoint_key"),
+    "repo-event-index.csv": ("repo", "event_id"),
 }
 
 

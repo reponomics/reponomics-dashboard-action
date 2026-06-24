@@ -23,7 +23,7 @@ This document is the long-lived technical reference for CSV export delivery. ADR
 
 The export bundle is built from canonical retained files:
 
-- `storage.CSV_REGISTRY` files: `traffic-log.csv`, `traffic-daily.csv`, `traffic-snapshots.csv`, `traffic-referrers.csv`, `traffic-paths.csv`, `repo-metrics.csv`
+- every CSV file registered in `storage.CSV_REGISTRY`
 - `manifest.json`
 
 This includes repos currently excluded from dashboard rendering, because export is for retained-data portability and parity.

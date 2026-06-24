@@ -11,7 +11,7 @@ import os
 from datetime import datetime, timezone
 
 DATA_DIR = "data"
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 SCHEMA_VERSION_INT = int(SCHEMA_VERSION)
 DATA_MODE = os.environ.get("DATA_MODE", "")
 VALID_DATA_MODES = {"encrypted", "plaintext"}
@@ -96,6 +96,66 @@ TRAFFIC_COVERAGE_FIELDS = [
     "latest_captured_at", "reason", "schema_version",
 ]
 
+REPO_COMMIT_FIELDS = [
+    "repo", "sha", "parent_sha", "committed_at", "authored_at",
+    "author_name", "author_email_hash", "author_login", "committer_login",
+    "message_subject", "message_body_hash", "files_changed", "additions",
+    "deletions", "changed_paths_sample", "classification",
+    "associated_pr_number", "source", "captured_at", "schema_version",
+]
+
+REPO_RELEASE_FIELDS = [
+    "repo", "release_id", "node_id", "tag_name", "target_commitish",
+    "target_sha", "name", "draft", "prerelease", "immutable", "created_at",
+    "published_at", "author_login", "html_url", "asset_count",
+    "asset_download_count", "body_hash", "captured_at", "schema_version",
+]
+
+REPO_RELEASE_ASSET_FIELDS = [
+    "repo", "release_id", "asset_id", "name", "label", "content_type",
+    "state", "size_bytes", "download_count", "created_at", "updated_at",
+    "browser_download_url", "captured_at", "schema_version",
+]
+
+REPO_LANGUAGE_FIELDS = [
+    "repo", "captured_at", "language", "bytes", "share", "schema_version",
+]
+
+REPO_TOPIC_FIELDS = [
+    "repo", "captured_at", "topic", "schema_version",
+]
+
+REPO_ISSUE_PR_SNAPSHOT_FIELDS = [
+    "repo", "ts", "captured_at", "open_issues_count", "open_prs_count",
+    "closed_issues_recent", "merged_prs_recent", "stale_open_issues_count",
+    "stale_open_prs_count", "unanswered_issue_count", "issue_sample_count",
+    "pr_sample_count", "source", "schema_version",
+]
+
+REPO_CODE_FREQUENCY_WEEKLY_FIELDS = [
+    "repo", "week_start", "additions", "deletions", "captured_at",
+    "source_status", "schema_version",
+]
+
+REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS = [
+    "repo", "author_id", "author_login", "week_start", "commits",
+    "additions", "deletions", "captured_at", "source_status",
+    "schema_version",
+]
+
+COLLECTION_ENDPOINT_FIELDS = [
+    "repo", "captured_at", "endpoint_key", "credential_class", "status",
+    "http_status", "rows_written", "cache_state", "rate_limit_remaining",
+    "retry_after_seconds", "duration_ms", "error_type", "error_message",
+    "schema_version",
+]
+
+REPO_EVENT_INDEX_FIELDS = [
+    "repo", "event_id", "event_type", "event_ts", "event_date", "title",
+    "url", "primary_sha", "release_id", "issue_or_pr_number", "magnitude",
+    "classification", "source_table", "captured_at", "schema_version",
+]
+
 # Map filename -> (field list, date field used for retention trim)
 CSV_REGISTRY = {
     "traffic-log.csv":       (LOG_FIELDS,      "ts"),
@@ -107,6 +167,28 @@ CSV_REGISTRY = {
     "collection-status.csv": (COLLECTION_STATUS_FIELDS, "ts"),
     "collection-days.csv":   (COLLECTION_DAY_FIELDS, "ts"),
     "traffic-coverage.csv":  (TRAFFIC_COVERAGE_FIELDS, "ts"),
+    "repo-commits.csv":      (REPO_COMMIT_FIELDS, "committed_at"),
+    "repo-releases.csv":     (REPO_RELEASE_FIELDS, "published_at"),
+    "repo-release-assets.csv": (
+        REPO_RELEASE_ASSET_FIELDS,
+        "captured_at",
+    ),
+    "repo-languages.csv":    (REPO_LANGUAGE_FIELDS, "captured_at"),
+    "repo-topics.csv":       (REPO_TOPIC_FIELDS, "captured_at"),
+    "repo-issue-pr-snapshots.csv": (
+        REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+        "ts",
+    ),
+    "repo-code-frequency-weekly.csv": (
+        REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+        "week_start",
+    ),
+    "repo-contributor-activity-weekly.csv": (
+        REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+        "week_start",
+    ),
+    "collection-endpoints.csv": (COLLECTION_ENDPOINT_FIELDS, "captured_at"),
+    "repo-event-index.csv":  (REPO_EVENT_INDEX_FIELDS, "event_date"),
 }
 
 ARTIFACT_FILES = list(CSV_REGISTRY.keys()) + ["manifest.json"]
@@ -398,6 +480,116 @@ def dedup_traffic_coverage(rows):
     seen = {}
     for row in rows:
         seen[(row["repo"], row["ts"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_commits(rows):
+    """Remove duplicate default-branch commit rows.
+
+    Key: (repo, sha).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["sha"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_releases(rows):
+    """Remove duplicate repository release rows.
+
+    Key: (repo, release_id).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["release_id"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_release_assets(rows):
+    """Remove duplicate release asset snapshot rows.
+
+    Key: (repo, asset_id, captured_at).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["asset_id"], row["captured_at"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_languages(rows):
+    """Remove duplicate repository language snapshot rows.
+
+    Key: (repo, captured_at, language).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["captured_at"], row["language"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_topics(rows):
+    """Remove duplicate repository topic snapshot rows.
+
+    Key: (repo, captured_at, topic).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["captured_at"], row["topic"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_issue_pr_snapshots(rows):
+    """Remove duplicate issue and pull request snapshot rows.
+
+    Key: (repo, captured_at).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["captured_at"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_code_frequency_weekly(rows):
+    """Remove duplicate weekly code-frequency rows.
+
+    Key: (repo, week_start).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["week_start"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_contributor_activity_weekly(rows):
+    """Remove duplicate weekly contributor activity rows.
+
+    Key: (repo, author_id, week_start).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["author_id"], row["week_start"])] = row
+    return list(seen.values())
+
+
+def dedup_collection_endpoints(rows):
+    """Remove duplicate endpoint telemetry rows.
+
+    Key: (repo, captured_at, endpoint_key).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["captured_at"], row["endpoint_key"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_event_index(rows):
+    """Remove duplicate normalized repository event rows.
+
+    Key: (repo, event_id).
+    """
+    seen = {}
+    for row in rows:
+        seen[(row["repo"], row["event_id"])] = row
     return list(seen.values())
 
 

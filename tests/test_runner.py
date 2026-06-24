@@ -327,6 +327,8 @@ def _stub_context_collectors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -4472,6 +4474,76 @@ def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
     ]
 
 
+def test_collect_statistics_shapes_weekly_graph_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    week_epoch = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
+
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        if url.endswith("/stats/code_frequency"):
+            return [
+                [week_epoch, 10, -4],
+                ["not-a-week"],
+                [week_epoch + 604800, 0, 0],
+            ]
+        if url.endswith("/stats/contributors"):
+            return [
+                {
+                    "author": {"id": 1, "login": "dev"},
+                    "weeks": [
+                        {"w": week_epoch, "a": 10, "d": 4, "c": 2},
+                        {"w": week_epoch + 604800, "a": 0, "d": 0, "c": 0},
+                    ],
+                }
+            ]
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    assert run.collect_mod.collect_code_frequency_weekly(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "week_start": "2026-06-01",
+            "additions": 10,
+            "deletions": 4,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "week_start": "2026-06-08",
+            "additions": 0,
+            "deletions": 0,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_contributor_activity_weekly(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "author_id": 1,
+            "author_login": "dev",
+            "week_start": "2026-06-01",
+            "commits": 2,
+            "additions": 10,
+            "deletions": 4,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
 def test_collect_appends_context_rows_for_selected_repo(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -4601,6 +4673,39 @@ def test_collect_appends_context_rows_for_selected_repo(
             }
         ],
     )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_code_frequency_weekly",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "week_start": "2026-06-01",
+                "additions": 10,
+                "deletions": 4,
+                "captured_at": captured_at,
+                "source_status": "api",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_contributor_activity_weekly",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "author_id": 1,
+                "author_login": "dev",
+                "week_start": "2026-06-01",
+                "commits": 2,
+                "additions": 10,
+                "deletions": 4,
+                "captured_at": captured_at,
+                "source_status": "api",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4614,6 +4719,8 @@ def test_collect_appends_context_rows_for_selected_repo(
     assert rows("repo-languages.csv")[-1]["language"] == "Python"
     assert rows("repo-topics.csv")[-1]["topic"] == "analytics"
     assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
+    assert rows("repo-code-frequency-weekly.csv")[-1]["additions"] == "10"
+    assert rows("repo-contributor-activity-weekly.csv")[-1]["author_login"] == "dev"
     event_rows = rows("repo-event-index.csv")
     event_ids = {row["event_id"] for row in event_rows}
     assert {"commit:abc123", "release:99"}.issubset(event_ids)
@@ -4667,6 +4774,8 @@ def test_collect_context_failure_records_warning_without_failing_collection(
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", raise_topics_error)
     monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 

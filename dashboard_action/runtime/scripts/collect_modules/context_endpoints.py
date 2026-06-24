@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
@@ -257,6 +258,84 @@ def collect_issue_pr_snapshot(
     ]
 
 
+def collect_code_frequency_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    *,
+    fetch_json: Callable[..., Any],
+) -> list[dict[str, Any]]:
+    """Fetch weekly code-frequency rows from GitHub repository statistics."""
+    url = f"https://api.github.com/repos/{repo}/stats/code_frequency"
+    data = fetch_json(url, headers)
+    if not isinstance(data, list):
+        raise requests.HTTPError(
+            f"Unexpected code frequency response for {repo}: {type(data).__name__}"
+        )
+    return [
+        {
+            "repo": repo,
+            "week_start": _epoch_week(row[0]),
+            "additions": _int(row[1]),
+            "deletions": abs(_int(row[2])),
+            "captured_at": captured_at,
+            "source_status": "api",
+            "schema_version": SCHEMA_VERSION,
+        }
+        for row in data
+        if _is_week_tuple(row, 3)
+    ]
+
+
+def collect_contributor_activity_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    *,
+    fetch_json: Callable[..., Any],
+) -> list[dict[str, Any]]:
+    """Fetch non-zero weekly contributor activity rows."""
+    url = f"https://api.github.com/repos/{repo}/stats/contributors"
+    data = fetch_json(url, headers)
+    if not isinstance(data, list):
+        raise requests.HTTPError(
+            f"Unexpected contributor activity response for {repo}: {type(data).__name__}"
+        )
+    rows: list[dict[str, Any]] = []
+    for contributor in data:
+        if not isinstance(contributor, dict):
+            continue
+        author = contributor.get("author")
+        if not isinstance(author, dict):
+            author = {}
+        weeks = contributor.get("weeks")
+        if not isinstance(weeks, list):
+            continue
+        for week in weeks:
+            if not isinstance(week, dict):
+                continue
+            commits = _int(week.get("c"))
+            additions = _int(week.get("a"))
+            deletions = _int(week.get("d"))
+            if commits == 0 and additions == 0 and deletions == 0:
+                continue
+            rows.append(
+                {
+                    "repo": repo,
+                    "author_id": author.get("id", ""),
+                    "author_login": author.get("login", ""),
+                    "week_start": _epoch_week(week.get("w")),
+                    "commits": commits,
+                    "additions": additions,
+                    "deletions": deletions,
+                    "captured_at": captured_at,
+                    "source_status": "api",
+                    "schema_version": SCHEMA_VERSION,
+                }
+            )
+    return rows
+
+
 def _login(value: Any) -> str:
     if isinstance(value, dict):
         return str(value.get("login") or "")
@@ -296,3 +375,15 @@ def _hash_text(value: str) -> str:
     if not value:
         return ""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _is_week_tuple(value: Any, length: int) -> bool:
+    return isinstance(value, (list, tuple)) and len(value) >= length
+
+
+def _epoch_week(value: Any) -> str:
+    try:
+        timestamp = int(value)
+    except (TypeError, ValueError):
+        return ""
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()

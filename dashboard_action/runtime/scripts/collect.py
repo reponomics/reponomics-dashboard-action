@@ -36,6 +36,8 @@ from collect_modules.constants import (
 )
 from collect_modules.endpoints import (
     collect_commit_history as _endpoints_collect_commit_history,
+    collect_code_frequency_weekly as _endpoints_collect_code_frequency_weekly,
+    collect_contributor_activity_weekly as _endpoints_collect_contributor_activity_weekly,
     collect_issue_pr_snapshot as _endpoints_collect_issue_pr_snapshot,
     collect_languages as _endpoints_collect_languages,
     collect_paths as _endpoints_collect_paths,
@@ -382,6 +384,32 @@ def collect_issue_pr_snapshot(
     )
 
 
+def collect_code_frequency_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_code_frequency_weekly(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_contributor_activity_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_contributor_activity_weekly(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
 _community_has_file = _endpoints_community_has_file
 _community_health_percentage = _endpoints_community_health_percentage
 
@@ -430,6 +458,8 @@ def _collection_dependencies() -> CollectionDependencies:
         collect_languages=collect_languages,
         collect_topics=collect_topics,
         collect_issue_pr_snapshot=collect_issue_pr_snapshot,
+        collect_code_frequency_weekly=collect_code_frequency_weekly,
+        collect_contributor_activity_weekly=collect_contributor_activity_weekly,
         collect_repo_metrics=collect_repo_metrics,
         append_csv=append_csv,
         collection_status_row=_collection_status_row,

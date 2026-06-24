@@ -17,7 +17,9 @@ from storage import (
     LOG_FIELDS,
     PATH_FIELDS,
     REFERRER_FIELDS,
+    REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
     REPO_COMMIT_FIELDS,
+    REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
     REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     REPO_LANGUAGE_FIELDS,
     REPO_METRIC_FIELDS,
@@ -52,6 +54,8 @@ class CollectionDependencies:
     collect_languages: Callable[[str, Headers, str], Rows]
     collect_topics: Callable[[str, Headers, str], Rows]
     collect_issue_pr_snapshot: Callable[[str, Headers, str], Rows]
+    collect_code_frequency_weekly: Callable[[str, Headers, str], Rows]
+    collect_contributor_activity_weekly: Callable[[str, Headers, str], Rows]
     collect_repo_metrics: Callable[..., list[dict[str, Any]]]
     append_csv: Callable[[str, list[dict[str, Any]], list[str]], None]
     collection_status_row: Callable[..., dict[str, Any]]
@@ -224,6 +228,20 @@ def _collect_context_artifacts(
         "issue/pr snapshot",
         deps.collect_issue_pr_snapshot,
     )
+    code_frequency_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "code frequency",
+        deps.collect_code_frequency_weekly,
+    )
+    contributor_activity_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "contributor activity",
+        deps.collect_contributor_activity_weekly,
+    )
     deps.append_csv(
         os.path.join(deps.data_dir, "repo-commits.csv"),
         commit_rows,
@@ -250,6 +268,16 @@ def _collect_context_artifacts(
         issue_pr_rows,
         REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-code-frequency-weekly.csv"),
+        code_frequency_rows,
+        REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-contributor-activity-weekly.csv"),
+        contributor_activity_rows,
+        REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+    )
     return {
         "commits": commit_rows,
         "releases": release_rows,
@@ -257,6 +285,8 @@ def _collect_context_artifacts(
         "languages": language_rows,
         "topics": topic_rows,
         "issue_pr_snapshots": issue_pr_rows,
+        "code_frequency": code_frequency_rows,
+        "contributor_activity": contributor_activity_rows,
     }
 
 
@@ -310,6 +340,8 @@ def _record_success(
             "languages",
             "topics",
             "issue_pr_snapshots",
+            "code_frequency",
+            "contributor_activity",
         )
     )
     run.status_rows.append(

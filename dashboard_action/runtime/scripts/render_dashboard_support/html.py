@@ -734,10 +734,9 @@ def build_encrypted_html(
     """Build the encrypted published dashboard HTML."""
     demo_unlock_panel = _build_demo_unlock_panel(demo_unlock)
     auth_card_classes = "auth-card auth-vault-door"
-    if demo_unlock_panel:
-        auth_card_classes += " has-demo-unlock"
     auth_card = f"""
   <div id="auth-shell">
+{demo_unlock_panel}
     <div class="auth-page">
       <div class="auth-wrap">
         <div class="{auth_card_classes}" id="unlock-card">
@@ -771,8 +770,6 @@ def build_encrypted_html(
               </div>
             </div>
           </div>
-
-{demo_unlock_panel}
 
 	          <form class="auth-form" id="unlock-form" autocomplete="off">
             <label class="auth-hidden-username" aria-hidden="true">

@@ -70,7 +70,8 @@ def test_encrypted_html_renders_escaped_demo_unlock_panel() -> None:
     )
 
     assert 'id="demo-unlock-panel"' in html
-    assert 'class="auth-card auth-vault-door has-demo-unlock"' in html
+    assert 'class="auth-card auth-vault-door" id="unlock-card"' in html
+    assert html.index('id="demo-unlock-panel"') < html.index('<div class="auth-page">')
     assert 'id="demo-unlock-key"' in html
     assert "Public &lt;demo&gt; key" in html
     assert "demo-key-&quot;quoted&quot;" in html

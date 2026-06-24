@@ -674,7 +674,6 @@ def write_manifest(manifest, data_dir=DATA_DIR):
     """Write manifest.json with updated last_updated timestamp."""
     manifest["schema_version"] = SCHEMA_VERSION
     manifest["files"] = list(CSV_REGISTRY.keys())
-    manifest["artifact_retention_days"] = RETENTION_DAYS
     manifest["retention_days"] = RETENTION_DAYS
     if DATA_MODE in VALID_DATA_MODES:
         manifest["data_mode"] = DATA_MODE

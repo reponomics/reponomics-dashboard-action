@@ -50,7 +50,7 @@ The manifest includes:
 - artifact kind: `dashboard-data`
 - action version
 - creation timestamp
-- artifact retention days
+- `retention_days`, meaning artifact backup expiry
 - parent manifest digest and parent payload digest when a parent exists
 - per-file SHA-256 digests for registered canonical CSV files
 - row counts and date ranges for registered canonical CSV files

@@ -169,7 +169,6 @@ def write_verified_lineage(
         "operation": operation,
         "action_version": action_version,
         "created_at": _now_iso(),
-        "artifact_retention_days": retention_days,
         "retention_days": retention_days,
         "payload_digest": child.payload_digest,
         "semantic_root_digest": child.semantic_root_digest,

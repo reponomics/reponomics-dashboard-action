@@ -4505,15 +4505,21 @@ def test_collect_statistics_shapes_weekly_graph_rows(
 ) -> None:
     week_epoch = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
 
-    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+    def fake_fetch_json_with_status(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        *,
+        accepted_statuses: set[int] | None = None,
+    ) -> tuple[int, Any, dict[str, str]]:
+        assert accepted_statuses
         if url.endswith("/stats/code_frequency"):
-            return [
+            return 200, [
                 [week_epoch, 10, -4],
                 ["not-a-week"],
                 [week_epoch + 604800, 0, 0],
-            ]
+            ], {}
         if url.endswith("/stats/contributors"):
-            return [
+            return 200, [
                 {
                     "author": {"id": 1, "login": "dev"},
                     "weeks": [
@@ -4521,10 +4527,10 @@ def test_collect_statistics_shapes_weekly_graph_rows(
                         {"w": week_epoch + 604800, "a": 0, "d": 0, "c": 0},
                     ],
                 }
-            ]
+            ], {}
         raise AssertionError(f"Unexpected URL: {url}")
 
-    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+    monkeypatch.setattr(run.collect_mod, "fetch_json_with_status", fake_fetch_json_with_status)
 
     assert run.collect_mod.collect_code_frequency_weekly(
         "demo/reponomics",
@@ -4568,6 +4574,33 @@ def test_collect_statistics_shapes_weekly_graph_rows(
             "schema_version": run.storage.SCHEMA_VERSION,
         }
     ]
+
+
+def test_collect_statistics_reports_pending_github_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json_with_status(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        *,
+        accepted_statuses: set[int] | None = None,
+    ) -> tuple[int, None, dict[str, str]]:
+        assert url == "https://api.github.com/repos/demo/reponomics/stats/code_frequency"
+        assert accepted_statuses == {202, 204, 422}
+        return 202, None, {}
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json_with_status", fake_fetch_json_with_status)
+
+    with pytest.raises(run.collect_mod.RepositoryStatisticsStatus) as exc_info:
+        run.collect_mod.collect_code_frequency_weekly(
+            "demo/reponomics",
+            {},
+            "2026-06-03T00:00:00Z",
+        )
+
+    assert exc_info.value.status == "pending"
+    assert exc_info.value.http_status == 202
+    assert exc_info.value.cache_state == "pending"
 
 
 def test_collect_appends_context_rows_for_selected_repo(
@@ -4747,6 +4780,19 @@ def test_collect_appends_context_rows_for_selected_repo(
     assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
     assert rows("repo-code-frequency-weekly.csv")[-1]["additions"] == "10"
     assert rows("repo-contributor-activity-weekly.csv")[-1]["author_login"] == "dev"
+    endpoint_rows = rows("collection-endpoints.csv")
+    endpoint_statuses = {row["endpoint_key"]: row["status"] for row in endpoint_rows}
+    assert endpoint_statuses == {
+        "commits": "ok",
+        "releases": "ok",
+        "languages": "ok",
+        "topics": "ok",
+        "issue-pr-snapshot": "ok",
+        "code-frequency": "ok",
+        "contributor-activity": "ok",
+    }
+    assert endpoint_rows[-2]["cache_state"] == "ready"
+    assert endpoint_rows[-1]["cache_state"] == "ready"
     event_rows = rows("repo-event-index.csv")
     event_ids = {row["event_id"] for row in event_rows}
     assert {"commit:abc123", "release:99"}.issubset(event_ids)
@@ -4807,10 +4853,89 @@ def test_collect_context_failure_records_warning_without_failing_collection(
 
     with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
         status_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-endpoints.csv").open(newline="", encoding="utf-8") as handle:
+        endpoint_rows = list(csv.DictReader(handle))
     summary = summary_path.read_text(encoding="utf-8")
     assert status_rows[-1]["status"] == "ok_zero_data"
+    topic_endpoint = next(row for row in endpoint_rows if row["endpoint_key"] == "topics")
+    assert topic_endpoint["status"] == "error"
+    assert topic_endpoint["error_type"] == "HTTPError"
+    assert "topics unavailable" in topic_endpoint["error_message"]
     assert "Repository Context Warnings" in summary
     assert "topics unavailable" in summary
+
+
+def test_collect_records_pending_statistics_endpoint_without_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_pending(repo: str, headers, captured_at: str):
+        raise run.collect_mod.RepositoryStatisticsStatus(
+            endpoint_key="code-frequency",
+            http_status=202,
+            status="pending",
+            cache_state="pending",
+            message=f"{repo}: GitHub statistics for code-frequency are still being computed.",
+        )
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", raise_pending)
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-endpoints.csv").open(newline="", encoding="utf-8") as handle:
+        endpoint_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    code_frequency = next(row for row in endpoint_rows if row["endpoint_key"] == "code-frequency")
+    assert status_rows[-1]["status"] == "ok_zero_data"
+    assert code_frequency["status"] == "pending"
+    assert code_frequency["http_status"] == "202"
+    assert code_frequency["cache_state"] == "pending"
+    assert code_frequency["rows_written"] == "0"
+    assert "Repository Context Warnings" not in summary
 
 
 def test_collect_repo_detail_and_community_profile_reject_non_object_payloads(

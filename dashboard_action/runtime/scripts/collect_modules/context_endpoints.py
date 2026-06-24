@@ -15,6 +15,25 @@ from collect_modules.types import Headers
 from storage import SCHEMA_VERSION
 
 
+class RepositoryStatisticsStatus(requests.HTTPError):
+    """Non-fatal repository statistics endpoint state."""
+
+    def __init__(
+        self,
+        *,
+        endpoint_key: str,
+        http_status: int,
+        status: str,
+        cache_state: str,
+        message: str,
+    ) -> None:
+        self.endpoint_key = endpoint_key
+        self.http_status = http_status
+        self.status = status
+        self.cache_state = cache_state
+        super().__init__(message)
+
+
 def collect_commit_history(
     repo: str,
     headers: Headers,
@@ -263,11 +282,16 @@ def collect_code_frequency_weekly(
     headers: Headers,
     captured_at: str,
     *,
-    fetch_json: Callable[..., Any],
+    fetch_json_with_status: Callable[..., tuple[int, object | None, dict[str, str]]],
 ) -> list[dict[str, Any]]:
     """Fetch weekly code-frequency rows from GitHub repository statistics."""
     url = f"https://api.github.com/repos/{repo}/stats/code_frequency"
-    data = fetch_json(url, headers)
+    status, data, _headers = fetch_json_with_status(
+        url,
+        headers,
+        accepted_statuses={202, 204, 422},
+    )
+    _raise_statistics_status(repo, "code-frequency", status)
     if not isinstance(data, list):
         raise requests.HTTPError(
             f"Unexpected code frequency response for {repo}: {type(data).__name__}"
@@ -292,11 +316,16 @@ def collect_contributor_activity_weekly(
     headers: Headers,
     captured_at: str,
     *,
-    fetch_json: Callable[..., Any],
+    fetch_json_with_status: Callable[..., tuple[int, object | None, dict[str, str]]],
 ) -> list[dict[str, Any]]:
     """Fetch non-zero weekly contributor activity rows."""
     url = f"https://api.github.com/repos/{repo}/stats/contributors"
-    data = fetch_json(url, headers)
+    status, data, _headers = fetch_json_with_status(
+        url,
+        headers,
+        accepted_statuses={202, 204},
+    )
+    _raise_statistics_status(repo, "contributor-activity", status)
     if not isinstance(data, list):
         raise requests.HTTPError(
             f"Unexpected contributor activity response for {repo}: {type(data).__name__}"
@@ -334,6 +363,33 @@ def collect_contributor_activity_weekly(
                 }
             )
     return rows
+
+
+def _raise_statistics_status(repo: str, endpoint_key: str, status: int) -> None:
+    if status == 202:
+        raise RepositoryStatisticsStatus(
+            endpoint_key=endpoint_key,
+            http_status=status,
+            status="pending",
+            cache_state="pending",
+            message=f"{repo}: GitHub statistics for {endpoint_key} are still being computed.",
+        )
+    if status == 204:
+        raise RepositoryStatisticsStatus(
+            endpoint_key=endpoint_key,
+            http_status=status,
+            status="no_content",
+            cache_state="empty",
+            message=f"{repo}: GitHub statistics for {endpoint_key} returned no content.",
+        )
+    if status == 422:
+        raise RepositoryStatisticsStatus(
+            endpoint_key=endpoint_key,
+            http_status=status,
+            status="unsupported",
+            cache_state="unsupported",
+            message=f"{repo}: GitHub statistics for {endpoint_key} are unsupported.",
+        )
 
 
 def _login(value: Any) -> str:

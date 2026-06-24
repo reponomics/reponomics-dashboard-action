@@ -186,6 +186,59 @@ def fetch_json(
     raise requests.HTTPError(f"Failed after {MAX_RETRIES} retries: {url}", response=resp)
 
 
+def fetch_json_with_status(
+    url: str,
+    headers: Headers,
+    allow_not_found: bool = False,
+    *,
+    perform_get: Callable[[str, Headers, int], requests.Response],
+    record_network_warning: Callable[[str, int, requests.RequestException], None],
+    accepted_statuses: set[int] | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    retry_delay: Callable[[int], float] = retry_delay_with_jitter,
+) -> tuple[int, object | None, dict[str, str]]:
+    """Fetch JSON and preserve HTTP status for endpoints with meaningful non-200s."""
+    accepted_statuses = accepted_statuses or set()
+    last_exc: requests.RequestException | None = None
+    resp: requests.Response | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = perform_get(url, headers, 30)
+        except requests.RequestException as exc:
+            last_exc = exc
+            record_network_warning(url, attempt, exc)
+            if attempt < MAX_RETRIES:
+                _sleep_after_network_error(attempt, exc, sleep, retry_delay)
+                continue
+            break
+
+        if resp.status_code in accepted_statuses and not is_secondary_rate_limit(resp):
+            return resp.status_code, _response_json_or_none(resp), dict(resp.headers)
+
+        action = _response_action(url, resp, attempt, allow_not_found)
+        if action == "return":
+            return resp.status_code, _response_json_or_none(resp), dict(resp.headers)
+        if action == "retry_not_found":
+            _sleep_after_not_found(url, attempt, sleep, retry_delay)
+            continue
+        if action == "retry":
+            _sleep_after_response(resp, attempt, sleep, retry_delay)
+            continue
+
+    if last_exc:
+        raise last_exc
+    raise requests.HTTPError(f"Failed after {MAX_RETRIES} retries: {url}", response=resp)
+
+
+def _response_json_or_none(resp: requests.Response) -> object | None:
+    if not (getattr(resp, "content", b"") or getattr(resp, "text", "")):
+        return None
+    try:
+        return resp.json()
+    except ValueError:
+        return None
+
+
 def _response_action(
     url: str,
     resp: requests.Response,

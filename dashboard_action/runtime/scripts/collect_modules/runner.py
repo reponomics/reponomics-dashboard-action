@@ -11,9 +11,11 @@ from typing import Any, TypeAlias
 
 import requests
 
+from collect_modules.context_endpoints import RepositoryStatisticsStatus
 from collect_modules.http import RepoUnavailableError, SecondaryRateLimitError
 from collect_modules.types import Headers, RepoMetadata
 from storage import (
+    COLLECTION_ENDPOINT_FIELDS,
     LOG_FIELDS,
     PATH_FIELDS,
     REFERRER_FIELDS,
@@ -26,10 +28,12 @@ from storage import (
     REPO_RELEASE_ASSET_FIELDS,
     REPO_RELEASE_FIELDS,
     REPO_TOPIC_FIELDS,
+    SCHEMA_VERSION,
     SNAPSHOT_FIELDS,
 )
 
 Rows: TypeAlias = list[dict[str, Any]]
+_STATISTICS_ENDPOINTS = {"code-frequency", "contributor-activity"}
 
 
 @dataclass(frozen=True)
@@ -206,10 +210,12 @@ def _collect_context_artifacts(
     deps: CollectionDependencies,
     detail: RepoMetadata,
 ) -> dict[str, Rows]:
+    endpoint_rows: Rows = []
     commit_rows = _context_rows(
         repo,
         run,
         deps,
+        "commits",
         "commits",
         lambda selected_repo, headers, captured_at: deps.collect_commit_history(
             selected_repo,
@@ -217,30 +223,53 @@ def _collect_context_artifacts(
             captured_at,
             str(detail.get("default_branch") or ""),
         ),
+        endpoint_rows,
     )
-    release_rows, release_asset_rows = _release_context_rows(repo, run, deps)
-    language_rows = _context_rows(repo, run, deps, "languages", deps.collect_languages)
-    topic_rows = _context_rows(repo, run, deps, "topics", deps.collect_topics)
+    release_rows, release_asset_rows = _release_context_rows(repo, run, deps, endpoint_rows)
+    language_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "languages",
+        "languages",
+        deps.collect_languages,
+        endpoint_rows,
+    )
+    topic_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "topics",
+        "topics",
+        deps.collect_topics,
+        endpoint_rows,
+    )
     issue_pr_rows = _context_rows(
         repo,
         run,
         deps,
         "issue/pr snapshot",
+        "issue-pr-snapshot",
         deps.collect_issue_pr_snapshot,
+        endpoint_rows,
     )
     code_frequency_rows = _context_rows(
         repo,
         run,
         deps,
         "code frequency",
+        "code-frequency",
         deps.collect_code_frequency_weekly,
+        endpoint_rows,
     )
     contributor_activity_rows = _context_rows(
         repo,
         run,
         deps,
         "contributor activity",
+        "contributor-activity",
         deps.collect_contributor_activity_weekly,
+        endpoint_rows,
     )
     deps.append_csv(
         os.path.join(deps.data_dir, "repo-commits.csv"),
@@ -278,6 +307,11 @@ def _collect_context_artifacts(
         contributor_activity_rows,
         REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
     )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "collection-endpoints.csv"),
+        endpoint_rows,
+        COLLECTION_ENDPOINT_FIELDS,
+    )
     return {
         "commits": commit_rows,
         "releases": release_rows,
@@ -294,13 +328,30 @@ def _release_context_rows(
     repo: str,
     run: CollectionRun,
     deps: CollectionDependencies,
+    endpoint_rows: Rows,
 ) -> tuple[Rows, Rows]:
     try:
-        return deps.collect_release_context(repo, run.headers, run.captured_at)
+        release_rows, asset_rows = deps.collect_release_context(repo, run.headers, run.captured_at)
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key="releases",
+            status="ok",
+            rows_written=len(release_rows) + len(asset_rows),
+        )
+        return release_rows, asset_rows
     except SecondaryRateLimitError:
         raise
     except (requests.HTTPError, requests.RequestException) as exc:
         _record_context_warning(repo, "releases", deps, exc)
+        _record_endpoint_error(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key="releases",
+            exc=exc,
+        )
         return [], []
 
 
@@ -309,15 +360,111 @@ def _context_rows(
     run: CollectionRun,
     deps: CollectionDependencies,
     family: str,
+    endpoint_key: str,
     collector: Callable[[str, Headers, str], Rows],
+    endpoint_rows: Rows,
 ) -> Rows:
     try:
-        return collector(repo, run.headers, run.captured_at)
+        rows = collector(repo, run.headers, run.captured_at)
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            status="ok",
+            rows_written=len(rows),
+            cache_state="ready" if endpoint_key in _STATISTICS_ENDPOINTS else "",
+        )
+        return rows
     except SecondaryRateLimitError:
         raise
+    except RepositoryStatisticsStatus as exc:
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            status=exc.status,
+            http_status=exc.http_status,
+            rows_written=0,
+            cache_state=exc.cache_state,
+            error_type=exc.__class__.__name__,
+            error_message=str(exc),
+        )
+        print(f"  Info: {exc}")
+        return []
     except (requests.HTTPError, requests.RequestException) as exc:
         _record_context_warning(repo, family, deps, exc)
+        _record_endpoint_error(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            exc=exc,
+        )
         return []
+
+
+def _record_endpoint_error(
+    endpoint_rows: Rows,
+    *,
+    repo: str,
+    captured_at: str,
+    endpoint_key: str,
+    exc: Exception,
+) -> None:
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", {}) or {}
+    _record_endpoint_row(
+        endpoint_rows,
+        repo=repo,
+        captured_at=captured_at,
+        endpoint_key=endpoint_key,
+        status="error",
+        http_status=getattr(response, "status_code", ""),
+        rows_written=0,
+        cache_state="",
+        rate_limit_remaining=headers.get("X-RateLimit-Remaining", ""),
+        retry_after_seconds=headers.get("Retry-After", ""),
+        error_type=exc.__class__.__name__,
+        error_message=str(exc),
+    )
+
+
+def _record_endpoint_row(
+    endpoint_rows: Rows,
+    *,
+    repo: str,
+    captured_at: str,
+    endpoint_key: str,
+    status: str,
+    http_status: Any = "",
+    rows_written: int = 0,
+    cache_state: str = "",
+    rate_limit_remaining: Any = "",
+    retry_after_seconds: Any = "",
+    duration_ms: Any = "",
+    error_type: str = "",
+    error_message: str = "",
+) -> None:
+    endpoint_rows.append(
+        {
+            "repo": repo,
+            "captured_at": captured_at,
+            "endpoint_key": endpoint_key,
+            "credential_class": "collection-token",
+            "status": status,
+            "http_status": http_status,
+            "rows_written": rows_written,
+            "cache_state": cache_state,
+            "rate_limit_remaining": rate_limit_remaining,
+            "retry_after_seconds": retry_after_seconds,
+            "duration_ms": duration_ms,
+            "error_type": error_type,
+            "error_message": error_message,
+            "schema_version": SCHEMA_VERSION,
+        }
+    )
 
 
 def _record_success(

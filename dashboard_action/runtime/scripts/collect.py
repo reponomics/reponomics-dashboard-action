@@ -57,6 +57,7 @@ from collect_modules.http import (
     RepoUnavailableError as RepoUnavailableError,
     SecondaryRateLimitError,
     fetch_json as _http_fetch_json,
+    fetch_json_with_status as _http_fetch_json_with_status,
     is_retryable_throttle as _http_is_retryable_throttle,
     is_secondary_rate_limit as _http_is_secondary_rate_limit,
     parse_retry_after_seconds as _http_parse_retry_after_seconds,
@@ -64,6 +65,7 @@ from collect_modules.http import (
     retry_delay_with_jitter as _http_retry_delay_with_jitter,
     secondary_retry_window as _http_secondary_retry_window,
 )
+from collect_modules.context_endpoints import RepositoryStatisticsStatus as RepositoryStatisticsStatus
 from collect_modules.repositories import (
     build_auto_candidates as _repositories_build_auto_candidates,
     current_repository as _repositories_current_repository,
@@ -240,6 +242,25 @@ def fetch_json(
     )
 
 
+def fetch_json_with_status(
+    url: str,
+    headers: Headers,
+    allow_not_found: bool = False,
+    *,
+    accepted_statuses: set[int] | None = None,
+) -> tuple[int, object | None, dict[str, str]]:
+    return _http_fetch_json_with_status(
+        url,
+        headers,
+        allow_not_found,
+        perform_get=_perform_get,
+        record_network_warning=_record_network_warning,
+        sleep=time.sleep,
+        retry_delay=_retry_delay_with_jitter,
+        accepted_statuses=accepted_statuses,
+    )
+
+
 def discover_repositories(headers: Headers) -> list[RepoMetadata]:
     return _repositories_discover_repositories(
         headers,
@@ -393,7 +414,7 @@ def collect_code_frequency_weekly(
         repo,
         headers,
         captured_at,
-        fetch_json=fetch_json,
+        fetch_json_with_status=fetch_json_with_status,
     )
 
 
@@ -406,7 +427,7 @@ def collect_contributor_activity_weekly(
         repo,
         headers,
         captured_at,
-        fetch_json=fetch_json,
+        fetch_json_with_status=fetch_json_with_status,
     )
 
 

@@ -11,11 +11,12 @@ from collect_modules.git_history import collect_commit_history_from_clone
 
 def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> str:
     result = subprocess.run(
-        ["git", "-C", repo.as_posix(), *args],
+        ["git", "-c", "commit.gpgsign=false", "-C", repo.as_posix(), *args],
         check=True,
         capture_output=True,
         text=True,
         env={**os.environ, **(env or {})},
+        timeout=10,
     )
     return result.stdout.strip()
 

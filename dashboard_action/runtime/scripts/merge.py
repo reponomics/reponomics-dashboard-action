@@ -39,6 +39,7 @@ from storage import (
     dedup_collection_endpoints,
     dedup_repo_event_index,
 )
+from event_index import event_index_rows
 from traffic_reporting import collection_day_rows, traffic_coverage_rows
 
 # Map filenames to their dedup functions
@@ -122,6 +123,17 @@ def materialize_reporting_coverage():
     )
 
 
+def materialize_event_index():
+    """Build the normalized repository event spine from retained context tables."""
+    commit_rows = read_csv(os.path.join(DATA_DIR, "repo-commits.csv"))
+    release_rows = read_csv(os.path.join(DATA_DIR, "repo-releases.csv"))
+    write_csv(
+        os.path.join(DATA_DIR, "repo-event-index.csv"),
+        event_index_rows(commit_rows, release_rows),
+        CSV_REGISTRY["repo-event-index.csv"][0],
+    )
+
+
 def trim_csv_by_date(filepath, date_field, cutoff_date):
     """Remove rows older than cutoff_date based on date_field."""
     rows = read_csv(filepath)
@@ -152,6 +164,8 @@ def main():
     materialize_daily()
     print("Materializing reporting coverage...")
     materialize_reporting_coverage()
+    print("Materializing contextual event index...")
+    materialize_event_index()
     print("Trimming to retention window...")
     trim_all()
 

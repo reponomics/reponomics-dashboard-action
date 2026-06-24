@@ -15,7 +15,10 @@ from .core import SCRIPTS_DIR, VERSION, ActionError, RuntimeConfig
 import crypto_artifact  # noqa: E402
 import render_dashboard  # noqa: E402
 import render_readme  # noqa: E402
+from render_dashboard_support.html import DemoUnlockMetadata  # noqa: E402
 import storage  # noqa: E402
+
+DEMO_UNLOCK_KEY_ENV = "REPONOMICS_DEMO_UNLOCK_KEY"
 
 
 def _sha(path: Path) -> str:
@@ -96,8 +99,20 @@ def _prepare_data_schema(config: RuntimeConfig) -> None:
         raise ActionError(f"Could not migrate retained dashboard data: {exc}") from exc
 
 
+def _demo_unlock_metadata() -> DemoUnlockMetadata | None:
+    demo_key = os.environ.get(DEMO_UNLOCK_KEY_ENV, "").strip()
+    if not demo_key:
+        return None
+    return {
+        "label": "Public demo key",
+        "key": demo_key,
+        "note": "Synthetic data. This key is intentionally public and must not be reused.",
+        "button_label": "Use key",
+    }
+
+
 def _render_outputs(config: RuntimeConfig, *, generate_readme: bool) -> None:
-    render_dashboard.render()
+    render_dashboard.render(demo_unlock=_demo_unlock_metadata())
 
     if not generate_readme:
         print("Skipping README render because generate-readme is false.")

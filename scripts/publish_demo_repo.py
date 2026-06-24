@@ -18,6 +18,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 ROOT = find_repo_root(Path(__file__))
 DEMO_PROVENANCE_PATH = Path(".reponomics/demo-provenance.json")
+DEMO_README_ASSETS_DIR = Path("docs/assets")
 
 
 class DemoPublishError(RuntimeError):
@@ -101,6 +102,16 @@ def _assert_publish_tree_shape(output_dir: Path) -> None:
     for relative in ("data", "dist", ".dashboard-data-artifact"):
         if (output_dir / relative).exists():
             raise DemoPublishError(f"Generated demo publish tree must not include {relative}/")
+    index_path = output_dir / "docs/index.html"
+    if index_path.exists():
+        raise DemoPublishError("Generated demo publish tree must not include docs/index.html")
+    assets_dir = output_dir / DEMO_README_ASSETS_DIR
+    if not assets_dir.exists():
+        return
+    for path in assets_dir.rglob("*"):
+        if path.is_file() and path.suffix.lower() != ".svg":
+            relative_path = path.relative_to(output_dir)
+            raise DemoPublishError(f"Generated demo publish tree must not include {relative_path}")
 
 
 def _git_ls_files(cwd: Path) -> list[str]:

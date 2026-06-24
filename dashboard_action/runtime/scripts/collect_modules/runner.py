@@ -20,6 +20,7 @@ from storage import (
     PATH_FIELDS,
     REFERRER_FIELDS,
     REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+    REPO_COMMIT_OBSERVATION_FIELDS,
     REPO_COMMIT_FIELDS,
     REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
     REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
@@ -213,6 +214,7 @@ def _collect_context_artifacts(
     detail: RepoMetadata,
 ) -> dict[str, Rows]:
     endpoint_rows: Rows = []
+    default_branch = str(detail.get("default_branch") or "")
     commit_rows = _context_rows(
         repo,
         run,
@@ -223,9 +225,14 @@ def _collect_context_artifacts(
             selected_repo,
             headers,
             captured_at,
-            str(detail.get("default_branch") or ""),
+            default_branch,
         ),
         endpoint_rows,
+    )
+    commit_observation_rows = _commit_observation_rows(
+        commit_rows,
+        captured_at=run.captured_at,
+        default_branch=default_branch,
     )
     release_rows, release_asset_rows = _release_context_rows(repo, run, deps, endpoint_rows)
     language_rows = _context_rows(
@@ -288,6 +295,11 @@ def _collect_context_artifacts(
         REPO_COMMIT_FIELDS,
     )
     deps.append_csv(
+        os.path.join(deps.data_dir, "repo-commit-observations.csv"),
+        commit_observation_rows,
+        REPO_COMMIT_OBSERVATION_FIELDS,
+    )
+    deps.append_csv(
         os.path.join(deps.data_dir, "repo-releases.csv"),
         release_rows,
         REPO_RELEASE_FIELDS,
@@ -330,6 +342,7 @@ def _collect_context_artifacts(
     )
     return {
         "commits": commit_rows,
+        "commit_observations": commit_observation_rows,
         "releases": release_rows,
         "release_assets": release_asset_rows,
         "languages": language_rows,
@@ -339,6 +352,37 @@ def _collect_context_artifacts(
         "code_frequency": code_frequency_rows,
         "contributor_activity": contributor_activity_rows,
     }
+
+
+def _commit_observation_rows(
+    commit_rows: Rows,
+    *,
+    captured_at: str,
+    default_branch: str,
+) -> Rows:
+    if not commit_rows:
+        return []
+    branch_head_sha = str(commit_rows[-1].get("sha") or "")
+    rows: Rows = []
+    for position, row in enumerate(reversed(commit_rows)):
+        sha = str(row.get("sha") or "")
+        if not sha:
+            continue
+        rows.append(
+            {
+                "repo": row.get("repo", ""),
+                "captured_at": captured_at,
+                "default_branch": default_branch,
+                "branch_head_sha": branch_head_sha,
+                "sha": sha,
+                "parent_sha": row.get("parent_sha", ""),
+                "committed_at": row.get("committed_at", ""),
+                "position_from_head": position,
+                "source": "github-commits-api-window",
+                "schema_version": SCHEMA_VERSION,
+            }
+        )
+    return rows
 
 
 def _release_context_rows(

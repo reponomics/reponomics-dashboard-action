@@ -8,7 +8,6 @@ window. Updates manifest.json timestamps on completion.
 """
 
 import os
-from datetime import datetime, timedelta, timezone
 
 from storage import (
     DATA_DIR,
@@ -29,6 +28,7 @@ from storage import (
     dedup_collection_days,
     dedup_traffic_coverage,
     dedup_repo_commits,
+    dedup_repo_commit_observations,
     dedup_repo_releases,
     dedup_repo_release_assets,
     dedup_repo_languages,
@@ -54,6 +54,7 @@ _DEDUP_FNS = {
     "collection-days.csv":   dedup_collection_days,
     "traffic-coverage.csv":  dedup_traffic_coverage,
     "repo-commits.csv":      dedup_repo_commits,
+    "repo-commit-observations.csv": dedup_repo_commit_observations,
     "repo-releases.csv":     dedup_repo_releases,
     "repo-release-assets.csv": dedup_repo_release_assets,
     "repo-languages.csv":    dedup_repo_languages,
@@ -151,11 +152,16 @@ def trim_csv_by_date(filepath, date_field, cutoff_date):
 
 
 def trim_all():
-    """Trim all CSV files to the retention window."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)).strftime("%Y-%m-%d")
+    """No-op compatibility hook.
 
-    for filename, (_fields, date_field) in CSV_REGISTRY.items():
-        trim_csv_by_date(os.path.join(DATA_DIR, filename), date_field, cutoff)
+    Retained CSV history is cumulative from first collection and is not governed
+    by artifact retention settings. Keep this function for older tests/scripts
+    that may call it directly, but normal collection should not delete rows.
+    """
+    print(
+        "CSV history trim skipped; retained data is cumulative "
+        + f"(artifact retention: {RETENTION_DAYS} days)."
+    )
 
 
 def main():
@@ -168,9 +174,6 @@ def main():
     materialize_reporting_coverage()
     print("Materializing contextual event index...")
     materialize_event_index()
-    print("Trimming to retention window...")
-    trim_all()
-
     # Update manifest timestamp
     manifest = read_manifest(DATA_DIR)
     write_manifest(manifest, DATA_DIR)

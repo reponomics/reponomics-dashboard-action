@@ -13,7 +13,7 @@ This page lists the provenance and verification material Reponomics publishes or
 | Template provenance | `.reponomics/template-provenance.json` | source repository and commit, template version, action repository/default ref/compatible major, template compatibility line, generated payload digest metadata |
 | Workflow action refs | `.github/workflows/*.yml` | Reponomics action refs used by generated workflows |
 | Retained dashboard data artifact | `dashboard-data` workflow artifact | retained encrypted or plaintext dashboard data, depending on `data_mode` |
-| Retained-data lineage manifest | `manifest.json` inside `dashboard-data` | retained-data schema version, file digests, row counts, retention cutoff, parent digest, and row-preservation verification metadata |
+| Retained-data lineage manifest | `manifest.json` inside `dashboard-data` | retained-data schema version, file digests, row counts, artifact retention days, parent digest, and row-preservation verification metadata |
 | Rendered dashboard outputs | Pages artifact or downloadable dashboard artifact | generated dashboard HTML and assets from the repository workflow run |
 
 ## Generated Template Publication

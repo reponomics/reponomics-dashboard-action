@@ -57,6 +57,7 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
 ]
 CONTEXTUAL_DATA_FILES = {
     "repo-commits.csv",
+    "repo-commit-observations.csv",
     "repo-releases.csv",
     "repo-release-assets.csv",
     "repo-languages.csv",
@@ -1166,7 +1167,7 @@ def test_bootstrap_creates_empty_data_files_and_manifest(
             assert list(reader) == []
 
 
-def test_registered_csvs_have_lineage_identity_and_retention_fields() -> None:
+def test_registered_csvs_have_lineage_identity_and_primary_date_fields() -> None:
     assert set(run.storage.CSV_REGISTRY) == set(run.lineage.ROW_IDENTITY_FIELDS)
 
     for filename, (fieldnames, date_field) in run.storage.CSV_REGISTRY.items():
@@ -4858,6 +4859,7 @@ def test_collect_appends_context_rows_for_selected_repo(
             return list(csv.DictReader(handle))
 
     assert rows("repo-commits.csv")[-1]["message_subject"] == "Add analytics on main"
+    assert rows("repo-commit-observations.csv")[-1]["branch_head_sha"] == "abc123"
     assert rows("repo-releases.csv")[-1]["tag_name"] == "v1.2.3"
     assert rows("repo-release-assets.csv")[-1]["name"] == "tool.tar.gz"
     assert rows("repo-languages.csv")[-1]["language"] == "Python"
@@ -5704,6 +5706,32 @@ def test_contextual_data_dedup_helpers_preserve_latest_identity_rows() -> None:
             {"repo": "demo/app", "sha": "abc", "message_subject": "new"},
         ]
     ) == [{"repo": "demo/app", "sha": "abc", "message_subject": "new"}]
+    assert run.storage.dedup_repo_commit_observations(
+        [
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "default_branch": "main",
+                "sha": "abc",
+                "position_from_head": "1",
+            },
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "default_branch": "main",
+                "sha": "abc",
+                "position_from_head": "0",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "default_branch": "main",
+            "sha": "abc",
+            "position_from_head": "0",
+        }
+    ]
     assert run.storage.dedup_repo_release_assets(
         [
             {
@@ -5790,6 +5818,51 @@ def test_release_retention_keeps_recent_drafts_without_published_at(
         rows = list(csv.DictReader(handle))
     assert rows[0]["release_id"] == "99"
     assert rows[0]["published_at"] == ""
+
+
+def test_merge_trim_all_does_not_delete_retained_csv_history(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(run.bootstrap, "DATA_DIR", data_dir.as_posix())
+    run.bootstrap.bootstrap()
+    old_committed_at = "2020-01-01T00:00:00Z"
+    _write_csv(
+        data_dir / "repo-commits.csv",
+        run.storage.REPO_COMMIT_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "sha": "abc123",
+                "parent_sha": "",
+                "committed_at": old_committed_at,
+                "authored_at": old_committed_at,
+                "author_name": "Maintainer",
+                "author_email_hash": "",
+                "author_login": "maintainer",
+                "committer_login": "maintainer",
+                "message_subject": "Initial observed commit",
+                "message_body_hash": "",
+                "files_changed": "",
+                "additions": "",
+                "deletions": "",
+                "changed_paths_sample": "",
+                "classification": "unknown",
+                "associated_pr_number": "",
+                "source": "github-commits-api",
+                "captured_at": old_committed_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(run.merge, "DATA_DIR", data_dir.as_posix())
+    run.merge.trim_all()
+
+    with (data_dir / "repo-commits.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["sha"] == "abc123"
 
 
 def test_schema_migration_handles_file_field_renames_and_defaults(

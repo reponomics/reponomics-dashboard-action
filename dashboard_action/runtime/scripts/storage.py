@@ -104,6 +104,12 @@ REPO_COMMIT_FIELDS = [
     "associated_pr_number", "source", "captured_at", "schema_version",
 ]
 
+REPO_COMMIT_OBSERVATION_FIELDS = [
+    "repo", "captured_at", "default_branch", "branch_head_sha", "sha",
+    "parent_sha", "committed_at", "position_from_head", "source",
+    "schema_version",
+]
+
 REPO_RELEASE_FIELDS = [
     "repo", "release_id", "node_id", "tag_name", "target_commitish",
     "target_sha", "name", "draft", "prerelease", "immutable", "created_at",
@@ -162,7 +168,9 @@ REPO_EVENT_INDEX_FIELDS = [
     "classification", "source_table", "captured_at", "schema_version",
 ]
 
-# Map filename -> (field list, date field used for retention trim)
+# Map filename -> (field list, primary date field used for lineage summaries
+# and emergency/manual maintenance helpers). Normal collection does not trim
+# retained CSV history by this field.
 CSV_REGISTRY = {
     "traffic-log.csv":       (LOG_FIELDS,      "ts"),
     "traffic-daily.csv":     (DAILY_FIELDS,     "ts"),
@@ -174,6 +182,10 @@ CSV_REGISTRY = {
     "collection-days.csv":   (COLLECTION_DAY_FIELDS, "ts"),
     "traffic-coverage.csv":  (TRAFFIC_COVERAGE_FIELDS, "ts"),
     "repo-commits.csv":      (REPO_COMMIT_FIELDS, "committed_at"),
+    "repo-commit-observations.csv": (
+        REPO_COMMIT_OBSERVATION_FIELDS,
+        "captured_at",
+    ),
     "repo-releases.csv":     (REPO_RELEASE_FIELDS, "created_at"),
     "repo-release-assets.csv": (
         REPO_RELEASE_ASSET_FIELDS,
@@ -504,6 +516,24 @@ def dedup_repo_commits(rows):
     return list(seen.values())
 
 
+def dedup_repo_commit_observations(rows):
+    """Remove duplicate default-branch commit observation rows.
+
+    Key: (repo, captured_at, default_branch, sha).
+    """
+    seen = {}
+    for row in rows:
+        seen[
+            (
+                row["repo"],
+                row["captured_at"],
+                row["default_branch"],
+                row["sha"],
+            )
+        ] = row
+    return list(seen.values())
+
+
 def dedup_repo_releases(rows):
     """Remove duplicate repository release rows.
 
@@ -644,6 +674,7 @@ def write_manifest(manifest, data_dir=DATA_DIR):
     """Write manifest.json with updated last_updated timestamp."""
     manifest["schema_version"] = SCHEMA_VERSION
     manifest["files"] = list(CSV_REGISTRY.keys())
+    manifest["artifact_retention_days"] = RETENTION_DAYS
     manifest["retention_days"] = RETENTION_DAYS
     if DATA_MODE in VALID_DATA_MODES:
         manifest["data_mode"] = DATA_MODE

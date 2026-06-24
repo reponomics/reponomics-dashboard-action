@@ -158,6 +158,19 @@ erDiagram
         string schema_version
     }
 
+    REPO_COMMIT_OBSERVATIONS {
+        string repo PK
+        string captured_at PK
+        string default_branch PK
+        string sha PK
+        string branch_head_sha
+        string parent_sha
+        string committed_at
+        int position_from_head
+        string source
+        string schema_version
+    }
+
     REPO_RELEASES {
         string repo PK
         string release_id PK
@@ -303,6 +316,7 @@ erDiagram
     REPOSITORY ||--o{ COLLECTION_STATUS : reports
     REPOSITORY ||--o{ TRAFFIC_COVERAGE : covers
     REPOSITORY ||--o{ REPO_COMMITS : contains
+    REPOSITORY ||--o{ REPO_COMMIT_OBSERVATIONS : observes
     REPOSITORY ||--o{ REPO_RELEASES : publishes
     REPOSITORY ||--o{ REPO_LANGUAGES : uses
     REPOSITORY ||--o{ REPO_TOPICS : labels
@@ -320,6 +334,7 @@ erDiagram
     COLLECTION_RUN ||--o{ REPO_METRICS : captured
     COLLECTION_RUN ||--o{ COLLECTION_STATUS : captured
     COLLECTION_RUN ||--o{ COLLECTION_ENDPOINTS : captured
+    COLLECTION_RUN ||--o{ REPO_COMMIT_OBSERVATIONS : captured
     COLLECTION_RUN ||--o{ REPO_LANGUAGES : captured
     COLLECTION_RUN ||--o{ REPO_TOPICS : captured
     COLLECTION_RUN ||--o{ REPO_ISSUE_PR_SNAPSHOTS : captured
@@ -328,6 +343,7 @@ erDiagram
     COLLECTION_DAYS ||--o{ COLLECTION_STATUS : summarizes
     COLLECTION_DAYS ||--o{ TRAFFIC_COVERAGE : summarizes
 
+    REPO_COMMITS ||--o{ REPO_COMMIT_OBSERVATIONS : observed
     REPO_ISSUE_PR_SNAPSHOTS ||--o{ REPO_ISSUE_LABEL_SNAPSHOTS : samples
     REPO_RELEASES ||--o{ REPO_RELEASE_ASSETS : contains
     REPO_COMMITS ||--o{ REPO_EVENT_INDEX : derives
@@ -336,7 +352,7 @@ erDiagram
 
 ## Table Grains
 
-| CSV file | Logical grain | Retention date |
+| CSV file | Logical grain | Primary date field |
 | --- | --- | --- |
 | `traffic-log.csv` | Repository, traffic day, collection capture | `ts` |
 | `traffic-daily.csv` | Repository, traffic day | `ts` |
@@ -348,6 +364,7 @@ erDiagram
 | `collection-days.csv` | Collection day | `ts` |
 | `traffic-coverage.csv` | Repository, reporting day | `ts` |
 | `repo-commits.csv` | Repository, commit SHA | `committed_at` |
+| `repo-commit-observations.csv` | Repository, collection capture, default branch, commit SHA | `captured_at` |
 | `repo-releases.csv` | Repository, release id | `created_at` |
 | `repo-release-assets.csv` | Repository, release asset, collection capture | `captured_at` |
 | `repo-languages.csv` | Repository, collection capture, language | `captured_at` |
@@ -366,6 +383,9 @@ erDiagram
 - `captured_at` is the closest equivalent to a collection-run foreign key. It is
   not globally unique by itself, but in practice it ties rows from one collector
   pass together. `run_id` is available only where the row family stores it.
+- Multiple collection runs per day are valid. Tables keyed by `captured_at`
+  retain per-run observations; daily tables such as `traffic-daily.csv`,
+  `collection-days.csv`, and `traffic-coverage.csv` are derived summaries.
 - `repo-event-index.csv` is a derived table. Its `source_table` column says
   which retained CSV produced the event row. Today it is populated from commits
   and releases; future projections can add issue, PR, topic, language, or
@@ -375,9 +395,12 @@ erDiagram
   unsupported endpoint results, and optional endpoint failures. Repo-level
   `collection-status.csv` remains the traffic/run health signal used by the
   existing calendar view.
+- `repo-commits.csv` records commit facts observed at least once.
+  `repo-commit-observations.csv` records the sampled default-branch window seen
+  during each run, which is the safer source for detecting force-pushes,
+  rebases, and missed observation periods.
 - Weekly graph tables are keyed by GitHub's statistics window. They are useful
-  context, but they are not authoritative commit history; `repo-commits.csv`
-  remains the event-level source for code timeline correlation.
+  context, but they are not authoritative commit history.
 
 ## Implementation Boundary
 

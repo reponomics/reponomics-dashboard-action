@@ -6,7 +6,7 @@
 4. Migrate the restored retained data packet to the runtime's current canonical CSV schema.
 5. Collect fresh GitHub data and merge it into the canonical CSV payload.
 6. Build a new child lineage manifest over the decrypted/plaintext canonical payload.
-7. Verify that the child preserves all parent rows still inside the configured retention horizon, allowing only explicit retention drops and compatible migrations.
+7. Verify that the child preserves all parent row identities, allowing only explicit compatible migrations.
 8. Encrypt the child payload when required.
 9. Upload the fresh `dashboard-data` artifact.
 10. Delete the oldest retained `dashboard-data` artifact after upload succeeds.
@@ -16,6 +16,29 @@ If collection fails, merge fails, manifest verification fails, encryption fails,
 ## Retention Defaults
 
 The default `retention-days` stays long, currently 90 days by default (user-configurable between 14-90 days) and still bounded by GitHub's artifact retention limits. The working model is: while collection is working as expected, artifacts are expected to be very short-lived, because each collection run deletes the oldest retained backup - the retention period, therefore, should be very long, by default, because it is only operationally relevant if there is a failure somehwere in the collection/storage pipeline.
+
+## Collection Gaps And API Lag
+
+Retained CSV history is cumulative from first collection. The runtime does not
+trim CSV rows based on `retention-days`, and it does not backfill historical
+data by default.
+
+Collection is an observation process, not a guarantee of exactly one complete
+daily sample. A missed workflow run, expired token, optional endpoint failure,
+rate limit, or delayed GitHub endpoint is represented as collection evidence:
+
+- `collection-status.csv` records repo/run-level outcomes.
+- `collection-endpoints.csv` records endpoint-level outcomes, including optional
+  failures and non-ready states such as repository statistics `pending`.
+- Tables keyed by `captured_at` may contain multiple runs per day.
+- Derived daily tables summarize observed data; they should not be treated as
+  the only source of truth when multiple runs occur on one day.
+
+GitHub APIs can lag. Traffic endpoints are especially important because they
+return a rolling window: a later run can legitimately fill in or replace data
+for earlier traffic days. In those cases, `captured_at` records when the
+dashboard observed the row, while the endpoint date field records the day or
+week the activity belongs to.
 
 ## Lineage Manifest
 
@@ -27,7 +50,7 @@ The manifest includes:
 - artifact kind: `dashboard-data`
 - action version
 - creation timestamp
-- retention days and retention cutoff date
+- artifact retention days
 - parent manifest digest and parent payload digest when a parent exists
 - per-file SHA-256 digests for registered canonical CSV files
 - row counts and date ranges for registered canonical CSV files
@@ -53,6 +76,7 @@ Each registered CSV needs a row identity:
 - `collection-days.csv`: `ts`
 - `traffic-coverage.csv`: `repo`, `ts`
 - `repo-commits.csv`: `repo`, `sha`
+- `repo-commit-observations.csv`: `repo`, `captured_at`, `default_branch`, `sha`
 - `repo-releases.csv`: `repo`, `release_id`
 - `repo-release-assets.csv`: `repo`, `asset_id`, `captured_at`
 - `repo-languages.csv`: `repo`, `captured_at`, `language`
@@ -64,7 +88,10 @@ Each registered CSV needs a row identity:
 - `collection-endpoints.csv`: `repo`, `captured_at`, `endpoint_key`
 - `repo-event-index.csv`: `repo`, `event_id`
 
-For each parent row inside the child retention horizon, the child must contain the same row identity in the same CSV family. Parent rows older than the child retention cutoff may be dropped. Any future migration that changes row identity must be represented as an explicit migration rule and tested.
+For each parent row, the child must contain the same row identity in the same
+CSV family. `retention-days` is artifact backup expiry, not a retained CSV
+history horizon. Any future migration that changes row identity must be
+represented as an explicit migration rule and tested.
 
 ## Retained Packet Migrations
 

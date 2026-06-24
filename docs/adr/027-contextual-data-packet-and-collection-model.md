@@ -95,6 +95,41 @@ Existing retained tables stay conceptually valid:
 
 These tables answer "what moved?" and "can we trust the collection window?"
 
+#### Collection Cadence, Gaps, And Idempotency
+
+The retained packet must be failure tolerant. It should not assume exactly one
+successful collection per day, and it should not hide missing data by filling
+synthetic observations. Missed workflow days, token failures, endpoint outages,
+rate limits, and GitHub endpoint states such as statistics `pending` are part
+of the retained evidence.
+
+Policy:
+
+- Store successful observations at the grain the endpoint naturally supports.
+  Tables keyed by `captured_at` can retain multiple runs per day.
+- Record collection health separately from observations. Use
+  `collection-status.csv` for repo/run-level collection outcome and
+  `collection-endpoints.csv` for endpoint-level status, including optional
+  endpoint failures and non-ready API states.
+- Treat API lag as expected behavior. `captured_at` records when the dashboard
+  saw an observation; endpoint-specific event dates such as traffic `ts`,
+  commit `committed_at`, release `published_at`, and statistics `week_start`
+  record when the observed activity belongs. Traffic endpoints can publish
+  delayed data inside their rolling API window, so later runs may legitimately
+  improve or replace earlier observations for prior traffic days.
+- Prefer idempotent row identities. Re-running the same collection window
+  should deduplicate stable facts such as commit SHAs, while per-run observation
+  tables should keep distinct `captured_at` rows.
+- Do not backfill by default. Backfill may be added later for selected endpoint
+  families, but the base model starts accumulating from the first successful
+  run that includes the table.
+- Do not use artifact retention as a CSV history horizon. Artifact retention is
+  backup survival; retained CSV history is cumulative unless an explicit,
+  versioned migration changes it.
+- Derived daily tables are summaries. They are useful for dashboard views but
+  should not be treated as the only authoritative evidence when multiple runs
+  occur on the same day.
+
 #### Layer 2: Project And Code Observations
 
 Add retained tables for source events and repository context. These are factual
@@ -102,7 +137,8 @@ observations, not final insights.
 
 | Table | Source | Purpose |
 | --- | --- | --- |
-| `repo-commits.csv` | Local git clone of the default branch | Linear main-branch code history for event correlation. |
+| `repo-commits.csv` | GitHub commits API | Commit facts observed on the default branch for event correlation. |
+| `repo-commit-observations.csv` | GitHub commits API | Per-run default-branch commit window for detecting rewritten history. |
 | `repo-releases.csv` | GitHub releases API | Release events, tags, asset totals, and publication state. |
 | `repo-release-assets.csv` | GitHub releases API | Per-asset download and packaging signals. |
 | `repo-languages.csv` | Repository languages API | Codebase composition snapshots. |
@@ -113,12 +149,15 @@ observations, not final insights.
 | `repo-contributor-activity-weekly.csv` | GitHub statistics API | Contributor breadth and weekly contribution load when available. |
 | `collection-endpoints.csv` | Collector instrumentation | Endpoint status, rate-limit/cache behavior, and unsupported-data states. |
 
-Local git-derived commit history is important because it does not require
-historical API backfill. The collector can clone or fetch the repository's
-default branch and extract retained-window history directly from git. That
-should become the authoritative source for `repo-commits.csv`. The GitHub commit
-API can still be useful for commit-to-PR association and signature metadata, but
-it should not be the only path for a linear default-branch log.
+Commit context is intentionally collected from GitHub's commits API instead of
+cloning each tracked repository. Cloning would make collection duration scale
+poorly for portfolios with many repositories, while storage is comparatively
+cheap. The first implementation starts observing commits when the feature is
+enabled; it does not perform historical backfill. `repo-commits.csv` stores
+commit facts observed at least once, while `repo-commit-observations.csv`
+records the default-branch commit window seen during each collection run. This
+keeps rewritten branch history honest without mutating or deleting older
+observations.
 
 #### Layer 3: Derived Event Spine
 
@@ -204,6 +243,31 @@ Notes:
   capped to prevent large rows.
 - `classification` can start heuristic-only: docs, tests, ci, release, refactor,
   feature, fix, dependency, unknown.
+- This is an observed commit fact table, not a complete clone-derived history.
+  Rows start accumulating when collection begins and are deduplicated by
+  `repo`, `sha`.
+
+### `repo-commit-observations.csv`
+
+Row identity: `repo`, `captured_at`, `default_branch`, `sha`.
+
+Columns:
+
+- `repo`
+- `captured_at`
+- `default_branch`
+- `branch_head_sha`
+- `sha`
+- `parent_sha`
+- `committed_at`
+- `position_from_head`
+- `source`
+- `schema_version`
+
+Each row means that a commit appeared in the sampled default-branch window for
+that collection run. This table preserves evidence of branch shape over time,
+including force-pushes or rebases, without requiring daily clones or attempting
+to rewrite previously observed commit facts.
 
 ### `repo-releases.csv`
 

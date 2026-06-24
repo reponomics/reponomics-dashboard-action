@@ -33,6 +33,7 @@ if str(RUNTIME_SCRIPTS_DIR) not in sys.path:
 
 from scripts import template_contract, template_provenance  # noqa: E402
 
+import render_readme  # noqa: E402
 import storage  # noqa: E402
 import traffic_reporting  # noqa: E402
 import crypto_artifact  # noqa: E402
@@ -50,12 +51,13 @@ DEMO_SEED_DASHBOARD_DATA_ARTIFACT_NAME = "dashboard-data"
 DEMO_SEED_ARTIFACT_PATH = Path("dashboard-data.enc")
 DEMO_EXCLUDED_PAYLOAD_PATHS = frozenset({DEMO_PROVENANCE_PATH.as_posix()})
 DEMO_README_NOTICE = """\
-> **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, and the Pages dashboard key is intentionally public.
+> **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, the committed README dashboard is demo-only, and the Pages dashboard key is intentionally public.
 
 """
 DEMO_OWNER = "reponomics-demo"
 DEMO_REPO_PREFIX = "demo-"
 DEMO_DATASET_DENYLIST = ("reponomics-labs", "internal", "customer", "stealth")
+DEMO_README_ASSETS_DIR = Path("docs/assets")
 
 
 class DemoBuildError(RuntimeError):
@@ -523,6 +525,34 @@ def _prepend_readme_notice(readme_path: Path) -> None:
     readme_path.write_text(DEMO_README_NOTICE + content, encoding="utf-8")
 
 
+def _render_demo_readme(output_dir: Path, dataset: dict[str, Any]) -> None:
+    render_readme.OUTPUT_PATH = "README.md"
+    render_readme.ASSET_OUTPUT_DIR = DEMO_README_ASSETS_DIR
+    render_readme.ASSET_DISPLAY_DIR = DEMO_README_ASSETS_DIR
+    contract = template_contract.load_contract(ROOT)
+    action_release_url = (
+        f"https://github.com/{contract.action_repository}/releases/tag/{contract.action_tag}"
+    )
+    env = {
+        "DASHBOARD_KEY": str(dataset["demo_key"]),
+        "DASHBOARD_ACCESS_MODE": "encrypted",
+        "REPONOMICS_MANAGED_DOCS_README_LINK": "docs/reponomics/README.md",
+        "REPONOMICS_VERSION_STATUS_JSON": json.dumps(
+            {
+                "current_version": contract.action_version,
+                "current_url": action_release_url,
+                "latest_version": contract.action_version,
+                "update_available": False,
+                "url": action_release_url,
+            },
+            separators=(",", ":"),
+        ),
+    }
+    with _temporary_env(env), _pushd(output_dir):
+        render_readme.render()
+    _prepend_readme_notice(output_dir / "README.md")
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -542,6 +572,19 @@ def _write_encrypted_seed_artifact(data_dir: Path, seed_output_dir: Path, datase
 def _prune_retained_data_from_publish_tree(output_dir: Path) -> None:
     for relative in ("data", "dist", ".dashboard-data-artifact"):
         shutil.rmtree(output_dir / relative, ignore_errors=True)
+
+
+def _assert_no_committed_html_dashboard_outputs(output_dir: Path) -> None:
+    index_path = output_dir / "docs/index.html"
+    if index_path.exists():
+        raise DemoBuildError("Generated demo publish tree must not include docs/index.html.")
+    assets_dir = output_dir / DEMO_README_ASSETS_DIR
+    if not assets_dir.exists():
+        return
+    for path in assets_dir.rglob("*"):
+        if path.is_file() and path.suffix.lower() != ".svg":
+            relative_path = path.relative_to(output_dir)
+            raise DemoBuildError(f"Generated demo publish tree must not include {relative_path}.")
 
 
 def _write_demo_config(output_dir: Path) -> None:
@@ -625,8 +668,9 @@ def build_demo(output_dir: Path, dataset_path: Path, as_of: date, seed_output_di
     seed_artifact_path = _write_encrypted_seed_artifact(output_dir / "data", seed_output_dir, dataset)
     _write_demo_config(output_dir)
     _write_demo_workflow(output_dir, str(dataset["demo_key"]))
-    _prepend_readme_notice(output_dir / "README.md")
+    _render_demo_readme(output_dir, dataset)
     _prune_retained_data_from_publish_tree(output_dir)
+    _assert_no_committed_html_dashboard_outputs(output_dir)
     _write_demo_provenance(output_dir, dataset, as_of, seed_artifact_path=seed_artifact_path)
     verify_demo(output_dir, dataset_path, seed_output_dir=seed_output_dir)
     print(f"Demo repository written to {output_dir}")
@@ -663,6 +707,7 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     required = [
         output_dir / "README.md",
         output_dir / "config.yaml",
+        output_dir / DEMO_README_ASSETS_DIR / "hero-stats.svg",
         output_dir / DEMO_TARGET_WORKFLOW,
         output_dir / DEMO_PROVENANCE_PATH,
     ]
@@ -672,9 +717,7 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     for relative in ("data", "dist", ".dashboard-data-artifact"):
         if (output_dir / relative).exists():
             raise DemoBuildError(f"Generated demo publish tree must not include {relative}/.")
-    for relative in ("docs/index.html", "docs/assets"):
-        if (output_dir / relative).exists():
-            raise DemoBuildError(f"Generated demo publish tree must not include {relative}.")
+    _assert_no_committed_html_dashboard_outputs(output_dir)
     seed_path = seed_output_dir / DEMO_SEED_ARTIFACT_PATH
     _load_encrypted_seed(seed_path)
     readme = (output_dir / "README.md").read_text(encoding="utf-8")
@@ -682,12 +725,14 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     workflow = (output_dir / DEMO_TARGET_WORKFLOW).read_text(encoding="utf-8")
     if "Public synthetic demo" not in readme:
         raise DemoBuildError("Demo README is missing synthetic-data disclosure.")
+    if "Latest data capture" not in readme or "docs/assets/hero-stats.svg" not in readme:
+        raise DemoBuildError("Demo README is missing the committed README dashboard.")
     if config.get("i_have_read_the_readme") is not True:
         raise DemoBuildError("Demo config must be setup-ready.")
     if config.get("data_mode") != "encrypted" or config.get("publish_pages_dashboard") is not True:
         raise DemoBuildError("Demo config must publish encrypted Pages.")
     if config.get("publish_readme_dashboard") is not False:
-        raise DemoBuildError("Demo config must not publish a README dashboard.")
+        raise DemoBuildError("Demo config must leave runtime README publication disabled.")
     if str(dataset["demo_key"]) not in workflow:
         raise DemoBuildError("Demo Pages workflow does not expose the configured public demo key.")
     _assert_no_demo_brand_risk_terms(output_dir)
@@ -695,6 +740,8 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
         raise DemoBuildError("Demo workflow must not require collection or dashboard secrets.")
     if "mode: publish" not in workflow or "artifact-run-id: ${{ github.run_id }}" not in workflow:
         raise DemoBuildError("Demo workflow must render Pages through the publish runtime.")
+    if 'generate-readme: "false"' not in workflow:
+        raise DemoBuildError("Demo workflow must not publish the README dashboard through runtime.")
     provenance = json.loads((output_dir / DEMO_PROVENANCE_PATH).read_text(encoding="utf-8"))
     if provenance.get("dataset_revision") != dataset.get("dataset_revision"):
         raise DemoBuildError("Demo provenance dataset_revision does not match dataset.yml.")

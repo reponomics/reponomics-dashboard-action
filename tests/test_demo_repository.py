@@ -183,6 +183,7 @@ def test_demo_pages_workflow_has_no_collection_or_dashboard_secrets(tmp_path: Pa
     assert "mode: publish" in workflow
     assert "artifact-run-id: ${{ github.run_id }}" in workflow
     assert "dashboard-secret: ${{ env.DEMO_DASHBOARD_KEY }}" in workflow
+    assert 'generate-readme: "false"' in workflow
     assert "public-demo-key" in workflow
     assert "actions/upload-pages-artifact@" not in workflow
     assert "actions/deploy-pages@" not in workflow
@@ -197,6 +198,33 @@ def test_demo_publisher_rejects_committed_retained_data(tmp_path: Path) -> None:
     (output / "data").mkdir()
 
     with pytest.raises(publish_demo_repo.DemoPublishError, match="must not include data"):
+        publish_demo_repo._assert_publish_tree_shape(output)
+
+
+def test_demo_publish_tree_allows_readme_svg_assets_only(tmp_path: Path) -> None:
+    output = tmp_path / "demo"
+    assets = output / "docs" / "assets"
+    assets.mkdir(parents=True)
+    (assets / "hero-stats.svg").write_text("<svg></svg>", encoding="utf-8")
+
+    build_demo_repo._assert_no_committed_html_dashboard_outputs(output)
+    publish_demo_repo._assert_publish_tree_shape(output)
+
+    (assets / "chart.umd.min.js").write_text("window.Chart = {}", encoding="utf-8")
+    with pytest.raises(build_demo_repo.DemoBuildError, match="docs/assets/chart\\.umd\\.min\\.js"):
+        build_demo_repo._assert_no_committed_html_dashboard_outputs(output)
+    with pytest.raises(publish_demo_repo.DemoPublishError, match="docs/assets/chart\\.umd\\.min\\.js"):
+        publish_demo_repo._assert_publish_tree_shape(output)
+
+
+def test_demo_publish_tree_rejects_committed_html_dashboard(tmp_path: Path) -> None:
+    output = tmp_path / "demo"
+    (output / "docs").mkdir(parents=True)
+    (output / "docs" / "index.html").write_text("<!doctype html>", encoding="utf-8")
+
+    with pytest.raises(build_demo_repo.DemoBuildError, match="docs/index\\.html"):
+        build_demo_repo._assert_no_committed_html_dashboard_outputs(output)
+    with pytest.raises(publish_demo_repo.DemoPublishError, match="docs/index\\.html"):
         publish_demo_repo._assert_publish_tree_shape(output)
 
 
@@ -250,6 +278,13 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert step_names.index("Validate downloaded demo artifact") < step_names.index(
         "Create demo publication app token"
     )
+    validation_step = next(step for step in steps if step["name"] == "Validate downloaded demo artifact")
+    validation_script = validation_step["run"]
+    assert "grep -q 'docs/assets/hero-stats.svg' demo-repo/README.md" in validation_script
+    assert "test -f demo-repo/docs/assets/hero-stats.svg" in validation_script
+    assert "test ! -e demo-repo/docs/index.html" in validation_script
+    assert "test -f demo-repo/docs/index.html" not in validation_script
+    assert "find demo-repo/docs/assets -type f ! -name '*.svg'" in validation_script
     token_step = next(step for step in steps if step["name"] == "Create demo publication app token")
     assert token_step["with"]["client-id"] == "${{ vars.DEMO_PUBLISH_APP_CLIENT_ID }}"
     assert token_step["with"]["private-key"] == "${{ secrets.DEMO_PUBLISH_APP_PRIVATE_KEY }}"

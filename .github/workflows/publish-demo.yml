@@ -135,12 +135,19 @@ jobs:
           tar -xzf publication-input/demo-repo.tar.gz -C demo-repo
           test -f publication-input/demo-source-commit.txt
           test -f demo-repo/README.md
-          test -f demo-repo/docs/index.html
+          grep -q 'docs/assets/hero-stats.svg' demo-repo/README.md
+          test -f demo-repo/docs/assets/hero-stats.svg
           test -f demo-repo/.reponomics/demo-provenance.json
           test -f demo-repo/.github/workflows/seed-and-publish-demo-dashboard.yml
           test ! -e demo-repo/data
           test ! -e demo-repo/dist
           test ! -e demo-repo/.dashboard-data-artifact
+          test ! -e demo-repo/docs/index.html
+          if find demo-repo/docs/assets -type f ! -name '*.svg' -print -quit | grep -q .; then
+            echo "Generated demo output contains committed HTML dashboard assets." >&2
+            find demo-repo/docs/assets -type f ! -name '*.svg' -print >&2
+            exit 1
+          fi
           if grep -R -n -E 'reponomics-labs|internal-tools|customer|stealth' demo-repo; then
             echo "Generated demo output contains a blocked public brand-risk term." >&2
             exit 1

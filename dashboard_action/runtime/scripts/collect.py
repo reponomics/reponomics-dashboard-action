@@ -35,11 +35,15 @@ from collect_modules.constants import (
     TOKEN_VALIDATION_URL as TOKEN_VALIDATION_URL,
 )
 from collect_modules.endpoints import (
+    collect_issue_pr_snapshot as _endpoints_collect_issue_pr_snapshot,
+    collect_languages as _endpoints_collect_languages,
     collect_paths as _endpoints_collect_paths,
     collect_referrers as _endpoints_collect_referrers,
+    collect_release_context as _endpoints_collect_release_context,
     collect_repo_community_profile as _endpoints_collect_repo_community_profile,
     collect_repo_detail as _endpoints_collect_repo_detail,
     collect_repo_metrics as _endpoints_collect_repo_metrics,
+    collect_topics as _endpoints_collect_topics,
     collect_views_clones as _endpoints_collect_views_clones,
     community_has_file as _endpoints_community_has_file,
     community_health_percentage as _endpoints_community_health_percentage,
@@ -315,6 +319,48 @@ def collect_repo_detail(repo: str, headers: Headers) -> RepoMetadata:
 
 def collect_repo_community_profile(repo: str, headers: Headers) -> RepoMetadata:
     return _endpoints_collect_repo_community_profile(repo, headers, fetch_json=fetch_json)
+
+
+def collect_release_context(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    return _endpoints_collect_release_context(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_languages(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_languages(repo, headers, captured_at, fetch_json=fetch_json)
+
+
+def collect_topics(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_topics(repo, headers, captured_at, fetch_json=fetch_json)
+
+
+def collect_issue_pr_snapshot(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_issue_pr_snapshot(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
 
 
 _community_has_file = _endpoints_community_has_file

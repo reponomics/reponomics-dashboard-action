@@ -4200,6 +4200,177 @@ def test_collect_referrers_and_paths_shape_endpoint_rows(
     ]
 
 
+def test_collect_release_context_shapes_release_and_asset_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/releases?per_page=100"
+        return [
+            {
+                "id": 99,
+                "node_id": "R_99",
+                "tag_name": "v1.2.3",
+                "target_commitish": "main",
+                "name": "v1.2.3",
+                "draft": False,
+                "prerelease": False,
+                "immutable": True,
+                "created_at": "2026-06-01T08:00:00Z",
+                "published_at": "2026-06-01T09:00:00Z",
+                "author": {"login": "maintainer"},
+                "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+                "body": "Release notes",
+                "assets": [
+                    {
+                        "id": 10,
+                        "name": "tool.tar.gz",
+                        "label": "tool",
+                        "content_type": "application/gzip",
+                        "state": "uploaded",
+                        "size": 2048,
+                        "download_count": 7,
+                        "created_at": "2026-06-01T08:30:00Z",
+                        "updated_at": "2026-06-01T08:45:00Z",
+                        "browser_download_url": "https://example.test/tool.tar.gz",
+                    }
+                ],
+            }
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    release_rows, asset_rows = run.collect_mod.collect_release_context(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    )
+
+    assert release_rows == [
+        {
+            "repo": "demo/reponomics",
+            "release_id": 99,
+            "node_id": "R_99",
+            "tag_name": "v1.2.3",
+            "target_commitish": "main",
+            "target_sha": "",
+            "name": "v1.2.3",
+            "draft": False,
+            "prerelease": False,
+            "immutable": True,
+            "created_at": "2026-06-01T08:00:00Z",
+            "published_at": "2026-06-01T09:00:00Z",
+            "author_login": "maintainer",
+            "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+            "asset_count": 1,
+            "asset_download_count": 7,
+            "body_hash": hashlib.sha256(b"Release notes").hexdigest(),
+            "captured_at": "2026-06-02T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert asset_rows == [
+        {
+            "repo": "demo/reponomics",
+            "release_id": 99,
+            "asset_id": 10,
+            "name": "tool.tar.gz",
+            "label": "tool",
+            "content_type": "application/gzip",
+            "state": "uploaded",
+            "size_bytes": 2048,
+            "download_count": 7,
+            "created_at": "2026-06-01T08:30:00Z",
+            "updated_at": "2026-06-01T08:45:00Z",
+            "browser_download_url": "https://example.test/tool.tar.gz",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
+def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        if url.endswith("/languages"):
+            return {"Python": 75, "Shell": 25}
+        if url.endswith("/topics?per_page=100"):
+            return {"names": ["analytics", "dashboard"]}
+        if url.endswith("/issues?state=open&per_page=100"):
+            return [
+                {"number": 1, "title": "bug"},
+                {"number": 2, "pull_request": {}},
+            ]
+        if url.endswith("/pulls?state=open&per_page=100"):
+            return [{"number": 2}, {"number": 3}]
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    assert run.collect_mod.collect_languages(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "language": "Python",
+            "bytes": 75,
+            "share": "0.750000",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "language": "Shell",
+            "bytes": 25,
+            "share": "0.250000",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_topics(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "topic": "analytics",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "topic": "dashboard",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_issue_pr_snapshot(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "open_issues_count": 1,
+            "open_prs_count": 2,
+            "closed_issues_recent": "",
+            "merged_prs_recent": "",
+            "stale_open_issues_count": "",
+            "stale_open_prs_count": "",
+            "unanswered_issue_count": "",
+            "issue_sample_count": 2,
+            "pr_sample_count": 2,
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
 def test_collect_repo_detail_and_community_profile_reject_non_object_payloads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

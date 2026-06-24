@@ -132,6 +132,12 @@ REPO_ISSUE_PR_SNAPSHOT_FIELDS = [
     "pr_sample_count", "source", "schema_version",
 ]
 
+REPO_ISSUE_LABEL_SNAPSHOT_FIELDS = [
+    "repo", "ts", "captured_at", "item_type", "state", "label_name",
+    "label_key", "label_bucket", "labeled_item_count", "sample_item_count",
+    "sample_scope", "source", "schema_version",
+]
+
 REPO_CODE_FREQUENCY_WEEKLY_FIELDS = [
     "repo", "week_start", "additions", "deletions", "captured_at",
     "source_status", "schema_version",
@@ -177,6 +183,10 @@ CSV_REGISTRY = {
     "repo-topics.csv":       (REPO_TOPIC_FIELDS, "captured_at"),
     "repo-issue-pr-snapshots.csv": (
         REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+        "ts",
+    ),
+    "repo-issue-label-snapshots.csv": (
+        REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
         "ts",
     ),
     "repo-code-frequency-weekly.csv": (
@@ -546,6 +556,25 @@ def dedup_repo_issue_pr_snapshots(rows):
     seen = {}
     for row in rows:
         seen[(row["repo"], row["captured_at"])] = row
+    return list(seen.values())
+
+
+def dedup_repo_issue_label_snapshots(rows):
+    """Remove duplicate issue and pull request label snapshot rows.
+
+    Key: (repo, captured_at, item_type, state, label_name).
+    """
+    seen = {}
+    for row in rows:
+        seen[
+            (
+                row["repo"],
+                row["captured_at"],
+                row["item_type"],
+                row["state"],
+                row["label_name"],
+            )
+        ] = row
     return list(seen.values())
 
 

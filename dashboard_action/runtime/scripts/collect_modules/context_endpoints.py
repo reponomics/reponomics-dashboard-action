@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import re
+from collections import Counter
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
@@ -275,6 +277,100 @@ def collect_issue_pr_snapshot(
             "schema_version": SCHEMA_VERSION,
         }
     ]
+
+
+def collect_issue_label_snapshots(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    *,
+    fetch_json: Callable[..., Any],
+) -> list[dict[str, Any]]:
+    """Fetch sampled open issue and pull request label counts."""
+    issue_url = f"https://api.github.com/repos/{repo}/issues?state=open&per_page=100"
+    issue_data = fetch_json(issue_url, headers)
+    if not isinstance(issue_data, list):
+        raise requests.HTTPError(
+            f"Unexpected issues response for {repo}: {type(issue_data).__name__}"
+        )
+    return _issue_label_snapshot_rows(repo, issue_data, captured_at)
+
+
+def _issue_label_snapshot_rows(
+    repo: str,
+    issue_data: list[Any],
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    counts: Counter[tuple[str, str]] = Counter()
+    sample_counts: Counter[str] = Counter()
+    for item in issue_data:
+        if not isinstance(item, dict):
+            continue
+        item_type = "pr" if "pull_request" in item else "issue"
+        sample_counts[item_type] += 1
+        labels = item.get("labels")
+        if not isinstance(labels, list):
+            continue
+        seen_labels: set[str] = set()
+        for label in labels:
+            name = _issue_label_name(label)
+            if not name:
+                continue
+            if name in seen_labels:
+                continue
+            seen_labels.add(name)
+            counts[(item_type, name)] += 1
+
+    rows = []
+    for item_type, label_name in sorted(counts, key=lambda key: (key[0], key[1].lower())):
+        label_key = _label_key(label_name)
+        rows.append(
+            {
+                "repo": repo,
+                "ts": captured_at[:10],
+                "captured_at": captured_at,
+                "item_type": item_type,
+                "state": "open",
+                "label_name": label_name,
+                "label_key": label_key,
+                "label_bucket": _label_bucket(label_key),
+                "labeled_item_count": counts[(item_type, label_name)],
+                "sample_item_count": sample_counts[item_type],
+                "sample_scope": "issues-api-open-first-page",
+                "source": "api-sample",
+                "schema_version": SCHEMA_VERSION,
+            }
+        )
+    return rows
+
+
+def _label_key(name: str) -> str:
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", name.lower())).strip("_")
+
+
+def _label_bucket(label_key: str) -> str:
+    tokens = set(label_key.split("_"))
+    if "bug" in tokens or "defect" in tokens:
+        return "bug"
+    if {"enhancement", "feature"} & tokens or label_key in {"feature_request", "new_feature"}:
+        return "enhancement"
+    if label_key == "good_first_issue" or {"good", "first", "issue"}.issubset(tokens):
+        return "good_first_issue"
+    if label_key == "help_wanted" or {"help", "wanted"}.issubset(tokens):
+        return "help_wanted"
+    if "stale" in tokens:
+        return "stale"
+    if "documentation" in tokens or "docs" in tokens:
+        return "documentation"
+    if "question" in tokens or "support" in tokens:
+        return "question"
+    return ""
+
+
+def _issue_label_name(label: Any) -> str:
+    if isinstance(label, dict):
+        return str(label.get("name") or "").strip()
+    return str(label or "").strip()
 
 
 def collect_code_frequency_weekly(

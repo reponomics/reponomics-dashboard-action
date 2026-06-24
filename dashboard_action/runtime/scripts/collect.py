@@ -38,6 +38,7 @@ from collect_modules.endpoints import (
     collect_commit_history as _endpoints_collect_commit_history,
     collect_code_frequency_weekly as _endpoints_collect_code_frequency_weekly,
     collect_contributor_activity_weekly as _endpoints_collect_contributor_activity_weekly,
+    collect_issue_label_snapshots as _endpoints_collect_issue_label_snapshots,
     collect_issue_pr_snapshot as _endpoints_collect_issue_pr_snapshot,
     collect_languages as _endpoints_collect_languages,
     collect_paths as _endpoints_collect_paths,
@@ -405,6 +406,19 @@ def collect_issue_pr_snapshot(
     )
 
 
+def collect_issue_label_snapshots(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_issue_label_snapshots(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
 def collect_code_frequency_weekly(
     repo: str,
     headers: Headers,
@@ -479,6 +493,7 @@ def _collection_dependencies() -> CollectionDependencies:
         collect_languages=collect_languages,
         collect_topics=collect_topics,
         collect_issue_pr_snapshot=collect_issue_pr_snapshot,
+        collect_issue_label_snapshots=collect_issue_label_snapshots,
         collect_code_frequency_weekly=collect_code_frequency_weekly,
         collect_contributor_activity_weekly=collect_contributor_activity_weekly,
         collect_repo_metrics=collect_repo_metrics,

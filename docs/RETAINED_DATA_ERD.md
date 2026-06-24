@@ -221,6 +221,22 @@ erDiagram
         string schema_version
     }
 
+    REPO_ISSUE_LABEL_SNAPSHOTS {
+        string repo PK
+        string captured_at PK
+        string item_type PK
+        string state
+        string label_name PK
+        string label_key
+        string label_bucket
+        int labeled_item_count
+        int sample_item_count
+        date ts
+        string sample_scope
+        string source
+        string schema_version
+    }
+
     REPO_CODE_FREQUENCY_WEEKLY {
         string repo PK
         date week_start PK
@@ -291,6 +307,7 @@ erDiagram
     REPOSITORY ||--o{ REPO_LANGUAGES : uses
     REPOSITORY ||--o{ REPO_TOPICS : labels
     REPOSITORY ||--o{ REPO_ISSUE_PR_SNAPSHOTS : tracks
+    REPOSITORY ||--o{ REPO_ISSUE_LABEL_SNAPSHOTS : samples
     REPOSITORY ||--o{ REPO_CODE_FREQUENCY_WEEKLY : changes
     REPOSITORY ||--o{ REPO_CONTRIBUTOR_ACTIVITY_WEEKLY : receives
     REPOSITORY ||--o{ COLLECTION_ENDPOINTS : collects
@@ -306,10 +323,12 @@ erDiagram
     COLLECTION_RUN ||--o{ REPO_LANGUAGES : captured
     COLLECTION_RUN ||--o{ REPO_TOPICS : captured
     COLLECTION_RUN ||--o{ REPO_ISSUE_PR_SNAPSHOTS : captured
+    COLLECTION_RUN ||--o{ REPO_ISSUE_LABEL_SNAPSHOTS : captured
 
     COLLECTION_DAYS ||--o{ COLLECTION_STATUS : summarizes
     COLLECTION_DAYS ||--o{ TRAFFIC_COVERAGE : summarizes
 
+    REPO_ISSUE_PR_SNAPSHOTS ||--o{ REPO_ISSUE_LABEL_SNAPSHOTS : samples
     REPO_RELEASES ||--o{ REPO_RELEASE_ASSETS : contains
     REPO_COMMITS ||--o{ REPO_EVENT_INDEX : derives
     REPO_RELEASES ||--o{ REPO_EVENT_INDEX : derives
@@ -334,6 +353,7 @@ erDiagram
 | `repo-languages.csv` | Repository, collection capture, language | `captured_at` |
 | `repo-topics.csv` | Repository, collection capture, topic | `captured_at` |
 | `repo-issue-pr-snapshots.csv` | Repository, collection capture | `ts` |
+| `repo-issue-label-snapshots.csv` | Repository, collection capture, item type, label | `ts` |
 | `repo-code-frequency-weekly.csv` | Repository, week | `week_start` |
 | `repo-contributor-activity-weekly.csv` | Repository, contributor, week | `week_start` |
 | `collection-endpoints.csv` | Repository, collection capture, endpoint family | `captured_at` |

@@ -22,6 +22,7 @@ from storage import (
     REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
     REPO_COMMIT_FIELDS,
     REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+    REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
     REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     REPO_LANGUAGE_FIELDS,
     REPO_METRIC_FIELDS,
@@ -58,6 +59,7 @@ class CollectionDependencies:
     collect_languages: Callable[[str, Headers, str], Rows]
     collect_topics: Callable[[str, Headers, str], Rows]
     collect_issue_pr_snapshot: Callable[[str, Headers, str], Rows]
+    collect_issue_label_snapshots: Callable[[str, Headers, str], Rows]
     collect_code_frequency_weekly: Callable[[str, Headers, str], Rows]
     collect_contributor_activity_weekly: Callable[[str, Headers, str], Rows]
     collect_repo_metrics: Callable[..., list[dict[str, Any]]]
@@ -253,6 +255,15 @@ def _collect_context_artifacts(
         deps.collect_issue_pr_snapshot,
         endpoint_rows,
     )
+    issue_label_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "issue label snapshot",
+        "issue-labels",
+        deps.collect_issue_label_snapshots,
+        endpoint_rows,
+    )
     code_frequency_rows = _context_rows(
         repo,
         run,
@@ -298,6 +309,11 @@ def _collect_context_artifacts(
         REPO_ISSUE_PR_SNAPSHOT_FIELDS,
     )
     deps.append_csv(
+        os.path.join(deps.data_dir, "repo-issue-label-snapshots.csv"),
+        issue_label_rows,
+        REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
+    )
+    deps.append_csv(
         os.path.join(deps.data_dir, "repo-code-frequency-weekly.csv"),
         code_frequency_rows,
         REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
@@ -319,6 +335,7 @@ def _collect_context_artifacts(
         "languages": language_rows,
         "topics": topic_rows,
         "issue_pr_snapshots": issue_pr_rows,
+        "issue_label_snapshots": issue_label_rows,
         "code_frequency": code_frequency_rows,
         "contributor_activity": contributor_activity_rows,
     }

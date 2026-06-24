@@ -31,6 +31,13 @@ ROW_IDENTITY_FIELDS = {
     "repo-languages.csv": ("repo", "captured_at", "language"),
     "repo-topics.csv": ("repo", "captured_at", "topic"),
     "repo-issue-pr-snapshots.csv": ("repo", "captured_at"),
+    "repo-issue-label-snapshots.csv": (
+        "repo",
+        "captured_at",
+        "item_type",
+        "state",
+        "label_name",
+    ),
     "repo-code-frequency-weekly.csv": ("repo", "week_start"),
     "repo-contributor-activity-weekly.csv": ("repo", "author_id", "week_start"),
     "collection-endpoints.csv": ("repo", "captured_at", "endpoint_key"),

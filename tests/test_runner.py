@@ -62,6 +62,7 @@ CONTEXTUAL_DATA_FILES = {
     "repo-languages.csv",
     "repo-topics.csv",
     "repo-issue-pr-snapshots.csv",
+    "repo-issue-label-snapshots.csv",
     "repo-code-frequency-weekly.csv",
     "repo-contributor-activity-weekly.csv",
     "collection-endpoints.csv",
@@ -327,6 +328,7 @@ def _stub_context_collectors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
@@ -4427,8 +4429,19 @@ def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
             return {"names": ["analytics", "dashboard"]}
         if url.endswith("/issues?state=open&per_page=100"):
             return [
-                {"number": 1, "title": "bug"},
-                {"number": 2, "pull_request": {}},
+                {
+                    "number": 1,
+                    "title": "bug",
+                    "labels": [
+                        {"name": "bug", "color": "d73a4a"},
+                        {"name": "enhancement", "color": "a2eeef"},
+                    ],
+                },
+                {
+                    "number": 2,
+                    "pull_request": {},
+                    "labels": [{"name": "dependencies", "color": "0366d6"}],
+                },
             ]
         if url.endswith("/pulls?state=open&per_page=100"):
             return [{"number": 2}, {"number": 3}]
@@ -4497,6 +4510,57 @@ def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
             "source": "api-sample",
             "schema_version": run.storage.SCHEMA_VERSION,
         }
+    ]
+    assert run.collect_mod.collect_issue_label_snapshots(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "bug",
+            "label_key": "bug",
+            "label_bucket": "bug",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "enhancement",
+            "label_key": "enhancement",
+            "label_bucket": "enhancement",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "pr",
+            "state": "open",
+            "label_name": "dependencies",
+            "label_key": "dependencies",
+            "label_bucket": "",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
     ]
 
 
@@ -4734,6 +4798,27 @@ def test_collect_appends_context_rows_for_selected_repo(
     )
     monkeypatch.setattr(
         run.collect_mod,
+        "collect_issue_label_snapshots",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "ts": captured_at[:10],
+                "captured_at": captured_at,
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "label_key": "bug",
+                "label_bucket": "bug",
+                "labeled_item_count": 1,
+                "sample_item_count": 1,
+                "sample_scope": "issues-api-open-first-page",
+                "source": "api-sample",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
         "collect_code_frequency_weekly",
         lambda repo, headers, captured_at: [
             {
@@ -4778,6 +4863,7 @@ def test_collect_appends_context_rows_for_selected_repo(
     assert rows("repo-languages.csv")[-1]["language"] == "Python"
     assert rows("repo-topics.csv")[-1]["topic"] == "analytics"
     assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
+    assert rows("repo-issue-label-snapshots.csv")[-1]["label_name"] == "bug"
     assert rows("repo-code-frequency-weekly.csv")[-1]["additions"] == "10"
     assert rows("repo-contributor-activity-weekly.csv")[-1]["author_login"] == "dev"
     endpoint_rows = rows("collection-endpoints.csv")
@@ -4788,6 +4874,7 @@ def test_collect_appends_context_rows_for_selected_repo(
         "languages": "ok",
         "topics": "ok",
         "issue-pr-snapshot": "ok",
+        "issue-labels": "ok",
         "code-frequency": "ok",
         "contributor-activity": "ok",
     }
@@ -4846,6 +4933,7 @@ def test_collect_context_failure_records_warning_without_failing_collection(
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", raise_topics_error)
     monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
@@ -4919,6 +5007,7 @@ def test_collect_records_pending_statistics_endpoint_without_warning(
     monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", raise_pending)
     monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
@@ -5772,6 +5861,37 @@ def test_schema_migration_handles_file_field_renames_and_defaults(
             "stargazers_count": "11",
             "source": "migration-default",
             "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert run.storage.dedup_repo_issue_label_snapshots(
+        [
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "labeled_item_count": "1",
+            },
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "labeled_item_count": "2",
+                "source": "new",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "bug",
+            "labeled_item_count": "2",
+            "source": "new",
         }
     ]
     assert not (data_dir / "legacy-growth.csv").exists()

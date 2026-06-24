@@ -108,6 +108,7 @@ observations, not final insights.
 | `repo-languages.csv` | Repository languages API | Codebase composition snapshots. |
 | `repo-topics.csv` | Repository topics API | Discovery and positioning context. |
 | `repo-issue-pr-snapshots.csv` | Issues and pull request APIs plus repo detail counters | Maintenance load and collaboration state. |
+| `repo-issue-label-snapshots.csv` | Issues API label aggregation | Label-based maintenance pressure signals without issue-level retention. |
 | `repo-code-frequency-weekly.csv` | GitHub statistics API | Weekly additions/deletions when available. |
 | `repo-contributor-activity-weekly.csv` | GitHub statistics API | Contributor breadth and weekly contribution load when available. |
 | `collection-endpoints.csv` | Collector instrumentation | Endpoint status, rate-limit/cache behavior, and unsupported-data states. |
@@ -301,6 +302,33 @@ Columns:
 The first implementation can populate only the cheap fields:
 `open_issues_count`, `open_prs_count`, and sample counts. Stale/unanswered
 fields can come later after pagination and labeling behavior are settled.
+
+### `repo-issue-label-snapshots.csv`
+
+Row identity: `repo`, `captured_at`, `item_type`, `state`, `label_name`.
+
+Columns:
+
+- `repo`
+- `ts`
+- `captured_at`
+- `item_type`
+- `state`
+- `label_name`
+- `label_key`
+- `label_bucket`
+- `labeled_item_count`
+- `sample_item_count`
+- `sample_scope`
+- `source`
+- `schema_version`
+
+This table is a tall aggregate fact table for labels seen in sampled open
+issues and pull requests. Labels retain the exact GitHub label string in
+`label_name`; `label_key` normalizes the name for grouping, and `label_bucket`
+maps common labels such as `bug` or `enhancement` into coarse maintainer-facing
+categories when possible. Counts such as "open issues labeled bug" are derived
+by filtering or grouping these rows within a capture.
 
 ### `repo-code-frequency-weekly.csv`
 

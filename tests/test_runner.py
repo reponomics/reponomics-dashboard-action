@@ -321,6 +321,13 @@ def _reset_collect_runtime_state() -> Generator[None, None, None]:
     run.collect_mod._reset_runtime_state()
 
 
+def _stub_context_collectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+
+
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -4371,6 +4378,194 @@ def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
     ]
 
 
+def test_collect_appends_context_rows_for_selected_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def collect_release_context(repo: str, headers, captured_at: str):
+        return (
+            [
+                {
+                    "repo": repo,
+                    "release_id": 99,
+                    "tag_name": "v1.2.3",
+                    "target_commitish": "main",
+                    "name": "v1.2.3",
+                    "created_at": "2026-06-01T08:00:00Z",
+                    "published_at": "2026-06-01T09:00:00Z",
+                    "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+                    "asset_count": 1,
+                    "asset_download_count": 7,
+                    "captured_at": captured_at,
+                    "schema_version": run.storage.SCHEMA_VERSION,
+                }
+            ],
+            [
+                {
+                    "repo": repo,
+                    "release_id": 99,
+                    "asset_id": 10,
+                    "name": "tool.tar.gz",
+                    "download_count": 7,
+                    "captured_at": captured_at,
+                    "schema_version": run.storage.SCHEMA_VERSION,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", collect_release_context)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_languages",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "captured_at": captured_at,
+                "language": "Python",
+                "bytes": 75,
+                "share": "0.750000",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_topics",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "captured_at": captured_at,
+                "topic": "analytics",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_issue_pr_snapshot",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "ts": captured_at[:10],
+                "captured_at": captured_at,
+                "open_issues_count": 1,
+                "open_prs_count": 2,
+                "issue_sample_count": 1,
+                "pr_sample_count": 2,
+                "source": "api-sample",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    def rows(filename: str) -> list[dict[str, str]]:
+        with (config.data_dir / filename).open(newline="", encoding="utf-8") as handle:
+            return list(csv.DictReader(handle))
+
+    assert rows("repo-releases.csv")[-1]["tag_name"] == "v1.2.3"
+    assert rows("repo-release-assets.csv")[-1]["name"] == "tool.tar.gz"
+    assert rows("repo-languages.csv")[-1]["language"] == "Python"
+    assert rows("repo-topics.csv")[-1]["topic"] == "analytics"
+    assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
+    event_rows = rows("repo-event-index.csv")
+    assert event_rows[-1]["event_id"] == "release:99"
+    assert event_rows[-1]["source_table"] == "repo-releases.csv"
+
+
+def test_collect_context_failure_records_warning_without_failing_collection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_topics_error(repo: str, headers, captured_at: str):
+        raise requests.HTTPError("topics unavailable")
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", raise_topics_error)
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert status_rows[-1]["status"] == "ok_zero_data"
+    assert "Repository Context Warnings" in summary
+    assert "topics unavailable" in summary
+
+
 def test_collect_repo_detail_and_community_profile_reject_non_object_payloads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -4576,6 +4771,7 @@ def test_collect_requests_one_detail_per_selected_repo(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4704,6 +4900,7 @@ def test_detail_failure_falls_back_without_losing_traffic(
     )
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4769,6 +4966,7 @@ def test_community_profile_failure_records_warning_without_losing_metrics(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -5301,6 +5499,7 @@ def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 

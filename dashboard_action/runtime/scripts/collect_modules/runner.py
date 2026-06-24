@@ -7,7 +7,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, TypeAlias
 
 import requests
 
@@ -17,9 +17,16 @@ from storage import (
     LOG_FIELDS,
     PATH_FIELDS,
     REFERRER_FIELDS,
+    REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+    REPO_LANGUAGE_FIELDS,
     REPO_METRIC_FIELDS,
+    REPO_RELEASE_ASSET_FIELDS,
+    REPO_RELEASE_FIELDS,
+    REPO_TOPIC_FIELDS,
     SNAPSHOT_FIELDS,
 )
+
+Rows: TypeAlias = list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -39,6 +46,10 @@ class CollectionDependencies:
     collect_views_clones: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_referrers: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_paths: Callable[[str, Headers, str], list[dict[str, Any]]]
+    collect_release_context: Callable[[str, Headers, str], tuple[Rows, Rows]]
+    collect_languages: Callable[[str, Headers, str], Rows]
+    collect_topics: Callable[[str, Headers, str], Rows]
+    collect_issue_pr_snapshot: Callable[[str, Headers, str], Rows]
     collect_repo_metrics: Callable[..., list[dict[str, Any]]]
     append_csv: Callable[[str, list[dict[str, Any]], list[str]], None]
     collection_status_row: Callable[..., dict[str, Any]]
@@ -47,6 +58,7 @@ class CollectionDependencies:
     write_step_summary: Callable[..., None]
     repo_detail_warnings: list[str]
     repo_community_warnings: list[str]
+    repo_context_warnings: list[str]
     data_dir: str
 
 
@@ -168,16 +180,93 @@ def _collect_artifacts(
         source=metric_source,
     )
     deps.append_csv(os.path.join(deps.data_dir, "repo-metrics.csv"), metric_rows, REPO_METRIC_FIELDS)
+    context_rows = _collect_context_artifacts(repo, run, deps)
     return {
         "traffic": vc_rows,
         "referrers": ref_rows,
         "paths": path_rows,
         "metrics": metric_rows,
+        **context_rows,
     }
 
 
 def _snapshot_rows(vc_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{key: value for key, value in row.items() if key in SNAPSHOT_FIELDS} for row in vc_rows]
+
+
+def _collect_context_artifacts(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+) -> dict[str, Rows]:
+    release_rows, release_asset_rows = _release_context_rows(repo, run, deps)
+    language_rows = _context_rows(repo, run, deps, "languages", deps.collect_languages)
+    topic_rows = _context_rows(repo, run, deps, "topics", deps.collect_topics)
+    issue_pr_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "issue/pr snapshot",
+        deps.collect_issue_pr_snapshot,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-releases.csv"),
+        release_rows,
+        REPO_RELEASE_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-release-assets.csv"),
+        release_asset_rows,
+        REPO_RELEASE_ASSET_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-languages.csv"),
+        language_rows,
+        REPO_LANGUAGE_FIELDS,
+    )
+    deps.append_csv(os.path.join(deps.data_dir, "repo-topics.csv"), topic_rows, REPO_TOPIC_FIELDS)
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-issue-pr-snapshots.csv"),
+        issue_pr_rows,
+        REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+    )
+    return {
+        "releases": release_rows,
+        "release_assets": release_asset_rows,
+        "languages": language_rows,
+        "topics": topic_rows,
+        "issue_pr_snapshots": issue_pr_rows,
+    }
+
+
+def _release_context_rows(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+) -> tuple[Rows, Rows]:
+    try:
+        return deps.collect_release_context(repo, run.headers, run.captured_at)
+    except SecondaryRateLimitError:
+        raise
+    except (requests.HTTPError, requests.RequestException) as exc:
+        _record_context_warning(repo, "releases", deps, exc)
+        return [], []
+
+
+def _context_rows(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+    family: str,
+    collector: Callable[[str, Headers, str], Rows],
+) -> Rows:
+    try:
+        return collector(repo, run.headers, run.captured_at)
+    except SecondaryRateLimitError:
+        raise
+    except (requests.HTTPError, requests.RequestException) as exc:
+        _record_context_warning(repo, family, deps, exc)
+        return []
 
 
 def _record_success(
@@ -191,6 +280,16 @@ def _record_success(
     ref_rows = artifacts["referrers"]
     path_rows = artifacts["paths"]
     metric_rows = artifacts["metrics"]
+    context_row_count = sum(
+        len(artifacts[key])
+        for key in (
+            "releases",
+            "release_assets",
+            "languages",
+            "topics",
+            "issue_pr_snapshots",
+        )
+    )
     run.status_rows.append(
         deps.collection_status_row(
             repo=repo,
@@ -205,7 +304,8 @@ def _record_success(
     )
     print(
         f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), "
-        + f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s)"
+        + f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s), "
+        + f"{context_row_count} context row(s)"
     )
 
 
@@ -319,4 +419,22 @@ def _fallback_repo_community_warning(repo: str, exc: Exception) -> str:
     return (
         f"{repo}: community profile request failed ({exc}); "
         + "collection continued and community metrics were left blank."
+    )
+
+
+def _record_context_warning(
+    repo: str,
+    family: str,
+    deps: CollectionDependencies,
+    exc: Exception,
+) -> None:
+    warning = _fallback_repo_context_warning(repo, family, exc)
+    deps.repo_context_warnings.append(warning)
+    print(f"  Warning: {warning}")
+
+
+def _fallback_repo_context_warning(repo: str, family: str, exc: Exception) -> str:
+    return (
+        f"{repo}: {family} request failed ({exc}); "
+        + "collection continued and contextual rows were left blank."
     )

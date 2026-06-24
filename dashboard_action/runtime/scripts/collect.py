@@ -98,16 +98,18 @@ _LAST_REQUEST_COMPLETED_AT: float | None = None
 _NETWORK_WARNINGS: list[NetworkWarning] = []
 _REPO_DETAIL_WARNINGS: list[str] = []
 _REPO_COMMUNITY_WARNINGS: list[str] = []
+_REPO_CONTEXT_WARNINGS: list[str] = []
 
 
 def _reset_runtime_state() -> None:
     """Reset per-run pacing and warning state."""
     global _LAST_REQUEST_COMPLETED_AT, _NETWORK_WARNINGS, _REPO_DETAIL_WARNINGS
-    global _REPO_COMMUNITY_WARNINGS
+    global _REPO_COMMUNITY_WARNINGS, _REPO_CONTEXT_WARNINGS
     _LAST_REQUEST_COMPLETED_AT = None
     _NETWORK_WARNINGS = []
     _REPO_DETAIL_WARNINGS = []
     _REPO_COMMUNITY_WARNINGS = []
+    _REPO_CONTEXT_WARNINGS = []
 
 
 def _record_network_warning(
@@ -153,6 +155,7 @@ def _write_step_summary(
         network_warnings=_NETWORK_WARNINGS,
         repo_detail_warnings=_REPO_DETAIL_WARNINGS,
         repo_community_warnings=_REPO_COMMUNITY_WARNINGS,
+        repo_context_warnings=_REPO_CONTEXT_WARNINGS,
     )
 
 
@@ -406,6 +409,10 @@ def _collection_dependencies() -> CollectionDependencies:
         collect_views_clones=collect_views_clones,
         collect_referrers=collect_referrers,
         collect_paths=collect_paths,
+        collect_release_context=collect_release_context,
+        collect_languages=collect_languages,
+        collect_topics=collect_topics,
+        collect_issue_pr_snapshot=collect_issue_pr_snapshot,
         collect_repo_metrics=collect_repo_metrics,
         append_csv=append_csv,
         collection_status_row=_collection_status_row,
@@ -414,6 +421,7 @@ def _collection_dependencies() -> CollectionDependencies:
         write_step_summary=_write_step_summary,
         repo_detail_warnings=_REPO_DETAIL_WARNINGS,
         repo_community_warnings=_REPO_COMMUNITY_WARNINGS,
+        repo_context_warnings=_REPO_CONTEXT_WARNINGS,
         data_dir=DATA_DIR,
     )
 

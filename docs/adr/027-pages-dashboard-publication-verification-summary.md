@@ -1,4 +1,4 @@
-# ADR 026: Pages Dashboard Publication Verification Summary
+# ADR 027: Pages Dashboard Publication Verification Summary
 
 Date: 2026-06-19
 
@@ -261,7 +261,7 @@ uploaded" and "the deployed Pages site served that artifact's rendered tree."
 
 ## Relationship To CSP And ESM
 
-ADR 025 moved the hosted dashboard to native ESM with a strict CSP and no
+ADR 026 moved the hosted dashboard to native ESM with a strict CSP and no
 inline executable code. That change reduces injection risk, but it deliberately
 removes the old incidental CSP-hash sensitivity of inline blocks in the hosted
 artifact.

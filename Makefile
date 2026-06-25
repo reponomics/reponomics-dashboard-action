@@ -301,13 +301,13 @@ ci: lint type-check validate test coverage ## Run CI checks
 fixtures: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard ## Run fixture checks
 
 fixture-collect: install ## Run collect fixture without live GitHub API calls
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_collect_fixture_updates_artifact_without_rendering_outputs -v
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/runner/test_runner_artifact_lineage.py::test_collect_fixture_updates_artifact_without_rendering_outputs -v
 
 fixture-publish: install ## Run publish fixture without live GitHub API calls
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_publish_fixture_renders_outputs_without_live_api -v
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/runner/test_runner_doctor_diagnostics.py::test_publish_fixture_renders_outputs_without_live_api -v
 
 fixture-rotate-key: install ## Run rotate-key fixture
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/test_runner.py::test_rotate_key_fixture_reencrypts_with_next_secret -v
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest tests/runner/test_runner_key_rotation_incident.py::test_rotate_key_fixture_reencrypts_with_next_secret -v
 
 preview-collection-quality-dashboard: install ## Render dashboard from collection-quality fixture data
 	rm -rf $(COLLECTION_QUALITY_PREVIEW_OUTPUT)

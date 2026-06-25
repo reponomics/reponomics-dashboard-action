@@ -1,4 +1,4 @@
-# ADR 027: Contextual Data Packet And Collection Model
+# ADR 028: Contextual Data Packet And Collection Model
 
 Date: 2026-06-24
 

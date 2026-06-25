@@ -1,4 +1,4 @@
-# ADR 025: Native ESM Dashboard Runtime
+# ADR 026: Native ESM Dashboard Runtime
 
 Date: 2026-06-19
 

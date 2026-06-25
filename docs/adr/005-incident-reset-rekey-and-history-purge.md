@@ -118,7 +118,7 @@ This ADR does not define:
 
 ## Implementation Status, 2026-05-25
 
-Implemented in `dashboard_action/run.py`, exposed in `action.yml`, documented in `README.md`, and covered by runtime tests in `tests/test_run_unit.py` and `tests/test_runner.py`.
+Implemented in `dashboard_action/run.py`, exposed in `action.yml`, documented in `README.md`, and covered by runtime tests in `tests/test_run_unit.py` and `tests/runner/`.
 
 ## Implementation Update, 2026-06-05
 

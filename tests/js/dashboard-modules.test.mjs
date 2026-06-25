@@ -312,6 +312,71 @@ test('insight renderer displays narrative headline body and evidence', () => {
   assert.match(item.innerHTML, /high/);
 });
 
+test('narrative context panel follows selected repo context', () => {
+  const section = inspectableElement();
+  const title = inspectableElement();
+  const panel = inspectableElement();
+  const context = {
+    document: inspectableDocument({
+      'narrative-context-section': section,
+      'narrative-context-title': title,
+      'narrative-context-panel': panel,
+    }),
+    currentPayload() {
+      return {
+        insights_v2: [
+          {
+            kind: 'narrative',
+            repo: 'owner/repo-a',
+            headline: 'repo-a release lined up with adoption',
+            body: 'A release landed before clone activity moved.',
+            confidence: 'medium',
+            evidence: [{ label: 'clones', value: '44' }],
+            nearby_context: [
+              {
+                type: 'release',
+                date: '2026-05-04',
+                label: 'v1.4.0',
+                detail: 'release',
+                url: 'https://github.com/owner/repo-a/releases/tag/v1.4.0',
+              },
+            ],
+          },
+          {
+            kind: 'narrative',
+            repo: 'owner/repo-b',
+            headline: 'repo-b context',
+            nearby_context: [{ type: 'code', date: '2026-05-03', label: '10 lines changed' }],
+          },
+        ],
+      };
+    },
+    escapeHtml(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    },
+    getShortName(repo) {
+      return repo.split('/').pop();
+    },
+    state: { selectedRepo: null },
+  };
+  const tables = installTables(context);
+
+  tables.renderNarrativeContextPanel();
+  assert.equal(section.style.display, 'none');
+  assert.equal(panel.innerHTML, '');
+
+  context.state.selectedRepo = 'owner/repo-a';
+  tables.renderNarrativeContextPanel();
+
+  assert.equal(section.style.display, 'grid');
+  assert.equal(title.textContent, 'What changed near repo-a');
+  assert.match(panel.innerHTML, /repo-a release lined up with adoption/);
+  assert.match(panel.innerHTML, /A release landed before clone activity moved/);
+  assert.match(panel.innerHTML, /clones: 44/);
+  assert.match(panel.innerHTML, /v1.4.0/);
+  assert.doesNotMatch(panel.innerHTML, /repo-b context/);
+});
+
 test('series helpers preserve selected-window and growth aggregation contracts', () => {
   const context = {
     MAX_DISPLAY_REPOS: 20,

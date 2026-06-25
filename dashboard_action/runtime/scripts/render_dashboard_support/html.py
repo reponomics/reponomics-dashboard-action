@@ -357,6 +357,18 @@ def build_dashboard_shell(
       </div>
     </div>
 
+    <div class="section-grid full" id="narrative-context-section">
+      <div class="card narrative-context-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2 id="narrative-context-title">What changed nearby</h2>
+            <p class="click-hint" id="narrative-context-subtitle">Repository context behind the selected story.</p>
+          </div>
+        </div>
+        <div id="narrative-context-panel"></div>
+      </div>
+    </div>
+
     <div class="section-grid full">
       <div class="card">
         <div class="section-header">

@@ -211,6 +211,67 @@ export function installTables(context) {
         `<ul>${items}</ul></details>`;
     }
 
+    function contextTimelineHtml(contextRows) {
+      const rows = Array.isArray(contextRows) ? contextRows.slice(0, 6) : [];
+      if (!rows.length) return '';
+      const items = rows.map((row) => {
+        const date = String(row && row.date ? row.date : '').slice(0, 10);
+        const label = String(row && row.label ? row.label : '').trim();
+        const detail = String(row && row.detail ? row.detail : '').trim();
+        const type = String(row && row.type ? row.type : 'context').trim();
+        const url = row && row.url ? String(row.url) : '';
+        const labelHtml = url
+          ? `<a href="${escapeHtml(url)}">${escapeHtml(label || type)}</a>`
+          : escapeHtml(label || type);
+        return '<li>' +
+          `<span class="context-marker">${escapeHtml(type.slice(0, 1).toUpperCase())}</span>` +
+          '<span class="context-copy">' +
+          `<span class="context-date mono">${escapeHtml(date || type)}</span>` +
+          `<span class="context-label">${labelHtml}</span>` +
+          (detail ? `<span class="context-detail">${escapeHtml(detail)}</span>` : '') +
+          '</span>' +
+          '</li>';
+      }).join('');
+      return `<ol class="context-timeline">${items}</ol>`;
+    }
+
+    function selectedNarrativeInsights() {
+      const payload = currentPayload();
+      const repo = state.selectedRepo || '';
+      const structured = (payload && payload.insights_v2) || [];
+      if (!repo || !Array.isArray(structured)) return [];
+      return structured
+        .filter((item) => item && item.kind === 'narrative' && item.repo === repo)
+        .filter((item) => Array.isArray(item.nearby_context) && item.nearby_context.length);
+    }
+
+    function renderNarrativeContextPanel() {
+      const section = document.getElementById('narrative-context-section');
+      const title = document.getElementById('narrative-context-title');
+      const panel = document.getElementById('narrative-context-panel');
+      if (!section || !panel) return;
+
+      const insights = selectedNarrativeInsights();
+      if (!insights.length) {
+        section.style.display = 'none';
+        panel.innerHTML = '';
+        return;
+      }
+
+      section.style.display = 'grid';
+      if (title) title.textContent = `What changed near ${getShortName(state.selectedRepo)}`;
+      panel.innerHTML = insights.slice(0, 2).map((item) => {
+        const confidence = item.confidence ? `<span>${escapeHtml(item.confidence)} confidence</span>` : '';
+        return '<section class="narrative-context-block">' +
+          `<h3>${escapeHtml(item.headline || item.text || '')}</h3>` +
+          (item.body ? `<p>${escapeHtml(item.body)}</p>` : '') +
+          narrativeEvidenceHtml(item.evidence) +
+          contextTimelineHtml(item.nearby_context) +
+          (confidence ? `<div class="context-confidence mono">${confidence}</div>` : '') +
+          '</section>';
+      }).join('');
+    }
+
     function renderInsights() {
       const container = document.getElementById('insights-list');
       if (!container) return;
@@ -392,5 +453,5 @@ export function installTables(context) {
       renderRepoTable();
     }
 
-  return { sortRows, renderSnapshotTable, renderReferrerTable, renderPathsTable, classifyInsight, renderInsights, asBool, renderCommunityCell, buildRepoSparkSVG, getRepoSortKey, sortRepos, setRepoSort };
+  return { sortRows, renderSnapshotTable, renderReferrerTable, renderPathsTable, classifyInsight, renderNarrativeContextPanel, renderInsights, asBool, renderCommunityCell, buildRepoSparkSVG, getRepoSortKey, sortRepos, setRepoSort };
 }

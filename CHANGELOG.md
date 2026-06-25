@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.27.1...v0.28.0) (2026-06-25)
+
+
+### Features
+
+* expand data collection ([#175](https://github.com/reponomics/reponomics-dashboard-action/issues/175)) ([d96ba73](https://github.com/reponomics/reponomics-dashboard-action/commit/d96ba736690a270b2b325e7a20bfd5d6e93f8011))
+
 ## [0.27.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.27.0...v0.27.1) (2026-06-24)
 
 

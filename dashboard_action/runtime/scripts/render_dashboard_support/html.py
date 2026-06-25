@@ -57,6 +57,7 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/controls.js",
     "dashboard/charts.js",
     "dashboard/tables.js",
+    "dashboard/story.js",
     "dashboard/controller.js",
     "dashboard/app.js",
     "dashboard/json-assets.js",
@@ -80,6 +81,7 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/controls.js",
     "dashboard/charts.js",
     "dashboard/tables.js",
+    "dashboard/story.js",
     "dashboard/controller.js",
     "dashboard/app.js",
 )
@@ -189,6 +191,32 @@ def build_dashboard_shell(
     </div>
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
+
+    <div class="story-board" id="story-board" aria-label="Repository narrative">
+      <section class="card story-card story-card-primary" aria-label="What happened">
+        <div class="story-topline">
+          <div class="story-kicker">What happened</div>
+          <div class="story-tabs" id="storyControls" aria-label="Story highlights"></div>
+        </div>
+        <div class="story-carousel" id="storyCarousel" aria-live="polite">
+          <article class="story-slide is-active">
+            <span class="story-slide-tone">Finding the story</span>
+            <h2 id="storyHeadline">Looking for the useful pattern</h2>
+            <p class="story-summary" id="storySummary">Once the data loads, this will pull out a highlight, a context read, and the next thing worth fixing.</p>
+            <div class="story-evidence-grid" id="storyEvidence"></div>
+          </article>
+        </div>
+      </section>
+      <section class="card story-card" aria-labelledby="nextActionsTitle">
+        <div class="section-header compact">
+          <div class="section-copy">
+            <h2 id="nextActionsTitle">What to do next</h2>
+            <p class="click-hint">Changes with the window and selected repos.</p>
+          </div>
+        </div>
+        <div id="next-actions"></div>
+      </section>
+    </div>
 
     <div class="growth-model-grid" aria-label="Repository growth model">
       <div class="card growth-stage">
@@ -367,6 +395,52 @@ def build_dashboard_shell(
         </div>
         <div id="insights-list"></div>
       </div>
+    </div>
+
+    <div class="context-grid">
+      <section class="card context-timeline-card" aria-labelledby="contextTimelineTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2 id="contextTimelineTitle">What changed around it</h2>
+            <p class="click-hint">The commit and release trail behind the traffic.</p>
+          </div>
+        </div>
+        <div id="context-timeline"></div>
+      </section>
+      <section class="card readiness-card" aria-labelledby="readinessTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2 id="readinessTitle">Ready for visitors?</h2>
+            <p class="click-hint">The files that help attention turn into stars, clones, issues, or PRs.</p>
+          </div>
+        </div>
+        <div id="readiness-panel"></div>
+      </section>
+    </div>
+
+    <div class="section-grid context-visual-grid">
+      <section class="card" id="contextChartCard" aria-labelledby="contextChartTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2 id="contextChartTitle">Shipping vs attention</h2>
+            <p class="click-hint">Weekly code churn next to traffic, so work and attention share the same frame.</p>
+          </div>
+        </div>
+        <div class="context-metric-strip" id="context-metrics"></div>
+        <div class="chart-container context-chart-container">
+          <canvas id="contextChart" role="img" aria-label="Weekly code activity and traffic context chart"></canvas>
+          <p class="empty-msg context-chart-empty" id="contextChartEmpty">No code-frequency context has been collected yet.</p>
+        </div>
+      </section>
+      <section class="card positioning-card" aria-labelledby="positioningTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2 id="positioningTitle">How people find it</h2>
+            <p class="click-hint">Languages, topics, referrers, and pages that shape the repo's public surface.</p>
+          </div>
+        </div>
+        <div id="positioning-panel"></div>
+      </section>
     </div>
 
     <div class="section-grid">

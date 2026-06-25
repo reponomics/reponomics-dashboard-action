@@ -60,7 +60,7 @@ export function installTheme(context) {
     function refreshCharts() {
       // Skip work entirely until charts exist; the first updateDashboard()
       // will pick up theme colors from CSS vars on its own.
-      if (!context.charts.dailyChart && !context.charts.weekdayChart && !context.charts.stackedChart) return;
+      if (!context.charts.dailyChart && !context.charts.weekdayChart && !context.charts.stackedChart && !context.charts.contextChart) return;
       const newOpts = chartOptions(false);
       if (context.charts.dailyChart) {
         Object.assign(context.charts.dailyChart.options, newOpts);
@@ -92,6 +92,9 @@ export function installTheme(context) {
           context.charts.stackedChart.options.scales.y.stacked = !!wasStacked;
         }
         context.charts.stackedChart.update('none');
+      }
+      if (context.charts.contextChart) {
+        context.charts.contextChart.update('none');
       }
       if (currentPayload()) updateDashboard();
     }

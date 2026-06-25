@@ -16,6 +16,2162 @@
   },
   "encoding": "json",
   "summary": {
+    "context": {
+      "code_frequency": {
+        "totals": {
+          "additions": 36270,
+          "deletions": 15834,
+          "net": 20436
+        },
+        "weeks": [
+          {
+            "additions": 1866,
+            "deletions": 474,
+            "net": 1392,
+            "week_start": "2026-02-23"
+          },
+          {
+            "additions": 1992,
+            "deletions": 756,
+            "net": 1236,
+            "week_start": "2026-03-02"
+          },
+          {
+            "additions": 2118,
+            "deletions": 1032,
+            "net": 1086,
+            "week_start": "2026-03-09"
+          },
+          {
+            "additions": 2244,
+            "deletions": 1314,
+            "net": 930,
+            "week_start": "2026-03-16"
+          },
+          {
+            "additions": 2370,
+            "deletions": 726,
+            "net": 1644,
+            "week_start": "2026-03-23"
+          },
+          {
+            "additions": 2496,
+            "deletions": 1008,
+            "net": 1488,
+            "week_start": "2026-03-30"
+          },
+          {
+            "additions": 2622,
+            "deletions": 1284,
+            "net": 1338,
+            "week_start": "2026-04-06"
+          },
+          {
+            "additions": 2748,
+            "deletions": 1566,
+            "net": 1182,
+            "week_start": "2026-04-13"
+          },
+          {
+            "additions": 2874,
+            "deletions": 978,
+            "net": 1896,
+            "week_start": "2026-04-20"
+          },
+          {
+            "additions": 3000,
+            "deletions": 1260,
+            "net": 1740,
+            "week_start": "2026-04-27"
+          },
+          {
+            "additions": 3126,
+            "deletions": 1536,
+            "net": 1590,
+            "week_start": "2026-05-04"
+          },
+          {
+            "additions": 3032,
+            "deletions": 1708,
+            "net": 1324,
+            "week_start": "2026-05-11"
+          },
+          {
+            "additions": 2938,
+            "deletions": 1010,
+            "net": 1928,
+            "week_start": "2026-05-18"
+          },
+          {
+            "additions": 2844,
+            "deletions": 1182,
+            "net": 1662,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "contributors": {
+        "totals": {
+          "active_contributors": 3,
+          "commits": 1009
+        },
+        "weeks": [
+          {
+            "active_contributors": 3,
+            "additions": 1670,
+            "commits": 70,
+            "deletions": 400,
+            "week_start": "2026-02-23"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1767,
+            "commits": 74,
+            "deletions": 421,
+            "week_start": "2026-03-02"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1734,
+            "commits": 73,
+            "deletions": 412,
+            "week_start": "2026-03-09"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1726,
+            "commits": 72,
+            "deletions": 403,
+            "week_start": "2026-03-16"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1683,
+            "commits": 71,
+            "deletions": 404,
+            "week_start": "2026-03-23"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1670,
+            "commits": 70,
+            "deletions": 400,
+            "week_start": "2026-03-30"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1767,
+            "commits": 74,
+            "deletions": 421,
+            "week_start": "2026-04-06"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1734,
+            "commits": 73,
+            "deletions": 412,
+            "week_start": "2026-04-13"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1726,
+            "commits": 72,
+            "deletions": 403,
+            "week_start": "2026-04-20"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1683,
+            "commits": 71,
+            "deletions": 404,
+            "week_start": "2026-04-27"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1670,
+            "commits": 70,
+            "deletions": 400,
+            "week_start": "2026-05-04"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1767,
+            "commits": 74,
+            "deletions": 421,
+            "week_start": "2026-05-11"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1734,
+            "commits": 73,
+            "deletions": 412,
+            "week_start": "2026-05-18"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 1726,
+            "commits": 72,
+            "deletions": 403,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "events": [
+        {
+          "classification": "feature",
+          "event_date": "2026-05-11",
+          "event_id": "commit:31451ce48964c2a6d2cbfc78b86784f83b1ae81f",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 599,
+          "repo": "reponomics/playground",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/playground/commit/31451ce48964c2a6d2cbfc78b86784f83b1ae81f"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-05-11",
+          "event_id": "commit:f306cdfe765aa351abe30f43ef3df7b482d0d285",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 557,
+          "repo": "reponomics/cli",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/cli/commit/f306cdfe765aa351abe30f43ef3df7b482d0d285"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-11",
+          "event_id": "commit:bc843ec62c745b6b91bbbd065f4d6445cafd9d85",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 537,
+          "repo": "reponomics/schema",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/schema/commit/bc843ec62c745b6b91bbbd065f4d6445cafd9d85"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-11",
+          "event_id": "commit:25047d2e7e8f0b7fe6bbc88cd9d55f382fe02258",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 495,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/dashboard-template/commit/25047d2e7e8f0b7fe6bbc88cd9d55f382fe02258"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-05-11",
+          "event_id": "commit:08865add8e87df0c09d822b7e4e1aeebe41584ed",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 237,
+          "repo": "reponomics/examples",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/examples/commit/08865add8e87df0c09d822b7e4e1aeebe41584ed"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-11",
+          "event_id": "commit:6b3981401f7ee8a07e6fc96b730ab42a614b49ab",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 212,
+          "repo": "reponomics/release-tools",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/release-tools/commit/6b3981401f7ee8a07e6fc96b730ab42a614b49ab"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-05-11",
+          "event_id": "commit:e5fcaad1538959be0b8a79d6f34a76d09104ea3f",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 208,
+          "repo": "reponomics/infra",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/infra/commit/e5fcaad1538959be0b8a79d6f34a76d09104ea3f"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-05-11",
+          "event_id": "commit:20b4de05a904cb855d8450d03dd7ea88ce231146",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 195,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/archive-reader/commit/20b4de05a904cb855d8450d03dd7ea88ce231146"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-11",
+          "event_id": "commit:71721df9c6067042c20721ab167660afedbdfeef",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 170,
+          "repo": "reponomics/collector",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/collector/commit/71721df9c6067042c20721ab167660afedbdfeef"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-05-11",
+          "event_id": "commit:f995d735e11667ddd48ebada83eb72194e46c3af",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 166,
+          "repo": "reponomics/charts",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/charts/commit/f995d735e11667ddd48ebada83eb72194e46c3af"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-11",
+          "event_id": "commit:2a5367949686576161d3bf377f8a852a1f5d6c12",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 118,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/docs-site/commit/2a5367949686576161d3bf377f8a852a1f5d6c12"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-11",
+          "event_id": "commit:5bbd4cf8563fab748da03051be806959eab509fa",
+          "event_ts": "2026-05-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 76,
+          "repo": "reponomics/action",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/action/commit/5bbd4cf8563fab748da03051be806959eab509fa"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10701",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 80,
+          "repo": "reponomics/examples",
+          "source_table": "repo-releases.csv",
+          "title": "v8.2.0 release",
+          "url": "https://github.com/reponomics/examples/releases/tag/v8.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10601",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 73,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-releases.csv",
+          "title": "v7.2.0 release",
+          "url": "https://github.com/reponomics/docs-site/releases/tag/v7.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10501",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 66,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-releases.csv",
+          "title": "v6.2.0 release",
+          "url": "https://github.com/reponomics/dashboard-template/releases/tag/v6.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10401",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 59,
+          "repo": "reponomics/collector",
+          "source_table": "repo-releases.csv",
+          "title": "v5.2.0 release",
+          "url": "https://github.com/reponomics/collector/releases/tag/v5.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10301",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 52,
+          "repo": "reponomics/cli",
+          "source_table": "repo-releases.csv",
+          "title": "v4.2.0 release",
+          "url": "https://github.com/reponomics/cli/releases/tag/v4.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10201",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 45,
+          "repo": "reponomics/charts",
+          "source_table": "repo-releases.csv",
+          "title": "v3.2.0 release",
+          "url": "https://github.com/reponomics/charts/releases/tag/v3.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10101",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 38,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-releases.csv",
+          "title": "v2.2.0 release",
+          "url": "https://github.com/reponomics/archive-reader/releases/tag/v2.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-04",
+          "event_id": "release:10001",
+          "event_ts": "2026-05-04T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 31,
+          "repo": "reponomics/action",
+          "source_table": "repo-releases.csv",
+          "title": "v1.2.0 release",
+          "url": "https://github.com/reponomics/action/releases/tag/v1.2.0"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-26",
+          "event_id": "commit:a12b09a5bfe3359c978a1182af9e5c37cf225de3",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 601,
+          "repo": "reponomics/release-tools",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/release-tools/commit/a12b09a5bfe3359c978a1182af9e5c37cf225de3"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-26",
+          "event_id": "commit:674bbaaf3dadfd3c680acc598639fdee380b38f9",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 559,
+          "repo": "reponomics/collector",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/collector/commit/674bbaaf3dadfd3c680acc598639fdee380b38f9"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-26",
+          "event_id": "commit:a0482407c12616dcad2c42723209e992620172da",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 497,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/docs-site/commit/a0482407c12616dcad2c42723209e992620172da"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-26",
+          "event_id": "commit:3fe190795f458e1b93f3b6535cd6a4ddefb6cff7",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 455,
+          "repo": "reponomics/action",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/action/commit/3fe190795f458e1b93f3b6535cd6a4ddefb6cff7"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-26",
+          "event_id": "commit:d2033ca737198a03baedeb420f21d7d6905a217d",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 239,
+          "repo": "reponomics/infra",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/infra/commit/d2033ca737198a03baedeb420f21d7d6905a217d"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-26",
+          "event_id": "commit:d62f5999304fb210a133076ebe88a04fa014a7b1",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 214,
+          "repo": "reponomics/schema",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/schema/commit/d62f5999304fb210a133076ebe88a04fa014a7b1"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-26",
+          "event_id": "commit:9051ee01ec6d8897d3a5226a8a5de5643fd87398",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 210,
+          "repo": "reponomics/playground",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/playground/commit/9051ee01ec6d8897d3a5226a8a5de5643fd87398"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-26",
+          "event_id": "commit:a8899d38214714ee4b1670a80b8aeba9d0d1cd52",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 197,
+          "repo": "reponomics/charts",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/charts/commit/a8899d38214714ee4b1670a80b8aeba9d0d1cd52"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-26",
+          "event_id": "commit:cccec47c292bcfa6ee39146f9a3eac272612d101",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 172,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/dashboard-template/commit/cccec47c292bcfa6ee39146f9a3eac272612d101"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-26",
+          "event_id": "commit:a9cb27e52df5d3bf836c4aa7016f26839fb404f9",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 168,
+          "repo": "reponomics/cli",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/cli/commit/a9cb27e52df5d3bf836c4aa7016f26839fb404f9"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-26",
+          "event_id": "commit:815ca656ec317f466578f59228256f3ccf53b88a",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 120,
+          "repo": "reponomics/examples",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/examples/commit/815ca656ec317f466578f59228256f3ccf53b88a"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-26",
+          "event_id": "commit:bbe3b2af57e18193a6f3364a41ef19b31fd38034",
+          "event_ts": "2026-04-26T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 78,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/archive-reader/commit/bbe3b2af57e18193a6f3364a41ef19b31fd38034"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10700",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 67,
+          "repo": "reponomics/examples",
+          "source_table": "repo-releases.csv",
+          "title": "v8.1.0 release",
+          "url": "https://github.com/reponomics/examples/releases/tag/v8.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10600",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 60,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-releases.csv",
+          "title": "v7.1.0 release",
+          "url": "https://github.com/reponomics/docs-site/releases/tag/v7.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10500",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 53,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-releases.csv",
+          "title": "v6.1.0 release",
+          "url": "https://github.com/reponomics/dashboard-template/releases/tag/v6.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10400",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 46,
+          "repo": "reponomics/collector",
+          "source_table": "repo-releases.csv",
+          "title": "v5.1.0 release",
+          "url": "https://github.com/reponomics/collector/releases/tag/v5.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10300",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 39,
+          "repo": "reponomics/cli",
+          "source_table": "repo-releases.csv",
+          "title": "v4.1.0 release",
+          "url": "https://github.com/reponomics/cli/releases/tag/v4.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10200",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 32,
+          "repo": "reponomics/charts",
+          "source_table": "repo-releases.csv",
+          "title": "v3.1.0 release",
+          "url": "https://github.com/reponomics/charts/releases/tag/v3.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10100",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 25,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-releases.csv",
+          "title": "v2.1.0 release",
+          "url": "https://github.com/reponomics/archive-reader/releases/tag/v2.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-11",
+          "event_id": "release:10000",
+          "event_ts": "2026-04-11T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 18,
+          "repo": "reponomics/action",
+          "source_table": "repo-releases.csv",
+          "title": "v1.1.0 release",
+          "url": "https://github.com/reponomics/action/releases/tag/v1.1.0"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-11",
+          "event_id": "commit:a4c5ca4e317704b97422c720f1dccbedd976c495",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 603,
+          "repo": "reponomics/schema",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/schema/commit/a4c5ca4e317704b97422c720f1dccbedd976c495"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-11",
+          "event_id": "commit:6058cae6b24a3e1a26fbb71ae228c0c2053b5b3e",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 561,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/dashboard-template/commit/6058cae6b24a3e1a26fbb71ae228c0c2053b5b3e"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-11",
+          "event_id": "commit:e5dadb88479b166ec72e218e0b7e6dac47d52e31",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 499,
+          "repo": "reponomics/examples",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/examples/commit/e5dadb88479b166ec72e218e0b7e6dac47d52e31"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-11",
+          "event_id": "commit:75068d68544623905f8e8d93d3d12ada9b265f39",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 457,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/archive-reader/commit/75068d68544623905f8e8d93d3d12ada9b265f39"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-11",
+          "event_id": "commit:b5c2ea13d04c345a8e1d2013ec9a213d3568127c",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 241,
+          "repo": "reponomics/playground",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/playground/commit/b5c2ea13d04c345a8e1d2013ec9a213d3568127c"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-11",
+          "event_id": "commit:d45590d543ee1fffd4850db31f11d7a797369cbd",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 212,
+          "repo": "reponomics/release-tools",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/release-tools/commit/d45590d543ee1fffd4850db31f11d7a797369cbd"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-11",
+          "event_id": "commit:d8148cb927ea00dfc225a2f03c3dc6f08b63e4a5",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 199,
+          "repo": "reponomics/cli",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/cli/commit/d8148cb927ea00dfc225a2f03c3dc6f08b63e4a5"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-11",
+          "event_id": "commit:35f82e1c5bb39219486a81b136f383c9a0ef4055",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 174,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/docs-site/commit/35f82e1c5bb39219486a81b136f383c9a0ef4055"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-11",
+          "event_id": "commit:ecb93f3c6541327af0ccf32eb0c68cc2eedd8bb0",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 170,
+          "repo": "reponomics/collector",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/collector/commit/ecb93f3c6541327af0ccf32eb0c68cc2eedd8bb0"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-11",
+          "event_id": "commit:66b68f20e2302bca1243b237af0843b74454eb33",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "reponomics/action",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/action/commit/66b68f20e2302bca1243b237af0843b74454eb33"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-11",
+          "event_id": "commit:f72aa6325c15f94b2ed9eea75c4b875ba568f991",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 122,
+          "repo": "reponomics/infra",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/infra/commit/f72aa6325c15f94b2ed9eea75c4b875ba568f991"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-11",
+          "event_id": "commit:9daa1f1ca003c63dc764d52228e0d55821e8cc25",
+          "event_ts": "2026-04-11T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 80,
+          "repo": "reponomics/charts",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/charts/commit/9daa1f1ca003c63dc764d52228e0d55821e8cc25"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-27",
+          "event_id": "commit:e2010a5c0fe7c1a179fe8105a690c29d5025edd7",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 563,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/docs-site/commit/e2010a5c0fe7c1a179fe8105a690c29d5025edd7"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-27",
+          "event_id": "commit:4ea39424afd12df4c39643f42dce9475d24efd8d",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 521,
+          "repo": "reponomics/action",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/action/commit/4ea39424afd12df4c39643f42dce9475d24efd8d"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-03-27",
+          "event_id": "commit:7226969886bdee351248c9e3fc888a3e619d2584",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 501,
+          "repo": "reponomics/infra",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/infra/commit/7226969886bdee351248c9e3fc888a3e619d2584"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-03-27",
+          "event_id": "commit:eddebe0ce9ac18359a3341d58342471250f27b75",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 459,
+          "repo": "reponomics/charts",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/charts/commit/eddebe0ce9ac18359a3341d58342471250f27b75"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-03-27",
+          "event_id": "commit:e44a4756655d8ad74969fb3f6fb4b75845f3fd08",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 243,
+          "repo": "reponomics/release-tools",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/release-tools/commit/e44a4756655d8ad74969fb3f6fb4b75845f3fd08"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-03-27",
+          "event_id": "commit:ef8155543d44fa5dd35feeb60e5b46b693a20d3c",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 214,
+          "repo": "reponomics/schema",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/schema/commit/ef8155543d44fa5dd35feeb60e5b46b693a20d3c"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-03-27",
+          "event_id": "commit:65978755b4998501dd95fff01e8df46837d2dfa6",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 201,
+          "repo": "reponomics/collector",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/collector/commit/65978755b4998501dd95fff01e8df46837d2dfa6"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-03-27",
+          "event_id": "commit:97b93d53d776fdd5704a8d583799235b15fc05e3",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 176,
+          "repo": "reponomics/examples",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/examples/commit/97b93d53d776fdd5704a8d583799235b15fc05e3"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-03-27",
+          "event_id": "commit:5e9e92c7335c729e5f3403a1107c5ab511ab1fda",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 172,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/dashboard-template/commit/5e9e92c7335c729e5f3403a1107c5ab511ab1fda"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-03-27",
+          "event_id": "commit:4eec17307f58185a2d13986c449433ae0302fdfe",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 134,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/archive-reader/commit/4eec17307f58185a2d13986c449433ae0302fdfe"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-03-27",
+          "event_id": "commit:f7fbbba79aa598860e347007cbd26130be2e7c21",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 124,
+          "repo": "reponomics/playground",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/playground/commit/f7fbbba79aa598860e347007cbd26130be2e7c21"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-03-27",
+          "event_id": "commit:8bdb574b0dd8af570c75469cd5338748ed46ec16",
+          "event_ts": "2026-03-27T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 82,
+          "repo": "reponomics/cli",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/cli/commit/8bdb574b0dd8af570c75469cd5338748ed46ec16"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-12",
+          "event_id": "commit:afed795b133d8f9756a1bff073df73b49789255d",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 565,
+          "repo": "reponomics/examples",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/examples/commit/afed795b133d8f9756a1bff073df73b49789255d"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-12",
+          "event_id": "commit:f274b2b08a9b2b2e2179bfdf84ab93a9cb59efa7",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 523,
+          "repo": "reponomics/archive-reader",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/reponomics/archive-reader/commit/f274b2b08a9b2b2e2179bfdf84ab93a9cb59efa7"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-03-12",
+          "event_id": "commit:142b3ff148d74384b302198b5d6181ed70a0caa5",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 503,
+          "repo": "reponomics/playground",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/playground/commit/142b3ff148d74384b302198b5d6181ed70a0caa5"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-03-12",
+          "event_id": "commit:febfa2b5dacabf03fa4123b613d5008c47206108",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 461,
+          "repo": "reponomics/cli",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/reponomics/cli/commit/febfa2b5dacabf03fa4123b613d5008c47206108"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-03-12",
+          "event_id": "commit:243f30fd1bc95096fae1bb1ec9f0367bb633563f",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 245,
+          "repo": "reponomics/schema",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/schema/commit/243f30fd1bc95096fae1bb1ec9f0367bb633563f"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-03-12",
+          "event_id": "commit:f8bd6cf20174d5784a230b6d47ec316ca6754dc2",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 203,
+          "repo": "reponomics/dashboard-template",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/reponomics/dashboard-template/commit/f8bd6cf20174d5784a230b6d47ec316ca6754dc2"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-03-12",
+          "event_id": "commit:d37440356f3caaf55a432dc3259f4a0240f6697e",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 178,
+          "repo": "reponomics/infra",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/infra/commit/d37440356f3caaf55a432dc3259f4a0240f6697e"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-03-12",
+          "event_id": "commit:a6a850e50b843e61d756fcf61a250449e801f216",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 174,
+          "repo": "reponomics/docs-site",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/docs-site/commit/a6a850e50b843e61d756fcf61a250449e801f216"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-03-12",
+          "event_id": "commit:35831e6f6c44f7b07eea1cbf99d1c3b165710bd7",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 136,
+          "repo": "reponomics/charts",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/reponomics/charts/commit/35831e6f6c44f7b07eea1cbf99d1c3b165710bd7"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-03-12",
+          "event_id": "commit:1e750f37aaa5d8d08d0a4c07e324db2b1d486a82",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "reponomics/action",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/reponomics/action/commit/1e750f37aaa5d8d08d0a4c07e324db2b1d486a82"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-03-12",
+          "event_id": "commit:268198924e9a00bd8a05e8d828455a8f83ba6b77",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 126,
+          "repo": "reponomics/release-tools",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/release-tools/commit/268198924e9a00bd8a05e8d828455a8f83ba6b77"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-03-12",
+          "event_id": "commit:ad8e3a25ac724dcfcfcda649d2e06b1d6bbe282e",
+          "event_ts": "2026-03-12T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 84,
+          "repo": "reponomics/collector",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/reponomics/collector/commit/ad8e3a25ac724dcfcfcda649d2e06b1d6bbe282e"
+        }
+      ],
+      "issues": {
+        "by_repo": {
+          "reponomics/action": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 2,
+            "open_prs": 0,
+            "stale_open_issues": 0,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 0
+          },
+          "reponomics/archive-reader": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 3,
+            "open_prs": 1,
+            "stale_open_issues": 1,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 0
+          },
+          "reponomics/charts": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 4,
+            "open_prs": 2,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/cli": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 5,
+            "open_prs": 3,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/collector": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 7,
+            "open_prs": 0,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/dashboard-template": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 8,
+            "open_prs": 1,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 2
+          },
+          "reponomics/docs-site": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 3,
+            "open_prs": 2,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 0
+          },
+          "reponomics/examples": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 4,
+            "open_prs": 3,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/infra": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 6,
+            "open_prs": 0,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/playground": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 7,
+            "open_prs": 1,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 1
+          },
+          "reponomics/release-tools": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 8,
+            "open_prs": 2,
+            "stale_open_issues": 2,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 2
+          },
+          "reponomics/schema": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 9,
+            "open_prs": 3,
+            "stale_open_issues": 3,
+            "stale_open_prs": 1,
+            "ts": "2026-05-25",
+            "unanswered_issues": 2
+          }
+        },
+        "label_buckets": [
+          {
+            "bucket": "bug",
+            "count": 18
+          },
+          {
+            "bucket": "documentation",
+            "count": 18
+          },
+          {
+            "bucket": "enhancement",
+            "count": 18
+          },
+          {
+            "bucket": "good_first_issue",
+            "count": 18
+          },
+          {
+            "bucket": "help_wanted",
+            "count": 18
+          }
+        ],
+        "totals": {
+          "open_issues": 66,
+          "open_prs": 18,
+          "stale_open_issues": 18,
+          "unanswered_issues": 12
+        }
+      },
+      "languages": {
+        "by_repo": {
+          "reponomics/action": [
+            {
+              "bytes": 113400,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 58800,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 21000,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 16800,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/archive-reader": [
+            {
+              "bytes": 151280,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 43920,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 29280,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 19520,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/charts": [
+            {
+              "bytes": 127880,
+              "language": "JavaScript",
+              "share": 0.46
+            },
+            {
+              "bytes": 61160,
+              "language": "HTML",
+              "share": 0.22
+            },
+            {
+              "bytes": 50040,
+              "language": "CSS",
+              "share": 0.18
+            },
+            {
+              "bytes": 38920,
+              "language": "Python",
+              "share": 0.14
+            }
+          ],
+          "reponomics/cli": [
+            {
+              "bytes": 156000,
+              "language": "Go",
+              "share": 0.5
+            },
+            {
+              "bytes": 74880,
+              "language": "Shell",
+              "share": 0.24
+            },
+            {
+              "bytes": 49920,
+              "language": "Markdown",
+              "share": 0.16
+            },
+            {
+              "bytes": 31200,
+              "language": "Python",
+              "share": 0.1
+            }
+          ],
+          "reponomics/collector": [
+            {
+              "bytes": 186840,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 96880,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 34600,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 27680,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/dashboard-template": [
+            {
+              "bytes": 235600,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 68400,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 45600,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 30400,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/docs-site": [
+            {
+              "bytes": 190440,
+              "language": "JavaScript",
+              "share": 0.46
+            },
+            {
+              "bytes": 91080,
+              "language": "HTML",
+              "share": 0.22
+            },
+            {
+              "bytes": 74520,
+              "language": "CSS",
+              "share": 0.18
+            },
+            {
+              "bytes": 57960,
+              "language": "Python",
+              "share": 0.14
+            }
+          ],
+          "reponomics/examples": [
+            {
+              "bytes": 224000,
+              "language": "Go",
+              "share": 0.5
+            },
+            {
+              "bytes": 107520,
+              "language": "Shell",
+              "share": 0.24
+            },
+            {
+              "bytes": 71680,
+              "language": "Markdown",
+              "share": 0.16
+            },
+            {
+              "bytes": 44800,
+              "language": "Python",
+              "share": 0.1
+            }
+          ],
+          "reponomics/infra": [
+            {
+              "bytes": 260280,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 134960,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 48200,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 38560,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/playground": [
+            {
+              "bytes": 319920,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 92880,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 61920,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 41280,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "reponomics/release-tools": [
+            {
+              "bytes": 253000,
+              "language": "JavaScript",
+              "share": 0.46
+            },
+            {
+              "bytes": 121000,
+              "language": "HTML",
+              "share": 0.22
+            },
+            {
+              "bytes": 99000,
+              "language": "CSS",
+              "share": 0.18
+            },
+            {
+              "bytes": 77000,
+              "language": "Python",
+              "share": 0.14
+            }
+          ],
+          "reponomics/schema": [
+            {
+              "bytes": 292000,
+              "language": "Go",
+              "share": 0.5
+            },
+            {
+              "bytes": 140160,
+              "language": "Shell",
+              "share": 0.24
+            },
+            {
+              "bytes": 93440,
+              "language": "Markdown",
+              "share": 0.16
+            },
+            {
+              "bytes": 58400,
+              "language": "Python",
+              "share": 0.1
+            }
+          ]
+        },
+        "top": [
+          {
+            "bytes": 1305720,
+            "language": "Python",
+            "share": 0.274080604534005
+          },
+          {
+            "bytes": 765720,
+            "language": "TypeScript",
+            "share": 0.16073047858942066
+          },
+          {
+            "bytes": 672000,
+            "language": "Go",
+            "share": 0.14105793450881612
+          },
+          {
+            "bytes": 571320,
+            "language": "JavaScript",
+            "share": 0.11992443324937027
+          },
+          {
+            "bytes": 496800,
+            "language": "Shell",
+            "share": 0.10428211586901763
+          },
+          {
+            "bytes": 351840,
+            "language": "Markdown",
+            "share": 0.07385390428211587
+          },
+          {
+            "bytes": 327360,
+            "language": "CSS",
+            "share": 0.06871536523929471
+          },
+          {
+            "bytes": 273240,
+            "language": "HTML",
+            "share": 0.0573551637279597
+          }
+        ]
+      },
+      "release_assets": [
+        {
+          "content_type": "application/zip",
+          "download_count": 80,
+          "name": "examples-v8.2.0-source.zip",
+          "release_id": "10701",
+          "repo": "reponomics/examples",
+          "size_bytes": 131900,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 73,
+          "name": "docs-site-v7.2.0-source.zip",
+          "release_id": "10601",
+          "repo": "reponomics/docs-site",
+          "size_bytes": 130200,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 71,
+          "name": "examples-v8.2.0-checksums.txt",
+          "release_id": "10701",
+          "repo": "reponomics/examples",
+          "size_bytes": 132700,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 67,
+          "name": "examples-v8.1.0-source.zip",
+          "release_id": "10700",
+          "repo": "reponomics/examples",
+          "size_bytes": 131900,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 66,
+          "name": "dashboard-template-v6.2.0-source.zip",
+          "release_id": "10501",
+          "repo": "reponomics/dashboard-template",
+          "size_bytes": 128500,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 64,
+          "name": "docs-site-v7.2.0-checksums.txt",
+          "release_id": "10601",
+          "repo": "reponomics/docs-site",
+          "size_bytes": 131000,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 60,
+          "name": "docs-site-v7.1.0-source.zip",
+          "release_id": "10600",
+          "repo": "reponomics/docs-site",
+          "size_bytes": 130200,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 59,
+          "name": "collector-v5.2.0-source.zip",
+          "release_id": "10401",
+          "repo": "reponomics/collector",
+          "size_bytes": 126800,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 58,
+          "name": "examples-v8.1.0-checksums.txt",
+          "release_id": "10700",
+          "repo": "reponomics/examples",
+          "size_bytes": 132700,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 57,
+          "name": "dashboard-template-v6.2.0-checksums.txt",
+          "release_id": "10501",
+          "repo": "reponomics/dashboard-template",
+          "size_bytes": 129300,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 53,
+          "name": "dashboard-template-v6.1.0-source.zip",
+          "release_id": "10500",
+          "repo": "reponomics/dashboard-template",
+          "size_bytes": 128500,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 52,
+          "name": "cli-v4.2.0-source.zip",
+          "release_id": "10301",
+          "repo": "reponomics/cli",
+          "size_bytes": 125100,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 51,
+          "name": "docs-site-v7.1.0-checksums.txt",
+          "release_id": "10600",
+          "repo": "reponomics/docs-site",
+          "size_bytes": 131000,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 50,
+          "name": "collector-v5.2.0-checksums.txt",
+          "release_id": "10401",
+          "repo": "reponomics/collector",
+          "size_bytes": 127600,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 46,
+          "name": "collector-v5.1.0-source.zip",
+          "release_id": "10400",
+          "repo": "reponomics/collector",
+          "size_bytes": 126800,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 45,
+          "name": "charts-v3.2.0-source.zip",
+          "release_id": "10201",
+          "repo": "reponomics/charts",
+          "size_bytes": 123400,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 44,
+          "name": "dashboard-template-v6.1.0-checksums.txt",
+          "release_id": "10500",
+          "repo": "reponomics/dashboard-template",
+          "size_bytes": 129300,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 43,
+          "name": "cli-v4.2.0-checksums.txt",
+          "release_id": "10301",
+          "repo": "reponomics/cli",
+          "size_bytes": 125900,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 39,
+          "name": "cli-v4.1.0-source.zip",
+          "release_id": "10300",
+          "repo": "reponomics/cli",
+          "size_bytes": 125100,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 38,
+          "name": "archive-reader-v2.2.0-source.zip",
+          "release_id": "10101",
+          "repo": "reponomics/archive-reader",
+          "size_bytes": 121700,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 37,
+          "name": "collector-v5.1.0-checksums.txt",
+          "release_id": "10400",
+          "repo": "reponomics/collector",
+          "size_bytes": 127600,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 36,
+          "name": "charts-v3.2.0-checksums.txt",
+          "release_id": "10201",
+          "repo": "reponomics/charts",
+          "size_bytes": 124200,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 32,
+          "name": "charts-v3.1.0-source.zip",
+          "release_id": "10200",
+          "repo": "reponomics/charts",
+          "size_bytes": 123400,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 31,
+          "name": "action-v1.2.0-source.zip",
+          "release_id": "10001",
+          "repo": "reponomics/action",
+          "size_bytes": 120000,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 30,
+          "name": "cli-v4.1.0-checksums.txt",
+          "release_id": "10300",
+          "repo": "reponomics/cli",
+          "size_bytes": 125900,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 29,
+          "name": "archive-reader-v2.2.0-checksums.txt",
+          "release_id": "10101",
+          "repo": "reponomics/archive-reader",
+          "size_bytes": 122500,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 25,
+          "name": "archive-reader-v2.1.0-source.zip",
+          "release_id": "10100",
+          "repo": "reponomics/archive-reader",
+          "size_bytes": 121700,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 23,
+          "name": "charts-v3.1.0-checksums.txt",
+          "release_id": "10200",
+          "repo": "reponomics/charts",
+          "size_bytes": 124200,
+          "updated_at": "2026-04-11T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 22,
+          "name": "action-v1.2.0-checksums.txt",
+          "release_id": "10001",
+          "repo": "reponomics/action",
+          "size_bytes": 120800,
+          "updated_at": "2026-05-04T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 18,
+          "name": "action-v1.1.0-source.zip",
+          "release_id": "10000",
+          "repo": "reponomics/action",
+          "size_bytes": 120000,
+          "updated_at": "2026-04-11T15:05:00Z"
+        }
+      ],
+      "releases": [
+        {
+          "asset_count": 2,
+          "asset_download_count": 31,
+          "draft": "False",
+          "name": "v1.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10001",
+          "repo": "reponomics/action",
+          "tag_name": "v1.2.0",
+          "url": "https://github.com/reponomics/action/releases/tag/v1.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 38,
+          "draft": "False",
+          "name": "v2.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10101",
+          "repo": "reponomics/archive-reader",
+          "tag_name": "v2.2.0",
+          "url": "https://github.com/reponomics/archive-reader/releases/tag/v2.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 45,
+          "draft": "False",
+          "name": "v3.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10201",
+          "repo": "reponomics/charts",
+          "tag_name": "v3.2.0",
+          "url": "https://github.com/reponomics/charts/releases/tag/v3.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 52,
+          "draft": "False",
+          "name": "v4.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10301",
+          "repo": "reponomics/cli",
+          "tag_name": "v4.2.0",
+          "url": "https://github.com/reponomics/cli/releases/tag/v4.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 59,
+          "draft": "False",
+          "name": "v5.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10401",
+          "repo": "reponomics/collector",
+          "tag_name": "v5.2.0",
+          "url": "https://github.com/reponomics/collector/releases/tag/v5.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 66,
+          "draft": "False",
+          "name": "v6.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10501",
+          "repo": "reponomics/dashboard-template",
+          "tag_name": "v6.2.0",
+          "url": "https://github.com/reponomics/dashboard-template/releases/tag/v6.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 73,
+          "draft": "False",
+          "name": "v7.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10601",
+          "repo": "reponomics/docs-site",
+          "tag_name": "v7.2.0",
+          "url": "https://github.com/reponomics/docs-site/releases/tag/v7.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 80,
+          "draft": "False",
+          "name": "v8.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-04T15:00:00Z",
+          "release_id": "10701",
+          "repo": "reponomics/examples",
+          "tag_name": "v8.2.0",
+          "url": "https://github.com/reponomics/examples/releases/tag/v8.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 18,
+          "draft": "False",
+          "name": "v1.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10000",
+          "repo": "reponomics/action",
+          "tag_name": "v1.1.0",
+          "url": "https://github.com/reponomics/action/releases/tag/v1.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 25,
+          "draft": "False",
+          "name": "v2.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10100",
+          "repo": "reponomics/archive-reader",
+          "tag_name": "v2.1.0",
+          "url": "https://github.com/reponomics/archive-reader/releases/tag/v2.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 32,
+          "draft": "False",
+          "name": "v3.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10200",
+          "repo": "reponomics/charts",
+          "tag_name": "v3.1.0",
+          "url": "https://github.com/reponomics/charts/releases/tag/v3.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 39,
+          "draft": "False",
+          "name": "v4.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10300",
+          "repo": "reponomics/cli",
+          "tag_name": "v4.1.0",
+          "url": "https://github.com/reponomics/cli/releases/tag/v4.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 46,
+          "draft": "False",
+          "name": "v5.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10400",
+          "repo": "reponomics/collector",
+          "tag_name": "v5.1.0",
+          "url": "https://github.com/reponomics/collector/releases/tag/v5.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 53,
+          "draft": "False",
+          "name": "v6.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10500",
+          "repo": "reponomics/dashboard-template",
+          "tag_name": "v6.1.0",
+          "url": "https://github.com/reponomics/dashboard-template/releases/tag/v6.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 60,
+          "draft": "False",
+          "name": "v7.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10600",
+          "repo": "reponomics/docs-site",
+          "tag_name": "v7.1.0",
+          "url": "https://github.com/reponomics/docs-site/releases/tag/v7.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 67,
+          "draft": "False",
+          "name": "v8.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-11T15:00:00Z",
+          "release_id": "10700",
+          "repo": "reponomics/examples",
+          "tag_name": "v8.1.0",
+          "url": "https://github.com/reponomics/examples/releases/tag/v8.1.0"
+        }
+      ],
+      "topics": {
+        "by_repo": {
+          "reponomics/action": [
+            "action",
+            "analytics",
+            "dashboard",
+            "github-actions"
+          ],
+          "reponomics/archive-reader": [
+            "archive-reader",
+            "automation",
+            "developer-tools",
+            "metrics"
+          ],
+          "reponomics/charts": [
+            "charts",
+            "documentation",
+            "maintainer-tools",
+            "open-source"
+          ],
+          "reponomics/cli": [
+            "cli",
+            "observability",
+            "release-engineering"
+          ],
+          "reponomics/collector": [
+            "analytics",
+            "collector",
+            "dashboard",
+            "github-actions"
+          ],
+          "reponomics/dashboard-template": [
+            "automation",
+            "dashboard-template",
+            "developer-tools",
+            "metrics"
+          ],
+          "reponomics/docs-site": [
+            "docs-site",
+            "documentation",
+            "maintainer-tools",
+            "open-source"
+          ],
+          "reponomics/examples": [
+            "cli",
+            "examples",
+            "observability",
+            "release-engineering"
+          ],
+          "reponomics/infra": [
+            "analytics",
+            "dashboard",
+            "github-actions",
+            "infra"
+          ],
+          "reponomics/playground": [
+            "automation",
+            "developer-tools",
+            "metrics",
+            "playground"
+          ],
+          "reponomics/release-tools": [
+            "documentation",
+            "maintainer-tools",
+            "open-source",
+            "release-tools"
+          ],
+          "reponomics/schema": [
+            "cli",
+            "observability",
+            "release-engineering",
+            "schema"
+          ]
+        },
+        "top": [
+          {
+            "repo_count": 3,
+            "topic": "analytics"
+          },
+          {
+            "repo_count": 3,
+            "topic": "automation"
+          },
+          {
+            "repo_count": 3,
+            "topic": "cli"
+          },
+          {
+            "repo_count": 3,
+            "topic": "dashboard"
+          },
+          {
+            "repo_count": 3,
+            "topic": "developer-tools"
+          },
+          {
+            "repo_count": 3,
+            "topic": "documentation"
+          },
+          {
+            "repo_count": 3,
+            "topic": "github-actions"
+          },
+          {
+            "repo_count": 3,
+            "topic": "maintainer-tools"
+          },
+          {
+            "repo_count": 3,
+            "topic": "metrics"
+          },
+          {
+            "repo_count": 3,
+            "topic": "observability"
+          },
+          {
+            "repo_count": 3,
+            "topic": "open-source"
+          },
+          {
+            "repo_count": 3,
+            "topic": "release-engineering"
+          }
+        ]
+      }
+    },
     "daily": {
       "clone_uniques": [
         13,

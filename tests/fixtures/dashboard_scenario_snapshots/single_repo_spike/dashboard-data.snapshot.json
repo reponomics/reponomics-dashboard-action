@@ -6,6 +6,676 @@
   },
   "encoding": "json",
   "summary": {
+    "context": {
+      "code_frequency": {
+        "totals": {
+          "additions": 3815,
+          "deletions": 2084,
+          "net": 1731
+        },
+        "weeks": [
+          {
+            "additions": 201,
+            "deletions": 64,
+            "net": 137,
+            "week_start": "2026-02-23"
+          },
+          {
+            "additions": 212,
+            "deletions": 106,
+            "net": 106,
+            "week_start": "2026-03-02"
+          },
+          {
+            "additions": 223,
+            "deletions": 147,
+            "net": 76,
+            "week_start": "2026-03-09"
+          },
+          {
+            "additions": 234,
+            "deletions": 189,
+            "net": 45,
+            "week_start": "2026-03-16"
+          },
+          {
+            "additions": 245,
+            "deletions": 86,
+            "net": 159,
+            "week_start": "2026-03-23"
+          },
+          {
+            "additions": 256,
+            "deletions": 128,
+            "net": 128,
+            "week_start": "2026-03-30"
+          },
+          {
+            "additions": 267,
+            "deletions": 169,
+            "net": 98,
+            "week_start": "2026-04-06"
+          },
+          {
+            "additions": 278,
+            "deletions": 211,
+            "net": 67,
+            "week_start": "2026-04-13"
+          },
+          {
+            "additions": 289,
+            "deletions": 108,
+            "net": 181,
+            "week_start": "2026-04-20"
+          },
+          {
+            "additions": 300,
+            "deletions": 150,
+            "net": 150,
+            "week_start": "2026-04-27"
+          },
+          {
+            "additions": 311,
+            "deletions": 191,
+            "net": 120,
+            "week_start": "2026-05-04"
+          },
+          {
+            "additions": 322,
+            "deletions": 233,
+            "net": 89,
+            "week_start": "2026-05-11"
+          },
+          {
+            "additions": 333,
+            "deletions": 130,
+            "net": 203,
+            "week_start": "2026-05-18"
+          },
+          {
+            "additions": 344,
+            "deletions": 172,
+            "net": 172,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "contributors": {
+        "totals": {
+          "active_contributors": 2,
+          "commits": 127
+        },
+        "weeks": [
+          {
+            "active_contributors": 2,
+            "additions": 113,
+            "commits": 6,
+            "deletions": 33,
+            "week_start": "2026-02-23"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 169,
+            "commits": 9,
+            "deletions": 49,
+            "week_start": "2026-03-02"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 225,
+            "commits": 12,
+            "deletions": 65,
+            "week_start": "2026-03-09"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 186,
+            "commits": 10,
+            "deletions": 51,
+            "week_start": "2026-03-16"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 147,
+            "commits": 8,
+            "deletions": 42,
+            "week_start": "2026-03-23"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 113,
+            "commits": 6,
+            "deletions": 33,
+            "week_start": "2026-03-30"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 169,
+            "commits": 9,
+            "deletions": 49,
+            "week_start": "2026-04-06"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 225,
+            "commits": 12,
+            "deletions": 65,
+            "week_start": "2026-04-13"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 186,
+            "commits": 10,
+            "deletions": 51,
+            "week_start": "2026-04-20"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 147,
+            "commits": 8,
+            "deletions": 42,
+            "week_start": "2026-04-27"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 113,
+            "commits": 6,
+            "deletions": 33,
+            "week_start": "2026-05-04"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 169,
+            "commits": 9,
+            "deletions": 49,
+            "week_start": "2026-05-11"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 225,
+            "commits": 12,
+            "deletions": 65,
+            "week_start": "2026-05-18"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 186,
+            "commits": 10,
+            "deletions": 51,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "events": [
+        {
+          "classification": "tests",
+          "event_date": "2026-05-15",
+          "event_id": "commit:1a72ac32fdf12296729c89eff0822bace799c5d6",
+          "event_ts": "2026-05-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 195,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/demo/sudden-breakout/commit/1a72ac32fdf12296729c89eff0822bace799c5d6"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-15",
+          "event_id": "commit:4dd98f2a269c906cbde2934906c58410be8c7825",
+          "event_ts": "2026-05-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 76,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/demo/steady-companion/commit/4dd98f2a269c906cbde2934906c58410be8c7825"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-08",
+          "event_id": "release:10101",
+          "event_ts": "2026-05-08T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 38,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-releases.csv",
+          "title": "v2.2.0 release",
+          "url": "https://github.com/demo/sudden-breakout/releases/tag/v2.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-08",
+          "event_id": "release:10001",
+          "event_ts": "2026-05-08T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 31,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-releases.csv",
+          "title": "v1.2.0 release",
+          "url": "https://github.com/demo/steady-companion/releases/tag/v1.2.0"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-30",
+          "event_id": "commit:b64fcf094fbf8384df3a2b80779c443e361a437d",
+          "event_ts": "2026-04-30T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 455,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/demo/steady-companion/commit/b64fcf094fbf8384df3a2b80779c443e361a437d"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-30",
+          "event_id": "commit:bdf1950859f0f80c28fc37ee94f5d99c59d650fd",
+          "event_ts": "2026-04-30T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 78,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/demo/sudden-breakout/commit/bdf1950859f0f80c28fc37ee94f5d99c59d650fd"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-15",
+          "event_id": "release:10100",
+          "event_ts": "2026-04-15T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 25,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-releases.csv",
+          "title": "v2.1.0 release",
+          "url": "https://github.com/demo/sudden-breakout/releases/tag/v2.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-15",
+          "event_id": "release:10000",
+          "event_ts": "2026-04-15T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 18,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-releases.csv",
+          "title": "v1.1.0 release",
+          "url": "https://github.com/demo/steady-companion/releases/tag/v1.1.0"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-15",
+          "event_id": "commit:7592521957ee8aad37e3ab0c2312214edf02ddfb",
+          "event_ts": "2026-04-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 457,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/demo/sudden-breakout/commit/7592521957ee8aad37e3ab0c2312214edf02ddfb"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-15",
+          "event_id": "commit:edf3a939bad2d38cf495ba5da512e08cb9a0e7a8",
+          "event_ts": "2026-04-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/demo/steady-companion/commit/edf3a939bad2d38cf495ba5da512e08cb9a0e7a8"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-31",
+          "event_id": "commit:179bc9470ec7bf42dbe52221f99437722314b02e",
+          "event_ts": "2026-03-31T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 521,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/demo/steady-companion/commit/179bc9470ec7bf42dbe52221f99437722314b02e"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-03-31",
+          "event_id": "commit:c19dfaf64c11d4b6e0720fd9a1ba7534eafa2bc5",
+          "event_ts": "2026-03-31T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 134,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/demo/sudden-breakout/commit/c19dfaf64c11d4b6e0720fd9a1ba7534eafa2bc5"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-03-16",
+          "event_id": "commit:41b5b9b87b0456e9dadd9016bf24beed25499966",
+          "event_ts": "2026-03-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 523,
+          "repo": "demo/sudden-breakout",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/demo/sudden-breakout/commit/41b5b9b87b0456e9dadd9016bf24beed25499966"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-03-16",
+          "event_id": "commit:4f2902826a110e845db533cdbc10349ae0f3fed9",
+          "event_ts": "2026-03-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "demo/steady-companion",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/demo/steady-companion/commit/4f2902826a110e845db533cdbc10349ae0f3fed9"
+        }
+      ],
+      "issues": {
+        "by_repo": {
+          "demo/steady-companion": {
+            "captured_at": "2026-05-29T12:00:00Z",
+            "open_issues": 2,
+            "open_prs": 0,
+            "stale_open_issues": 0,
+            "stale_open_prs": 0,
+            "ts": "2026-05-29",
+            "unanswered_issues": 0
+          },
+          "demo/sudden-breakout": {
+            "captured_at": "2026-05-29T12:00:00Z",
+            "open_issues": 3,
+            "open_prs": 1,
+            "stale_open_issues": 1,
+            "stale_open_prs": 0,
+            "ts": "2026-05-29",
+            "unanswered_issues": 0
+          }
+        },
+        "label_buckets": [
+          {
+            "bucket": "good_first_issue",
+            "count": 5
+          },
+          {
+            "bucket": "enhancement",
+            "count": 3
+          },
+          {
+            "bucket": "help_wanted",
+            "count": 3
+          },
+          {
+            "bucket": "bug",
+            "count": 1
+          },
+          {
+            "bucket": "documentation",
+            "count": 1
+          }
+        ],
+        "totals": {
+          "open_issues": 5,
+          "open_prs": 1,
+          "stale_open_issues": 1,
+          "unanswered_issues": 0
+        }
+      },
+      "languages": {
+        "by_repo": {
+          "demo/steady-companion": [
+            {
+              "bytes": 113400,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 58800,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 21000,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 16800,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "demo/sudden-breakout": [
+            {
+              "bytes": 151280,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 43920,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 29280,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 19520,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ]
+        },
+        "top": [
+          {
+            "bytes": 210080,
+            "language": "Python",
+            "share": 0.46273127753303966
+          },
+          {
+            "bytes": 157320,
+            "language": "TypeScript",
+            "share": 0.34651982378854623
+          },
+          {
+            "bytes": 36320,
+            "language": "Shell",
+            "share": 0.08
+          },
+          {
+            "bytes": 29280,
+            "language": "Markdown",
+            "share": 0.06449339207048459
+          },
+          {
+            "bytes": 21000,
+            "language": "CSS",
+            "share": 0.046255506607929514
+          }
+        ]
+      },
+      "release_assets": [
+        {
+          "content_type": "application/zip",
+          "download_count": 38,
+          "name": "sudden-breakout-v2.2.0-source.zip",
+          "release_id": "10101",
+          "repo": "demo/sudden-breakout",
+          "size_bytes": 121700,
+          "updated_at": "2026-05-08T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 31,
+          "name": "steady-companion-v1.2.0-source.zip",
+          "release_id": "10001",
+          "repo": "demo/steady-companion",
+          "size_bytes": 120000,
+          "updated_at": "2026-05-08T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 29,
+          "name": "sudden-breakout-v2.2.0-checksums.txt",
+          "release_id": "10101",
+          "repo": "demo/sudden-breakout",
+          "size_bytes": 122500,
+          "updated_at": "2026-05-08T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 25,
+          "name": "sudden-breakout-v2.1.0-source.zip",
+          "release_id": "10100",
+          "repo": "demo/sudden-breakout",
+          "size_bytes": 121700,
+          "updated_at": "2026-04-15T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 22,
+          "name": "steady-companion-v1.2.0-checksums.txt",
+          "release_id": "10001",
+          "repo": "demo/steady-companion",
+          "size_bytes": 120800,
+          "updated_at": "2026-05-08T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 18,
+          "name": "steady-companion-v1.1.0-source.zip",
+          "release_id": "10000",
+          "repo": "demo/steady-companion",
+          "size_bytes": 120000,
+          "updated_at": "2026-04-15T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 16,
+          "name": "sudden-breakout-v2.1.0-checksums.txt",
+          "release_id": "10100",
+          "repo": "demo/sudden-breakout",
+          "size_bytes": 122500,
+          "updated_at": "2026-04-15T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 9,
+          "name": "steady-companion-v1.1.0-checksums.txt",
+          "release_id": "10000",
+          "repo": "demo/steady-companion",
+          "size_bytes": 120800,
+          "updated_at": "2026-04-15T15:05:00Z"
+        }
+      ],
+      "releases": [
+        {
+          "asset_count": 2,
+          "asset_download_count": 31,
+          "draft": "False",
+          "name": "v1.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-08T15:00:00Z",
+          "release_id": "10001",
+          "repo": "demo/steady-companion",
+          "tag_name": "v1.2.0",
+          "url": "https://github.com/demo/steady-companion/releases/tag/v1.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 38,
+          "draft": "False",
+          "name": "v2.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-08T15:00:00Z",
+          "release_id": "10101",
+          "repo": "demo/sudden-breakout",
+          "tag_name": "v2.2.0",
+          "url": "https://github.com/demo/sudden-breakout/releases/tag/v2.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 18,
+          "draft": "False",
+          "name": "v1.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-15T15:00:00Z",
+          "release_id": "10000",
+          "repo": "demo/steady-companion",
+          "tag_name": "v1.1.0",
+          "url": "https://github.com/demo/steady-companion/releases/tag/v1.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 25,
+          "draft": "False",
+          "name": "v2.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-15T15:00:00Z",
+          "release_id": "10100",
+          "repo": "demo/sudden-breakout",
+          "tag_name": "v2.1.0",
+          "url": "https://github.com/demo/sudden-breakout/releases/tag/v2.1.0"
+        }
+      ],
+      "topics": {
+        "by_repo": {
+          "demo/steady-companion": [
+            "analytics",
+            "dashboard",
+            "github-actions",
+            "steady-companion"
+          ],
+          "demo/sudden-breakout": [
+            "automation",
+            "developer-tools",
+            "metrics",
+            "sudden-breakout"
+          ]
+        },
+        "top": [
+          {
+            "repo_count": 1,
+            "topic": "analytics"
+          },
+          {
+            "repo_count": 1,
+            "topic": "automation"
+          },
+          {
+            "repo_count": 1,
+            "topic": "dashboard"
+          },
+          {
+            "repo_count": 1,
+            "topic": "developer-tools"
+          },
+          {
+            "repo_count": 1,
+            "topic": "github-actions"
+          },
+          {
+            "repo_count": 1,
+            "topic": "metrics"
+          },
+          {
+            "repo_count": 1,
+            "topic": "steady-companion"
+          },
+          {
+            "repo_count": 1,
+            "topic": "sudden-breakout"
+          }
+        ]
+      }
+    },
     "daily": {
       "clone_uniques": [
         1,

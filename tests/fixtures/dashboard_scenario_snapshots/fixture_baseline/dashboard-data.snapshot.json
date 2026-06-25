@@ -6,6 +6,546 @@
   },
   "encoding": "json",
   "summary": {
+    "context": {
+      "code_frequency": {
+        "totals": {
+          "additions": 870,
+          "deletions": 506,
+          "net": 364
+        },
+        "weeks": [
+          {
+            "additions": 201,
+            "deletions": 64,
+            "net": 137,
+            "week_start": "2026-04-27"
+          },
+          {
+            "additions": 212,
+            "deletions": 106,
+            "net": 106,
+            "week_start": "2026-05-11"
+          },
+          {
+            "additions": 223,
+            "deletions": 147,
+            "net": 76,
+            "week_start": "2026-05-18"
+          },
+          {
+            "additions": 234,
+            "deletions": 189,
+            "net": 45,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "contributors": {
+        "totals": {
+          "active_contributors": 2,
+          "commits": 37
+        },
+        "weeks": [
+          {
+            "active_contributors": 2,
+            "additions": 113,
+            "commits": 6,
+            "deletions": 33,
+            "week_start": "2026-04-27"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 169,
+            "commits": 9,
+            "deletions": 49,
+            "week_start": "2026-05-11"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 225,
+            "commits": 12,
+            "deletions": 65,
+            "week_start": "2026-05-18"
+          },
+          {
+            "active_contributors": 2,
+            "additions": 186,
+            "commits": 10,
+            "deletions": 51,
+            "week_start": "2026-05-25"
+          }
+        ]
+      },
+      "events": [
+        {
+          "classification": "tests",
+          "event_date": "2026-05-23",
+          "event_id": "commit:f9e85cda0486444b1d5439dd2aa04ee311dd3f19",
+          "event_ts": "2026-05-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 195,
+          "repo": "demo/beta",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/demo/beta/commit/f9e85cda0486444b1d5439dd2aa04ee311dd3f19"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-23",
+          "event_id": "commit:b35819b1146d5adcb59998ceedba023b13ea4185",
+          "event_ts": "2026-05-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 76,
+          "repo": "demo/alpha",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/demo/alpha/commit/b35819b1146d5adcb59998ceedba023b13ea4185"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-22",
+          "event_id": "release:10101",
+          "event_ts": "2026-05-22T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 38,
+          "repo": "demo/beta",
+          "source_table": "repo-releases.csv",
+          "title": "v2.2.0 release",
+          "url": "https://github.com/demo/beta/releases/tag/v2.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-22",
+          "event_id": "release:10001",
+          "event_ts": "2026-05-22T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 31,
+          "repo": "demo/alpha",
+          "source_table": "repo-releases.csv",
+          "title": "v1.2.0 release",
+          "url": "https://github.com/demo/alpha/releases/tag/v1.2.0"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-21",
+          "event_id": "commit:9f23cf9d6e643f02c20662b35674fd0779714ad9",
+          "event_ts": "2026-05-21T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 455,
+          "repo": "demo/alpha",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/demo/alpha/commit/9f23cf9d6e643f02c20662b35674fd0779714ad9"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-21",
+          "event_id": "commit:7b8e37c6a0fb8b631bd2dc293cf741d6355bde7a",
+          "event_ts": "2026-05-21T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 78,
+          "repo": "demo/beta",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/demo/beta/commit/7b8e37c6a0fb8b631bd2dc293cf741d6355bde7a"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-18",
+          "event_id": "release:10100",
+          "event_ts": "2026-05-18T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 25,
+          "repo": "demo/beta",
+          "source_table": "repo-releases.csv",
+          "title": "v2.1.0 release",
+          "url": "https://github.com/demo/beta/releases/tag/v2.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-18",
+          "event_id": "release:10000",
+          "event_ts": "2026-05-18T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 18,
+          "repo": "demo/alpha",
+          "source_table": "repo-releases.csv",
+          "title": "v1.1.0 release",
+          "url": "https://github.com/demo/alpha/releases/tag/v1.1.0"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-18",
+          "event_id": "commit:b69acc7387cab12bd869eac9b34e43a07055d1d8",
+          "event_ts": "2026-05-18T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 457,
+          "repo": "demo/beta",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/demo/beta/commit/b69acc7387cab12bd869eac9b34e43a07055d1d8"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-18",
+          "event_id": "commit:0ab40e1a97caf034783be0c2c30cce8302fb703b",
+          "event_ts": "2026-05-18T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "demo/alpha",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/demo/alpha/commit/0ab40e1a97caf034783be0c2c30cce8302fb703b"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-05-15",
+          "event_id": "commit:68fc48b6f8ebbe3979ca984f74f19daf774f9049",
+          "event_ts": "2026-05-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 521,
+          "repo": "demo/alpha",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/demo/alpha/commit/68fc48b6f8ebbe3979ca984f74f19daf774f9049"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-15",
+          "event_id": "commit:838a58b2e01f681d5e5d9a2b4351e22494a8a279",
+          "event_ts": "2026-05-15T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 134,
+          "repo": "demo/beta",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/demo/beta/commit/838a58b2e01f681d5e5d9a2b4351e22494a8a279"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-05-13",
+          "event_id": "commit:9dbbbd10546d3e8ba04dc34a0b61c034f73f6d10",
+          "event_ts": "2026-05-13T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 523,
+          "repo": "demo/beta",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/demo/beta/commit/9dbbbd10546d3e8ba04dc34a0b61c034f73f6d10"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-05-13",
+          "event_id": "commit:6f9c5d7ba059f559ce44263034e4f300e2b845f4",
+          "event_ts": "2026-05-13T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "demo/alpha",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/demo/alpha/commit/6f9c5d7ba059f559ce44263034e4f300e2b845f4"
+        }
+      ],
+      "issues": {
+        "by_repo": {
+          "demo/alpha": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 2,
+            "open_prs": 0,
+            "stale_open_issues": 0,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 0
+          },
+          "demo/beta": {
+            "captured_at": "2026-05-25T12:00:00Z",
+            "open_issues": 3,
+            "open_prs": 1,
+            "stale_open_issues": 1,
+            "stale_open_prs": 0,
+            "ts": "2026-05-25",
+            "unanswered_issues": 0
+          }
+        },
+        "label_buckets": [
+          {
+            "bucket": "good_first_issue",
+            "count": 5
+          },
+          {
+            "bucket": "enhancement",
+            "count": 3
+          },
+          {
+            "bucket": "help_wanted",
+            "count": 3
+          },
+          {
+            "bucket": "bug",
+            "count": 1
+          },
+          {
+            "bucket": "documentation",
+            "count": 1
+          }
+        ],
+        "totals": {
+          "open_issues": 5,
+          "open_prs": 1,
+          "stale_open_issues": 1,
+          "unanswered_issues": 0
+        }
+      },
+      "languages": {
+        "by_repo": {
+          "demo/alpha": [
+            {
+              "bytes": 113400,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 58800,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 21000,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 16800,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "demo/beta": [
+            {
+              "bytes": 151280,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 43920,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 29280,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 19520,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ]
+        },
+        "top": [
+          {
+            "bytes": 210080,
+            "language": "Python",
+            "share": 0.46273127753303966
+          },
+          {
+            "bytes": 157320,
+            "language": "TypeScript",
+            "share": 0.34651982378854623
+          },
+          {
+            "bytes": 36320,
+            "language": "Shell",
+            "share": 0.08
+          },
+          {
+            "bytes": 29280,
+            "language": "Markdown",
+            "share": 0.06449339207048459
+          },
+          {
+            "bytes": 21000,
+            "language": "CSS",
+            "share": 0.046255506607929514
+          }
+        ]
+      },
+      "release_assets": [
+        {
+          "content_type": "application/zip",
+          "download_count": 38,
+          "name": "beta-v2.2.0-source.zip",
+          "release_id": "10101",
+          "repo": "demo/beta",
+          "size_bytes": 121700,
+          "updated_at": "2026-05-22T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 31,
+          "name": "alpha-v1.2.0-source.zip",
+          "release_id": "10001",
+          "repo": "demo/alpha",
+          "size_bytes": 120000,
+          "updated_at": "2026-05-22T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 29,
+          "name": "beta-v2.2.0-checksums.txt",
+          "release_id": "10101",
+          "repo": "demo/beta",
+          "size_bytes": 122500,
+          "updated_at": "2026-05-22T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 25,
+          "name": "beta-v2.1.0-source.zip",
+          "release_id": "10100",
+          "repo": "demo/beta",
+          "size_bytes": 121700,
+          "updated_at": "2026-05-18T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 22,
+          "name": "alpha-v1.2.0-checksums.txt",
+          "release_id": "10001",
+          "repo": "demo/alpha",
+          "size_bytes": 120800,
+          "updated_at": "2026-05-22T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 18,
+          "name": "alpha-v1.1.0-source.zip",
+          "release_id": "10000",
+          "repo": "demo/alpha",
+          "size_bytes": 120000,
+          "updated_at": "2026-05-18T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 16,
+          "name": "beta-v2.1.0-checksums.txt",
+          "release_id": "10100",
+          "repo": "demo/beta",
+          "size_bytes": 122500,
+          "updated_at": "2026-05-18T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 9,
+          "name": "alpha-v1.1.0-checksums.txt",
+          "release_id": "10000",
+          "repo": "demo/alpha",
+          "size_bytes": 120800,
+          "updated_at": "2026-05-18T15:05:00Z"
+        }
+      ],
+      "releases": [
+        {
+          "asset_count": 2,
+          "asset_download_count": 31,
+          "draft": "False",
+          "name": "v1.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-22T15:00:00Z",
+          "release_id": "10001",
+          "repo": "demo/alpha",
+          "tag_name": "v1.2.0",
+          "url": "https://github.com/demo/alpha/releases/tag/v1.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 38,
+          "draft": "False",
+          "name": "v2.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-22T15:00:00Z",
+          "release_id": "10101",
+          "repo": "demo/beta",
+          "tag_name": "v2.2.0",
+          "url": "https://github.com/demo/beta/releases/tag/v2.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 18,
+          "draft": "False",
+          "name": "v1.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-18T15:00:00Z",
+          "release_id": "10000",
+          "repo": "demo/alpha",
+          "tag_name": "v1.1.0",
+          "url": "https://github.com/demo/alpha/releases/tag/v1.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 25,
+          "draft": "False",
+          "name": "v2.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-18T15:00:00Z",
+          "release_id": "10100",
+          "repo": "demo/beta",
+          "tag_name": "v2.1.0",
+          "url": "https://github.com/demo/beta/releases/tag/v2.1.0"
+        }
+      ],
+      "topics": {
+        "by_repo": {
+          "demo/alpha": [
+            "alpha",
+            "analytics",
+            "dashboard",
+            "github-actions"
+          ],
+          "demo/beta": [
+            "automation",
+            "beta",
+            "developer-tools",
+            "metrics"
+          ]
+        },
+        "top": [
+          {
+            "repo_count": 1,
+            "topic": "alpha"
+          },
+          {
+            "repo_count": 1,
+            "topic": "analytics"
+          },
+          {
+            "repo_count": 1,
+            "topic": "automation"
+          },
+          {
+            "repo_count": 1,
+            "topic": "beta"
+          },
+          {
+            "repo_count": 1,
+            "topic": "dashboard"
+          },
+          {
+            "repo_count": 1,
+            "topic": "developer-tools"
+          },
+          {
+            "repo_count": 1,
+            "topic": "github-actions"
+          },
+          {
+            "repo_count": 1,
+            "topic": "metrics"
+          }
+        ]
+      }
+    },
     "daily": {
       "clone_uniques": [
         2,

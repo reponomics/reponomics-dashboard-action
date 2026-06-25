@@ -125,14 +125,14 @@ export function installMomentum(context) {
       if (m.streak.days >= 1) {
         cells.push(`
           <div class="momentum-cell">
-            <span class="momentum-label"><span class="moji">🔥</span>Hot streak</span>
+            <span class="momentum-label"><span class="momentum-mark" aria-hidden="true"></span>Hot streak</span>
             <span class="momentum-value">${m.streak.days}d</span>
             <span class="momentum-meta">consecutive days above baseline (~${formatNumber(Math.round(m.streak.median))}/d)</span>
           </div>`);
       } else {
         cells.push(`
           <div class="momentum-cell">
-            <span class="momentum-label"><span class="moji">🔥</span>Hot streak</span>
+            <span class="momentum-label"><span class="momentum-mark" aria-hidden="true"></span>Hot streak</span>
             <span class="momentum-value muted">—</span>
             <span class="momentum-meta">no current streak above baseline (~${formatNumber(Math.round(m.streak.median))}/d)</span>
           </div>`);
@@ -145,7 +145,7 @@ export function installMomentum(context) {
         : '';
       cells.push(`
         <div class="momentum-cell" title="Highest combined-views day across all visible repos">
-          <span class="momentum-label"><span class="moji">⭐</span>Best overall day</span>
+          <span class="momentum-label"><span class="momentum-mark warm" aria-hidden="true"></span>Best overall day</span>
           <span class="momentum-value">${formatNumber(m.bestDay.views)} views</span>
           <span class="momentum-meta">${escapeHtml(bestDateLabel)}${sinceLabel ? ' · ' + escapeHtml(sinceLabel) : ''}</span>
         </div>`);
@@ -154,7 +154,7 @@ export function installMomentum(context) {
       if (m.topRepo) {
         cells.push(`
           <div class="momentum-cell" title="The single repo + day with the highest views in the window">
-            <span class="momentum-label"><span class="moji">🏆</span>Best single-repo day</span>
+            <span class="momentum-label"><span class="momentum-mark accent" aria-hidden="true"></span>Best single-repo day</span>
             <span class="momentum-value"><span class="repo-tag">${escapeHtml(getShortName(m.topRepo.name))}</span>${formatNumber(m.topRepo.views)}</span>
             <span class="momentum-meta">${escapeHtml(formatEventDate(m.topRepo.date))}</span>
           </div>`);

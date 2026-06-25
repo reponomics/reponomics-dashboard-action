@@ -52,6 +52,15 @@ from load_data import (
     load_collection_status,
     load_collection_days,
     load_traffic_coverage,
+    load_event_index,
+    load_releases,
+    load_release_assets,
+    load_languages,
+    load_topics,
+    load_issue_pr_snapshots,
+    load_issue_label_snapshots,
+    load_code_frequency_weekly,
+    load_contributor_activity_weekly,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -110,6 +119,9 @@ EXPORT_MANIFEST_VERSION = 1
 DASHBOARD_DATA_VERSION = 2
 ENCRYPTED_DASHBOARD_DATA_VERSION = DASHBOARD_DATA_VERSION
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+CONTEXT_EVENT_LIMIT = 80
+CONTEXT_RELEASE_LIMIT = 30
+CONTEXT_WEEK_LIMIT = 26
 
 BASE_STYLES = dashboard_html.BASE_STYLES
 APP_RUNTIME_JS = dashboard_html.APP_RUNTIME_JS
@@ -282,6 +294,304 @@ def _latest_snapshot_by_repo(rows):
     return dict(grouped)
 
 
+def _int_value(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _float_value(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _latest_rows_by_repo(
+    rows: list[dict[str, Any]], field: str = "captured_at"
+) -> dict[str, list[dict[str, Any]]]:
+    """Return rows from each repo's latest observed value for a date-like field."""
+    latest_by_repo: dict[str, str] = {}
+    for row in rows:
+        repo = row.get("repo", "")
+        value = row.get(field, "")
+        if repo and value > latest_by_repo.get(repo, ""):
+            latest_by_repo[repo] = value
+
+    grouped: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        repo = row.get("repo", "")
+        if repo and row.get(field, "") == latest_by_repo.get(repo, ""):
+            grouped[repo].append(row)
+    return dict(grouped)
+
+
+def _latest_row_by_repo(
+    rows: list[dict[str, Any]], field: str = "captured_at"
+) -> dict[str, dict[str, Any]]:
+    """Return one latest row per repo using a date-like field."""
+    latest: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        repo = row.get("repo", "")
+        value = row.get(field, "")
+        if repo and value >= latest.get(repo, {}).get(field, ""):
+            latest[repo] = row
+    return latest
+
+
+def _build_context_payload(
+    *,
+    event_rows,
+    release_rows,
+    release_asset_rows,
+    language_rows,
+    topic_rows,
+    issue_rows,
+    issue_label_rows,
+    code_frequency_rows,
+    contributor_rows,
+) -> dict[str, Any]:
+    """Project richer retained context rows into compact dashboard JSON."""
+    return {
+        "events": _context_events(event_rows),
+        "releases": _context_releases(release_rows),
+        "release_assets": _context_release_assets(release_asset_rows),
+        "languages": _context_languages(language_rows),
+        "topics": _context_topics(topic_rows),
+        "issues": _context_issues(issue_rows, issue_label_rows),
+        "code_frequency": _context_code_frequency(code_frequency_rows),
+        "contributors": _context_contributors(contributor_rows),
+    }
+
+
+def _context_events(rows) -> list[dict[str, Any]]:
+    normalized = [
+        {
+            "repo": row.get("repo", ""),
+            "event_id": row.get("event_id", ""),
+            "event_type": row.get("event_type", ""),
+            "event_date": row.get("event_date", ""),
+            "event_ts": row.get("event_ts", ""),
+            "title": row.get("title", ""),
+            "url": row.get("url", ""),
+            "magnitude": _int_value(row.get("magnitude")),
+            "classification": row.get("classification", "") or "unknown",
+            "source_table": row.get("source_table", ""),
+        }
+        for row in rows
+        if row.get("repo") and row.get("event_date")
+    ]
+    normalized.sort(
+        key=lambda row: (
+            row["event_date"],
+            row.get("event_ts", ""),
+            row.get("magnitude", 0),
+        ),
+        reverse=True,
+    )
+    return normalized[:CONTEXT_EVENT_LIMIT]
+
+
+def _context_releases(rows) -> list[dict[str, Any]]:
+    normalized = [
+        {
+            "repo": row.get("repo", ""),
+            "release_id": row.get("release_id", ""),
+            "tag_name": row.get("tag_name", ""),
+            "name": row.get("name", "") or row.get("tag_name", ""),
+            "published_at": row.get("published_at", "") or row.get("created_at", ""),
+            "url": row.get("html_url", ""),
+            "asset_count": _int_value(row.get("asset_count")),
+            "asset_download_count": _int_value(row.get("asset_download_count")),
+            "draft": row.get("draft", ""),
+            "prerelease": row.get("prerelease", ""),
+        }
+        for row in rows
+        if row.get("repo") and row.get("release_id")
+    ]
+    normalized.sort(key=lambda row: row.get("published_at", ""), reverse=True)
+    return normalized[:CONTEXT_RELEASE_LIMIT]
+
+
+def _context_release_assets(rows) -> list[dict[str, Any]]:
+    normalized = [
+        {
+            "repo": row.get("repo", ""),
+            "release_id": row.get("release_id", ""),
+            "name": row.get("name", ""),
+            "download_count": _int_value(row.get("download_count")),
+            "content_type": row.get("content_type", ""),
+            "size_bytes": _int_value(row.get("size_bytes")),
+            "updated_at": row.get("updated_at", ""),
+        }
+        for row in rows
+        if row.get("repo") and row.get("asset_id")
+    ]
+    normalized.sort(
+        key=lambda row: (row.get("download_count", 0), row.get("updated_at", "")),
+        reverse=True,
+    )
+    return normalized[:CONTEXT_RELEASE_LIMIT]
+
+
+def _context_languages(rows) -> dict[str, Any]:
+    latest = _latest_rows_by_repo(rows, "captured_at")
+    by_repo = {}
+    totals: defaultdict[str, int] = defaultdict(int)
+    for repo, repo_rows in latest.items():
+        sorted_rows = sorted(repo_rows, key=lambda row: _int_value(row.get("bytes")), reverse=True)
+        by_repo[repo] = [
+            {
+                "language": row.get("language", ""),
+                "bytes": _int_value(row.get("bytes")),
+                "share": _float_value(row.get("share")),
+            }
+            for row in sorted_rows[:6]
+            if row.get("language")
+        ]
+        for row in repo_rows:
+            if row.get("language"):
+                totals[row["language"]] += _int_value(row.get("bytes"))
+
+    total_bytes = sum(totals.values())
+    top = [
+        {
+            "language": language,
+            "bytes": bytes_count,
+            "share": (bytes_count / total_bytes) if total_bytes else 0,
+        }
+        for language, bytes_count in sorted(
+            totals.items(), key=lambda item: item[1], reverse=True
+        )[:8]
+    ]
+    return {"top": top, "by_repo": by_repo}
+
+
+def _context_topics(rows) -> dict[str, Any]:
+    latest = _latest_rows_by_repo(rows, "captured_at")
+    by_repo = {}
+    counts: defaultdict[str, int] = defaultdict(int)
+    for repo, repo_rows in latest.items():
+        topics = sorted({row.get("topic", "") for row in repo_rows if row.get("topic")})
+        by_repo[repo] = topics[:12]
+        for topic in topics:
+            counts[topic] += 1
+    top = [
+        {"topic": topic, "repo_count": count}
+        for topic, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:12]
+    ]
+    return {"top": top, "by_repo": by_repo}
+
+
+def _context_issues(issue_rows, label_rows) -> dict[str, Any]:
+    latest_issues = _latest_row_by_repo(issue_rows, "ts")
+    by_repo = {}
+    totals = {
+        "open_issues": 0,
+        "open_prs": 0,
+        "stale_open_issues": 0,
+        "unanswered_issues": 0,
+    }
+    for repo, row in latest_issues.items():
+        repo_issue = {
+            "open_issues": _int_value(row.get("open_issues_count")),
+            "open_prs": _int_value(row.get("open_prs_count")),
+            "stale_open_issues": _int_value(row.get("stale_open_issues_count")),
+            "stale_open_prs": _int_value(row.get("stale_open_prs_count")),
+            "unanswered_issues": _int_value(row.get("unanswered_issue_count")),
+            "captured_at": row.get("captured_at", ""),
+            "ts": row.get("ts", ""),
+        }
+        by_repo[repo] = repo_issue
+        totals["open_issues"] += repo_issue["open_issues"]
+        totals["open_prs"] += repo_issue["open_prs"]
+        totals["stale_open_issues"] += repo_issue["stale_open_issues"]
+        totals["unanswered_issues"] += repo_issue["unanswered_issues"]
+
+    latest_labels = _latest_rows_by_repo(label_rows, "ts")
+    bucket_counts: defaultdict[str, int] = defaultdict(int)
+    for repo_rows in latest_labels.values():
+        for row in repo_rows:
+            bucket = row.get("label_bucket", "") or "other"
+            bucket_counts[bucket] += _int_value(row.get("labeled_item_count"))
+    label_buckets = [
+        {"bucket": bucket, "count": count}
+        for bucket, count in sorted(
+            bucket_counts.items(), key=lambda item: (-item[1], item[0])
+        )
+        if count
+    ][:10]
+    return {"totals": totals, "by_repo": by_repo, "label_buckets": label_buckets}
+
+
+def _context_code_frequency(rows) -> dict[str, Any]:
+    by_week: defaultdict[str, dict[str, int]] = defaultdict(
+        lambda: {"additions": 0, "deletions": 0}
+    )
+    for row in rows:
+        week = row.get("week_start", "")
+        if not week:
+            continue
+        by_week[week]["additions"] += _int_value(row.get("additions"))
+        by_week[week]["deletions"] += _int_value(row.get("deletions"))
+
+    weeks = [
+        {
+            "week_start": week,
+            "additions": values["additions"],
+            "deletions": values["deletions"],
+            "net": values["additions"] - values["deletions"],
+        }
+        for week, values in sorted(by_week.items())
+    ][-CONTEXT_WEEK_LIMIT:]
+    return {
+        "weeks": weeks,
+        "totals": {
+            "additions": sum(row["additions"] for row in weeks),
+            "deletions": sum(row["deletions"] for row in weeks),
+            "net": sum(row["net"] for row in weeks),
+        },
+    }
+
+
+def _context_contributors(rows) -> dict[str, Any]:
+    by_week: defaultdict[str, dict[str, Any]] = defaultdict(
+        lambda: {"authors": set(), "commits": 0, "additions": 0, "deletions": 0}
+    )
+    for row in rows:
+        week = row.get("week_start", "")
+        if not week:
+            continue
+        author = row.get("author_login") or row.get("author_id") or ""
+        if author:
+            by_week[week]["authors"].add(author)
+        by_week[week]["commits"] += _int_value(row.get("commits"))
+        by_week[week]["additions"] += _int_value(row.get("additions"))
+        by_week[week]["deletions"] += _int_value(row.get("deletions"))
+
+    weeks = [
+        {
+            "week_start": week,
+            "active_contributors": len(values["authors"]),
+            "commits": values["commits"],
+            "additions": values["additions"],
+            "deletions": values["deletions"],
+        }
+        for week, values in sorted(by_week.items())
+    ][-CONTEXT_WEEK_LIMIT:]
+    all_authors = set()
+    for values in by_week.values():
+        all_authors.update(values["authors"])
+    return {
+        "weeks": weeks,
+        "totals": {
+            "active_contributors": len(all_authors),
+            "commits": sum(row["commits"] for row in weeks),
+        },
+    }
+
+
 def _build_payload(
     now,
     totals,
@@ -302,6 +612,7 @@ def _build_payload(
     traffic_reporting,
     community_profiles,
     repo_metadata,
+    context_payload,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
     repos = []
@@ -382,6 +693,7 @@ def _build_payload(
         "insights_v2": insights_structured,
         "data_quality": data_quality,
         "traffic_reporting": traffic_reporting,
+        "context": context_payload,
     }
 
 
@@ -575,6 +887,15 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     status_rows = load_collection_status()
     collection_day_rows = load_collection_days()
     coverage_rows = load_traffic_coverage()
+    event_rows = load_event_index()
+    release_rows = load_releases()
+    release_asset_rows = load_release_assets()
+    language_rows = load_languages()
+    topic_rows = load_topics()
+    issue_rows = load_issue_pr_snapshots()
+    issue_label_rows = load_issue_label_snapshots()
+    code_frequency_rows = load_code_frequency_weekly()
+    contributor_rows = load_contributor_activity_weekly()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -596,6 +917,17 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     dates, series = _pad_metric_series(dates, series, reporting_end_date)
     repo_series = _pad_repo_series(repo_series, reporting_end_date)
     data_quality = collection_quality(status_rows, collection_day_rows)
+    context_payload = _build_context_payload(
+        event_rows=event_rows,
+        release_rows=release_rows,
+        release_asset_rows=release_asset_rows,
+        language_rows=language_rows,
+        topic_rows=topic_rows,
+        issue_rows=issue_rows,
+        issue_label_rows=issue_label_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_rows=contributor_rows,
+    )
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
     insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
@@ -620,6 +952,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         traffic_reporting,
         community_profiles,
         repo_metadata,
+        context_payload,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

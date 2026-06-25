@@ -61,6 +61,7 @@ def test_dashboard_static_assets_are_included_in_built_wheel(tmp_path: Path) -> 
         "dashboard/selection.js",
         "dashboard/series.js",
         "dashboard/state.js",
+        "dashboard/story.js",
         "dashboard/tables.js",
         "dashboard/theme-preload.js",
         "dashboard/theme.js",

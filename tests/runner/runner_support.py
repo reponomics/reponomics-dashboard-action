@@ -38,6 +38,7 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
     "assets/dashboard/controls.js",
     "assets/dashboard/charts.js",
     "assets/dashboard/tables.js",
+    "assets/dashboard/story.js",
     "assets/dashboard/controller.js",
     "assets/dashboard/app.js",
     "assets/dashboard/json-assets.js",

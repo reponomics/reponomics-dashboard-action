@@ -5,6 +5,7 @@ import { createDashboardApp } from '../../dashboard_action/runtime/scripts/rende
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+import { installStory } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/story.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
 const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
@@ -194,6 +195,7 @@ test('dashboard app creates isolated contexts without implicit browser globals',
     dailyChart: null,
     weekdayChart: null,
     stackedChart: null,
+    contextChart: null,
   });
 });
 
@@ -311,6 +313,125 @@ test('series helpers preserve selected-window and growth aggregation contracts',
       forks_delta: [0, 0],
     },
   );
+});
+
+test('story helpers surface spike follow-through as a daily update', () => {
+  const dates = [
+    '2026-01-01',
+    '2026-01-02',
+    '2026-01-03',
+    '2026-01-04',
+    '2026-01-05',
+    '2026-01-06',
+    '2026-01-07',
+    '2026-01-08',
+    '2026-01-09',
+  ];
+  const repo = {
+    name: 'owner/signal-repo',
+    views: 64,
+    activity: 64,
+    community: {
+      has_readme: true,
+      has_license: false,
+      has_contributing: false,
+      has_issue_template: true,
+      has_pull_request_template: false,
+      has_code_of_conduct: false,
+      health_percentage: 45,
+    },
+    series: {
+      dates,
+      views: [3, 4, 3, 4, 4, 18, 12, 11, 5],
+      uniques: [1, 2, 1, 2, 2, 9, 6, 5, 2],
+      clones: [0, 0, 1, 0, 1, 2, 1, 1, 0],
+      clone_uniques: [0, 0, 1, 0, 1, 1, 1, 1, 0],
+      stars_delta: [0, 0, 0, 0, 0, 1, 1, 0, 0],
+      subscribers_delta: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      forks_delta: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    },
+  };
+  const helpers = installStory({
+    document: fakeDocument(),
+    buildAggregateSeries() {
+      return repo.series;
+    },
+    compactNumber(value) {
+      return String(value);
+    },
+    currentPayload() {
+      return {
+        daily: { dates },
+        insights_v2: [],
+        context: {
+          events: [{
+            repo: 'owner/signal-repo',
+            event_type: 'release',
+            event_date: '2026-01-06',
+            title: 'v1.2.0',
+            magnitude: 4,
+          }],
+          releases: [],
+        },
+      };
+    },
+    escapeHtml(value) {
+      return String(value ?? '');
+    },
+    formatIsoDate(date) {
+      return date.toISOString().slice(0, 10);
+    },
+    formatNumber(value) {
+      return Number(value || 0).toLocaleString();
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return (number >= 0 ? '+' : '') + number.toLocaleString();
+    },
+    getCurrentPathRows() {
+      return [];
+    },
+    getCurrentReferrerRows() {
+      return [];
+    },
+    getCurrentWindowData() {
+      return { daily: repo.series, totals: {}, repos: [repo] };
+    },
+    getShortName(name) {
+      return String(name).split('/').pop();
+    },
+    getThemeColor(_name, fallback) {
+      return fallback;
+    },
+    getVisibleRepos() {
+      return [repo];
+    },
+    hexAlpha(color) {
+      return color;
+    },
+    isComparing() {
+      return false;
+    },
+    parseIsoDate(value) {
+      const date = new Date(value + 'T00:00:00Z');
+      return Number.isNaN(date.getTime()) ? null : date;
+    },
+    state: {},
+    charts: {},
+    chartAdapter: {
+      createChart() {
+        return { data: {}, options: {}, update() {} };
+      },
+    },
+  });
+
+  const follow = helpers.followThroughStory();
+  assert.equal(follow.tab, 'Follow-up');
+  assert.match(follow.headline, /signal-repo had follow-through/);
+  assert.match(follow.summary, /daily read/);
+
+  const cards = helpers.buildStoryCards();
+  assert.deepEqual(cards.map((card) => card.tab), ['Bright spot', 'Follow-up', 'Fix next']);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {

@@ -46,6 +46,7 @@ export function installController(context) {
   const renderPathsTable = (...args) => context.renderPathsTable(...args);
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
+  const renderStory = (...args) => context.renderStory(...args);
   const setMetric = (...args) => context.setMetric(...args);
   const setRepoSort = (...args) => context.setRepoSort(...args);
   const setText = (...args) => context.setText(...args);
@@ -421,6 +422,7 @@ export function installController(context) {
       updateDailyChart();
       updateWeekdayChart();
       updateStackedChart();
+      renderStory();
       renderReferrerTable(getCurrentReferrerRows());
       renderPathsTable(getCurrentPathRows());
       renderMomentum();

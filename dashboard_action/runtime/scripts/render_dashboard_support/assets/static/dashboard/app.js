@@ -11,6 +11,7 @@ import { installChartOptions } from './chart-options.js';
 import { installControls } from './controls.js';
 import { installCharts } from './charts.js';
 import { installTables } from './tables.js';
+import { installStory } from './story.js';
 import { installController } from './controller.js';
 
 const installers = [
@@ -26,6 +27,7 @@ const installers = [
   installControls,
   installCharts,
   installTables,
+  installStory,
   installController,
 ];
 
@@ -44,6 +46,7 @@ export function createDashboardApp(options = {}) {
       dailyChart: null,
       weekdayChart: null,
       stackedChart: null,
+      contextChart: null,
     },
   };
 

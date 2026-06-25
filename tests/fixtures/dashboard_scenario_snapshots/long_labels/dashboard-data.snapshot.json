@@ -10,6 +10,1340 @@
   },
   "encoding": "json",
   "summary": {
+    "context": {
+      "code_frequency": {
+        "totals": {
+          "additions": 6090,
+          "deletions": 2919,
+          "net": 3171
+        },
+        "weeks": [
+          {
+            "additions": 735,
+            "deletions": 210,
+            "net": 525,
+            "week_start": "2026-03-30"
+          },
+          {
+            "additions": 780,
+            "deletions": 342,
+            "net": 438,
+            "week_start": "2026-04-06"
+          },
+          {
+            "additions": 825,
+            "deletions": 471,
+            "net": 354,
+            "week_start": "2026-04-13"
+          },
+          {
+            "additions": 870,
+            "deletions": 603,
+            "net": 267,
+            "week_start": "2026-04-20"
+          },
+          {
+            "additions": 915,
+            "deletions": 300,
+            "net": 615,
+            "week_start": "2026-04-27"
+          },
+          {
+            "additions": 960,
+            "deletions": 432,
+            "net": 528,
+            "week_start": "2026-05-04"
+          },
+          {
+            "additions": 1005,
+            "deletions": 561,
+            "net": 444,
+            "week_start": "2026-05-11"
+          }
+        ]
+      },
+      "contributors": {
+        "totals": {
+          "active_contributors": 3,
+          "commits": 250
+        },
+        "weeks": [
+          {
+            "active_contributors": 3,
+            "additions": 707,
+            "commits": 34,
+            "deletions": 196,
+            "week_start": "2026-03-30"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 747,
+            "commits": 36,
+            "deletions": 204,
+            "week_start": "2026-04-06"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 792,
+            "commits": 38,
+            "deletions": 217,
+            "week_start": "2026-04-13"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 732,
+            "commits": 35,
+            "deletions": 195,
+            "week_start": "2026-04-20"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 772,
+            "commits": 37,
+            "deletions": 208,
+            "week_start": "2026-04-27"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 707,
+            "commits": 34,
+            "deletions": 196,
+            "week_start": "2026-05-04"
+          },
+          {
+            "active_contributors": 3,
+            "additions": 747,
+            "commits": 36,
+            "deletions": 204,
+            "week_start": "2026-05-11"
+          }
+        ]
+      },
+      "events": [
+        {
+          "classification": "feature",
+          "event_date": "2026-05-09",
+          "event_id": "commit:19b535f3144004dcc29de56b0bd245c238dfe07c",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 557,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/19b535f3144004dcc29de56b0bd245c238dfe07c"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-09",
+          "event_id": "commit:b7f3390b4efd226b21bbcf88c6d644ae5ef8ae37",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 495,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/b7f3390b4efd226b21bbcf88c6d644ae5ef8ae37"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-05-09",
+          "event_id": "commit:c53bef5a7e87fde6c10b617bd4d8785d851825a9",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 195,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/c53bef5a7e87fde6c10b617bd4d8785d851825a9"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-09",
+          "event_id": "commit:3176955e40a914f53387dc6a4a3d6c903cdf1974",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 170,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/3176955e40a914f53387dc6a4a3d6c903cdf1974"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-05-09",
+          "event_id": "commit:5d56caab708c1694a79daaaba6c280a7912ea07f",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 166,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/5d56caab708c1694a79daaaba6c280a7912ea07f"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-09",
+          "event_id": "commit:233fb9759d9e108706699d409593c8b1ef990fea",
+          "event_ts": "2026-05-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 76,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/commit/233fb9759d9e108706699d409593c8b1ef990fea"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10501",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 66,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-releases.csv",
+          "title": "v6.2.0 release",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v6.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10401",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 59,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-releases.csv",
+          "title": "v5.2.0 release",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/releases/tag/v5.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10301",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 52,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-releases.csv",
+          "title": "v4.2.0 release",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v4.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10201",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 45,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-releases.csv",
+          "title": "v3.2.0 release",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/releases/tag/v3.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10101",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 38,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-releases.csv",
+          "title": "v2.2.0 release",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v2.2.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-05-05",
+          "event_id": "release:10001",
+          "event_ts": "2026-05-05T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 31,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-releases.csv",
+          "title": "v1.2.0 release",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/releases/tag/v1.2.0"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-05-01",
+          "event_id": "commit:9a098f3a6803c213d13752271d52f5a1784b584b",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 559,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/9a098f3a6803c213d13752271d52f5a1784b584b"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-05-01",
+          "event_id": "commit:9cb4d0341e09d59f59df53030d3796a74c6d043d",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 455,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/commit/9cb4d0341e09d59f59df53030d3796a74c6d043d"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-05-01",
+          "event_id": "commit:c561b73c55c4eb2739f95f1d48920a480694b571",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 197,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/c561b73c55c4eb2739f95f1d48920a480694b571"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-05-01",
+          "event_id": "commit:2e9e57dd5560bf014a045e89a8f989d640137de9",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 172,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/2e9e57dd5560bf014a045e89a8f989d640137de9"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-05-01",
+          "event_id": "commit:4c820d5f55c138eb9660d2053d9e10961977778f",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 168,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/4c820d5f55c138eb9660d2053d9e10961977778f"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-05-01",
+          "event_id": "commit:9dc93e69fd174ff139df7cf7c60ffb5be618fc27",
+          "event_ts": "2026-05-01T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 78,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/9dc93e69fd174ff139df7cf7c60ffb5be618fc27"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10500",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 53,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-releases.csv",
+          "title": "v6.1.0 release",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v6.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10400",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 46,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-releases.csv",
+          "title": "v5.1.0 release",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/releases/tag/v5.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10300",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 39,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-releases.csv",
+          "title": "v4.1.0 release",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v4.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10200",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 32,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-releases.csv",
+          "title": "v3.1.0 release",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/releases/tag/v3.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10100",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 25,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-releases.csv",
+          "title": "v2.1.0 release",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v2.1.0"
+        },
+        {
+          "classification": "release",
+          "event_date": "2026-04-23",
+          "event_id": "release:10000",
+          "event_ts": "2026-04-23T15:00:00Z",
+          "event_type": "release",
+          "magnitude": 18,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-releases.csv",
+          "title": "v1.1.0 release",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/releases/tag/v1.1.0"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-23",
+          "event_id": "commit:cdcc3db32e3adf3f375530c297ef0b2b6bf76f3e",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 561,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/cdcc3db32e3adf3f375530c297ef0b2b6bf76f3e"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-23",
+          "event_id": "commit:5dcf0490dd09a73b0f5b431153aacd3c83b8b5fd",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 457,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/5dcf0490dd09a73b0f5b431153aacd3c83b8b5fd"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-23",
+          "event_id": "commit:24df7aafde6e58d561cca5d56d882733f03f6d8d",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 199,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/24df7aafde6e58d561cca5d56d882733f03f6d8d"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-23",
+          "event_id": "commit:3d9deabc0b52fd00fc85fd40491a2af0d4ef54ac",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 170,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/3d9deabc0b52fd00fc85fd40491a2af0d4ef54ac"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-23",
+          "event_id": "commit:f588fec044af8a1a436bae46b2c8771626f6c4b9",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/commit/f588fec044af8a1a436bae46b2c8771626f6c4b9"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-23",
+          "event_id": "commit:2443a9ae3cee21fbce3dd7ab5775cf7d8a76be62",
+          "event_ts": "2026-04-23T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 80,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/2443a9ae3cee21fbce3dd7ab5775cf7d8a76be62"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-16",
+          "event_id": "commit:39965b2d49902cbc7e15c1c5edde54b97e27550e",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 521,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/commit/39965b2d49902cbc7e15c1c5edde54b97e27550e"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-16",
+          "event_id": "commit:4e36b104b03e5145c3c45e8061cdcb93ece1ac76",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 459,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/4e36b104b03e5145c3c45e8061cdcb93ece1ac76"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-16",
+          "event_id": "commit:c1032ae2f5a6c0429a9f2ad31b90945602d30bb5",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 201,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/c1032ae2f5a6c0429a9f2ad31b90945602d30bb5"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-16",
+          "event_id": "commit:816892f02e7c85ddf52346acd578ab05725fc388",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 172,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/816892f02e7c85ddf52346acd578ab05725fc388"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-16",
+          "event_id": "commit:a35e8369cbb921dd52415c65b6542ed3a12d6aac",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 134,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/a35e8369cbb921dd52415c65b6542ed3a12d6aac"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-16",
+          "event_id": "commit:024d673c5048141ab28c341c826d5d793b4dfcdb",
+          "event_ts": "2026-04-16T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 82,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/024d673c5048141ab28c341c826d5d793b4dfcdb"
+        },
+        {
+          "classification": "feature",
+          "event_date": "2026-04-09",
+          "event_id": "commit:0c5ad2d83146fe03111b41a901cfadc8c360d552",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 523,
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "source_table": "repo-commits.csv",
+          "title": "Add dashboard context cards",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0c5ad2d83146fe03111b41a901cfadc8c360d552"
+        },
+        {
+          "classification": "refactor",
+          "event_date": "2026-04-09",
+          "event_id": "commit:e5894985e8360bf7f2cbb489693e2c8886f28799",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 461,
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "source_table": "repo-commits.csv",
+          "title": "Split collector context modules",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/e5894985e8360bf7f2cbb489693e2c8886f28799"
+        },
+        {
+          "classification": "tests",
+          "event_date": "2026-04-09",
+          "event_id": "commit:c2bba4993a34d7f19fffcd9c61f1fc9b18ec3f35",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 203,
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "source_table": "repo-commits.csv",
+          "title": "Cover contributor activity snapshots",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/c2bba4993a34d7f19fffcd9c61f1fc9b18ec3f35"
+        },
+        {
+          "classification": "fix",
+          "event_date": "2026-04-09",
+          "event_id": "commit:c929cba8b2c4d98d5acdcfa63c2b2b4dcd952df5",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 136,
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "source_table": "repo-commits.csv",
+          "title": "Fix release asset counting",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/c929cba8b2c4d98d5acdcfa63c2b2b4dcd952df5"
+        },
+        {
+          "classification": "docs",
+          "event_date": "2026-04-09",
+          "event_id": "commit:050494128b730417893e94df97920178fd162b9a",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 132,
+          "repo": "archive/really-small-but-noisy-repo",
+          "source_table": "repo-commits.csv",
+          "title": "Refresh README examples",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/commit/050494128b730417893e94df97920178fd162b9a"
+        },
+        {
+          "classification": "maintenance",
+          "event_date": "2026-04-09",
+          "event_id": "commit:e80774e175ede49331d30167726afbb8f8351777",
+          "event_ts": "2026-04-09T10:15:00Z",
+          "event_type": "commit",
+          "magnitude": 84,
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "source_table": "repo-commits.csv",
+          "title": "Tighten issue triage labels",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/e80774e175ede49331d30167726afbb8f8351777"
+        }
+      ],
+      "issues": {
+        "by_repo": {
+          "archive/really-small-but-noisy-repo": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 2,
+            "open_prs": 0,
+            "stale_open_issues": 0,
+            "stale_open_prs": 0,
+            "ts": "2026-05-15",
+            "unanswered_issues": 0
+          },
+          "developer-experience/release-note-policy-validation-toolkit": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 3,
+            "open_prs": 1,
+            "stale_open_issues": 1,
+            "stale_open_prs": 0,
+            "ts": "2026-05-15",
+            "unanswered_issues": 0
+          },
+          "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 4,
+            "open_prs": 2,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-15",
+            "unanswered_issues": 1
+          },
+          "maintainer-tools/community-health-profile-snapshotter": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 5,
+            "open_prs": 3,
+            "stale_open_issues": 1,
+            "stale_open_prs": 1,
+            "ts": "2026-05-15",
+            "unanswered_issues": 1
+          },
+          "platform-infra/plain-artifact-export-verification-service": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 7,
+            "open_prs": 0,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-15",
+            "unanswered_issues": 1
+          },
+          "research-platform-team/collector-migration-compatibility-fixtures": {
+            "captured_at": "2026-05-15T12:00:00Z",
+            "open_issues": 8,
+            "open_prs": 1,
+            "stale_open_issues": 2,
+            "stale_open_prs": 0,
+            "ts": "2026-05-15",
+            "unanswered_issues": 2
+          }
+        },
+        "label_buckets": [
+          {
+            "bucket": "good_first_issue",
+            "count": 11
+          },
+          {
+            "bucket": "enhancement",
+            "count": 9
+          },
+          {
+            "bucket": "help_wanted",
+            "count": 9
+          },
+          {
+            "bucket": "bug",
+            "count": 7
+          },
+          {
+            "bucket": "documentation",
+            "count": 7
+          }
+        ],
+        "totals": {
+          "open_issues": 29,
+          "open_prs": 7,
+          "stale_open_issues": 7,
+          "unanswered_issues": 5
+        }
+      },
+      "languages": {
+        "by_repo": {
+          "archive/really-small-but-noisy-repo": [
+            {
+              "bytes": 113400,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 58800,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 21000,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 16800,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "developer-experience/release-note-policy-validation-toolkit": [
+            {
+              "bytes": 151280,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 43920,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 29280,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 19520,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror": [
+            {
+              "bytes": 127880,
+              "language": "JavaScript",
+              "share": 0.46
+            },
+            {
+              "bytes": 61160,
+              "language": "HTML",
+              "share": 0.22
+            },
+            {
+              "bytes": 50040,
+              "language": "CSS",
+              "share": 0.18
+            },
+            {
+              "bytes": 38920,
+              "language": "Python",
+              "share": 0.14
+            }
+          ],
+          "maintainer-tools/community-health-profile-snapshotter": [
+            {
+              "bytes": 156000,
+              "language": "Go",
+              "share": 0.5
+            },
+            {
+              "bytes": 74880,
+              "language": "Shell",
+              "share": 0.24
+            },
+            {
+              "bytes": 49920,
+              "language": "Markdown",
+              "share": 0.16
+            },
+            {
+              "bytes": 31200,
+              "language": "Python",
+              "share": 0.1
+            }
+          ],
+          "platform-infra/plain-artifact-export-verification-service": [
+            {
+              "bytes": 186840,
+              "language": "TypeScript",
+              "share": 0.54
+            },
+            {
+              "bytes": 96880,
+              "language": "Python",
+              "share": 0.28
+            },
+            {
+              "bytes": 34600,
+              "language": "CSS",
+              "share": 0.1
+            },
+            {
+              "bytes": 27680,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ],
+          "research-platform-team/collector-migration-compatibility-fixtures": [
+            {
+              "bytes": 235600,
+              "language": "Python",
+              "share": 0.62
+            },
+            {
+              "bytes": 68400,
+              "language": "TypeScript",
+              "share": 0.18
+            },
+            {
+              "bytes": 45600,
+              "language": "Markdown",
+              "share": 0.12
+            },
+            {
+              "bytes": 30400,
+              "language": "Shell",
+              "share": 0.08
+            }
+          ]
+        },
+        "top": [
+          {
+            "bytes": 612680,
+            "language": "Python",
+            "share": 0.34614689265536724
+          },
+          {
+            "bytes": 412560,
+            "language": "TypeScript",
+            "share": 0.23308474576271188
+          },
+          {
+            "bytes": 169280,
+            "language": "Shell",
+            "share": 0.09563841807909605
+          },
+          {
+            "bytes": 156000,
+            "language": "Go",
+            "share": 0.08813559322033898
+          },
+          {
+            "bytes": 127880,
+            "language": "JavaScript",
+            "share": 0.07224858757062147
+          },
+          {
+            "bytes": 124800,
+            "language": "Markdown",
+            "share": 0.07050847457627119
+          },
+          {
+            "bytes": 105640,
+            "language": "CSS",
+            "share": 0.059683615819209036
+          },
+          {
+            "bytes": 61160,
+            "language": "HTML",
+            "share": 0.03455367231638418
+          }
+        ]
+      },
+      "release_assets": [
+        {
+          "content_type": "application/zip",
+          "download_count": 66,
+          "name": "collector-migration-compatibility-fixtures-v6.2.0-source.zip",
+          "release_id": "10501",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "size_bytes": 128500,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 59,
+          "name": "plain-artifact-export-verification-service-v5.2.0-source.zip",
+          "release_id": "10401",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "size_bytes": 126800,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 57,
+          "name": "collector-migration-compatibility-fixtures-v6.2.0-checksums.txt",
+          "release_id": "10501",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "size_bytes": 129300,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 53,
+          "name": "collector-migration-compatibility-fixtures-v6.1.0-source.zip",
+          "release_id": "10500",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "size_bytes": 128500,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 52,
+          "name": "community-health-profile-snapshotter-v4.2.0-source.zip",
+          "release_id": "10301",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "size_bytes": 125100,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 50,
+          "name": "plain-artifact-export-verification-service-v5.2.0-checksums.txt",
+          "release_id": "10401",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "size_bytes": 127600,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 46,
+          "name": "plain-artifact-export-verification-service-v5.1.0-source.zip",
+          "release_id": "10400",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "size_bytes": 126800,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 45,
+          "name": "reponomics-dashboard-super-long-private-mirror-v3.2.0-source.zip",
+          "release_id": "10201",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "size_bytes": 123400,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 44,
+          "name": "collector-migration-compatibility-fixtures-v6.1.0-checksums.txt",
+          "release_id": "10500",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "size_bytes": 129300,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 43,
+          "name": "community-health-profile-snapshotter-v4.2.0-checksums.txt",
+          "release_id": "10301",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "size_bytes": 125900,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 39,
+          "name": "community-health-profile-snapshotter-v4.1.0-source.zip",
+          "release_id": "10300",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "size_bytes": 125100,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 38,
+          "name": "release-note-policy-validation-toolkit-v2.2.0-source.zip",
+          "release_id": "10101",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "size_bytes": 121700,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 37,
+          "name": "plain-artifact-export-verification-service-v5.1.0-checksums.txt",
+          "release_id": "10400",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "size_bytes": 127600,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 36,
+          "name": "reponomics-dashboard-super-long-private-mirror-v3.2.0-checksums.txt",
+          "release_id": "10201",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "size_bytes": 124200,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 32,
+          "name": "reponomics-dashboard-super-long-private-mirror-v3.1.0-source.zip",
+          "release_id": "10200",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "size_bytes": 123400,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 31,
+          "name": "really-small-but-noisy-repo-v1.2.0-source.zip",
+          "release_id": "10001",
+          "repo": "archive/really-small-but-noisy-repo",
+          "size_bytes": 120000,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 30,
+          "name": "community-health-profile-snapshotter-v4.1.0-checksums.txt",
+          "release_id": "10300",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "size_bytes": 125900,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 29,
+          "name": "release-note-policy-validation-toolkit-v2.2.0-checksums.txt",
+          "release_id": "10101",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "size_bytes": 122500,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 25,
+          "name": "release-note-policy-validation-toolkit-v2.1.0-source.zip",
+          "release_id": "10100",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "size_bytes": 121700,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 23,
+          "name": "reponomics-dashboard-super-long-private-mirror-v3.1.0-checksums.txt",
+          "release_id": "10200",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "size_bytes": 124200,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 22,
+          "name": "really-small-but-noisy-repo-v1.2.0-checksums.txt",
+          "release_id": "10001",
+          "repo": "archive/really-small-but-noisy-repo",
+          "size_bytes": 120800,
+          "updated_at": "2026-05-05T15:05:00Z"
+        },
+        {
+          "content_type": "application/zip",
+          "download_count": 18,
+          "name": "really-small-but-noisy-repo-v1.1.0-source.zip",
+          "release_id": "10000",
+          "repo": "archive/really-small-but-noisy-repo",
+          "size_bytes": 120000,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 16,
+          "name": "release-note-policy-validation-toolkit-v2.1.0-checksums.txt",
+          "release_id": "10100",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "size_bytes": 122500,
+          "updated_at": "2026-04-23T15:05:00Z"
+        },
+        {
+          "content_type": "text/plain",
+          "download_count": 9,
+          "name": "really-small-but-noisy-repo-v1.1.0-checksums.txt",
+          "release_id": "10000",
+          "repo": "archive/really-small-but-noisy-repo",
+          "size_bytes": 120800,
+          "updated_at": "2026-04-23T15:05:00Z"
+        }
+      ],
+      "releases": [
+        {
+          "asset_count": 2,
+          "asset_download_count": 31,
+          "draft": "False",
+          "name": "v1.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10001",
+          "repo": "archive/really-small-but-noisy-repo",
+          "tag_name": "v1.2.0",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/releases/tag/v1.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 38,
+          "draft": "False",
+          "name": "v2.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10101",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "tag_name": "v2.2.0",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v2.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 45,
+          "draft": "False",
+          "name": "v3.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10201",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "tag_name": "v3.2.0",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/releases/tag/v3.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 52,
+          "draft": "False",
+          "name": "v4.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10301",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "tag_name": "v4.2.0",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v4.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 59,
+          "draft": "False",
+          "name": "v5.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10401",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "tag_name": "v5.2.0",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/releases/tag/v5.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 66,
+          "draft": "False",
+          "name": "v6.2.0 release",
+          "prerelease": "False",
+          "published_at": "2026-05-05T15:00:00Z",
+          "release_id": "10501",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "tag_name": "v6.2.0",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v6.2.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 18,
+          "draft": "False",
+          "name": "v1.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10000",
+          "repo": "archive/really-small-but-noisy-repo",
+          "tag_name": "v1.1.0",
+          "url": "https://github.com/archive/really-small-but-noisy-repo/releases/tag/v1.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 25,
+          "draft": "False",
+          "name": "v2.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10100",
+          "repo": "developer-experience/release-note-policy-validation-toolkit",
+          "tag_name": "v2.1.0",
+          "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v2.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 32,
+          "draft": "False",
+          "name": "v3.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10200",
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+          "tag_name": "v3.1.0",
+          "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/releases/tag/v3.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 39,
+          "draft": "False",
+          "name": "v4.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10300",
+          "repo": "maintainer-tools/community-health-profile-snapshotter",
+          "tag_name": "v4.1.0",
+          "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v4.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 46,
+          "draft": "False",
+          "name": "v5.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10400",
+          "repo": "platform-infra/plain-artifact-export-verification-service",
+          "tag_name": "v5.1.0",
+          "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/releases/tag/v5.1.0"
+        },
+        {
+          "asset_count": 2,
+          "asset_download_count": 53,
+          "draft": "False",
+          "name": "v6.1.0 release",
+          "prerelease": "False",
+          "published_at": "2026-04-23T15:00:00Z",
+          "release_id": "10500",
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+          "tag_name": "v6.1.0",
+          "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v6.1.0"
+        }
+      ],
+      "topics": {
+        "by_repo": {
+          "archive/really-small-but-noisy-repo": [
+            "analytics",
+            "dashboard",
+            "github-actions",
+            "really-small-but-noisy-repo"
+          ],
+          "developer-experience/release-note-policy-validation-toolkit": [
+            "automation",
+            "developer-tools",
+            "metrics",
+            "release-note-policy-validation"
+          ],
+          "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror": [
+            "documentation",
+            "maintainer-tools",
+            "open-source",
+            "reponomics-dashboard-super-lon"
+          ],
+          "maintainer-tools/community-health-profile-snapshotter": [
+            "cli",
+            "community-health-profile-snaps",
+            "observability",
+            "release-engineering"
+          ],
+          "platform-infra/plain-artifact-export-verification-service": [
+            "analytics",
+            "dashboard",
+            "github-actions",
+            "plain-artifact-export-verifica"
+          ],
+          "research-platform-team/collector-migration-compatibility-fixtures": [
+            "automation",
+            "collector-migration-compatibil",
+            "developer-tools",
+            "metrics"
+          ]
+        },
+        "top": [
+          {
+            "repo_count": 2,
+            "topic": "analytics"
+          },
+          {
+            "repo_count": 2,
+            "topic": "automation"
+          },
+          {
+            "repo_count": 2,
+            "topic": "dashboard"
+          },
+          {
+            "repo_count": 2,
+            "topic": "developer-tools"
+          },
+          {
+            "repo_count": 2,
+            "topic": "github-actions"
+          },
+          {
+            "repo_count": 2,
+            "topic": "metrics"
+          },
+          {
+            "repo_count": 1,
+            "topic": "cli"
+          },
+          {
+            "repo_count": 1,
+            "topic": "collector-migration-compatibil"
+          },
+          {
+            "repo_count": 1,
+            "topic": "community-health-profile-snaps"
+          },
+          {
+            "repo_count": 1,
+            "topic": "documentation"
+          },
+          {
+            "repo_count": 1,
+            "topic": "maintainer-tools"
+          },
+          {
+            "repo_count": 1,
+            "topic": "observability"
+          }
+        ]
+      }
+    },
     "daily": {
       "clone_uniques": [
         4,

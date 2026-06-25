@@ -3,6 +3,44 @@
   "chunks": {},
   "encoding": "json",
   "summary": {
+    "context": {
+      "code_frequency": {
+        "totals": {
+          "additions": 0,
+          "deletions": 0,
+          "net": 0
+        },
+        "weeks": []
+      },
+      "contributors": {
+        "totals": {
+          "active_contributors": 0,
+          "commits": 0
+        },
+        "weeks": []
+      },
+      "events": [],
+      "issues": {
+        "by_repo": {},
+        "label_buckets": [],
+        "totals": {
+          "open_issues": 0,
+          "open_prs": 0,
+          "stale_open_issues": 0,
+          "unanswered_issues": 0
+        }
+      },
+      "languages": {
+        "by_repo": {},
+        "top": []
+      },
+      "release_assets": [],
+      "releases": [],
+      "topics": {
+        "by_repo": {},
+        "top": []
+      }
+    },
     "daily": {
       "clone_uniques": [],
       "clones": [],

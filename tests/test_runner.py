@@ -23,6 +23,7 @@ import pytest
 import requests
 
 from dashboard_action import run
+from collect_modules.context_endpoints import RepositoryStatisticsStatus
 import doctor_retained
 from scripts import dashboard_scenarios
 
@@ -4656,7 +4657,7 @@ def test_collect_statistics_reports_pending_github_cache(
 
     monkeypatch.setattr(run.collect_mod, "fetch_json_with_status", fake_fetch_json_with_status)
 
-    with pytest.raises(run.collect_mod.RepositoryStatisticsStatus) as exc_info:
+    with pytest.raises(RepositoryStatisticsStatus) as exc_info:
         run.collect_mod.collect_code_frequency_weekly(
             "demo/reponomics",
             {},
@@ -4977,7 +4978,7 @@ def test_collect_records_pending_statistics_endpoint_without_warning(
     ]
 
     def raise_pending(repo: str, headers, captured_at: str):
-        raise run.collect_mod.RepositoryStatisticsStatus(
+        raise RepositoryStatisticsStatus(
             endpoint_key="code-frequency",
             http_status=202,
             status="pending",

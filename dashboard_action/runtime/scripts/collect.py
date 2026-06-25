@@ -66,7 +66,6 @@ from collect_modules.http import (
     retry_delay_with_jitter as _http_retry_delay_with_jitter,
     secondary_retry_window as _http_secondary_retry_window,
 )
-from collect_modules.context_endpoints import RepositoryStatisticsStatus as RepositoryStatisticsStatus
 from collect_modules.repositories import (
     build_auto_candidates as _repositories_build_auto_candidates,
     current_repository as _repositories_current_repository,

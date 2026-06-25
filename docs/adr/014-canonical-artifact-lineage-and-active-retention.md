@@ -5,7 +5,7 @@ Date: 2026-06-05
 > Supersession note: retained CSV row preservation policy has since moved to
 > cumulative history rather than retention-horizon trimming. See
 > [Artifact Storage and Active Cleanup](../ARTIFACT_STORAGE_AND_CLEANUP.md) and
-> [ADR 027](./027-contextual-data-packet-and-collection-model.md) for the live
+> [ADR 028](./028-contextual-data-packet-and-collection-model.md) for the live
 > model. This ADR remains a historical decision record.
 
 ## Status

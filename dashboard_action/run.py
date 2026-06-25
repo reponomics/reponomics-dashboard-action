@@ -556,18 +556,32 @@ def _doctor_pages_deployment_detail(payload: dict[str, object]) -> tuple[str, do
     return ("pages_latest_deployment_valid", "skipped", "latest Pages status was not reported")
 
 
+def _diagnose_dashboard_artifact_for_doctor(
+    config: RuntimeConfig,
+    key_checks: list[tuple[str, str]],
+) -> doctor_mod.DashboardDoctorResult:
+    try:
+        return doctor_mod.diagnose_dashboard_artifact(
+            config.pages_index_path,
+            configured_data_mode=config.resolved_data_mode,
+            secrets=key_checks,
+            retained_data_dir=config.data_dir,
+        )
+    except doctor_mod._DashboardDoctorError as exc:
+        raise ActionError(f"Doctor diagnostics failed at stage {exc.stage}: {exc.detail}") from None
+    except Exception as exc:
+        raise ActionError(
+            f"Doctor diagnostics failed unexpectedly ({exc.__class__.__name__})."
+        ) from None
+
+
 def run_doctor(config: RuntimeConfig) -> None:
     """Run read-only dashboard artifact diagnostics."""
     key_checks = [
         ("DASHBOARD_SECRET_DO_NOT_REPLACE", config.dashboard_secret),
         ("COMPARISON_SECRET", config.comparison_secret),
     ]
-    result = doctor_mod.diagnose_dashboard_artifact(
-        config.pages_index_path,
-        configured_data_mode=config.resolved_data_mode,
-        secrets=key_checks,
-        retained_data_dir=config.data_dir,
-    )
+    result = _diagnose_dashboard_artifact_for_doctor(config, key_checks)
     result.stages.extend(_doctor_pages_preflight_stages(config))
     report_path = Path(".reponomics") / "doctor" / "doctor-report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)

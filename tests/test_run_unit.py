@@ -645,6 +645,31 @@ def test_main_dispatches_doctor_mode(
     assert called == ["doctor", "doctor:doctor"]
 
 
+def test_doctor_mode_sanitizes_unexpected_diagnostic_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    leaked_message = "debug token ghp_should_not_be_logged dashboard-secret-value"
+    config = _config_for_run_tests(tmp_path, mode="doctor")
+
+    def fail_diagnostics(*_args: Any, **_kwargs: Any) -> run.doctor_mod.DashboardDoctorResult:
+        raise RuntimeError(leaked_message)
+
+    monkeypatch.setattr(run, "validate_config", lambda _config: None)
+    monkeypatch.setattr(run, "_mask_config_secrets", lambda _config: None)
+    monkeypatch.setattr(run.doctor_mod, "diagnose_dashboard_artifact", fail_diagnostics)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run.main(lambda: config)
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+    assert exc_info.value.code == 1
+    assert leaked_message not in output
+    assert "Doctor diagnostics failed unexpectedly (RuntimeError)." in output
+
+
 def test_main_dispatches_collect_cleanup_only(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

@@ -110,6 +110,15 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
                 "coverage_state": "reported",
             }
         ],
+        "repo-event-index.csv": [{"repo": "demo/app", "event_id": "commit:abc"}],
+        "repo-release-assets.csv": [{"repo": "demo/app", "asset_id": "1"}],
+        "repo-issue-pr-snapshots.csv": [
+            {"repo": "demo/app", "open_issues_count": "2"}
+        ],
+        "repo-issue-label-snapshots.csv": [
+            {"repo": "demo/app", "label_bucket": "bug"}
+        ],
+        "collection-endpoints.csv": [{"repo": "demo/app", "endpoint_key": "commits"}],
     }
 
     def read_csv(path: str) -> list[dict[str, str]]:
@@ -129,6 +138,21 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
     ]
     assert load_data.load_traffic_coverage(str(tmp_path)) is rows_by_file[
         "traffic-coverage.csv"
+    ]
+    assert load_data.load_event_index(str(tmp_path)) is rows_by_file[
+        "repo-event-index.csv"
+    ]
+    assert load_data.load_release_assets(str(tmp_path)) is rows_by_file[
+        "repo-release-assets.csv"
+    ]
+    assert load_data.load_issue_pr_snapshots(str(tmp_path)) is rows_by_file[
+        "repo-issue-pr-snapshots.csv"
+    ]
+    assert load_data.load_issue_label_snapshots(str(tmp_path)) is rows_by_file[
+        "repo-issue-label-snapshots.csv"
+    ]
+    assert load_data.load_collection_endpoints(str(tmp_path)) is rows_by_file[
+        "collection-endpoints.csv"
     ]
 
 
@@ -953,3 +977,161 @@ def test_actionable_insights_rank_and_diversify_text_and_structured_outputs() ->
     assert all("score" not in insight for insight in structured)
     assert {insight["metric"] for insight in structured} == {"views", "clones"}
     assert load_data.actionable_insights_structured(rows, limit=0) == []
+
+
+def test_narrative_insights_combine_attention_readiness_and_release_context() -> None:
+    daily_rows = [
+        _daily_row("demo/ready-gap", "2026-05-01", 30, uniques=8),
+        _daily_row("demo/ready-gap", "2026-05-02", 45, uniques=10),
+        _daily_row("demo/release", "2026-05-01", 20, uniques=8, clones=6),
+        _daily_row("demo/release", "2026-05-02", 25, uniques=9, clones=8),
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/ready-gap", "2026-05-01", 10, 2, 1),
+            "community_health_percentage": "45",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "true",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_code_of_conduct": "true",
+        },
+        {
+            **_metric_row("demo/ready-gap", "2026-05-02", 10, 2, 1),
+            "community_health_percentage": "45",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "true",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_code_of_conduct": "true",
+        },
+        _metric_row("demo/release", "2026-05-01", 5, 1, 1),
+        _metric_row("demo/release", "2026-05-02", 5, 1, 3),
+    ]
+    event_rows = [
+        {
+            "repo": "demo/release",
+            "event_id": "release:42",
+            "event_type": "release",
+            "event_date": "2026-05-02",
+            "title": "v1.2.3",
+            "release_id": "42",
+            "url": "https://github.com/demo/release/releases/tag/v1.2.3",
+        }
+    ]
+    release_asset_rows = [
+        {
+            "repo": "demo/release",
+            "release_id": "42",
+            "asset_id": "7",
+            "download_count": "13",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=event_rows,
+        release_asset_rows=release_asset_rows,
+        limit=5,
+    )
+    subtypes = {insight["subtype"] for insight in insights}
+
+    assert "attention_without_readiness" in subtypes
+    assert "release_pulled_attention_forward" in subtypes
+    assert all(insight["kind"] == "narrative" for insight in insights)
+    assert all("score" not in insight for insight in insights)
+
+
+def test_narrative_insights_cover_docs_maintenance_and_data_quality() -> None:
+    daily_rows = [
+        _daily_row("demo/docs", "2026-05-01", 30, uniques=10),
+        _daily_row("demo/docs", "2026-05-02", 35, uniques=12),
+        _daily_row("demo/pressure", "2026-05-01", 45, uniques=15),
+        _daily_row("demo/pressure", "2026-05-02", 45, uniques=15),
+    ]
+    metric_rows = [
+        _metric_row("demo/docs", "2026-05-01", 10, 2, 1),
+        _metric_row("demo/docs", "2026-05-02", 10, 2, 1),
+        {
+            **_metric_row("demo/pressure", "2026-05-01", 20, 3, 2),
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+        },
+        {
+            **_metric_row("demo/pressure", "2026-05-02", 22, 3, 2),
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+        },
+    ]
+    event_rows = [
+        {
+            "repo": "demo/docs",
+            "event_id": "commit:abc",
+            "event_type": "commit",
+            "event_date": "2026-05-01",
+            "title": "Improve README examples",
+            "classification": "docs",
+            "url": "https://github.com/demo/docs/commit/abc",
+        }
+    ]
+    path_rows = [
+        {
+            "repo": "demo/docs",
+            "captured_at": "2026-05-02T12:00:00Z",
+            "path": "/demo/docs/blob/main/README.md",
+            "title": "README",
+            "count": "24",
+        }
+    ]
+    issue_pr_rows = [
+        {
+            "repo": "demo/pressure",
+            "captured_at": "2026-05-02T12:00:00Z",
+            "open_issues_count": "12",
+            "open_prs_count": "4",
+        }
+    ]
+    issue_label_rows = [
+        {
+            "repo": "demo/pressure",
+            "captured_at": "2026-05-02T12:00:00Z",
+            "label_bucket": "bug",
+            "labeled_item_count": "5",
+        }
+    ]
+    collection_day_rows = [
+        {
+            "ts": "2026-05-02",
+            "status": "gaps_detected",
+            "skipped_repos": "1",
+            "error_repos": "0",
+        }
+    ]
+    endpoint_rows = [
+        {
+            "repo": "demo/docs",
+            "captured_at": "2026-05-02T12:00:00Z",
+            "endpoint_key": "contributor-activity",
+            "status": "pending",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=path_rows,
+        event_rows=event_rows,
+        issue_pr_rows=issue_pr_rows,
+        issue_label_rows=issue_label_rows,
+        endpoint_rows=endpoint_rows,
+        collection_day_rows=collection_day_rows,
+        limit=5,
+    )
+    subtypes = {insight["subtype"] for insight in insights}
+
+    assert "docs_or_example_found_audience" in subtypes
+    assert "maintenance_pressure" in subtypes
+    assert "data_gap_not_product_signal" in subtypes

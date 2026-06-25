@@ -5,6 +5,7 @@ import { createDashboardApp } from '../../dashboard_action/runtime/scripts/rende
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+import { installTables } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/tables.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
 const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
@@ -181,6 +182,37 @@ function dataProviderContext() {
   };
 }
 
+function inspectableElement() {
+  return {
+    children: [],
+    className: '',
+    dataset: {},
+    innerHTML: '',
+    style: { setProperty() {} },
+    tabIndex: 0,
+    textContent: '',
+    appendChild(child) {
+      this.children.push(child);
+    },
+    addEventListener() {},
+    querySelectorAll() {
+      return [];
+    },
+    setAttribute() {},
+  };
+}
+
+function inspectableDocument(elements) {
+  return {
+    createElement() {
+      return inspectableElement();
+    },
+    getElementById(id) {
+      return elements[id] || null;
+    },
+  };
+}
+
 test('dashboard app creates isolated contexts without implicit browser globals', () => {
   const first = createDashboardApp(fakeHost());
   const second = createDashboardApp(fakeHost());
@@ -207,6 +239,58 @@ test('format helpers install independently of app lifecycle', () => {
   assert.equal(helpers.sumArray([1, '2', null, undefined, 4]), 7);
   assert.equal(helpers.buildSparklinePath([], 100, 34).line, '');
   assert.match(helpers.buildSparklinePath([3, 7, 5], 100, 34).line, /^M0\.00 /);
+});
+
+test('insight renderer displays narrative headline body and evidence', () => {
+  const insightsList = inspectableElement();
+  const context = {
+    document: inspectableDocument({ 'insights-list': insightsList }),
+    window: { scrollTo() {} },
+    currentPayload() {
+      return {
+        insights_v2: [
+          {
+            kind: 'narrative',
+            subtype: 'attention_without_readiness',
+            tone: 'risk',
+            repo: 'owner/repo-a',
+            headline: 'repo-a is getting attention without contribution readiness',
+            body: 'The repo drew attention but lacks an issue template.',
+            confidence: 'high',
+            evidence: [
+              { label: 'views', value: '120' },
+              { label: 'community gaps', value: 'issue template' },
+            ],
+          },
+        ],
+      };
+    },
+    escapeHtml(value) {
+      return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      return Number(value) >= 0 ? `+${value}` : String(value);
+    },
+    getShortName(repo) {
+      return repo.split('/').pop();
+    },
+    selectRepo() {},
+    state: {},
+    updateDashboard() {},
+  };
+
+  installTables(context).renderInsights();
+
+  assert.equal(insightsList.children.length, 1);
+  const item = insightsList.children[0].children[0];
+  assert.match(item.innerHTML, /repo-a is getting attention without contribution readiness/);
+  assert.match(item.innerHTML, /lacks an issue template/);
+  assert.match(item.innerHTML, /Evidence: views: 120/);
+  assert.match(item.innerHTML, /community gaps: issue template/);
+  assert.match(item.innerHTML, /high/);
 });
 
 test('series helpers preserve selected-window and growth aggregation contracts', () => {

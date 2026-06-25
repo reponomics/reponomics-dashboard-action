@@ -24,6 +24,7 @@ from load_data_modules.growth.core import (
 )
 from load_data_modules.growth.insights import _growth_insight_candidates
 from load_data_modules.momentum import compute_momentum
+from load_data_modules.narratives import narrative_insights_structured
 from load_data_modules.parse import (
     _bool_or_none,
     _counter_snapshot,
@@ -89,6 +90,11 @@ __all__ = [
     "latest_repo_metadata",
     "latest_repo_metrics",
     "latest_repo_metrics_per_day",
+    "load_collection_endpoints",
+    "load_event_index",
+    "load_issue_label_snapshots",
+    "load_issue_pr_snapshots",
+    "load_release_assets",
     "load_collection_status",
     "load_collection_days",
     "load_daily",
@@ -97,6 +103,7 @@ __all__ = [
     "load_repo_metrics",
     "load_traffic_coverage",
     "repo_growth_series",
+    "narrative_insights_structured",
     "repo_metric_deltas",
     "storage",
     "top_paths",
@@ -142,6 +149,31 @@ def load_collection_days(data_dir=None):
 def load_traffic_coverage(data_dir=None):
     """Load traffic-coverage.csv and return the raw row list."""
     return _load_csv("traffic-coverage.csv", data_dir)
+
+
+def load_event_index(data_dir=None):
+    """Load repo-event-index.csv and return the raw row list."""
+    return _load_csv("repo-event-index.csv", data_dir)
+
+
+def load_release_assets(data_dir=None):
+    """Load repo-release-assets.csv and return the raw row list."""
+    return _load_csv("repo-release-assets.csv", data_dir)
+
+
+def load_issue_pr_snapshots(data_dir=None):
+    """Load repo-issue-pr-snapshots.csv and return the raw row list."""
+    return _load_csv("repo-issue-pr-snapshots.csv", data_dir)
+
+
+def load_issue_label_snapshots(data_dir=None):
+    """Load repo-issue-label-snapshots.csv and return the raw row list."""
+    return _load_csv("repo-issue-label-snapshots.csv", data_dir)
+
+
+def load_collection_endpoints(data_dir=None):
+    """Load collection-endpoints.csv and return the raw row list."""
+    return _load_csv("collection-endpoints.csv", data_dir)
 
 
 def _load_csv(filename, data_dir=None):

@@ -148,6 +148,11 @@ export function installTables(context) {
     }
 
     function classifyInsight(item) {
+      if (item.kind === 'narrative') {
+        if (item.tone === 'risk' || item.tone === 'data_quality') return 'down';
+        if (item.tone === 'opportunity') return 'up';
+        return 'neutral';
+      }
       if (item.kind === 'spike') {
         return item.direction === 'spiked' ? 'up' : 'down';
       }
@@ -196,7 +201,23 @@ export function installTables(context) {
         let meta = '';
         let pctLabel = '';
 
-        if (item.kind === 'trend') {
+        if (item.kind === 'narrative') {
+          headline = escapeHtml(item.headline || item.text || '');
+          const evidence = Array.isArray(item.evidence) ? item.evidence.slice(0, 4) : [];
+          const evidenceText = evidence
+            .map((fact) => {
+              const label = String(fact && fact.label ? fact.label : '').trim();
+              const value = String(fact && fact.value ? fact.value : '').trim();
+              if (!label && !value) return '';
+              return label && value ? `${label}: ${value}` : (label || value);
+            })
+            .filter(Boolean)
+            .join(' · ');
+          meta = [item.body || '', evidenceText ? `Evidence: ${evidenceText}` : '']
+            .filter(Boolean)
+            .join(' ');
+          pctLabel = item.confidence ? String(item.confidence) : (item.tone || 'story');
+        } else if (item.kind === 'trend') {
           const verb = (item.pct === null || item.pct === undefined)
             ? 'started getting'
             : (item.pct > 0 ? 'is up on' : 'is down on');

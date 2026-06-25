@@ -112,6 +112,8 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
         ],
         "repo-event-index.csv": [{"repo": "demo/app", "event_id": "commit:abc"}],
         "repo-release-assets.csv": [{"repo": "demo/app", "asset_id": "1"}],
+        "repo-languages.csv": [{"repo": "demo/app", "language": "Python"}],
+        "repo-topics.csv": [{"repo": "demo/app", "topic": "analytics"}],
         "repo-issue-pr-snapshots.csv": [
             {"repo": "demo/app", "open_issues_count": "2"}
         ],
@@ -119,6 +121,10 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
             {"repo": "demo/app", "label_bucket": "bug"}
         ],
         "collection-endpoints.csv": [{"repo": "demo/app", "endpoint_key": "commits"}],
+        "repo-code-frequency-weekly.csv": [{"repo": "demo/app", "additions": "4"}],
+        "repo-contributor-activity-weekly.csv": [
+            {"repo": "demo/app", "author_login": "dev"}
+        ],
     }
 
     def read_csv(path: str) -> list[dict[str, str]]:
@@ -145,6 +151,8 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
     assert load_data.load_release_assets(str(tmp_path)) is rows_by_file[
         "repo-release-assets.csv"
     ]
+    assert load_data.load_languages(str(tmp_path)) is rows_by_file["repo-languages.csv"]
+    assert load_data.load_topics(str(tmp_path)) is rows_by_file["repo-topics.csv"]
     assert load_data.load_issue_pr_snapshots(str(tmp_path)) is rows_by_file[
         "repo-issue-pr-snapshots.csv"
     ]
@@ -153,6 +161,12 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
     ]
     assert load_data.load_collection_endpoints(str(tmp_path)) is rows_by_file[
         "collection-endpoints.csv"
+    ]
+    assert load_data.load_code_frequency_weekly(str(tmp_path)) is rows_by_file[
+        "repo-code-frequency-weekly.csv"
+    ]
+    assert load_data.load_contributor_activity_weekly(str(tmp_path)) is rows_by_file[
+        "repo-contributor-activity-weekly.csv"
     ]
 
 
@@ -1135,3 +1149,127 @@ def test_narrative_insights_cover_docs_maintenance_and_data_quality() -> None:
     assert "docs_or_example_found_audience" in subtypes
     assert "maintenance_pressure" in subtypes
     assert "data_gap_not_product_signal" in subtypes
+
+
+def test_narrative_insights_cover_contextual_recipe_patterns() -> None:
+    daily_rows = [
+        _daily_row("demo/concentrated", "2026-05-05", 50, uniques=15),
+        _daily_row("demo/churn", "2026-05-01", 20, uniques=8),
+        _daily_row("demo/churn", "2026-05-02", 22, uniques=8),
+        _daily_row("demo/churn", "2026-05-03", 20, uniques=8),
+        _daily_row("demo/churn", "2026-05-04", 24, uniques=8),
+        _daily_row("demo/churn", "2026-05-05", 20, uniques=8),
+        _daily_row("demo/churn", "2026-05-06", 8, uniques=3),
+        _daily_row("demo/positioning", "2026-05-05", 32, uniques=10),
+        _daily_row("demo/silent", "2026-05-05", 18, uniques=6, clones=12),
+    ]
+    metric_rows = [
+        _metric_row("demo/concentrated", "2026-05-04", 20, 3, 1),
+        _metric_row("demo/concentrated", "2026-05-05", 20, 3, 1),
+        _metric_row("demo/churn", "2026-05-05", 5, 1, 0),
+        _metric_row("demo/churn", "2026-05-06", 5, 1, 0),
+        _metric_row("demo/positioning", "2026-05-04", 8, 1, 1),
+        _metric_row("demo/positioning", "2026-05-05", 9, 1, 1),
+        _metric_row("demo/silent", "2026-05-04", 30, 4, 2),
+        _metric_row("demo/silent", "2026-05-05", 30, 4, 2),
+    ]
+    contributor_activity_rows = [
+        {
+            "repo": "demo/concentrated",
+            "author_login": "core-dev",
+            "week_start": "2026-04-13",
+            "commits": "8",
+        },
+        {
+            "repo": "demo/concentrated",
+            "author_login": "helper",
+            "week_start": "2026-04-13",
+            "commits": "1",
+        },
+    ]
+    code_frequency_rows = [
+        {
+            "repo": "demo/churn",
+            "week_start": "2026-05-04",
+            "additions": "160",
+            "deletions": "80",
+        },
+        {
+            "repo": "demo/silent",
+            "week_start": "2026-05-04",
+            "additions": "15",
+            "deletions": "9",
+        },
+    ]
+    event_rows = [
+        {
+            "repo": "demo/churn",
+            "event_id": "commit:def",
+            "event_type": "commit",
+            "event_date": "2026-05-05",
+            "title": "Refactor internal cache",
+            "classification": "refactor",
+            "url": "https://github.com/demo/churn/commit/def",
+        }
+    ]
+    topic_rows = [
+        {
+            "repo": "demo/positioning",
+            "captured_at": "2026-05-01T12:00:00Z",
+            "topic": "cli",
+        },
+        {
+            "repo": "demo/positioning",
+            "captured_at": "2026-05-05T12:00:00Z",
+            "topic": "cli",
+        },
+        {
+            "repo": "demo/positioning",
+            "captured_at": "2026-05-05T12:00:00Z",
+            "topic": "github-actions",
+        },
+    ]
+    referrer_rows = [
+        {
+            "repo": "demo/positioning",
+            "captured_at": "2026-05-05T12:00:00Z",
+            "referrer": "github.com",
+            "count": "18",
+        }
+    ]
+    path_rows = [
+        {
+            "repo": "demo/positioning",
+            "captured_at": "2026-05-05T12:00:00Z",
+            "path": "/demo/positioning/actions",
+            "count": "12",
+        }
+    ]
+    issue_pr_rows = [
+        {
+            "repo": "demo/silent",
+            "captured_at": "2026-05-05T12:00:00Z",
+            "open_issues_count": "1",
+            "stale_open_issues_count": "0",
+            "unanswered_issue_count": "0",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=path_rows,
+        referrer_rows=referrer_rows,
+        event_rows=event_rows,
+        issue_pr_rows=issue_pr_rows,
+        topic_rows=topic_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_activity_rows=contributor_activity_rows,
+        limit=10,
+    )
+    subtypes = {insight["subtype"] for insight in insights}
+
+    assert "contributor_concentration_risk" in subtypes
+    assert "code_churn_explains_dip" in subtypes
+    assert "positioning_shift_met_audience" in subtypes
+    assert "silent_but_healthy_utility" in subtypes

@@ -42,6 +42,17 @@ def latest_snapshot_by_repo(rows: Rows) -> dict[str, Rows]:
     return dict(grouped)
 
 
+def previous_snapshot_by_repo(rows: Rows) -> dict[str, Rows]:
+    """Return snapshot row set immediately before the latest capture per repo."""
+    previous_capture = previous_capture_by_repo(rows)
+    grouped: dict[str, Rows] = defaultdict(list)
+    for row in rows:
+        repo = str(row.get("repo") or "")
+        if repo and str(row.get("captured_at") or "") == previous_capture.get(repo):
+            grouped[repo].append(row)
+    return dict(grouped)
+
+
 def latest_capture_by_repo(rows: Rows) -> dict[str, str]:
     """Return latest captured_at value for each repository."""
     latest: dict[str, str] = {}
@@ -51,6 +62,31 @@ def latest_capture_by_repo(rows: Rows) -> dict[str, str]:
         if repo and captured_at >= latest.get(repo, ""):
             latest[repo] = captured_at
     return latest
+
+
+def previous_capture_by_repo(rows: Rows) -> dict[str, str]:
+    """Return the previous captured_at value for each repository."""
+    captures: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        repo = str(row.get("repo") or "")
+        captured_at = str(row.get("captured_at") or "")
+        if repo and captured_at:
+            captures[repo].add(captured_at)
+    previous: dict[str, str] = {}
+    for repo, values in captures.items():
+        ordered = sorted(values)
+        if len(ordered) >= 2:
+            previous[repo] = ordered[-2]
+    return previous
+
+
+def rows_by_repo_week(rows: Rows) -> dict[str, Rows]:
+    """Group weekly retained rows by repository in chronological order."""
+    grouped = rows_by_repo(rows)
+    return {
+        repo: sorted(items, key=lambda row: str(row.get("week_start") or ""))
+        for repo, items in grouped.items()
+    }
 
 
 def release_assets_by_release(rows: Rows) -> dict[tuple[str, str], Rows]:

@@ -53,10 +53,14 @@ from load_data import (
     load_collection_days,
     load_traffic_coverage,
     load_collection_endpoints,
+    load_code_frequency_weekly,
+    load_contributor_activity_weekly,
     load_event_index,
     load_issue_label_snapshots,
     load_issue_pr_snapshots,
+    load_languages,
     load_release_assets,
+    load_topics,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -610,6 +614,10 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     issue_pr_rows = load_issue_pr_snapshots()
     issue_label_rows = load_issue_label_snapshots()
     endpoint_rows = load_collection_endpoints()
+    language_rows = load_languages()
+    topic_rows = load_topics()
+    code_frequency_rows = load_code_frequency_weekly()
+    contributor_activity_rows = load_contributor_activity_weekly()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -646,6 +654,10 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         issue_label_rows=issue_label_rows,
         endpoint_rows=endpoint_rows,
         collection_day_rows=collection_day_rows,
+        language_rows=language_rows,
+        topic_rows=topic_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_activity_rows=contributor_activity_rows,
         growth=growth,
         limit=5,
     )

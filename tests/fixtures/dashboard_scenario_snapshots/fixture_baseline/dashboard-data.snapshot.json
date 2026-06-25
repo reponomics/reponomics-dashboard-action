@@ -522,6 +522,27 @@
     ],
     "insights_v2": [
       {
+        "body": "The collection calendar shows gaps_detected on 2026-05-25. Treat affected windows as incomplete before comparing them to normal weeks.",
+        "confidence": "high",
+        "evidence": [
+          {
+            "label": "collection days",
+            "value": "16"
+          },
+          {
+            "label": "endpoint gaps",
+            "value": "0"
+          }
+        ],
+        "headline": "Some movement may be a data gap, not a product signal",
+        "kind": "narrative",
+        "metric": "collection",
+        "repo": "",
+        "subtype": "data_gap_not_product_signal",
+        "text": "Some movement may be a data gap, not a product signal The collection calendar shows gaps_detected on 2026-05-25. Treat affected windows as incomplete before comparing them to normal weeks.",
+        "tone": "data_quality"
+      },
+      {
         "delta": 5,
         "denominator": 116,
         "kind": "growth",

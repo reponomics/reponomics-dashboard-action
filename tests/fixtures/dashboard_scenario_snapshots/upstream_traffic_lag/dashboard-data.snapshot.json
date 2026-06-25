@@ -127,6 +127,35 @@
     ],
     "insights_v2": [
       {
+        "body": "demo/api-monitor drew 124 views and 56 visitors without downstream growth. The repo is missing contributing guide, so new attention may not have an obvious path into participation.",
+        "confidence": "high",
+        "evidence": [
+          {
+            "label": "views",
+            "value": "124"
+          },
+          {
+            "label": "visitors",
+            "value": "56"
+          },
+          {
+            "label": "downstream delta",
+            "value": "+0"
+          },
+          {
+            "label": "community gaps",
+            "value": "contributing guide"
+          }
+        ],
+        "headline": "api-monitor is getting attention without contribution readiness",
+        "kind": "narrative",
+        "metric": "views",
+        "repo": "demo/api-monitor",
+        "subtype": "attention_without_readiness",
+        "text": "api-monitor is getting attention without contribution readiness demo/api-monitor drew 124 views and 56 visitors without downstream growth. The repo is missing contributing guide, so new attention may not have an obvious path into participation.",
+        "tone": "risk"
+      },
+      {
         "downstream_delta": 0,
         "kind": "growth",
         "metric": "growth",

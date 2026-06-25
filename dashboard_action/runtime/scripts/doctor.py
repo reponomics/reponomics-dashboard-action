@@ -32,8 +32,8 @@ from doctor_modules.discovery import (
 from doctor_modules.export import _diagnose_export_artifact
 from doctor_modules.handoff import _ui_handoff_stage
 from doctor_modules.manifest import _validate_export_manifest_contract
+from doctor_modules.decode import _decrypt_gzip_json_staged
 from doctor_modules.schema import (
-    _decrypt_gzip_json_staged,
     _semantic_counts_stage,
     _validate_chunk,
     _validate_chunk_staged,

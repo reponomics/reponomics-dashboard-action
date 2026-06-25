@@ -22,6 +22,7 @@ from doctor_support import (
 def _validate_export_manifest_contract(
     manifest: dict[str, Any],
 ) -> tuple[list[DoctorStage], bytes | None, bytes | None]:
+    """Validate export manifest fields and decode reusable crypto parameters."""
     errors = _export_manifest_contract_errors(manifest)
     salt, salt_error = _decode_manifest_bytes(manifest.get("salt"), "salt", EXPECTED_SALT_BYTES)
     iv, iv_error = _decode_manifest_bytes(manifest.get("iv"), "iv", EXPECTED_IV_BYTES)
@@ -40,6 +41,7 @@ def _validate_export_manifest_contract(
 
 
 def _export_manifest_contract_errors(manifest: dict[str, Any]) -> list[str]:
+    """Return human-readable export manifest contract violations."""
     errors: list[str] = []
     if manifest.get("version") != EXPECTED_EXPORT_MANIFEST_VERSION:
         errors.append("unsupported version")
@@ -61,6 +63,7 @@ def _export_manifest_contract_errors(manifest: dict[str, Any]) -> list[str]:
 
 
 def _manifest_kdf_valid(kdf: Any) -> bool:
+    """Return whether the export manifest KDF matches the supported contract."""
     return (
         isinstance(kdf, dict)
         and kdf.get("name") == EXPECTED_KDF_NAME
@@ -70,20 +73,24 @@ def _manifest_kdf_valid(kdf: Any) -> bool:
 
 
 def _asset_path_valid(asset: Any) -> bool:
+    """Return whether the export asset path uses the expected generated filename."""
     return isinstance(asset, str) and bool(EXPORT_ASSET_RE.fullmatch(asset))
 
 
 def _positive_int(value: Any) -> bool:
+    """Return whether a manifest value is a positive integer."""
     return isinstance(value, int) and value > 0
 
 
 def _sha256_value_valid(value: Any) -> bool:
+    """Return whether a manifest value is a lowercase SHA-256 hex digest."""
     return isinstance(value, str) and bool(SHA256_HEX_RE.fullmatch(value))
 
 
 def _decode_manifest_bytes(
     value: Any, name: str, expected_len: int
 ) -> tuple[bytes | None, str | None]:
+    """Decode a base64 manifest byte field and validate its length."""
     try:
         decoded = _b64_decode(value)
     except Exception as exc:

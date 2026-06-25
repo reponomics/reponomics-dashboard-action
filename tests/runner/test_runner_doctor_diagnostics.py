@@ -662,6 +662,20 @@ def test_doctor_encrypted_browser_contract_rejects_runtime_invalid_envelopes(
     assert result.ui_handoff_reached is False
 
 
+def test_doctor_rejects_invalid_configured_data_mode_before_diagnosing(tmp_path: Path) -> None:
+    dashboard_html_path = tmp_path / "missing-dashboard.html"
+
+    with pytest.raises(run.doctor_mod._DashboardDoctorError) as exc_info:
+        run.doctor_mod.diagnose_dashboard_artifact(
+            dashboard_html_path,
+            configured_data_mode="default",
+            secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+        )
+
+    assert exc_info.value.stage == "configured_data_mode_recorded"
+    assert exc_info.value.detail == "configured data mode 'default' is invalid"
+
+
 def _mutate_encrypted_dashboard_contract(data: dict[str, Any], mutation: str) -> None:
     if mutation == "version":
         data["version"] = run.doctor_mod.EXPECTED_DASHBOARD_DATA_VERSION + 1

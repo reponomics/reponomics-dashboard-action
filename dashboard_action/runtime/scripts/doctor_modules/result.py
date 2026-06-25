@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from doctor_support import (
@@ -52,21 +53,15 @@ WELL_FORMED_STAGE_NAMES = {
 }
 
 
+@dataclass(frozen=True)
 class _PayloadDiagnosticResult:
-    def __init__(
-        self,
-        *,
-        stages: list[DoctorStage],
-        secret_results: list[DoctorSecretResult],
-        chunks_checked: int = 0,
-        chunk_count: int = 0,
-        repo_count: int = 0,
-    ) -> None:
-        self.stages = stages
-        self.secret_results = secret_results
-        self.chunks_checked = chunks_checked
-        self.chunk_count = chunk_count
-        self.repo_count = repo_count
+    """Payload-stage diagnostics and data coverage used by final aggregation."""
+
+    stages: list[DoctorStage]
+    secret_results: list[DoctorSecretResult]
+    chunks_checked: int = 0
+    chunk_count: int = 0
+    repo_count: int = 0
 
 
 def _dashboard_result(
@@ -79,16 +74,10 @@ def _dashboard_result(
     retained_status: DoctorStageStatus,
     export_status: DoctorStageStatus,
 ) -> DashboardDoctorResult:
-    accepted_secret = next(
-        (result for result in payload_result.secret_results if result.accepted), None
-    )
-    if configured_mode == "plaintext":
-        key_status: DoctorStageStatus = "skipped"
-        data_stages = []
-    else:
-        key_status = "passed" if accepted_secret is not None else "failed"
-        data_stages = accepted_secret.stages if accepted_secret is not None else []
-    combined_data_stages = stages + data_stages
+    """Build the public doctor result from staged artifact diagnostics."""
+    accepted_secret = _accepted_secret_result(payload_result)
+    key_status = _key_status(configured_mode, accepted_secret)
+    combined_data_stages = stages + _accepted_secret_stages(configured_mode, accepted_secret)
     return DashboardDoctorResult(
         configured_data_mode=configured_mode,
         detected_dashboard_mode=detected_mode,
@@ -113,7 +102,35 @@ def _dashboard_result(
     )
 
 
+def _accepted_secret_result(
+    payload_result: _PayloadDiagnosticResult,
+) -> DoctorSecretResult | None:
+    """Return the first supplied secret that authenticated the dashboard summary."""
+    return next((result for result in payload_result.secret_results if result.accepted), None)
+
+
+def _key_status(
+    configured_mode: DoctorDataMode,
+    accepted_secret: DoctorSecretResult | None,
+) -> DoctorStageStatus:
+    """Return the aggregate key status for encrypted or plaintext dashboards."""
+    if configured_mode == "plaintext":
+        return "skipped"
+    return "passed" if accepted_secret is not None else "failed"
+
+
+def _accepted_secret_stages(
+    configured_mode: DoctorDataMode,
+    accepted_secret: DoctorSecretResult | None,
+) -> list[DoctorStage]:
+    """Return accepted-secret stages that contribute to aggregate data statuses."""
+    if configured_mode == "plaintext" or accepted_secret is None:
+        return []
+    return accepted_secret.stages
+
+
 def _compat_stage(stage: DoctorStage) -> tuple[str, str]:
+    """Map staged doctor failures to the legacy key-check stage vocabulary."""
     if stage.name in {"summary_authenticates", "chunk_authenticates"}:
         return "decrypt", stage.detail
     if stage.name in {"summary_decompresses", "chunk_decompresses"}:

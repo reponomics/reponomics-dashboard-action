@@ -20,30 +20,65 @@ def _ui_handoff_stage(
     secret_results: list[DoctorSecretResult],
     repo_count: int,
 ) -> DoctorStage:
+    """Return whether diagnostics reached the browser/UI handoff boundary."""
+    if _detected_mode_does_not_match_configuration(configured_mode, detected_mode):
+        return _mode_mismatch_handoff_stage()
+
     prerequisites = _ui_handoff_prerequisites(configured_mode, repo_count)
     data_stages = list(stages)
     accepted_secret = next((result for result in secret_results if result.accepted), None)
-    if configured_mode == "encrypted":
+    if _encrypted_mode_requires_accepted_secret(configured_mode):
         if accepted_secret is None:
-            return _stage(
-                "ui_handoff_boundary_reached",
-                "failed",
-                "no supplied secret authenticated the encrypted dashboard summary",
-            )
+            return _missing_accepted_secret_handoff_stage()
         data_stages.extend(accepted_secret.stages)
 
-    if detected_mode != configured_mode:
-        return _stage(
-            "ui_handoff_boundary_reached",
-            "failed",
-            "configured and detected dashboard modes were not compatible",
-        )
     if not _all_required_stage_statuses_passed(data_stages, prerequisites):
-        return _stage(
-            "ui_handoff_boundary_reached",
-            "failed",
-            "one or more encryption, storage, or data-contract stages failed",
-        )
+        return _failed_prerequisites_handoff_stage()
+    return _passed_handoff_stage()
+
+
+def _detected_mode_does_not_match_configuration(
+    configured_mode: DoctorDataMode,
+    detected_mode: DetectedDashboardMode,
+) -> bool:
+    """Return whether payload discovery contradicted the configured mode."""
+    return detected_mode != configured_mode
+
+
+def _encrypted_mode_requires_accepted_secret(configured_mode: DoctorDataMode) -> bool:
+    """Return whether UI handoff depends on an authenticated dashboard secret."""
+    return configured_mode == "encrypted"
+
+
+def _mode_mismatch_handoff_stage() -> DoctorStage:
+    """Build the UI handoff failure for incompatible configured/detected modes."""
+    return _stage(
+        "ui_handoff_boundary_reached",
+        "failed",
+        "configured and detected dashboard modes were not compatible",
+    )
+
+
+def _missing_accepted_secret_handoff_stage() -> DoctorStage:
+    """Build the UI handoff failure for encrypted dashboards without a valid key."""
+    return _stage(
+        "ui_handoff_boundary_reached",
+        "failed",
+        "no supplied secret authenticated the encrypted dashboard summary",
+    )
+
+
+def _failed_prerequisites_handoff_stage() -> DoctorStage:
+    """Build the UI handoff failure for failed storage or data-contract checks."""
+    return _stage(
+        "ui_handoff_boundary_reached",
+        "failed",
+        "one or more encryption, storage, or data-contract stages failed",
+    )
+
+
+def _passed_handoff_stage() -> DoctorStage:
+    """Build the UI handoff success stage."""
     return _stage(
         "ui_handoff_boundary_reached",
         "passed",
@@ -52,6 +87,7 @@ def _ui_handoff_stage(
 
 
 def _ui_handoff_prerequisites(configured_mode: DoctorDataMode, repo_count: int) -> set[str]:
+    """Return the stage names required before handing off to browser/UI behavior."""
     prerequisites = {
         "dashboard_html_found",
         "configured_data_mode_recorded",

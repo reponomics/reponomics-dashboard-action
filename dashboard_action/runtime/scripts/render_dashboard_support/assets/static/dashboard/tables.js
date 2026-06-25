@@ -170,6 +170,47 @@ export function installTables(context) {
       return 'neutral';
     }
 
+    function narrativeEvidenceHtml(evidence) {
+      const facts = Array.isArray(evidence) ? evidence.slice(0, 4) : [];
+      if (!facts.length) return '';
+      const items = facts.map((fact) => {
+        const label = String(fact && fact.label ? fact.label : '').trim();
+        const value = String(fact && fact.value ? fact.value : '').trim();
+        if (!label && !value) return '';
+        const text = label && value ? `${label}: ${value}` : (label || value);
+        const url = fact && fact.url ? String(fact.url) : '';
+        if (url) {
+          return `<a class="insight-fact" href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
+        }
+        return `<span class="insight-fact">${escapeHtml(text)}</span>`;
+      }).filter(Boolean);
+      return items.length ? `<div class="insight-evidence">${items.join('')}</div>` : '';
+    }
+
+    function nearbyContextHtml(contextRows) {
+      const rows = Array.isArray(contextRows) ? contextRows.slice(0, 4) : [];
+      if (!rows.length) return '';
+      const items = rows.map((row) => {
+        const date = String(row && row.date ? row.date : '').slice(0, 10);
+        const label = String(row && row.label ? row.label : '').trim();
+        const detail = String(row && row.detail ? row.detail : '').trim();
+        const type = String(row && row.type ? row.type : 'context').trim();
+        const url = row && row.url ? String(row.url) : '';
+        const labelHtml = url
+          ? `<a href="${escapeHtml(url)}">${escapeHtml(label || type)}</a>`
+          : escapeHtml(label || type);
+        return '<li>' +
+          `<span class="insight-context-date mono">${escapeHtml(date || type)}</span>` +
+          '<span class="insight-context-copy">' +
+          `<span class="insight-context-label">${labelHtml}</span>` +
+          (detail ? `<span class="insight-context-detail">${escapeHtml(detail)}</span>` : '') +
+          '</span>' +
+          '</li>';
+      }).join('');
+      return '<details class="insight-context"><summary>What changed nearby</summary>' +
+        `<ul>${items}</ul></details>`;
+    }
+
     function renderInsights() {
       const container = document.getElementById('insights-list');
       if (!container) return;
@@ -200,22 +241,12 @@ export function installTables(context) {
         let headline = '';
         let meta = '';
         let pctLabel = '';
+        let detailHtml = '';
 
         if (item.kind === 'narrative') {
           headline = escapeHtml(item.headline || item.text || '');
-          const evidence = Array.isArray(item.evidence) ? item.evidence.slice(0, 4) : [];
-          const evidenceText = evidence
-            .map((fact) => {
-              const label = String(fact && fact.label ? fact.label : '').trim();
-              const value = String(fact && fact.value ? fact.value : '').trim();
-              if (!label && !value) return '';
-              return label && value ? `${label}: ${value}` : (label || value);
-            })
-            .filter(Boolean)
-            .join(' · ');
-          meta = [item.body || '', evidenceText ? `Evidence: ${evidenceText}` : '']
-            .filter(Boolean)
-            .join(' ');
+          meta = item.body || '';
+          detailHtml = narrativeEvidenceHtml(item.evidence) + nearbyContextHtml(item.nearby_context);
           pctLabel = item.confidence ? String(item.confidence) : (item.tone || 'story');
         } else if (item.kind === 'trend') {
           const verb = (item.pct === null || item.pct === undefined)
@@ -255,6 +286,7 @@ export function installTables(context) {
           `<div class="insight-icon" aria-hidden="true">${icon}</div>` +
           `<div class="insight-body"><div class="insight-headline">${headline}</div>` +
           (meta ? `<div class="insight-meta mono">${escapeHtml(meta)}</div>` : '') +
+          detailHtml +
           `</div>` +
           (pctLabel ? `<div class="insight-pct">${escapeHtml(pctLabel)}</div>` : '');
 
@@ -262,7 +294,10 @@ export function installTables(context) {
           li.setAttribute('role', 'button');
           li.setAttribute('aria-label', `Focus on ${shortRepo}`);
           const focus = function() { selectRepo(repo); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-          li.addEventListener('click', focus);
+          li.addEventListener('click', function(e) {
+            if (e.target && e.target.closest && e.target.closest('a, details')) return;
+            focus();
+          });
           li.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focus(); }
           });

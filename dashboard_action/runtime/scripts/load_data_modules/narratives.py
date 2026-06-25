@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from load_data_modules.growth.core import growth_analytics
 from load_data_modules.narrative_context import NarrativeContext
+from load_data_modules.narrative_enrichment import enrich_narrative_candidates
 from load_data_modules.narrative_ranking import ranked_narratives
 from load_data_modules.narrative_rules import build_narrative_candidates
 from load_data_modules.types import Candidate, Rows
@@ -49,6 +50,7 @@ def narrative_insights_structured(
         growth=growth if growth is not None else growth_analytics(daily_rows, metric_rows),
     )
     candidates = build_narrative_candidates(context)
+    enrich_narrative_candidates(candidates, context)
     return ranked_narratives(candidates, limit)
 
 

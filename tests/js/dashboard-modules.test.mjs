@@ -261,6 +261,21 @@ test('insight renderer displays narrative headline body and evidence', () => {
               { label: 'views', value: '120' },
               { label: 'community gaps', value: 'issue template' },
             ],
+            nearby_context: [
+              {
+                type: 'commit',
+                date: '2026-05-05',
+                label: 'Improve onboarding docs',
+                detail: 'docs',
+                url: 'https://github.com/owner/repo-a/commit/abc',
+              },
+              {
+                type: 'maintenance',
+                date: '2026-05-06T12:00:00Z',
+                label: '4 open issues, 1 open PRs',
+                detail: '1 stale open issues',
+              },
+            ],
           },
         ],
       };
@@ -288,8 +303,12 @@ test('insight renderer displays narrative headline body and evidence', () => {
   const item = insightsList.children[0].children[0];
   assert.match(item.innerHTML, /repo-a is getting attention without contribution readiness/);
   assert.match(item.innerHTML, /lacks an issue template/);
-  assert.match(item.innerHTML, /Evidence: views: 120/);
+  assert.match(item.innerHTML, /insight-evidence/);
+  assert.match(item.innerHTML, /views: 120/);
   assert.match(item.innerHTML, /community gaps: issue template/);
+  assert.match(item.innerHTML, /What changed nearby/);
+  assert.match(item.innerHTML, /Improve onboarding docs/);
+  assert.match(item.innerHTML, /4 open issues, 1 open PRs/);
   assert.match(item.innerHTML, /high/);
 });
 

@@ -1273,3 +1273,15 @@ def test_narrative_insights_cover_contextual_recipe_patterns() -> None:
     assert "code_churn_explains_dip" in subtypes
     assert "positioning_shift_met_audience" in subtypes
     assert "silent_but_healthy_utility" in subtypes
+
+    by_subtype = {insight["subtype"]: insight for insight in insights}
+    churn_context = by_subtype["code_churn_explains_dip"]["nearby_context"]
+    positioning_context = by_subtype["positioning_shift_met_audience"]["nearby_context"]
+    silent_context = by_subtype["silent_but_healthy_utility"]["nearby_context"]
+    contributor_context = by_subtype["contributor_concentration_risk"]["nearby_context"]
+
+    assert {item["type"] for item in churn_context} >= {"commit", "code"}
+    assert any("Refactor internal cache" in item["label"] for item in churn_context)
+    assert any(item["type"] == "positioning" for item in positioning_context)
+    assert any(item["type"] == "maintenance" for item in silent_context)
+    assert any(item["type"] == "contributors" for item in contributor_context)

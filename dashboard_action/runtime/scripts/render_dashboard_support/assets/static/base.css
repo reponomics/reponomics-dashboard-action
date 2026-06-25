@@ -1265,6 +1265,78 @@
       margin-top: 0.2rem;
       font-variant-numeric: tabular-nums;
     }
+    .insight-evidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+    }
+    .insight-fact {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+      max-width: 100%;
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      background: var(--bg-raised);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.74rem;
+      line-height: 1.35;
+      padding: 0.18rem 0.42rem;
+      overflow-wrap: anywhere;
+      text-decoration: none;
+    }
+    a.insight-fact:hover { color: var(--accent); border-color: rgba(124, 106, 255, 0.45); }
+    .insight-context {
+      margin-top: 0.6rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .insight-context summary {
+      width: max-content;
+      max-width: 100%;
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 650;
+      list-style-position: inside;
+    }
+    .insight-context ul {
+      list-style: none;
+      display: grid;
+      gap: 0.45rem;
+      margin: 0.45rem 0 0;
+      padding: 0;
+    }
+    .insight-context li {
+      display: grid;
+      grid-template-columns: minmax(5.6rem, auto) 1fr;
+      gap: 0.55rem;
+      align-items: start;
+      padding-top: 0.45rem;
+      border-top: 1px solid var(--border-soft);
+    }
+    .insight-context-date {
+      color: var(--text-faint);
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .insight-context-copy {
+      display: grid;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+    .insight-context-label {
+      color: var(--text);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .insight-context-label a { color: inherit; }
+    .insight-context-label a:hover { color: var(--accent); }
+    .insight-context-detail {
+      color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
     .insight-pct {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
       font-size: 0.92rem;
@@ -2376,6 +2448,8 @@
       }
       .insight-item { grid-template-columns: auto 1fr; }
       .insight-pct { grid-column: 2 / 3; justify-self: end; }
+      .insight-context li { grid-template-columns: 1fr; gap: 0.18rem; }
+      .insight-context-date { white-space: normal; }
       .repo-spark { width: 64px; }
       .growth-cell { min-width: 150px; font-size: 0.82rem; }
       .growth-row {

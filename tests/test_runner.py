@@ -23,6 +23,7 @@ import pytest
 import requests
 
 from dashboard_action import run
+from collect_modules.context_endpoints import RepositoryStatisticsStatus
 import doctor_retained
 from scripts import dashboard_scenarios
 
@@ -55,6 +56,20 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
     "assets/dashboard/entry-public.js",
     "assets/dashboard/entry-secure.js",
 ]
+CONTEXTUAL_DATA_FILES = {
+    "repo-commits.csv",
+    "repo-commit-observations.csv",
+    "repo-releases.csv",
+    "repo-release-assets.csv",
+    "repo-languages.csv",
+    "repo-topics.csv",
+    "repo-issue-pr-snapshots.csv",
+    "repo-issue-label-snapshots.csv",
+    "repo-code-frequency-weekly.csv",
+    "repo-contributor-activity-weekly.csv",
+    "collection-endpoints.csv",
+    "repo-event-index.csv",
+}
 
 
 @pytest.fixture(autouse=True)
@@ -307,6 +322,17 @@ def _reset_collect_runtime_state() -> Generator[None, None, None]:
     run.collect_mod._reset_runtime_state()
     yield
     run.collect_mod._reset_runtime_state()
+
+
+def _stub_context_collectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
 
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -1140,6 +1166,15 @@ def test_bootstrap_creates_empty_data_files_and_manifest(
             reader = csv.reader(handle)
             assert next(reader) == fieldnames
             assert list(reader) == []
+
+
+def test_registered_csvs_have_lineage_identity_and_primary_date_fields() -> None:
+    assert set(run.storage.CSV_REGISTRY) == set(run.lineage.ROW_IDENTITY_FIELDS)
+
+    for filename, (fieldnames, date_field) in run.storage.CSV_REGISTRY.items():
+        assert date_field in fieldnames, filename
+        for identity_field in run.lineage.ROW_IDENTITY_FIELDS[filename]:
+            assert identity_field in fieldnames, filename
 
 
 def test_invalid_mode_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -4179,6 +4214,822 @@ def test_collect_referrers_and_paths_shape_endpoint_rows(
     ]
 
 
+def test_collect_release_context_shapes_release_and_asset_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/releases?per_page=100"
+        return [
+            {
+                "id": 99,
+                "node_id": "R_99",
+                "tag_name": "v1.2.3",
+                "target_commitish": "main",
+                "name": "v1.2.3",
+                "draft": False,
+                "prerelease": False,
+                "immutable": True,
+                "created_at": "2026-06-01T08:00:00Z",
+                "published_at": "2026-06-01T09:00:00Z",
+                "author": {"login": "maintainer"},
+                "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+                "body": "Release notes",
+                "assets": [
+                    {
+                        "id": 10,
+                        "name": "tool.tar.gz",
+                        "label": "tool",
+                        "content_type": "application/gzip",
+                        "state": "uploaded",
+                        "size": 2048,
+                        "download_count": 7,
+                        "created_at": "2026-06-01T08:30:00Z",
+                        "updated_at": "2026-06-01T08:45:00Z",
+                        "browser_download_url": "https://example.test/tool.tar.gz",
+                    }
+                ],
+            }
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    release_rows, asset_rows = run.collect_mod.collect_release_context(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    )
+
+    assert release_rows == [
+        {
+            "repo": "demo/reponomics",
+            "release_id": 99,
+            "node_id": "R_99",
+            "tag_name": "v1.2.3",
+            "target_commitish": "main",
+            "target_sha": "",
+            "name": "v1.2.3",
+            "draft": False,
+            "prerelease": False,
+            "immutable": True,
+            "created_at": "2026-06-01T08:00:00Z",
+            "published_at": "2026-06-01T09:00:00Z",
+            "author_login": "maintainer",
+            "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+            "asset_count": 1,
+            "asset_download_count": 7,
+            "body_hash": hashlib.sha256(b"Release notes").hexdigest(),
+            "captured_at": "2026-06-02T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert asset_rows == [
+        {
+            "repo": "demo/reponomics",
+            "release_id": 99,
+            "asset_id": 10,
+            "name": "tool.tar.gz",
+            "label": "tool",
+            "content_type": "application/gzip",
+            "state": "uploaded",
+            "size_bytes": 2048,
+            "download_count": 7,
+            "created_at": "2026-06-01T08:30:00Z",
+            "updated_at": "2026-06-01T08:45:00Z",
+            "browser_download_url": "https://example.test/tool.tar.gz",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
+def test_collect_commit_history_shapes_api_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/commits?per_page=100&sha=main"
+        return [
+            {
+                "sha": "def456",
+                "parents": [{"sha": "abc123"}],
+                "author": {"login": "dev"},
+                "committer": {"login": "maintainer"},
+                "commit": {
+                    "message": "Fix parser edge case (#12)\n\nBody text",
+                    "author": {
+                        "name": "Dev Example",
+                        "email": "DEV@example.com",
+                        "date": "2026-06-02T08:00:00Z",
+                    },
+                    "committer": {"date": "2026-06-02T09:00:00Z"},
+                },
+            },
+            {
+                "sha": "abc123",
+                "parents": [],
+                "author": {"login": "dev"},
+                "committer": {"login": "dev"},
+                "commit": {
+                    "message": "Add parser",
+                    "author": {
+                        "name": "Dev Example",
+                        "email": "dev@example.com",
+                        "date": "2026-06-01T08:00:00Z",
+                    },
+                    "committer": {"date": "2026-06-01T09:00:00Z"},
+                },
+            },
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    rows = run.collect_mod.collect_commit_history(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+        default_branch="main",
+    )
+
+    assert rows == [
+        {
+            "repo": "demo/reponomics",
+            "sha": "abc123",
+            "parent_sha": "",
+            "committed_at": "2026-06-01T09:00:00Z",
+            "authored_at": "2026-06-01T08:00:00Z",
+            "author_name": "Dev Example",
+            "author_email_hash": hashlib.sha256(b"dev@example.com").hexdigest(),
+            "author_login": "dev",
+            "committer_login": "dev",
+            "message_subject": "Add parser",
+            "message_body_hash": "",
+            "files_changed": "",
+            "additions": "",
+            "deletions": "",
+            "changed_paths_sample": "",
+            "classification": "feature",
+            "associated_pr_number": "",
+            "source": "github-commits-api",
+            "captured_at": "2026-06-03T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "sha": "def456",
+            "parent_sha": "abc123",
+            "committed_at": "2026-06-02T09:00:00Z",
+            "authored_at": "2026-06-02T08:00:00Z",
+            "author_name": "Dev Example",
+            "author_email_hash": hashlib.sha256(b"dev@example.com").hexdigest(),
+            "author_login": "dev",
+            "committer_login": "maintainer",
+            "message_subject": "Fix parser edge case (#12)",
+            "message_body_hash": hashlib.sha256(b"Body text").hexdigest(),
+            "files_changed": "",
+            "additions": "",
+            "deletions": "",
+            "changed_paths_sample": "",
+            "classification": "fix",
+            "associated_pr_number": "12",
+            "source": "github-commits-api",
+            "captured_at": "2026-06-03T00:00:00Z",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+
+
+def test_collect_commit_history_classifies_conventional_api_subjects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        assert url == "https://api.github.com/repos/demo/reponomics/commits?per_page=100"
+        return [
+            {"sha": "test123", "commit": {"message": "test(parser): cover edge case"}},
+            {"sha": "ci123", "commit": {"message": "ci: pin workflow action"}},
+            {"sha": "docs123", "commit": {"message": "docs(readme): clarify setup"}},
+        ]
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    rows = run.collect_mod.collect_commit_history(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    )
+
+    assert {row["message_subject"]: row["classification"] for row in rows} == {
+        "docs(readme): clarify setup": "docs",
+        "ci: pin workflow action": "ci",
+        "test(parser): cover edge case": "tests",
+    }
+
+
+def test_collect_context_shapes_languages_topics_and_issue_pr_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json(url: str, _headers: run.collect_mod.Headers) -> Any:
+        if url.endswith("/languages"):
+            return {"Python": 75, "Shell": 25}
+        if url.endswith("/topics?per_page=100"):
+            return {"names": ["analytics", "dashboard"]}
+        if url.endswith("/issues?state=open&per_page=100"):
+            return [
+                {
+                    "number": 1,
+                    "title": "bug",
+                    "labels": [
+                        {"name": "bug", "color": "d73a4a"},
+                        {"name": "enhancement", "color": "a2eeef"},
+                    ],
+                },
+                {
+                    "number": 2,
+                    "pull_request": {},
+                    "labels": [{"name": "dependencies", "color": "0366d6"}],
+                },
+            ]
+        if url.endswith("/pulls?state=open&per_page=100"):
+            return [{"number": 2}, {"number": 3}]
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json", fake_fetch_json)
+
+    assert run.collect_mod.collect_languages(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "language": "Python",
+            "bytes": 75,
+            "share": "0.750000",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "language": "Shell",
+            "bytes": 25,
+            "share": "0.250000",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_topics(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "topic": "analytics",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "topic": "dashboard",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_issue_pr_snapshot(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "open_issues_count": 1,
+            "open_prs_count": 2,
+            "closed_issues_recent": "",
+            "merged_prs_recent": "",
+            "stale_open_issues_count": "",
+            "stale_open_prs_count": "",
+            "unanswered_issue_count": "",
+            "issue_sample_count": 2,
+            "pr_sample_count": 2,
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert run.collect_mod.collect_issue_label_snapshots(
+        "demo/reponomics",
+        {},
+        "2026-06-02T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "bug",
+            "label_key": "bug",
+            "label_bucket": "bug",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "enhancement",
+            "label_key": "enhancement",
+            "label_bucket": "enhancement",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "ts": "2026-06-02",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "item_type": "pr",
+            "state": "open",
+            "label_name": "dependencies",
+            "label_key": "dependencies",
+            "label_bucket": "",
+            "labeled_item_count": 1,
+            "sample_item_count": 1,
+            "sample_scope": "issues-api-open-first-page",
+            "source": "api-sample",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+
+
+def test_collect_statistics_shapes_weekly_graph_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    week_epoch = int(datetime(2026, 6, 1, tzinfo=timezone.utc).timestamp())
+
+    def fake_fetch_json_with_status(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        *,
+        accepted_statuses: set[int] | None = None,
+    ) -> tuple[int, Any, dict[str, str]]:
+        assert accepted_statuses
+        if url.endswith("/stats/code_frequency"):
+            return 200, [
+                [week_epoch, 10, -4],
+                ["not-a-week"],
+                [week_epoch + 604800, 0, 0],
+            ], {}
+        if url.endswith("/stats/contributors"):
+            return 200, [
+                {
+                    "author": {"id": 1, "login": "dev"},
+                    "weeks": [
+                        {"w": week_epoch, "a": 10, "d": 4, "c": 2},
+                        {"w": week_epoch + 604800, "a": 0, "d": 0, "c": 0},
+                    ],
+                }
+            ], {}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json_with_status", fake_fetch_json_with_status)
+
+    assert run.collect_mod.collect_code_frequency_weekly(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "week_start": "2026-06-01",
+            "additions": 10,
+            "deletions": 4,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+        {
+            "repo": "demo/reponomics",
+            "week_start": "2026-06-08",
+            "additions": 0,
+            "deletions": 0,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        },
+    ]
+    assert run.collect_mod.collect_contributor_activity_weekly(
+        "demo/reponomics",
+        {},
+        "2026-06-03T00:00:00Z",
+    ) == [
+        {
+            "repo": "demo/reponomics",
+            "author_id": 1,
+            "author_login": "dev",
+            "week_start": "2026-06-01",
+            "commits": 2,
+            "additions": 10,
+            "deletions": 4,
+            "captured_at": "2026-06-03T00:00:00Z",
+            "source_status": "api",
+            "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+
+
+def test_collect_statistics_reports_pending_github_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_fetch_json_with_status(
+        url: str,
+        _headers: run.collect_mod.Headers,
+        *,
+        accepted_statuses: set[int] | None = None,
+    ) -> tuple[int, None, dict[str, str]]:
+        assert url == "https://api.github.com/repos/demo/reponomics/stats/code_frequency"
+        assert accepted_statuses == {202, 204, 422}
+        return 202, None, {}
+
+    monkeypatch.setattr(run.collect_mod, "fetch_json_with_status", fake_fetch_json_with_status)
+
+    with pytest.raises(RepositoryStatisticsStatus) as exc_info:
+        run.collect_mod.collect_code_frequency_weekly(
+            "demo/reponomics",
+            {},
+            "2026-06-03T00:00:00Z",
+        )
+
+    assert exc_info.value.status == "pending"
+    assert exc_info.value.http_status == 202
+    assert exc_info.value.cache_state == "pending"
+
+
+def test_collect_appends_context_rows_for_selected_repo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def collect_release_context(repo: str, headers, captured_at: str):
+        return (
+            [
+                {
+                    "repo": repo,
+                    "release_id": 99,
+                    "tag_name": "v1.2.3",
+                    "target_commitish": "main",
+                    "name": "v1.2.3",
+                    "created_at": "2026-06-01T08:00:00Z",
+                    "published_at": "2026-06-01T09:00:00Z",
+                    "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3",
+                    "asset_count": 1,
+                    "asset_download_count": 7,
+                    "captured_at": captured_at,
+                    "schema_version": run.storage.SCHEMA_VERSION,
+                }
+            ],
+            [
+                {
+                    "repo": repo,
+                    "release_id": 99,
+                    "asset_id": 10,
+                    "name": "tool.tar.gz",
+                    "download_count": 7,
+                    "captured_at": captured_at,
+                    "schema_version": run.storage.SCHEMA_VERSION,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+            "default_branch": "main",
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_commit_history",
+        lambda repo, headers, captured_at, default_branch: [
+            {
+                "repo": repo,
+                "sha": "abc123",
+                "committed_at": "2026-05-31T09:00:00Z",
+                "message_subject": f"Add analytics on {default_branch}",
+                "classification": "feature",
+                "captured_at": captured_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", collect_release_context)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_languages",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "captured_at": captured_at,
+                "language": "Python",
+                "bytes": 75,
+                "share": "0.750000",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_topics",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "captured_at": captured_at,
+                "topic": "analytics",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_issue_pr_snapshot",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "ts": captured_at[:10],
+                "captured_at": captured_at,
+                "open_issues_count": 1,
+                "open_prs_count": 2,
+                "issue_sample_count": 1,
+                "pr_sample_count": 2,
+                "source": "api-sample",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_issue_label_snapshots",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "ts": captured_at[:10],
+                "captured_at": captured_at,
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "label_key": "bug",
+                "label_bucket": "bug",
+                "labeled_item_count": 1,
+                "sample_item_count": 1,
+                "sample_scope": "issues-api-open-first-page",
+                "source": "api-sample",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_code_frequency_weekly",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "week_start": "2026-06-01",
+                "additions": 10,
+                "deletions": 4,
+                "captured_at": captured_at,
+                "source_status": "api",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_contributor_activity_weekly",
+        lambda repo, headers, captured_at: [
+            {
+                "repo": repo,
+                "author_id": 1,
+                "author_login": "dev",
+                "week_start": "2026-06-01",
+                "commits": 2,
+                "additions": 10,
+                "deletions": 4,
+                "captured_at": captured_at,
+                "source_status": "api",
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    def rows(filename: str) -> list[dict[str, str]]:
+        with (config.data_dir / filename).open(newline="", encoding="utf-8") as handle:
+            return list(csv.DictReader(handle))
+
+    assert rows("repo-commits.csv")[-1]["message_subject"] == "Add analytics on main"
+    assert rows("repo-commit-observations.csv")[-1]["branch_head_sha"] == "abc123"
+    assert rows("repo-releases.csv")[-1]["tag_name"] == "v1.2.3"
+    assert rows("repo-release-assets.csv")[-1]["name"] == "tool.tar.gz"
+    assert rows("repo-languages.csv")[-1]["language"] == "Python"
+    assert rows("repo-topics.csv")[-1]["topic"] == "analytics"
+    assert rows("repo-issue-pr-snapshots.csv")[-1]["open_prs_count"] == "2"
+    assert rows("repo-issue-label-snapshots.csv")[-1]["label_name"] == "bug"
+    assert rows("repo-code-frequency-weekly.csv")[-1]["additions"] == "10"
+    assert rows("repo-contributor-activity-weekly.csv")[-1]["author_login"] == "dev"
+    endpoint_rows = rows("collection-endpoints.csv")
+    endpoint_statuses = {row["endpoint_key"]: row["status"] for row in endpoint_rows}
+    assert endpoint_statuses == {
+        "commits": "ok",
+        "releases": "ok",
+        "languages": "ok",
+        "topics": "ok",
+        "issue-pr-snapshot": "ok",
+        "issue-labels": "ok",
+        "code-frequency": "ok",
+        "contributor-activity": "ok",
+    }
+    assert endpoint_rows[-2]["cache_state"] == "ready"
+    assert endpoint_rows[-1]["cache_state"] == "ready"
+    event_rows = rows("repo-event-index.csv")
+    event_ids = {row["event_id"] for row in event_rows}
+    assert {"commit:abc123", "release:99"}.issubset(event_ids)
+
+
+def test_collect_context_failure_records_warning_without_failing_collection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_topics_error(repo: str, headers, captured_at: str):
+        raise requests.HTTPError("topics unavailable")
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", raise_topics_error)
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-endpoints.csv").open(newline="", encoding="utf-8") as handle:
+        endpoint_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert status_rows[-1]["status"] == "ok_zero_data"
+    topic_endpoint = next(row for row in endpoint_rows if row["endpoint_key"] == "topics")
+    assert topic_endpoint["status"] == "error"
+    assert topic_endpoint["error_type"] == "HTTPError"
+    assert "topics unavailable" in topic_endpoint["error_message"]
+    assert "Repository Context Warnings" in summary
+    assert "topics unavailable" in summary
+
+
+def test_collect_records_pending_statistics_endpoint_without_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    summary_path = tmp_path / "summary.md"
+    config = _config(tmp_path, config_path=config_path)
+    discovered = [
+        {
+            "full_name": "demo/reponomics",
+            "permissions": {"push": True},
+            "fork": False,
+            "archived": False,
+            "disabled": False,
+            "private": False,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+    ]
+
+    def raise_pending(repo: str, headers, captured_at: str):
+        raise RepositoryStatisticsStatus(
+            endpoint_key="code-frequency",
+            http_status=202,
+            status="pending",
+            cache_state="pending",
+            message=f"{repo}: GitHub statistics for code-frequency are still being computed.",
+        )
+
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
+    monkeypatch.setattr(run.collect_mod, "get_headers", lambda: {})
+    monkeypatch.setattr(run.collect_mod, "validate_token", lambda headers: None)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
+    monkeypatch.setattr(
+        run.collect_mod,
+        "collect_repo_detail",
+        lambda repo, headers: {
+            "id": 123,
+            "node_id": "R_123",
+            "stargazers_count": 15,
+            "subscribers_count": 3,
+            "forks_count": 2,
+        },
+    )
+    monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
+    monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_commit_history", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_release_context", lambda *args: ([], []))
+    monkeypatch.setattr(run.collect_mod, "collect_languages", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_topics", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_pr_snapshot", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_issue_label_snapshots", lambda *args: [])
+    monkeypatch.setattr(run.collect_mod, "collect_code_frequency_weekly", raise_pending)
+    monkeypatch.setattr(run.collect_mod, "collect_contributor_activity_weekly", lambda *args: [])
+
+    run.run_collect(config, restore_artifact=False, execute_collect=True)
+
+    with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
+        status_rows = list(csv.DictReader(handle))
+    with (config.data_dir / "collection-endpoints.csv").open(newline="", encoding="utf-8") as handle:
+        endpoint_rows = list(csv.DictReader(handle))
+    summary = summary_path.read_text(encoding="utf-8")
+    code_frequency = next(row for row in endpoint_rows if row["endpoint_key"] == "code-frequency")
+    assert status_rows[-1]["status"] == "ok_zero_data"
+    assert code_frequency["status"] == "pending"
+    assert code_frequency["http_status"] == "202"
+    assert code_frequency["cache_state"] == "pending"
+    assert code_frequency["rows_written"] == "0"
+    assert "Repository Context Warnings" not in summary
+
+
 def test_collect_repo_detail_and_community_profile_reject_non_object_payloads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -4384,6 +5235,7 @@ def test_collect_requests_one_detail_per_selected_repo(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4512,6 +5364,7 @@ def test_detail_failure_falls_back_without_losing_traffic(
     )
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4577,6 +5430,7 @@ def test_community_profile_failure_records_warning_without_losing_metrics(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 
@@ -4817,6 +5671,201 @@ def test_schema_migration_upgrades_v2_metrics_manifest_dedup_and_retention(
     assert manifest["created_at"] == "2026-05-01T12:00:00Z"
 
 
+def test_schema_migration_creates_contextual_data_headers(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "3",
+                "files": ["repo-metrics.csv"],
+                "created_at": "2026-05-01T12:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert run.storage.migrate_schema(data_dir.as_posix()) is True
+
+    for filename in sorted(CONTEXTUAL_DATA_FILES):
+        path = data_dir / filename
+        assert path.exists(), filename
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.reader(handle)
+            assert next(reader) == run.storage.CSV_REGISTRY[filename][0]
+            assert list(reader) == []
+
+    manifest = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == run.storage.SCHEMA_VERSION
+    assert set(CONTEXTUAL_DATA_FILES).issubset(manifest["files"])
+
+
+def test_contextual_data_dedup_helpers_preserve_latest_identity_rows() -> None:
+    assert run.storage.dedup_repo_commits(
+        [
+            {"repo": "demo/app", "sha": "abc", "message_subject": "old"},
+            {"repo": "demo/app", "sha": "abc", "message_subject": "new"},
+        ]
+    ) == [{"repo": "demo/app", "sha": "abc", "message_subject": "new"}]
+    assert run.storage.dedup_repo_commit_observations(
+        [
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "default_branch": "main",
+                "sha": "abc",
+                "position_from_head": "1",
+            },
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "default_branch": "main",
+                "sha": "abc",
+                "position_from_head": "0",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "default_branch": "main",
+            "sha": "abc",
+            "position_from_head": "0",
+        }
+    ]
+    assert run.storage.dedup_repo_release_assets(
+        [
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "download_count": "1",
+            },
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "download_count": "2",
+            },
+            {
+                "repo": "demo/app",
+                "asset_id": "10",
+                "captured_at": "2026-06-02T00:00:00Z",
+                "download_count": "3",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "asset_id": "10",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "download_count": "2",
+        },
+        {
+            "repo": "demo/app",
+            "asset_id": "10",
+            "captured_at": "2026-06-02T00:00:00Z",
+            "download_count": "3",
+        },
+    ]
+    assert run.storage.dedup_repo_event_index(
+        [
+            {"repo": "demo/app", "event_id": "commit:abc", "title": "old"},
+            {"repo": "demo/app", "event_id": "commit:abc", "title": "new"},
+        ]
+    ) == [{"repo": "demo/app", "event_id": "commit:abc", "title": "new"}]
+
+
+def test_release_retention_keeps_recent_drafts_without_published_at(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(run.bootstrap, "DATA_DIR", data_dir.as_posix())
+    run.bootstrap.bootstrap()
+    recent_created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _write_csv(
+        data_dir / "repo-releases.csv",
+        run.storage.REPO_RELEASE_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "release_id": "99",
+                "node_id": "R_99",
+                "tag_name": "v1.2.3-draft",
+                "target_commitish": "main",
+                "target_sha": "",
+                "name": "v1.2.3 draft",
+                "draft": "True",
+                "prerelease": "False",
+                "immutable": "",
+                "created_at": recent_created_at,
+                "published_at": "",
+                "author_login": "maintainer",
+                "html_url": "https://github.com/demo/reponomics/releases/tag/v1.2.3-draft",
+                "asset_count": "0",
+                "asset_download_count": "0",
+                "body_hash": "",
+                "captured_at": recent_created_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(run.merge, "DATA_DIR", data_dir.as_posix())
+    run.merge.trim_all()
+
+    with (data_dir / "repo-releases.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["release_id"] == "99"
+    assert rows[0]["published_at"] == ""
+
+
+def test_merge_trim_all_does_not_delete_retained_csv_history(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(run.bootstrap, "DATA_DIR", data_dir.as_posix())
+    run.bootstrap.bootstrap()
+    old_committed_at = "2020-01-01T00:00:00Z"
+    _write_csv(
+        data_dir / "repo-commits.csv",
+        run.storage.REPO_COMMIT_FIELDS,
+        [
+            {
+                "repo": "demo/reponomics",
+                "sha": "abc123",
+                "parent_sha": "",
+                "committed_at": old_committed_at,
+                "authored_at": old_committed_at,
+                "author_name": "Maintainer",
+                "author_email_hash": "",
+                "author_login": "maintainer",
+                "committer_login": "maintainer",
+                "message_subject": "Initial observed commit",
+                "message_body_hash": "",
+                "files_changed": "",
+                "additions": "",
+                "deletions": "",
+                "changed_paths_sample": "",
+                "classification": "unknown",
+                "associated_pr_number": "",
+                "source": "github-commits-api",
+                "captured_at": old_committed_at,
+                "schema_version": run.storage.SCHEMA_VERSION,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(run.merge, "DATA_DIR", data_dir.as_posix())
+    run.merge.trim_all()
+
+    with (data_dir / "repo-commits.csv").open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["sha"] == "abc123"
+
+
 def test_schema_migration_handles_file_field_renames_and_defaults(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -4886,6 +5935,37 @@ def test_schema_migration_handles_file_field_renames_and_defaults(
             "stargazers_count": "11",
             "source": "migration-default",
             "schema_version": run.storage.SCHEMA_VERSION,
+        }
+    ]
+    assert run.storage.dedup_repo_issue_label_snapshots(
+        [
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "labeled_item_count": "1",
+            },
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-01T00:00:00Z",
+                "item_type": "issue",
+                "state": "open",
+                "label_name": "bug",
+                "labeled_item_count": "2",
+                "source": "new",
+            },
+        ]
+    ) == [
+        {
+            "repo": "demo/app",
+            "captured_at": "2026-06-01T00:00:00Z",
+            "item_type": "issue",
+            "state": "open",
+            "label_name": "bug",
+            "labeled_item_count": "2",
+            "source": "new",
         }
     ]
     assert not (data_dir / "legacy-growth.csv").exists()
@@ -5030,6 +6110,7 @@ def test_collect_from_v2_fixture_migrates_and_keeps_old_config(
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_referrers", lambda *args: [])
     monkeypatch.setattr(run.collect_mod, "collect_paths", lambda *args: [])
+    _stub_context_collectors(monkeypatch)
 
     run.run_collect(config, restore_artifact=False, execute_collect=True)
 

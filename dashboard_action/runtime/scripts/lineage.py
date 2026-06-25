@@ -6,7 +6,7 @@ import csv
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,24 @@ ROW_IDENTITY_FIELDS = {
     "collection-status.csv": ("repo", "captured_at", "status"),
     "collection-days.csv": ("ts",),
     "traffic-coverage.csv": ("repo", "ts"),
+    "repo-commits.csv": ("repo", "sha"),
+    "repo-commit-observations.csv": ("repo", "captured_at", "default_branch", "sha"),
+    "repo-releases.csv": ("repo", "release_id"),
+    "repo-release-assets.csv": ("repo", "asset_id", "captured_at"),
+    "repo-languages.csv": ("repo", "captured_at", "language"),
+    "repo-topics.csv": ("repo", "captured_at", "topic"),
+    "repo-issue-pr-snapshots.csv": ("repo", "captured_at"),
+    "repo-issue-label-snapshots.csv": (
+        "repo",
+        "captured_at",
+        "item_type",
+        "state",
+        "label_name",
+    ),
+    "repo-code-frequency-weekly.csv": ("repo", "week_start"),
+    "repo-contributor-activity-weekly.csv": ("repo", "author_id", "week_start"),
+    "collection-endpoints.csv": ("repo", "captured_at", "endpoint_key"),
+    "repo-event-index.csv": ("repo", "event_id"),
 }
 
 
@@ -141,9 +159,8 @@ def write_verified_lineage(
     operation: str,
 ) -> PayloadSnapshot:
     root = Path(data_dir)
-    cutoff = retention_cutoff(retention_days)
     child = snapshot_payload(root)
-    _verify_parent_rows_preserved(parent, child, cutoff)
+    _verify_parent_rows_preserved(parent, child)
 
     manifest = storage.read_manifest(root.as_posix())
     manifest["lineage"] = {
@@ -153,7 +170,6 @@ def write_verified_lineage(
         "action_version": action_version,
         "created_at": _now_iso(),
         "retention_days": retention_days,
-        "retention_cutoff": cutoff,
         "payload_digest": child.payload_digest,
         "semantic_root_digest": child.semantic_root_digest,
         "files": _json_file_summaries(child.files),
@@ -167,7 +183,7 @@ def write_verified_lineage(
         },
         "verification": {
             "type": "retained-row-superset",
-            "retained_parent_rows": _retained_parent_row_count(parent, cutoff),
+            "parent_rows": _parent_row_count(parent),
         },
     }
     storage.write_manifest(manifest, root.as_posix())
@@ -196,12 +212,6 @@ def validate_snapshot_lineage(snapshot: PayloadSnapshot) -> None:
         label="semantic_root_digest",
         expected=str(snapshot.lineage.get("semantic_root_digest") or ""),
         actual=snapshot.semantic_root_digest,
-    )
-
-
-def retention_cutoff(retention_days: int) -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=retention_days)).strftime(
-        "%Y-%m-%d"
     )
 
 
@@ -278,25 +288,19 @@ def _row_field_present(filename: str, row: dict[str, str], field: str) -> bool:
     )
 
 
-def _retained_parent_row_count(parent: PayloadSnapshot, cutoff: str) -> int:
+def _parent_row_count(parent: PayloadSnapshot) -> int:
     count = 0
     for filename in storage.CSV_REGISTRY:
-        count += sum(
-            1
-            for identity in parent.row_identities[filename]
-            if _is_retained(parent.row_dates[filename].get(identity, ""), cutoff)
-        )
+        count += len(parent.row_identities[filename])
     return count
 
 
 def _verify_parent_rows_preserved(
-    parent: PayloadSnapshot, child: PayloadSnapshot, cutoff: str
+    parent: PayloadSnapshot, child: PayloadSnapshot
 ) -> None:
     missing: list[tuple[str, str]] = []
     for filename in storage.CSV_REGISTRY:
         for identity in sorted(parent.row_identities[filename]):
-            if not _is_retained(parent.row_dates[filename].get(identity, ""), cutoff):
-                continue
             if identity not in child.row_identities[filename]:
                 missing.append((filename, identity))
 
@@ -312,12 +316,6 @@ def _verify_parent_rows_preserved(
         + (f" ({examples})" if examples else "")
         + "."
     )
-
-
-def _is_retained(value: str, cutoff: str) -> bool:
-    if not value:
-        return True
-    return value[:10] >= cutoff
 
 
 def _json_file_summaries(

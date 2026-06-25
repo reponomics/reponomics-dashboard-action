@@ -69,7 +69,7 @@ The generated `update-docs` workflow updates Reponomics-managed local documentat
 
 The canonical data store is the `dashboard-data` GitHub Actions artifact.
 
-- `collect` restores the prior artifact, collects current GitHub data, merges and trims retained CSV history, verifies lineage, uploads a new `dashboard-data` artifact, then deletes at most one older superseded `dashboard-data` artifact while keeping rollback artifacts.
+- `collect` restores the prior artifact, collects current GitHub data, merges cumulative retained CSV history, verifies lineage, uploads a new `dashboard-data` artifact, then deletes at most one older superseded `dashboard-data` artifact while keeping rollback artifacts.
 - `publish` restores retained data, migrates it to the runtime's current retained-data schema, renders dashboard output, optionally renders private-repository metric README output, and deploys an encrypted Pages artifact for encrypted mode only when hosted dashboard publication is enabled. Otherwise, it uploads a downloadable dashboard artifact.
 - `rotate-key` restores encrypted retained state, decrypts with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, and publishes rotated encrypted outputs.
 - `incident-reset` is a manual emergency workflow for suspected dashboard-key exposure. Make the dashboard repository private and disable any exposed Pages dashboard first. The action restores retained state, decrypts it with `DASHBOARD_SECRET_DO_NOT_REPLACE`, re-encrypts with `DASHBOARD_NEXT_SECRET`, uploads the new retained artifact, then deletes old workflow runs associated with prior `dashboard-data` artifacts.

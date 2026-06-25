@@ -35,11 +35,19 @@ from collect_modules.constants import (
     TOKEN_VALIDATION_URL as TOKEN_VALIDATION_URL,
 )
 from collect_modules.endpoints import (
+    collect_commit_history as _endpoints_collect_commit_history,
+    collect_code_frequency_weekly as _endpoints_collect_code_frequency_weekly,
+    collect_contributor_activity_weekly as _endpoints_collect_contributor_activity_weekly,
+    collect_issue_label_snapshots as _endpoints_collect_issue_label_snapshots,
+    collect_issue_pr_snapshot as _endpoints_collect_issue_pr_snapshot,
+    collect_languages as _endpoints_collect_languages,
     collect_paths as _endpoints_collect_paths,
     collect_referrers as _endpoints_collect_referrers,
+    collect_release_context as _endpoints_collect_release_context,
     collect_repo_community_profile as _endpoints_collect_repo_community_profile,
     collect_repo_detail as _endpoints_collect_repo_detail,
     collect_repo_metrics as _endpoints_collect_repo_metrics,
+    collect_topics as _endpoints_collect_topics,
     collect_views_clones as _endpoints_collect_views_clones,
     community_has_file as _endpoints_community_has_file,
     community_health_percentage as _endpoints_community_health_percentage,
@@ -50,6 +58,7 @@ from collect_modules.http import (
     RepoUnavailableError as RepoUnavailableError,
     SecondaryRateLimitError,
     fetch_json as _http_fetch_json,
+    fetch_json_with_status as _http_fetch_json_with_status,
     is_retryable_throttle as _http_is_retryable_throttle,
     is_secondary_rate_limit as _http_is_secondary_rate_limit,
     parse_retry_after_seconds as _http_parse_retry_after_seconds,
@@ -94,16 +103,18 @@ _LAST_REQUEST_COMPLETED_AT: float | None = None
 _NETWORK_WARNINGS: list[NetworkWarning] = []
 _REPO_DETAIL_WARNINGS: list[str] = []
 _REPO_COMMUNITY_WARNINGS: list[str] = []
+_REPO_CONTEXT_WARNINGS: list[str] = []
 
 
 def _reset_runtime_state() -> None:
     """Reset per-run pacing and warning state."""
     global _LAST_REQUEST_COMPLETED_AT, _NETWORK_WARNINGS, _REPO_DETAIL_WARNINGS
-    global _REPO_COMMUNITY_WARNINGS
+    global _REPO_COMMUNITY_WARNINGS, _REPO_CONTEXT_WARNINGS
     _LAST_REQUEST_COMPLETED_AT = None
     _NETWORK_WARNINGS = []
     _REPO_DETAIL_WARNINGS = []
     _REPO_COMMUNITY_WARNINGS = []
+    _REPO_CONTEXT_WARNINGS = []
 
 
 def _record_network_warning(
@@ -149,6 +160,7 @@ def _write_step_summary(
         network_warnings=_NETWORK_WARNINGS,
         repo_detail_warnings=_REPO_DETAIL_WARNINGS,
         repo_community_warnings=_REPO_COMMUNITY_WARNINGS,
+        repo_context_warnings=_REPO_CONTEXT_WARNINGS,
     )
 
 
@@ -227,6 +239,25 @@ def fetch_json(
         record_network_warning=_record_network_warning,
         sleep=time.sleep,
         retry_delay=_retry_delay_with_jitter,
+    )
+
+
+def fetch_json_with_status(
+    url: str,
+    headers: Headers,
+    allow_not_found: bool = False,
+    *,
+    accepted_statuses: set[int] | None = None,
+) -> tuple[int, object | None, dict[str, str]]:
+    return _http_fetch_json_with_status(
+        url,
+        headers,
+        allow_not_found,
+        perform_get=_perform_get,
+        record_network_warning=_record_network_warning,
+        sleep=time.sleep,
+        retry_delay=_retry_delay_with_jitter,
+        accepted_statuses=accepted_statuses,
     )
 
 
@@ -317,6 +348,102 @@ def collect_repo_community_profile(repo: str, headers: Headers) -> RepoMetadata:
     return _endpoints_collect_repo_community_profile(repo, headers, fetch_json=fetch_json)
 
 
+def collect_release_context(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    return _endpoints_collect_release_context(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_commit_history(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+    default_branch: str = "",
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_commit_history(
+        repo,
+        headers,
+        captured_at,
+        default_branch=default_branch,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_languages(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_languages(repo, headers, captured_at, fetch_json=fetch_json)
+
+
+def collect_topics(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_topics(repo, headers, captured_at, fetch_json=fetch_json)
+
+
+def collect_issue_pr_snapshot(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_issue_pr_snapshot(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_issue_label_snapshots(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_issue_label_snapshots(
+        repo,
+        headers,
+        captured_at,
+        fetch_json=fetch_json,
+    )
+
+
+def collect_code_frequency_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_code_frequency_weekly(
+        repo,
+        headers,
+        captured_at,
+        fetch_json_with_status=fetch_json_with_status,
+    )
+
+
+def collect_contributor_activity_weekly(
+    repo: str,
+    headers: Headers,
+    captured_at: str,
+) -> list[dict[str, Any]]:
+    return _endpoints_collect_contributor_activity_weekly(
+        repo,
+        headers,
+        captured_at,
+        fetch_json_with_status=fetch_json_with_status,
+    )
+
+
 _community_has_file = _endpoints_community_has_file
 _community_health_percentage = _endpoints_community_health_percentage
 
@@ -360,6 +487,14 @@ def _collection_dependencies() -> CollectionDependencies:
         collect_views_clones=collect_views_clones,
         collect_referrers=collect_referrers,
         collect_paths=collect_paths,
+        collect_commit_history=collect_commit_history,
+        collect_release_context=collect_release_context,
+        collect_languages=collect_languages,
+        collect_topics=collect_topics,
+        collect_issue_pr_snapshot=collect_issue_pr_snapshot,
+        collect_issue_label_snapshots=collect_issue_label_snapshots,
+        collect_code_frequency_weekly=collect_code_frequency_weekly,
+        collect_contributor_activity_weekly=collect_contributor_activity_weekly,
         collect_repo_metrics=collect_repo_metrics,
         append_csv=append_csv,
         collection_status_row=_collection_status_row,
@@ -368,6 +503,7 @@ def _collection_dependencies() -> CollectionDependencies:
         write_step_summary=_write_step_summary,
         repo_detail_warnings=_REPO_DETAIL_WARNINGS,
         repo_community_warnings=_REPO_COMMUNITY_WARNINGS,
+        repo_context_warnings=_REPO_CONTEXT_WARNINGS,
         data_dir=DATA_DIR,
     )
 

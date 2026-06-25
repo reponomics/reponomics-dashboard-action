@@ -23,10 +23,12 @@ This document is the long-lived technical reference for CSV export delivery. ADR
 
 The export bundle is built from canonical retained files:
 
-- `storage.CSV_REGISTRY` files: `traffic-log.csv`, `traffic-daily.csv`, `traffic-snapshots.csv`, `traffic-referrers.csv`, `traffic-paths.csv`, `repo-metrics.csv`
+- every CSV file registered in `storage.CSV_REGISTRY`
 - `manifest.json`
 
 This includes repos currently excluded from dashboard rendering, because export is for retained-data portability and parity.
+For a relationship-oriented view of these retained CSV files, see
+[Retained Data ERD](./RETAINED_DATA_ERD.md).
 
 ### 2) Publish-time build pipeline
 
@@ -90,7 +92,7 @@ Operational target:
 Use these variables:
 
 - `R`: tracked repos
-- `D`: retained days
+- `D`: observed collection days since this retained packet started accumulating
 - `C`: effective collect runs per day
 - `W`: traffic-window rows returned per run for views/clones (currently 14)
 - `q_r`: referrer rows per repo/run (current API top list, up to 10)
@@ -100,7 +102,7 @@ Use these variables:
 
 ### Row-count model
 
-Per retention window:
+For the accumulated observed history:
 
 - `N_log ~= R * C * W * D`
 - `N_snap ~= R * C * W * D`

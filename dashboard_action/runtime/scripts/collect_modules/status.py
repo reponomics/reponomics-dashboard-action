@@ -91,6 +91,7 @@ def write_step_summary(
     network_warnings: list[NetworkWarning] | None = None,
     repo_detail_warnings: list[str] | None = None,
     repo_community_warnings: list[str] | None = None,
+    repo_context_warnings: list[str] | None = None,
 ) -> None:
     """Write a GitHub Actions step summary when available."""
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -102,6 +103,7 @@ def write_step_summary(
     _append_network_warnings(lines, network_warnings or [])
     _append_warning_section(lines, "Repository Detail Warnings", repo_detail_warnings or [])
     _append_warning_section(lines, "Community Profile Warnings", repo_community_warnings or [])
+    _append_warning_section(lines, "Repository Context Warnings", repo_context_warnings or [])
 
     with open(summary_path, "a") as f:
         f.write("\n".join(lines) + "\n")

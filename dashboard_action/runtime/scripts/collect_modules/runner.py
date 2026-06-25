@@ -7,19 +7,35 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, TypeAlias
 
 import requests
 
+from collect_modules.context_endpoints import RepositoryStatisticsStatus
 from collect_modules.http import RepoUnavailableError, SecondaryRateLimitError
 from collect_modules.types import Headers, RepoMetadata
 from storage import (
+    COLLECTION_ENDPOINT_FIELDS,
     LOG_FIELDS,
     PATH_FIELDS,
     REFERRER_FIELDS,
+    REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+    REPO_COMMIT_OBSERVATION_FIELDS,
+    REPO_COMMIT_FIELDS,
+    REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+    REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
+    REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+    REPO_LANGUAGE_FIELDS,
     REPO_METRIC_FIELDS,
+    REPO_RELEASE_ASSET_FIELDS,
+    REPO_RELEASE_FIELDS,
+    REPO_TOPIC_FIELDS,
+    SCHEMA_VERSION,
     SNAPSHOT_FIELDS,
 )
+
+Rows: TypeAlias = list[dict[str, Any]]
+_STATISTICS_ENDPOINTS = {"code-frequency", "contributor-activity"}
 
 
 @dataclass(frozen=True)
@@ -39,6 +55,14 @@ class CollectionDependencies:
     collect_views_clones: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_referrers: Callable[[str, Headers, str], list[dict[str, Any]]]
     collect_paths: Callable[[str, Headers, str], list[dict[str, Any]]]
+    collect_commit_history: Callable[[str, Headers, str, str], Rows]
+    collect_release_context: Callable[[str, Headers, str], tuple[Rows, Rows]]
+    collect_languages: Callable[[str, Headers, str], Rows]
+    collect_topics: Callable[[str, Headers, str], Rows]
+    collect_issue_pr_snapshot: Callable[[str, Headers, str], Rows]
+    collect_issue_label_snapshots: Callable[[str, Headers, str], Rows]
+    collect_code_frequency_weekly: Callable[[str, Headers, str], Rows]
+    collect_contributor_activity_weekly: Callable[[str, Headers, str], Rows]
     collect_repo_metrics: Callable[..., list[dict[str, Any]]]
     append_csv: Callable[[str, list[dict[str, Any]], list[str]], None]
     collection_status_row: Callable[..., dict[str, Any]]
@@ -47,6 +71,7 @@ class CollectionDependencies:
     write_step_summary: Callable[..., None]
     repo_detail_warnings: list[str]
     repo_community_warnings: list[str]
+    repo_context_warnings: list[str]
     data_dir: str
 
 
@@ -168,16 +193,339 @@ def _collect_artifacts(
         source=metric_source,
     )
     deps.append_csv(os.path.join(deps.data_dir, "repo-metrics.csv"), metric_rows, REPO_METRIC_FIELDS)
+    context_rows = _collect_context_artifacts(repo, run, deps, detail or {})
     return {
         "traffic": vc_rows,
         "referrers": ref_rows,
         "paths": path_rows,
         "metrics": metric_rows,
+        **context_rows,
     }
 
 
 def _snapshot_rows(vc_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{key: value for key, value in row.items() if key in SNAPSHOT_FIELDS} for row in vc_rows]
+
+
+def _collect_context_artifacts(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+    detail: RepoMetadata,
+) -> dict[str, Rows]:
+    endpoint_rows: Rows = []
+    default_branch = str(detail.get("default_branch") or "")
+    commit_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "commits",
+        "commits",
+        lambda selected_repo, headers, captured_at: deps.collect_commit_history(
+            selected_repo,
+            headers,
+            captured_at,
+            default_branch,
+        ),
+        endpoint_rows,
+    )
+    commit_observation_rows = _commit_observation_rows(
+        commit_rows,
+        captured_at=run.captured_at,
+        default_branch=default_branch,
+    )
+    release_rows, release_asset_rows = _release_context_rows(repo, run, deps, endpoint_rows)
+    language_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "languages",
+        "languages",
+        deps.collect_languages,
+        endpoint_rows,
+    )
+    topic_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "topics",
+        "topics",
+        deps.collect_topics,
+        endpoint_rows,
+    )
+    issue_pr_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "issue/pr snapshot",
+        "issue-pr-snapshot",
+        deps.collect_issue_pr_snapshot,
+        endpoint_rows,
+    )
+    issue_label_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "issue label snapshot",
+        "issue-labels",
+        deps.collect_issue_label_snapshots,
+        endpoint_rows,
+    )
+    code_frequency_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "code frequency",
+        "code-frequency",
+        deps.collect_code_frequency_weekly,
+        endpoint_rows,
+    )
+    contributor_activity_rows = _context_rows(
+        repo,
+        run,
+        deps,
+        "contributor activity",
+        "contributor-activity",
+        deps.collect_contributor_activity_weekly,
+        endpoint_rows,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-commits.csv"),
+        commit_rows,
+        REPO_COMMIT_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-commit-observations.csv"),
+        commit_observation_rows,
+        REPO_COMMIT_OBSERVATION_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-releases.csv"),
+        release_rows,
+        REPO_RELEASE_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-release-assets.csv"),
+        release_asset_rows,
+        REPO_RELEASE_ASSET_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-languages.csv"),
+        language_rows,
+        REPO_LANGUAGE_FIELDS,
+    )
+    deps.append_csv(os.path.join(deps.data_dir, "repo-topics.csv"), topic_rows, REPO_TOPIC_FIELDS)
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-issue-pr-snapshots.csv"),
+        issue_pr_rows,
+        REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-issue-label-snapshots.csv"),
+        issue_label_rows,
+        REPO_ISSUE_LABEL_SNAPSHOT_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-code-frequency-weekly.csv"),
+        code_frequency_rows,
+        REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "repo-contributor-activity-weekly.csv"),
+        contributor_activity_rows,
+        REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+    )
+    deps.append_csv(
+        os.path.join(deps.data_dir, "collection-endpoints.csv"),
+        endpoint_rows,
+        COLLECTION_ENDPOINT_FIELDS,
+    )
+    return {
+        "commits": commit_rows,
+        "commit_observations": commit_observation_rows,
+        "releases": release_rows,
+        "release_assets": release_asset_rows,
+        "languages": language_rows,
+        "topics": topic_rows,
+        "issue_pr_snapshots": issue_pr_rows,
+        "issue_label_snapshots": issue_label_rows,
+        "code_frequency": code_frequency_rows,
+        "contributor_activity": contributor_activity_rows,
+    }
+
+
+def _commit_observation_rows(
+    commit_rows: Rows,
+    *,
+    captured_at: str,
+    default_branch: str,
+) -> Rows:
+    if not commit_rows:
+        return []
+    branch_head_sha = str(commit_rows[-1].get("sha") or "")
+    rows: Rows = []
+    for position, row in enumerate(reversed(commit_rows)):
+        sha = str(row.get("sha") or "")
+        if not sha:
+            continue
+        rows.append(
+            {
+                "repo": row.get("repo", ""),
+                "captured_at": captured_at,
+                "default_branch": default_branch,
+                "branch_head_sha": branch_head_sha,
+                "sha": sha,
+                "parent_sha": row.get("parent_sha", ""),
+                "committed_at": row.get("committed_at", ""),
+                "position_from_head": position,
+                "source": "github-commits-api-window",
+                "schema_version": SCHEMA_VERSION,
+            }
+        )
+    return rows
+
+
+def _release_context_rows(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+    endpoint_rows: Rows,
+) -> tuple[Rows, Rows]:
+    try:
+        release_rows, asset_rows = deps.collect_release_context(repo, run.headers, run.captured_at)
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key="releases",
+            status="ok",
+            rows_written=len(release_rows) + len(asset_rows),
+        )
+        return release_rows, asset_rows
+    except SecondaryRateLimitError:
+        raise
+    except (requests.HTTPError, requests.RequestException) as exc:
+        _record_context_warning(repo, "releases", deps, exc)
+        _record_endpoint_error(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key="releases",
+            exc=exc,
+        )
+        return [], []
+
+
+def _context_rows(
+    repo: str,
+    run: CollectionRun,
+    deps: CollectionDependencies,
+    family: str,
+    endpoint_key: str,
+    collector: Callable[[str, Headers, str], Rows],
+    endpoint_rows: Rows,
+) -> Rows:
+    try:
+        rows = collector(repo, run.headers, run.captured_at)
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            status="ok",
+            rows_written=len(rows),
+            cache_state="ready" if endpoint_key in _STATISTICS_ENDPOINTS else "",
+        )
+        return rows
+    except SecondaryRateLimitError:
+        raise
+    except RepositoryStatisticsStatus as exc:
+        _record_endpoint_row(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            status=exc.status,
+            http_status=exc.http_status,
+            rows_written=0,
+            cache_state=exc.cache_state,
+            error_type=exc.__class__.__name__,
+            error_message=str(exc),
+        )
+        print(f"  Info: {exc}")
+        return []
+    except (requests.HTTPError, requests.RequestException) as exc:
+        _record_context_warning(repo, family, deps, exc)
+        _record_endpoint_error(
+            endpoint_rows,
+            repo=repo,
+            captured_at=run.captured_at,
+            endpoint_key=endpoint_key,
+            exc=exc,
+        )
+        return []
+
+
+def _record_endpoint_error(
+    endpoint_rows: Rows,
+    *,
+    repo: str,
+    captured_at: str,
+    endpoint_key: str,
+    exc: Exception,
+) -> None:
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", {}) or {}
+    _record_endpoint_row(
+        endpoint_rows,
+        repo=repo,
+        captured_at=captured_at,
+        endpoint_key=endpoint_key,
+        status="error",
+        http_status=getattr(response, "status_code", ""),
+        rows_written=0,
+        cache_state="",
+        rate_limit_remaining=headers.get("X-RateLimit-Remaining", ""),
+        retry_after_seconds=headers.get("Retry-After", ""),
+        error_type=exc.__class__.__name__,
+        error_message=str(exc),
+    )
+
+
+def _record_endpoint_row(
+    endpoint_rows: Rows,
+    *,
+    repo: str,
+    captured_at: str,
+    endpoint_key: str,
+    status: str,
+    http_status: Any = "",
+    rows_written: int = 0,
+    cache_state: str = "",
+    rate_limit_remaining: Any = "",
+    retry_after_seconds: Any = "",
+    duration_ms: Any = "",
+    error_type: str = "",
+    error_message: str = "",
+) -> None:
+    endpoint_rows.append(
+        {
+            "repo": repo,
+            "captured_at": captured_at,
+            "endpoint_key": endpoint_key,
+            "credential_class": "collection-token",
+            "status": status,
+            "http_status": http_status,
+            "rows_written": rows_written,
+            "cache_state": cache_state,
+            "rate_limit_remaining": rate_limit_remaining,
+            "retry_after_seconds": retry_after_seconds,
+            "duration_ms": duration_ms,
+            "error_type": error_type,
+            "error_message": error_message,
+            "schema_version": SCHEMA_VERSION,
+        }
+    )
 
 
 def _record_success(
@@ -191,6 +539,19 @@ def _record_success(
     ref_rows = artifacts["referrers"]
     path_rows = artifacts["paths"]
     metric_rows = artifacts["metrics"]
+    context_row_count = sum(
+        len(artifacts[key])
+        for key in (
+            "releases",
+            "commits",
+            "release_assets",
+            "languages",
+            "topics",
+            "issue_pr_snapshots",
+            "code_frequency",
+            "contributor_activity",
+        )
+    )
     run.status_rows.append(
         deps.collection_status_row(
             repo=repo,
@@ -205,7 +566,8 @@ def _record_success(
     )
     print(
         f"  OK: {len(vc_rows)} day(s), {len(ref_rows)} referrer(s), "
-        + f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s)"
+        + f"{len(path_rows)} path(s), {len(metric_rows)} repo metric row(s), "
+        + f"{context_row_count} context row(s)"
     )
 
 
@@ -319,4 +681,22 @@ def _fallback_repo_community_warning(repo: str, exc: Exception) -> str:
     return (
         f"{repo}: community profile request failed ({exc}); "
         + "collection continued and community metrics were left blank."
+    )
+
+
+def _record_context_warning(
+    repo: str,
+    family: str,
+    deps: CollectionDependencies,
+    exc: Exception,
+) -> None:
+    warning = _fallback_repo_context_warning(repo, family, exc)
+    deps.repo_context_warnings.append(warning)
+    print(f"  Warning: {warning}")
+
+
+def _fallback_repo_context_warning(repo: str, family: str, exc: Exception) -> str:
+    return (
+        f"{repo}: {family} request failed ({exc}); "
+        + "collection continued and contextual rows were left blank."
     )

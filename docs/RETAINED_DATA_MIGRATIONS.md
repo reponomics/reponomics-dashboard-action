@@ -135,7 +135,7 @@ supported fixtures directly to the current schema.
 Retained data changes are breaking when they cannot be represented as a safe
 forward migration from the supported schema floor. Examples include:
 
-- dropping retained history inside the retention horizon;
+- dropping retained history without an explicit migration transform;
 - removing a migration step while its source schema is still supported;
 - raising the minimum supported retained packet schema;
 - changing row identity without an explicit identity-preserving transform;

@@ -8,7 +8,6 @@ window. Updates manifest.json timestamps on completion.
 """
 
 import os
-from datetime import datetime, timedelta, timezone
 
 from storage import (
     DATA_DIR,
@@ -28,7 +27,20 @@ from storage import (
     dedup_collection_status,
     dedup_collection_days,
     dedup_traffic_coverage,
+    dedup_repo_commits,
+    dedup_repo_commit_observations,
+    dedup_repo_releases,
+    dedup_repo_release_assets,
+    dedup_repo_languages,
+    dedup_repo_topics,
+    dedup_repo_issue_label_snapshots,
+    dedup_repo_issue_pr_snapshots,
+    dedup_repo_code_frequency_weekly,
+    dedup_repo_contributor_activity_weekly,
+    dedup_collection_endpoints,
+    dedup_repo_event_index,
 )
+from event_index import event_index_rows
 from traffic_reporting import collection_day_rows, traffic_coverage_rows
 
 # Map filenames to their dedup functions
@@ -41,6 +53,18 @@ _DEDUP_FNS = {
     "collection-status.csv": dedup_collection_status,
     "collection-days.csv":   dedup_collection_days,
     "traffic-coverage.csv":  dedup_traffic_coverage,
+    "repo-commits.csv":      dedup_repo_commits,
+    "repo-commit-observations.csv": dedup_repo_commit_observations,
+    "repo-releases.csv":     dedup_repo_releases,
+    "repo-release-assets.csv": dedup_repo_release_assets,
+    "repo-languages.csv":    dedup_repo_languages,
+    "repo-topics.csv":       dedup_repo_topics,
+    "repo-issue-pr-snapshots.csv": dedup_repo_issue_pr_snapshots,
+    "repo-issue-label-snapshots.csv": dedup_repo_issue_label_snapshots,
+    "repo-code-frequency-weekly.csv": dedup_repo_code_frequency_weekly,
+    "repo-contributor-activity-weekly.csv": dedup_repo_contributor_activity_weekly,
+    "collection-endpoints.csv": dedup_collection_endpoints,
+    "repo-event-index.csv":  dedup_repo_event_index,
 }
 
 
@@ -102,6 +126,17 @@ def materialize_reporting_coverage():
     )
 
 
+def materialize_event_index():
+    """Build the normalized repository event spine from retained context tables."""
+    commit_rows = read_csv(os.path.join(DATA_DIR, "repo-commits.csv"))
+    release_rows = read_csv(os.path.join(DATA_DIR, "repo-releases.csv"))
+    write_csv(
+        os.path.join(DATA_DIR, "repo-event-index.csv"),
+        event_index_rows(commit_rows, release_rows),
+        CSV_REGISTRY["repo-event-index.csv"][0],
+    )
+
+
 def trim_csv_by_date(filepath, date_field, cutoff_date):
     """Remove rows older than cutoff_date based on date_field."""
     rows = read_csv(filepath)
@@ -117,11 +152,16 @@ def trim_csv_by_date(filepath, date_field, cutoff_date):
 
 
 def trim_all():
-    """Trim all CSV files to the retention window."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS)).strftime("%Y-%m-%d")
+    """No-op compatibility hook.
 
-    for filename, (_fields, date_field) in CSV_REGISTRY.items():
-        trim_csv_by_date(os.path.join(DATA_DIR, filename), date_field, cutoff)
+    Retained CSV history is cumulative from first collection and is not governed
+    by artifact retention settings. Keep this function for older tests/scripts
+    that may call it directly, but normal collection should not delete rows.
+    """
+    print(
+        "CSV history trim skipped; retained data is cumulative "
+        + f"(artifact retention: {RETENTION_DAYS} days)."
+    )
 
 
 def main():
@@ -132,9 +172,8 @@ def main():
     materialize_daily()
     print("Materializing reporting coverage...")
     materialize_reporting_coverage()
-    print("Trimming to retention window...")
-    trim_all()
-
+    print("Materializing contextual event index...")
+    materialize_event_index()
     # Update manifest timestamp
     manifest = read_manifest(DATA_DIR)
     write_manifest(manifest, DATA_DIR)

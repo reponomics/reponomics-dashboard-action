@@ -43,6 +43,7 @@ export function installController(context) {
   const renderDashboardNotice = (...args) => context.renderDashboardNotice(...args);
   const renderInsights = (...args) => context.renderInsights(...args);
   const renderMomentum = (...args) => context.renderMomentum(...args);
+  const renderNarrativeInsights = (...args) => context.renderNarrativeInsights(...args);
   const renderPathsTable = (...args) => context.renderPathsTable(...args);
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
@@ -424,6 +425,7 @@ export function installController(context) {
       renderReferrerTable(getCurrentReferrerRows());
       renderPathsTable(getCurrentPathRows());
       renderMomentum();
+      renderNarrativeInsights();
       renderInsights();
       renderRepoStrip();
       renderRepoTable();

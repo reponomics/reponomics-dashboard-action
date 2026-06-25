@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import sys
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import date, timedelta
 from functools import cached_property
 from pathlib import Path
@@ -39,6 +40,13 @@ class ScenarioDataset:
     path_rows: list[dict[str, str]]
     metric_rows: list[dict[str, str]]
     status_rows: list[dict[str, str]]
+    release_rows: list[dict[str, str]] = field(default_factory=list)
+    language_rows: list[dict[str, str]] = field(default_factory=list)
+    topic_rows: list[dict[str, str]] = field(default_factory=list)
+    issue_pr_rows: list[dict[str, str]] = field(default_factory=list)
+    code_frequency_rows: list[dict[str, str]] = field(default_factory=list)
+    contributor_activity_rows: list[dict[str, str]] = field(default_factory=list)
+    event_rows: list[dict[str, str]] = field(default_factory=list)
 
     @cached_property
     def totals(self) -> dict[str, Any]:
@@ -137,6 +145,19 @@ def _repo_daily_views(rows: list[dict[str, str]]) -> dict[tuple[str, str], int]:
     return totals
 
 
+def _repo_peak_day(rows: list[dict[str, str]], repo: str) -> str:
+    repo_rows = [row for row in rows if row.get("repo") == repo]
+    if not repo_rows:
+        return ""
+    return max(repo_rows, key=lambda row: int(row.get("views_count", 0) or 0))["ts"]
+
+
+def _date_shift(ts: str, days: int) -> str:
+    if not ts:
+        return ""
+    return (date.fromisoformat(ts) + timedelta(days=days)).isoformat()
+
+
 def _synthetic_referrers(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     captured_at = _latest_capture(rows)
     referrers = [
@@ -162,6 +183,214 @@ def _synthetic_referrers(rows: list[dict[str, str]]) -> list[dict[str, str]]:
                 "schema_version": storage.SCHEMA_VERSION,
             })
     return result
+
+
+def _synthetic_releases(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not rows:
+        return []
+    dates = _all_dates(rows)
+    captured_at = _latest_capture(rows)
+    result: list[dict[str, str]] = []
+    for repo_index, repo_row in enumerate(load_data.aggregate_per_repo(rows)[:8]):
+        repo = repo_row["repo"]
+        release_date = dates[min(len(dates) - 1, max(0, len(dates) * 2 // 3 + repo_index % 3))]
+        total_clones = int(repo_row["total_clones"])
+        result.append({
+            "repo": repo,
+            "release_id": str(50_000 + repo_index),
+            "node_id": f"R_RELEASE_{repo_index}",
+            "tag_name": f"v1.{repo_index}.0",
+            "target_commitish": "main",
+            "target_sha": f"scenario{repo_index:04x}",
+            "name": f"Scenario release {repo_index + 1}",
+            "draft": "False",
+            "prerelease": "False",
+            "immutable": "False",
+            "created_at": f"{release_date}T09:00:00Z",
+            "published_at": f"{release_date}T10:00:00Z",
+            "author_login": "scenario-maintainer",
+            "html_url": f"https://github.com/{repo}/releases/tag/v1.{repo_index}.0",
+            "asset_count": str(1 + repo_index % 3),
+            "asset_download_count": str(max(1, total_clones // 2)),
+            "body_hash": "",
+            "captured_at": captured_at,
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    return result
+
+
+def _synthetic_languages(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    captured_at = _latest_capture(rows)
+    languages = [
+        ("Python", "0.72"),
+        ("TypeScript", "0.68"),
+        ("Shell", "0.12"),
+        ("Markdown", "0.08"),
+    ]
+    result: list[dict[str, str]] = []
+    for repo_index, repo in enumerate(_repos(rows)):
+        primary, share = languages[repo_index % 2]
+        result.append({
+            "repo": repo,
+            "captured_at": captured_at,
+            "language": primary,
+            "bytes": str(120_000 + repo_index * 9_000),
+            "share": share,
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+        result.append({
+            "repo": repo,
+            "captured_at": captured_at,
+            "language": languages[2 + repo_index % 2][0],
+            "bytes": str(18_000 + repo_index * 2_000),
+            "share": languages[2 + repo_index % 2][1],
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    return result
+
+
+def _synthetic_topics(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    captured_at = _latest_capture(rows)
+    topic_sets = [
+        ("analytics", "dashboard", "github-actions"),
+        ("developer-tools", "automation", "metrics"),
+        ("docs", "observability", "reports"),
+    ]
+    result: list[dict[str, str]] = []
+    for repo_index, repo in enumerate(_repos(rows)):
+        for topic in topic_sets[repo_index % len(topic_sets)]:
+            result.append({
+                "repo": repo,
+                "captured_at": captured_at,
+                "topic": topic,
+                "schema_version": storage.SCHEMA_VERSION,
+            })
+    return result
+
+
+def _synthetic_issue_pr_snapshots(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    captured_at = _latest_capture(rows)
+    ts = _latest_day(rows)
+    result: list[dict[str, str]] = []
+    for repo_index, repo_row in enumerate(load_data.aggregate_per_repo(rows)):
+        views = int(repo_row["total_views"])
+        open_issues = 2 + repo_index % 5 + views // 850
+        result.append({
+            "repo": repo_row["repo"],
+            "ts": ts,
+            "captured_at": captured_at,
+            "open_issues_count": str(open_issues),
+            "open_prs_count": str(repo_index % 4),
+            "closed_issues_recent": str(repo_index % 3),
+            "merged_prs_recent": str((repo_index + 1) % 3),
+            "stale_open_issues_count": str(1 if repo_index % 4 == 0 else 0),
+            "stale_open_prs_count": "0",
+            "unanswered_issue_count": str(1 if repo_index % 5 == 0 else 0),
+            "issue_sample_count": str(open_issues),
+            "pr_sample_count": str(repo_index % 4),
+            "source": "dashboard-scenario",
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    return result
+
+
+def _synthetic_code_frequency(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not rows:
+        return []
+    captured_at = _latest_capture(rows)
+    latest = date.fromisoformat(_latest_day(rows))
+    week_start = (latest - timedelta(days=latest.weekday())).isoformat()
+    result: list[dict[str, str]] = []
+    for repo_index, repo_row in enumerate(load_data.aggregate_per_repo(rows)):
+        views = int(repo_row["total_views"])
+        result.append({
+            "repo": repo_row["repo"],
+            "week_start": week_start,
+            "additions": str(120 + repo_index * 31 + views // 20),
+            "deletions": str(40 + repo_index * 17 + views // 45),
+            "captured_at": captured_at,
+            "source_status": "dashboard-scenario",
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    return result
+
+
+def _synthetic_contributor_activity(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    if not rows:
+        return []
+    captured_at = _latest_capture(rows)
+    latest = date.fromisoformat(_latest_day(rows))
+    week_start = (latest - timedelta(days=latest.weekday())).isoformat()
+    result: list[dict[str, str]] = []
+    for repo_index, repo_row in enumerate(load_data.aggregate_per_repo(rows)):
+        contributor_count = 1 if repo_index % 3 == 0 else 2 + repo_index % 3
+        for contributor_index in range(contributor_count):
+            result.append({
+                "repo": repo_row["repo"],
+                "author_id": str(20_000 + repo_index * 10 + contributor_index),
+                "author_login": f"scenario-user-{repo_index}-{contributor_index}",
+                "week_start": week_start,
+                "commits": str(2 + repo_index % 5 + contributor_index),
+                "additions": str(80 + repo_index * 18),
+                "deletions": str(24 + repo_index * 9),
+                "captured_at": captured_at,
+                "source_status": "dashboard-scenario",
+                "schema_version": storage.SCHEMA_VERSION,
+            })
+    return result
+
+
+def _synthetic_event_index(
+    rows: list[dict[str, str]],
+    release_rows: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    captured_at = _latest_capture(rows)
+    classifications = ["docs", "feature", "maintenance", "release"]
+    result: list[dict[str, str]] = []
+    for repo_index, repo_row in enumerate(load_data.aggregate_per_repo(rows)[:8]):
+        repo = repo_row["repo"]
+        peak_day = _repo_peak_day(rows, repo)
+        event_date = _date_shift(peak_day, -1) or peak_day
+        sha = f"scenario{repo_index:08x}"
+        classification = classifications[repo_index % len(classifications)]
+        result.append({
+            "repo": repo,
+            "event_id": f"commit:{sha}",
+            "event_type": "commit",
+            "event_ts": f"{event_date}T10:00:00Z" if event_date else "",
+            "event_date": event_date,
+            "title": f"{classification}: scenario context update",
+            "url": f"https://github.com/{repo}/commit/{sha}",
+            "primary_sha": sha,
+            "release_id": "",
+            "issue_or_pr_number": str(100 + repo_index),
+            "magnitude": str(40 + repo_index * 11),
+            "classification": classification,
+            "source_table": "repo-commits.csv",
+            "captured_at": captured_at,
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    for row in release_rows:
+        release_id = row["release_id"]
+        event_ts = row.get("published_at") or row.get("created_at") or row.get("captured_at", "")
+        result.append({
+            "repo": row["repo"],
+            "event_id": f"release:{release_id}",
+            "event_type": "release",
+            "event_ts": event_ts,
+            "event_date": event_ts[:10],
+            "title": row.get("name") or row.get("tag_name") or f"Release {release_id}",
+            "url": row.get("html_url", ""),
+            "primary_sha": row.get("target_sha", ""),
+            "release_id": release_id,
+            "issue_or_pr_number": "",
+            "magnitude": row.get("asset_download_count") or row.get("asset_count") or "0",
+            "classification": "release",
+            "source_table": "repo-releases.csv",
+            "captured_at": row.get("captured_at", ""),
+            "schema_version": storage.SCHEMA_VERSION,
+        })
+    return sorted(result, key=lambda row: (row["repo"], row["event_date"], row["event_id"]))
 
 
 def _synthetic_paths(rows: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -272,6 +501,8 @@ def _scenario_from_daily(
     description: str,
     daily_rows: list[dict[str, str]],
 ) -> ScenarioDataset:
+    metric_rows = _synthetic_metrics(daily_rows)
+    release_rows = _synthetic_releases(daily_rows)
     return ScenarioDataset(
         key=key,
         title=title,
@@ -279,8 +510,15 @@ def _scenario_from_daily(
         daily_rows=daily_rows,
         referrer_rows=_synthetic_referrers(daily_rows),
         path_rows=_synthetic_paths(daily_rows),
-        metric_rows=_synthetic_metrics(daily_rows),
+        metric_rows=metric_rows,
         status_rows=_synthetic_status(daily_rows),
+        release_rows=release_rows,
+        language_rows=_synthetic_languages(daily_rows),
+        topic_rows=_synthetic_topics(daily_rows),
+        issue_pr_rows=_synthetic_issue_pr_snapshots(daily_rows),
+        code_frequency_rows=_synthetic_code_frequency(daily_rows),
+        contributor_activity_rows=_synthetic_contributor_activity(daily_rows),
+        event_rows=_synthetic_event_index(daily_rows, release_rows),
     )
 
 

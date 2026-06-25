@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -110,6 +111,18 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
                 "coverage_state": "reported",
             }
         ],
+        "repo-commits.csv": [{"repo": "demo/app", "sha": "abc"}],
+        "repo-commit-observations.csv": [{"repo": "demo/app", "sha": "abc"}],
+        "repo-releases.csv": [{"repo": "demo/app", "release_id": "1"}],
+        "repo-release-assets.csv": [{"repo": "demo/app", "asset_id": "10"}],
+        "repo-languages.csv": [{"repo": "demo/app", "language": "Python"}],
+        "repo-topics.csv": [{"repo": "demo/app", "topic": "cli"}],
+        "repo-issue-pr-snapshots.csv": [{"repo": "demo/app", "open_issues_count": "2"}],
+        "repo-issue-label-snapshots.csv": [{"repo": "demo/app", "label_name": "bug"}],
+        "repo-code-frequency-weekly.csv": [{"repo": "demo/app", "week_start": "2026-05-01"}],
+        "repo-contributor-activity-weekly.csv": [{"repo": "demo/app", "author_login": "alice"}],
+        "collection-endpoints.csv": [{"repo": "demo/app", "endpoint_key": "repo-detail"}],
+        "repo-event-index.csv": [{"repo": "demo/app", "event_id": "commit:abc"}],
     }
 
     def read_csv(path: str) -> list[dict[str, str]]:
@@ -129,6 +142,38 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
     ]
     assert load_data.load_traffic_coverage(str(tmp_path)) is rows_by_file[
         "traffic-coverage.csv"
+    ]
+    assert load_data.load_repo_commits(str(tmp_path)) is rows_by_file["repo-commits.csv"]
+    assert load_data.load_repo_commit_observations(str(tmp_path)) is rows_by_file[
+        "repo-commit-observations.csv"
+    ]
+    assert load_data.load_repo_releases(str(tmp_path)) is rows_by_file[
+        "repo-releases.csv"
+    ]
+    assert load_data.load_repo_release_assets(str(tmp_path)) is rows_by_file[
+        "repo-release-assets.csv"
+    ]
+    assert load_data.load_repo_languages(str(tmp_path)) is rows_by_file[
+        "repo-languages.csv"
+    ]
+    assert load_data.load_repo_topics(str(tmp_path)) is rows_by_file["repo-topics.csv"]
+    assert load_data.load_repo_issue_pr_snapshots(str(tmp_path)) is rows_by_file[
+        "repo-issue-pr-snapshots.csv"
+    ]
+    assert load_data.load_repo_issue_label_snapshots(str(tmp_path)) is rows_by_file[
+        "repo-issue-label-snapshots.csv"
+    ]
+    assert load_data.load_repo_code_frequency_weekly(str(tmp_path)) is rows_by_file[
+        "repo-code-frequency-weekly.csv"
+    ]
+    assert load_data.load_repo_contributor_activity_weekly(str(tmp_path)) is rows_by_file[
+        "repo-contributor-activity-weekly.csv"
+    ]
+    assert load_data.load_collection_endpoints(str(tmp_path)) is rows_by_file[
+        "collection-endpoints.csv"
+    ]
+    assert load_data.load_repo_event_index(str(tmp_path)) is rows_by_file[
+        "repo-event-index.csv"
     ]
 
 
@@ -216,6 +261,155 @@ def test_repo_growth_series_projects_normalized_daily_counters() -> None:
             "samples": 2,
         }
     }
+
+
+def test_narrative_insights_rank_cross_signal_repository_stories() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = []
+    metric_rows = []
+    for offset in range(15):
+        current = start + timedelta(days=offset)
+        views = 72 if offset == 11 else 16 + (offset % 3)
+        daily_rows.append(
+            _daily_row(
+                "demo/app",
+                current.isoformat(),
+                views,
+                max(5, views // 2),
+                5 if offset >= 9 else 1,
+                2 if offset >= 9 else 1,
+            )
+        )
+        metric_rows.append(
+            {
+                **_metric_row("demo/app", current.isoformat(), 12, 3, 1),
+                "open_issues_count": "9",
+                "size_kb": "450",
+                "language": "Python",
+                "visibility": "public",
+                "default_branch": "main",
+                "has_pages": "False",
+                "has_discussions": "True",
+                "archived": "False",
+                "disabled": "False",
+                "community_health_percentage": "58",
+                "community_documentation": "README.md",
+                "community_updated_at": f"{current.isoformat()}T11:00:00Z",
+                "community_content_reports_enabled": "True",
+                "community_has_code_of_conduct": "True",
+                "community_has_contributing": "False",
+                "community_has_issue_template": "False",
+                "community_has_pull_request_template": "True",
+                "community_has_readme": "True",
+                "community_has_license": "True",
+            }
+        )
+
+    growth = load_data.growth_analytics(daily_rows, metric_rows)
+    narratives = load_data.narrative_insights(
+        daily_rows,
+        metric_rows,
+        growth=growth,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_id": "commit:abc",
+                "event_type": "commit",
+                "event_date": "2026-06-11",
+                "title": "docs: explain setup",
+                "classification": "docs",
+                "magnitude": "42",
+                "url": "https://github.com/demo/app/commit/abc",
+            }
+        ],
+        release_rows=[
+            {
+                "repo": "demo/app",
+                "release_id": "99",
+                "tag_name": "v1.0.0",
+                "name": "v1.0.0",
+                "published_at": "2026-06-10T09:00:00Z",
+                "asset_count": "2",
+                "asset_download_count": "13",
+                "html_url": "https://github.com/demo/app/releases/tag/v1.0.0",
+            }
+        ],
+        issue_pr_rows=[
+            {
+                "repo": "demo/app",
+                "ts": "2026-06-15",
+                "captured_at": "2026-06-15T12:00:00Z",
+                "open_issues_count": "8",
+                "open_prs_count": "2",
+                "stale_open_issues_count": "1",
+                "unanswered_issue_count": "1",
+            }
+        ],
+        language_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-15T12:00:00Z",
+                "language": "Python",
+                "share": "0.82",
+            }
+        ],
+        topic_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-15T12:00:00Z",
+                "topic": "automation",
+            }
+        ],
+        code_frequency_rows=[
+            {
+                "repo": "demo/app",
+                "week_start": "2026-06-08",
+                "additions": "420",
+                "deletions": "180",
+            }
+        ],
+        contributor_activity_rows=[
+            {
+                "repo": "demo/app",
+                "author_login": "alice",
+                "week_start": "2026-06-08",
+                "commits": "6",
+                "additions": "420",
+                "deletions": "180",
+            }
+        ],
+        referrer_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-15T12:00:00Z",
+                "referrer": "google.com",
+                "count": "36",
+            }
+        ],
+        path_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-15T12:00:00Z",
+                "path": "/demo/app/blob/main/README.md",
+                "title": "README",
+                "count": "24",
+            }
+        ],
+        limit=10,
+    )
+
+    recipes = {item["recipe"] for item in narratives}
+    assert {
+        "attention_conversion_gap",
+        "event_aligned_attention",
+        "release_adoption_lift",
+        "attention_before_readiness",
+        "maintenance_pressure",
+    }.issubset(recipes)
+    assert all("score" not in item for item in narratives)
+    event_story = next(item for item in narratives if item["recipe"] == "event_aligned_attention")
+    assert event_story["events"][0]["classification"] == "docs"
+    assert event_story["evidence"][0]["label"] == "Peak day"
 
 
 def test_collection_quality_empty_and_days_skip_incomplete_rows() -> None:

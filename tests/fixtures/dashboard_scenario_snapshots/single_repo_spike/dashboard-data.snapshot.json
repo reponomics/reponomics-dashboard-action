@@ -1801,6 +1801,143 @@
         "all"
       ]
     },
+    "narratives": [
+      {
+        "action": "Look for whether the churn was user-facing, refactor-heavy, or release preparation.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "additions + deletions",
+            "label": "Code changes",
+            "value": "308"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "184"
+          },
+          {
+            "detail": "previous comparable window",
+            "label": "Prior views",
+            "value": "1,073"
+          }
+        ],
+        "recipe": "code_churn_context",
+        "repo": "demo/sudden-breakout",
+        "summary": "demo/sudden-breakout had 308 lines changed recently while attention stayed flat at 184 views.",
+        "title": "Internal code churn gives context for a quiet traffic window",
+        "tone": "neutral"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "85"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "4"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "1"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "demo/steady-companion",
+        "summary": "demo/steady-companion has 85 recent visitors and 21 clones while 4 issues and 1 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "110"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "4"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "0"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "demo/sudden-breakout",
+        "summary": "demo/sudden-breakout has 110 recent visitors and 14 clones while 4 issues and 0 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      },
+      {
+        "action": "Consider marking good first issues or asking for help in the next release note.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "recent weekly sample",
+            "label": "Active contributors",
+            "value": "1"
+          },
+          {
+            "detail": "recent weekly sample",
+            "label": "Commits",
+            "value": "2"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "14"
+          }
+        ],
+        "recipe": "contributor_concentration",
+        "repo": "demo/sudden-breakout",
+        "summary": "demo/sudden-breakout has 110 visitors and 14 clones recently, but the contributor activity sample is concentrated in one author.",
+        "title": "Interest is visible while contribution is concentrated",
+        "tone": "attention"
+      },
+      {
+        "action": "Look for whether the churn was user-facing, refactor-heavy, or release preparation.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "additions + deletions",
+            "label": "Code changes",
+            "value": "278"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "154"
+          },
+          {
+            "detail": "previous comparable window",
+            "label": "Prior views",
+            "value": "154"
+          }
+        ],
+        "recipe": "code_churn_context",
+        "repo": "demo/steady-companion",
+        "summary": "demo/steady-companion had 278 lines changed recently while attention stayed quiet at 154 views.",
+        "title": "Internal code churn gives context for a quiet traffic window",
+        "tone": "neutral"
+      }
+    ],
     "paths": [
       {
         "content": "Repository overview",

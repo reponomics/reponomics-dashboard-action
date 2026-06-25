@@ -7,6 +7,7 @@ import { installSelection } from './selection.js';
 import { installQualityCalendar } from './quality-calendar.js';
 import { installSeries } from './series.js';
 import { installMomentum } from './momentum.js';
+import { installNarrativeInsights } from './narrative-insights.js';
 import { installChartOptions } from './chart-options.js';
 import { installControls } from './controls.js';
 import { installCharts } from './charts.js';
@@ -22,6 +23,7 @@ const installers = [
   installQualityCalendar,
   installSeries,
   installMomentum,
+  installNarrativeInsights,
   installChartOptions,
   installControls,
   installCharts,

@@ -52,6 +52,13 @@ from load_data import (
     load_collection_status,
     load_collection_days,
     load_traffic_coverage,
+    load_repo_releases,
+    load_repo_languages,
+    load_repo_topics,
+    load_repo_issue_pr_snapshots,
+    load_repo_code_frequency_weekly,
+    load_repo_contributor_activity_weekly,
+    load_repo_event_index,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -63,6 +70,7 @@ from load_data import (
     growth_analytics,
     latest_repo_community_profiles,
     latest_repo_metadata,
+    narrative_insights,
     traffic_reporting_summary,
 )
 
@@ -298,6 +306,7 @@ def _build_payload(
     growth,
     insights,
     insights_structured,
+    narratives,
     data_quality,
     traffic_reporting,
     community_profiles,
@@ -380,6 +389,7 @@ def _build_payload(
         },
         "insights": insights,
         "insights_v2": insights_structured,
+        "narratives": narratives,
         "data_quality": data_quality,
         "traffic_reporting": traffic_reporting,
     }
@@ -575,6 +585,13 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     status_rows = load_collection_status()
     collection_day_rows = load_collection_days()
     coverage_rows = load_traffic_coverage()
+    release_rows = load_repo_releases()
+    language_rows = load_repo_languages()
+    topic_rows = load_repo_topics()
+    issue_pr_rows = load_repo_issue_pr_snapshots()
+    code_frequency_rows = load_repo_code_frequency_weekly()
+    contributor_activity_rows = load_repo_contributor_activity_weekly()
+    event_rows = load_repo_event_index()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -600,6 +617,21 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
     )
+    narratives = narrative_insights(
+        daily_rows,
+        metric_rows,
+        growth=growth,
+        event_rows=event_rows,
+        release_rows=release_rows,
+        issue_pr_rows=issue_pr_rows,
+        language_rows=language_rows,
+        topic_rows=topic_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_activity_rows=contributor_activity_rows,
+        referrer_rows=referrer_rows,
+        path_rows=path_rows,
+        limit=6,
+    )
     payload = _build_payload(
         now,
         totals,
@@ -616,6 +648,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         growth,
         insights,
         insights_structured,
+        narratives,
         data_quality,
         traffic_reporting,
         community_profiles,

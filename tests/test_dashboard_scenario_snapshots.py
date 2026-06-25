@@ -104,6 +104,29 @@ def _write_scenario_data(
         run.storage.TRAFFIC_COVERAGE_FIELDS,
         dataset.traffic_coverage_rows,
     )
+    _write_csv(data_dir / "repo-releases.csv", run.storage.REPO_RELEASE_FIELDS, dataset.release_rows)
+    _write_csv(data_dir / "repo-languages.csv", run.storage.REPO_LANGUAGE_FIELDS, dataset.language_rows)
+    _write_csv(data_dir / "repo-topics.csv", run.storage.REPO_TOPIC_FIELDS, dataset.topic_rows)
+    _write_csv(
+        data_dir / "repo-issue-pr-snapshots.csv",
+        run.storage.REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+        dataset.issue_pr_rows,
+    )
+    _write_csv(
+        data_dir / "repo-code-frequency-weekly.csv",
+        run.storage.REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+        dataset.code_frequency_rows,
+    )
+    _write_csv(
+        data_dir / "repo-contributor-activity-weekly.csv",
+        run.storage.REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+        dataset.contributor_activity_rows,
+    )
+    _write_csv(
+        data_dir / "repo-event-index.csv",
+        run.storage.REPO_EVENT_INDEX_FIELDS,
+        dataset.event_rows,
+    )
 
 
 def _render_production_outputs(

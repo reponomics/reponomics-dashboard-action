@@ -69,6 +69,25 @@ write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, scenario.dai
 write_csv(data_dir / "traffic-referrers.csv", run.storage.REFERRER_FIELDS, scenario.referrer_rows)
 write_csv(data_dir / "traffic-paths.csv", run.storage.PATH_FIELDS, scenario.path_rows)
 write_csv(data_dir / "repo-metrics.csv", run.storage.REPO_METRIC_FIELDS, scenario.metric_rows)
+write_csv(data_dir / "repo-releases.csv", run.storage.REPO_RELEASE_FIELDS, scenario.release_rows)
+write_csv(data_dir / "repo-languages.csv", run.storage.REPO_LANGUAGE_FIELDS, scenario.language_rows)
+write_csv(data_dir / "repo-topics.csv", run.storage.REPO_TOPIC_FIELDS, scenario.topic_rows)
+write_csv(
+    data_dir / "repo-issue-pr-snapshots.csv",
+    run.storage.REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+    scenario.issue_pr_rows,
+)
+write_csv(
+    data_dir / "repo-code-frequency-weekly.csv",
+    run.storage.REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+    scenario.code_frequency_rows,
+)
+write_csv(
+    data_dir / "repo-contributor-activity-weekly.csv",
+    run.storage.REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+    scenario.contributor_activity_rows,
+)
+write_csv(data_dir / "repo-event-index.csv", run.storage.REPO_EVENT_INDEX_FIELDS, scenario.event_rows)
 write_csv(
     data_dir / "collection-status.csv",
     run.storage.COLLECTION_STATUS_FIELDS,

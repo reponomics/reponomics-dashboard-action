@@ -170,6 +170,62 @@
         "all"
       ]
     },
+    "narratives": [
+      {
+        "action": "Inspect the README, examples, and contribution path before chasing more reach.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "88"
+          },
+          {
+            "detail": "attention",
+            "label": "Views",
+            "value": "188"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          }
+        ],
+        "recipe": "attention_conversion_gap",
+        "repo": "demo/toolkit",
+        "summary": "demo/toolkit drew 88 visitors in the last 14d, while stars, watchers, and forks moved by +0 in total.",
+        "title": "Attention is not turning into visible community movement",
+        "tone": "attention"
+      },
+      {
+        "action": "Inspect the README, examples, and contribution path before chasing more reach.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "72"
+          },
+          {
+            "detail": "attention",
+            "label": "Views",
+            "value": "156"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          }
+        ],
+        "recipe": "attention_conversion_gap",
+        "repo": "demo/docs-site",
+        "summary": "demo/docs-site drew 72 visitors in the last 14d, while stars, watchers, and forks moved by +0 in total.",
+        "title": "Attention is not turning into visible community movement",
+        "tone": "attention"
+      }
+    ],
     "paths": [
       {
         "content": "Repository overview",

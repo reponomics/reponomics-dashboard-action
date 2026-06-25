@@ -962,6 +962,186 @@
         "all"
       ]
     },
+    "narratives": [
+      {
+        "action": "Consider marking good first issues or asking for help in the next release note.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "recent weekly sample",
+            "label": "Active contributors",
+            "value": "1"
+          },
+          {
+            "detail": "recent weekly sample",
+            "label": "Commits",
+            "value": "2"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "76"
+          }
+        ],
+        "recipe": "contributor_concentration",
+        "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+        "summary": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror has 559 visitors and 76 clones recently, but the contributor activity sample is concentrated in one author.",
+        "title": "Interest is visible while contribution is concentrated",
+        "tone": "attention"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "428"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "5"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "1"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+        "summary": "research-platform-team/collector-migration-compatibility-fixtures has 428 recent visitors and 57 clones while 5 issues and 1 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      },
+      {
+        "action": "Check release notes, package assets, and clone/fork follow-through.",
+        "anchor_date": "2026-05-03",
+        "events": [
+          {
+            "classification": "release",
+            "date": "2026-05-03",
+            "title": "Scenario release 3",
+            "type": "release",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v1.2.0"
+          }
+        ],
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Release",
+            "value": "Scenario release 3"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "37"
+          },
+          {
+            "detail": "counter delta",
+            "label": "Forks",
+            "value": "+0"
+          }
+        ],
+        "recipe": "release_adoption_lift",
+        "repo": "developer-experience/release-note-policy-validation-toolkit",
+        "summary": "release event \"Scenario release 3\" is in the recent window for developer-experience/release-note-policy-validation-toolkit; the same window shows 37 clones, 14 cloners, and +0 forks.",
+        "title": "Release activity is paired with adoption signals",
+        "tone": "positive"
+      },
+      {
+        "action": "Look for whether the churn was user-facing, refactor-heavy, or release preparation.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "additions + deletions",
+            "label": "Code changes",
+            "value": "409"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "453"
+          },
+          {
+            "detail": "previous comparable window",
+            "label": "Prior views",
+            "value": "461"
+          }
+        ],
+        "recipe": "code_churn_context",
+        "repo": "platform-infra/plain-artifact-export-verification-service",
+        "summary": "platform-infra/plain-artifact-export-verification-service had 409 lines changed recently while attention stayed quiet at 453 views.",
+        "title": "Internal code churn gives context for a quiet traffic window",
+        "tone": "neutral"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "559"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "5"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "0"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+        "summary": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror has 559 recent visitors and 76 clones while 5 issues and 0 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      },
+      {
+        "action": "Check release notes, package assets, and clone/fork follow-through.",
+        "anchor_date": "2026-05-01",
+        "events": [
+          {
+            "classification": "release",
+            "date": "2026-05-01",
+            "title": "Scenario release 1",
+            "type": "release",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/releases/tag/v1.0.0"
+          }
+        ],
+        "evidence": [
+          {
+            "detail": "2026-05-01",
+            "label": "Release",
+            "value": "Scenario release 1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "76"
+          },
+          {
+            "detail": "counter delta",
+            "label": "Forks",
+            "value": "+0"
+          }
+        ],
+        "recipe": "release_adoption_lift",
+        "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+        "summary": "release event \"Scenario release 1\" is in the recent window for enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror; the same window shows 76 clones, 34 cloners, and +0 forks.",
+        "title": "Release activity is paired with adoption signals",
+        "tone": "positive"
+      }
+    ],
     "paths": [
       {
         "content": "Repository overview",

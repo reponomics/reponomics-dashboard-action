@@ -53,6 +53,7 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/quality-calendar.js",
     "dashboard/series.js",
     "dashboard/momentum.js",
+    "dashboard/narrative-insights.js",
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
@@ -76,6 +77,7 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/quality-calendar.js",
     "dashboard/series.js",
     "dashboard/momentum.js",
+    "dashboard/narrative-insights.js",
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
@@ -354,6 +356,18 @@ def build_dashboard_shell(
     <div class="section-grid full" id="momentum-section">
       <div class="card momentum-card">
         <div class="momentum-grid" id="momentum-grid"></div>
+      </div>
+    </div>
+
+    <div class="section-grid full" id="narrative-insights-section">
+      <div class="card narrative-insights-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Stories to inspect</h2>
+            <p class="click-hint">Contextual signals that connect traffic, growth, and repository activity. Click a card to focus on the repo.</p>
+          </div>
+        </div>
+        <div id="narrative-insights-panel"></div>
       </div>
     </div>
 

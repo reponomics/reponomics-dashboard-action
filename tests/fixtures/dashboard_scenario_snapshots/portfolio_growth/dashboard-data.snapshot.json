@@ -1822,6 +1822,170 @@
         "all"
       ]
     },
+    "narratives": [
+      {
+        "action": "Tighten contributor affordances while the repo is already being inspected.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "614"
+          },
+          {
+            "detail": "health score",
+            "label": "Community",
+            "value": "96%"
+          },
+          {
+            "detail": "contributing guide",
+            "label": "Missing",
+            "value": "1"
+          }
+        ],
+        "recipe": "attention_before_readiness",
+        "repo": "reponomics/action",
+        "summary": "reponomics/action has 614 recent visitors, but contributing guide may make the next step less obvious.",
+        "title": "Attention is arriving before the repo looks contributor-ready",
+        "tone": "warning"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "473"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "9"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "1"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "reponomics/dashboard-template",
+        "summary": "reponomics/dashboard-template has 473 recent visitors and 67 clones while 9 issues and 1 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      },
+      {
+        "action": "Consider marking good first issues or asking for help in the next release note.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "recent weekly sample",
+            "label": "Active contributors",
+            "value": "1"
+          },
+          {
+            "detail": "recent weekly sample",
+            "label": "Commits",
+            "value": "5"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "46"
+          }
+        ],
+        "recipe": "contributor_concentration",
+        "repo": "reponomics/collector",
+        "summary": "reponomics/collector has 323 visitors and 46 clones recently, but the contributor activity sample is concentrated in one author.",
+        "title": "Interest is visible while contribution is concentrated",
+        "tone": "attention"
+      },
+      {
+        "action": "Look for whether the churn was user-facing, refactor-heavy, or release preparation.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "additions + deletions",
+            "label": "Code changes",
+            "value": "723"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "258"
+          },
+          {
+            "detail": "previous comparable window",
+            "label": "Prior views",
+            "value": "298"
+          }
+        ],
+        "recipe": "code_churn_context",
+        "repo": "reponomics/schema",
+        "summary": "reponomics/schema had 723 lines changed recently while attention stayed quiet at 258 views.",
+        "title": "Internal code churn gives context for a quiet traffic window",
+        "tone": "neutral"
+      },
+      {
+        "action": "Tighten contributor affordances while the repo is already being inspected.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "356"
+          },
+          {
+            "detail": "health score",
+            "label": "Community",
+            "value": "78%"
+          },
+          {
+            "detail": "contributing guide",
+            "label": "Missing",
+            "value": "1"
+          }
+        ],
+        "recipe": "attention_before_readiness",
+        "repo": "reponomics/docs-site",
+        "summary": "reponomics/docs-site has 356 recent visitors, but contributing guide may make the next step less obvious.",
+        "title": "Attention is arriving before the repo looks contributor-ready",
+        "tone": "warning"
+      },
+      {
+        "action": "Use labels, templates, or release notes to steer incoming user work.",
+        "anchor_date": "",
+        "events": [],
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "614"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open issues",
+            "value": "10"
+          },
+          {
+            "detail": "latest snapshot",
+            "label": "Open PRs",
+            "value": "0"
+          }
+        ],
+        "recipe": "maintenance_pressure",
+        "repo": "reponomics/action",
+        "summary": "reponomics/action has 614 recent visitors and 91 clones while 10 issues and 0 PRs are open.",
+        "title": "User attention is meeting an active maintenance queue",
+        "tone": "warning"
+      }
+    ],
     "paths": [
       {
         "content": "Repository overview",

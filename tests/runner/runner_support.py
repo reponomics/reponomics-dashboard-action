@@ -34,6 +34,7 @@ PUBLISHED_CORE_RUNTIME_SOURCES = [
     "assets/dashboard/quality-calendar.js",
     "assets/dashboard/series.js",
     "assets/dashboard/momentum.js",
+    "assets/dashboard/narrative-insights.js",
     "assets/dashboard/chart-options.js",
     "assets/dashboard/controls.js",
     "assets/dashboard/charts.js",
@@ -422,6 +423,29 @@ def _seed_scenario(data_dir: Path, dataset: dashboard_scenarios.ScenarioDataset)
         data_dir / "collection-status.csv",
         run.storage.COLLECTION_STATUS_FIELDS,
         dataset.status_rows,
+    )
+    _write_csv(data_dir / "repo-releases.csv", run.storage.REPO_RELEASE_FIELDS, dataset.release_rows)
+    _write_csv(data_dir / "repo-languages.csv", run.storage.REPO_LANGUAGE_FIELDS, dataset.language_rows)
+    _write_csv(data_dir / "repo-topics.csv", run.storage.REPO_TOPIC_FIELDS, dataset.topic_rows)
+    _write_csv(
+        data_dir / "repo-issue-pr-snapshots.csv",
+        run.storage.REPO_ISSUE_PR_SNAPSHOT_FIELDS,
+        dataset.issue_pr_rows,
+    )
+    _write_csv(
+        data_dir / "repo-code-frequency-weekly.csv",
+        run.storage.REPO_CODE_FREQUENCY_WEEKLY_FIELDS,
+        dataset.code_frequency_rows,
+    )
+    _write_csv(
+        data_dir / "repo-contributor-activity-weekly.csv",
+        run.storage.REPO_CONTRIBUTOR_ACTIVITY_WEEKLY_FIELDS,
+        dataset.contributor_activity_rows,
+    )
+    _write_csv(
+        data_dir / "repo-event-index.csv",
+        run.storage.REPO_EVENT_INDEX_FIELDS,
+        dataset.event_rows,
     )
     (data_dir / "manifest.json").write_text(
         json.dumps({"schema_version": run.storage.SCHEMA_VERSION}),

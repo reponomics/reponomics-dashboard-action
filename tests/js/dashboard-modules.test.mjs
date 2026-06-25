@@ -4,6 +4,7 @@ import test from 'node:test';
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
+import { installNarrativeInsights } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/narrative-insights.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
@@ -311,6 +312,69 @@ test('series helpers preserve selected-window and growth aggregation contracts',
       forks_delta: [0, 0],
     },
   );
+});
+
+test('narrative insight helpers scope cards and render evidence safely', () => {
+  const state = {
+    selectedRepo: 'demo/app',
+    compareRepos: [],
+  };
+  const helpers = installNarrativeInsights({
+    document: fakeDocument(),
+    window: { scrollTo() {} },
+    currentPayload() {
+      return {};
+    },
+    escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    },
+    getShortName(repoName) {
+      return String(repoName || '').split('/').pop() || '';
+    },
+    isComparing() {
+      return state.compareRepos.length >= 2;
+    },
+    selectRepo() {},
+    state,
+  });
+
+  const cards = [
+    { repo: 'demo/app', recipe: 'attention_conversion_gap' },
+    { repo: 'demo/lib', recipe: 'release_adoption_lift' },
+  ];
+  assert.deepEqual(helpers.narrativeScope(cards), [cards[0]]);
+  assert.equal(helpers.recipeLabel('attention_conversion_gap'), 'Attention Conversion Gap');
+  assert.equal(helpers.safeEventUrl('javascript:alert(1)'), '');
+  assert.equal(
+    helpers.safeEventUrl('https://github.com/demo/app/releases/tag/v1.0.0'),
+    'https://github.com/demo/app/releases/tag/v1.0.0',
+  );
+
+  const html = helpers.renderNarrativeItem({
+    repo: 'demo/app',
+    recipe: 'event_aligned_attention',
+    tone: 'positive',
+    title: 'A repository event lines up with the attention peak',
+    summary: 'Traffic moved near a docs event.',
+    anchor_date: '2026-06-12',
+    evidence: [{ label: 'Peak day', value: '42', detail: 'views' }],
+    events: [{
+      date: '2026-06-10',
+      title: 'docs: update setup',
+      classification: 'docs',
+      url: 'https://github.com/demo/app/commit/abc',
+    }],
+    action: 'Compare surrounding referrers.',
+  });
+
+  assert.match(html, /narrative-item positive/);
+  assert.match(html, /Event Aligned Attention/);
+  assert.match(html, /Peak day/);
+  assert.match(html, /https:\/\/github\.com\/demo\/app\/commit\/abc/);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {

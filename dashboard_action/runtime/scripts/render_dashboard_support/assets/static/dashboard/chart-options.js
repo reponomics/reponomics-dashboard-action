@@ -4,12 +4,12 @@ export function installChartOptions(context) {
   const getThemeColor = (...args) => context.getThemeColor(...args);
 
     function chartOptions(stacked) {
-      const tick = getThemeColor('--text-muted', '#8b949e');
+      const tick = getThemeColor('--text-muted', '#a4b1c1');
       const grid = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
       const axis = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
-      const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
-      const tipBorder = getThemeColor('--chart-tooltip-border', '#262d38');
-      const text = getThemeColor('--text', '#e6edf3');
+      const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(12, 16, 22, 0.97)');
+      const tipBorder = getThemeColor('--chart-tooltip-border', 'rgba(214, 168, 75, 0.30)');
+      const text = getThemeColor('--text', '#edf3f8');
       return {
         responsive: true,
         maintainAspectRatio: false,
@@ -28,6 +28,8 @@ export function installChartOptions(context) {
             titleColor: text,
             bodyColor: text,
             padding: 10,
+            cornerRadius: 8,
+            caretSize: 6,
             boxPadding: 4,
             usePointStyle: true,
             callbacks: {

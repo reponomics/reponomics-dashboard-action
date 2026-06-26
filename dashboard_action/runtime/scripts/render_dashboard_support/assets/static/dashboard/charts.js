@@ -121,11 +121,11 @@ export function installCharts(context) {
       renderDelta('deltaCloneUniques', computeDelta(split, 'clone_uniques'));
 
       const src = sparkSource || { views: [], uniques: [], clones: [], clone_uniques: [] };
-      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], getThemeColor('--accent', '#1f6feb'));
-      renderSparkline('sparkViews', src.views || [], getThemeColor('--c-views', '#58a6ff'));
-      renderSparkline('sparkUniques', src.uniques || [], getThemeColor('--c-uniques', '#3fb950'));
-      renderSparkline('sparkClones', src.clones || [], getThemeColor('--c-clones', '#CC79A7'));
-      renderSparkline('sparkCloneUniques', src.clone_uniques || [], getThemeColor('--c-cloners', '#ffa657'));
+      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], getThemeColor('--accent', '#6bb8ff'));
+      renderSparkline('sparkViews', src.views || [], getThemeColor('--c-views', '#6bb8ff'));
+      renderSparkline('sparkUniques', src.uniques || [], getThemeColor('--c-uniques', '#4fc8a5'));
+      renderSparkline('sparkClones', src.clones || [], getThemeColor('--c-clones', '#d97eb7'));
+      renderSparkline('sparkCloneUniques', src.clone_uniques || [], getThemeColor('--c-cloners', '#f0b75a'));
     }
 
     function ensureCharts() {
@@ -137,12 +137,12 @@ export function installCharts(context) {
         });
       }
       if (!context.charts.weekdayChart) {
-        const tick = getThemeColor('--text-muted', '#8b949e');
+        const tick = getThemeColor('--text-muted', '#a4b1c1');
         const grid = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
         const axis = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
-        const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
-        const tipBorder = getThemeColor('--chart-tooltip-border', '#262d38');
-        const text = getThemeColor('--text', '#e6edf3');
+        const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(12, 16, 22, 0.97)');
+        const tipBorder = getThemeColor('--chart-tooltip-border', 'rgba(214, 168, 75, 0.30)');
+        const text = getThemeColor('--text', '#edf3f8');
         context.charts.weekdayChart = context.chartAdapter.createChart(document.getElementById('weekdayChart'), {
           type: 'bar',
           data: { labels: [], datasets: [] },
@@ -159,6 +159,8 @@ export function installCharts(context) {
                 titleColor: text,
                 bodyColor: text,
                 padding: 10,
+                cornerRadius: 8,
+                caretSize: 6,
                 callbacks: {
                   label: function(ctx) {
                     return ' ' + (ctx.dataset.label || '') + '  ' + Number(ctx.parsed.y || 0).toLocaleString();

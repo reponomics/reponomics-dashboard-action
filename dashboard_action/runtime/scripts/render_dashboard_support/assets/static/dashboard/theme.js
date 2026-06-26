@@ -68,7 +68,7 @@ export function installTheme(context) {
       }
       if (context.charts.weekdayChart) {
         // weekday uses its own option block — patch the text/grid colors
-        const tickColor = getThemeColor('--text-muted', '#8b949e');
+        const tickColor = getThemeColor('--text-muted', '#a4b1c1');
         const gridColor = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
         const axisColor = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
         context.charts.weekdayChart.options.scales.x.ticks.color = tickColor;
@@ -76,10 +76,10 @@ export function installTheme(context) {
         context.charts.weekdayChart.options.scales.y.grid.color = gridColor;
         if (context.charts.weekdayChart.options.scales.x.border) context.charts.weekdayChart.options.scales.x.border.color = axisColor;
         if (context.charts.weekdayChart.options.plugins?.tooltip) {
-          context.charts.weekdayChart.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
-          context.charts.weekdayChart.options.plugins.tooltip.borderColor = getThemeColor('--chart-tooltip-border', '#262d38');
-          context.charts.weekdayChart.options.plugins.tooltip.titleColor = getThemeColor('--text', '#e6edf3');
-          context.charts.weekdayChart.options.plugins.tooltip.bodyColor = getThemeColor('--text', '#e6edf3');
+          context.charts.weekdayChart.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg', 'rgba(12, 16, 22, 0.97)');
+          context.charts.weekdayChart.options.plugins.tooltip.borderColor = getThemeColor('--chart-tooltip-border', 'rgba(214, 168, 75, 0.30)');
+          context.charts.weekdayChart.options.plugins.tooltip.titleColor = getThemeColor('--text', '#edf3f8');
+          context.charts.weekdayChart.options.plugins.tooltip.bodyColor = getThemeColor('--text', '#edf3f8');
         }
         context.charts.weekdayChart.update('none');
       }

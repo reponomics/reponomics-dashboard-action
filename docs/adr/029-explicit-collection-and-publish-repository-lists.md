@@ -72,18 +72,23 @@ Example:
 ```yaml
 collect:
   repositories:
-    - owner/api
-    - owner/web
-    - owner/docs
-    - owner/sdk
-    - owner/infra
+    - api
+    - web
+    - docs
+    - sdk
+    - other-owner/infra
 
 publish:
   repositories:
-    - owner/api
-    - owner/web
-    - owner/docs
+    - api
+    - web
+    - docs
 ```
+
+Repository entries may use either a bare repository name or a full
+`owner/repo` name. Bare names are normalized to the owner of the dashboard
+repository. Full names are available when the user wants to collect or publish
+repositories from another owner.
 
 ### Collection List
 
@@ -93,7 +98,7 @@ observations only for repositories listed there.
 Policy:
 
 - `collect.repositories` is required.
-- Entries must be explicit `owner/repo` names.
+- Entries must be explicit repository names, either as `repo` or `owner/repo`.
 - No repositories are added implicitly.
 - No automatic discovery fills remaining slots.
 - No `include_others` style behavior remains in the beta model.
@@ -119,7 +124,7 @@ repositories listed there.
 Policy:
 
 - `publish.repositories` is required.
-- Entries must be explicit `owner/repo` names.
+- Entries must be explicit repository names, either as `repo` or `owner/repo`.
 - Every published repository must also appear in `collect.repositories`.
 - The list is capped at 8 repositories.
 - Reponomics does not choose a default publish list.

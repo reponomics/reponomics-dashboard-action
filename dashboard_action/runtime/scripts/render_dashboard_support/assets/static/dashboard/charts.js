@@ -146,6 +146,7 @@ export function installCharts(context) {
         context.charts.weekdayChart = context.chartAdapter.createChart(document.getElementById('weekdayChart'), {
           type: 'bar',
           data: { labels: [], datasets: [] },
+          plugins: [barTexturePlugin],
           options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -227,6 +228,87 @@ export function installCharts(context) {
       g.addColorStop(1, hexAlpha(color, 0.02));
       return g;
     }
+
+    function buildBarGradient(ctx, chartArea, color, options) {
+      const topAlpha = options?.topAlpha ?? 0.88;
+      const midAlpha = options?.midAlpha ?? 0.62;
+      const bottomAlpha = options?.bottomAlpha ?? 0.38;
+      if (!chartArea) return hexAlpha(color, midAlpha);
+      const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, hexAlpha(color, topAlpha));
+      g.addColorStop(0.58, hexAlpha(color, midAlpha));
+      g.addColorStop(1, hexAlpha(color, bottomAlpha));
+      return g;
+    }
+
+    function makeBarFill(color, options) {
+      return function(context) {
+        const chart = context.chart;
+        return buildBarGradient(chart.ctx, chart.chartArea, color, options);
+      };
+    }
+
+    const barTexturePlugin = {
+      id: 'reponomicsBarTexture',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        if (!ctx) return;
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (!meta || meta.type !== 'bar' || meta.hidden) return;
+          const color = dataset.textureColor || dataset.borderColor || getThemeColor('--accent', '#6bb8ff');
+          const alpha = dataset.textureAlpha ?? 0.22;
+          const variant = dataset.textureVariant || (datasetIndex % 2 ? 'check' : 'stripe');
+          meta.data.forEach((bar) => {
+            const props = typeof bar.getProps === 'function'
+              ? bar.getProps(['x', 'y', 'base', 'width'], true)
+              : bar;
+            const width = Number(props.width || 0);
+            if (!width) return;
+            const left = Number(props.x) - width / 2;
+            const right = Number(props.x) + width / 2;
+            const top = Math.min(Number(props.y), Number(props.base));
+            const bottom = Math.max(Number(props.y), Number(props.base));
+            const height = bottom - top;
+            if (!Number.isFinite(height) || height < 3) return;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(left, top, right - left, height);
+            ctx.clip();
+            ctx.lineWidth = 1;
+
+            if (variant === 'check') {
+              ctx.fillStyle = hexAlpha(color, alpha * 0.52);
+              const step = 8;
+              for (let x = left - step; x < right + step; x += step) {
+                for (let y = top - step; y < bottom + step; y += step) {
+                  if (((Math.floor((x - left) / step) + Math.floor((y - top) / step)) % 2) === 0) {
+                    ctx.fillRect(x, y, step / 2, step / 2);
+                  }
+                }
+              }
+            } else {
+              ctx.strokeStyle = hexAlpha(color, alpha);
+              const step = 9;
+              for (let x = left - height; x < right + height; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, bottom + 1);
+                ctx.lineTo(x + height, top - 1);
+                ctx.stroke();
+              }
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            ctx.beginPath();
+            ctx.moveTo(left + 1, top + 1);
+            ctx.lineTo(right - 1, top + 1);
+            ctx.stroke();
+            ctx.restore();
+          });
+        });
+      }
+    };
 
     function makeAreaDataset(label, data, color, options) {
       return {
@@ -313,15 +395,27 @@ export function installCharts(context) {
       if (isComparing()) {
         title.textContent = 'Weekday rhythm — ' + metric.label.toLowerCase();
         labels = windowData.weekday?.labels || defaultLabels;
-        datasets = state.compareRepos.map((repoName) => ({
-          label: getShortName(repoName),
-          data: buildWeekdaySummaryFromSeries({
-            [repoName]: getRepoByName(repoName)?.series || { dates: [], views: [], uniques: [], clones: [], clone_uniques: [], stars_delta: [], subscribers_delta: [], forks_delta: [] }
-          })[metric.key] || labels.map(() => 0),
-          backgroundColor: hexAlpha(getRepoColor(repoName), 0.85),
-          borderRadius: 6,
-          maxBarThickness: 22
-        }));
+        datasets = state.compareRepos.map((repoName, idx) => {
+          const color = getRepoColor(repoName);
+          return {
+            type: 'bar',
+            label: getShortName(repoName),
+            data: buildWeekdaySummaryFromSeries({
+              [repoName]: getRepoByName(repoName)?.series || { dates: [], views: [], uniques: [], clones: [], clone_uniques: [], stars_delta: [], subscribers_delta: [], forks_delta: [] }
+            })[metric.key] || labels.map(() => 0),
+            backgroundColor: makeBarFill(color, { topAlpha: 0.92, midAlpha: 0.68, bottomAlpha: 0.42 }),
+            borderColor: hexAlpha(color, 0.88),
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            hoverBackgroundColor: makeBarFill(color, { topAlpha: 1, midAlpha: 0.78, bottomAlpha: 0.52 }),
+            hoverBorderColor: color,
+            maxBarThickness: 22,
+            textureColor: color,
+            textureVariant: idx % 2 ? 'check' : 'stripe',
+            textureAlpha: 0.20
+          };
+        });
       } else {
         const weekdayData = state.selectedRepo
           ? buildWeekdaySummaryFromSeries({
@@ -334,11 +428,20 @@ export function installCharts(context) {
         labels = weekdayData?.labels || defaultLabels;
         datasets = [
           {
+            type: 'bar',
             label: 'Avg ' + metric.label.toLowerCase(),
             data: weekdayData?.[metric.key] || labels.map(() => 0),
-            backgroundColor: hexAlpha(metric.color, 0.78),
-            borderRadius: 6,
-            maxBarThickness: 28
+            backgroundColor: makeBarFill(metric.color, { topAlpha: 0.92, midAlpha: 0.66, bottomAlpha: 0.36 }),
+            borderColor: hexAlpha(metric.color, 0.82),
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            hoverBackgroundColor: makeBarFill(metric.color, { topAlpha: 1, midAlpha: 0.78, bottomAlpha: 0.50 }),
+            hoverBorderColor: metric.color,
+            maxBarThickness: 28,
+            textureColor: metric.color,
+            textureVariant: state.metric === 'clone_uniques' || state.metric === 'clones' ? 'check' : 'stripe',
+            textureAlpha: 0.24
           }
         ];
       }

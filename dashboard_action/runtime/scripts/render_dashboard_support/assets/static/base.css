@@ -1656,10 +1656,23 @@
       border: 1px solid var(--border-soft);
     }
     .repo-bar {
+      position: relative;
       height: 100%;
       border-radius: 999px;
       background: var(--bar-color, linear-gradient(90deg, var(--c-views), var(--accent)));
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.20) inset;
       transition: width 240ms ease;
+    }
+    .repo-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.20), transparent 48%),
+        repeating-linear-gradient(135deg, var(--bar-pattern-color, rgba(255, 255, 255, 0.16)) 0 1px, transparent 1px 7px);
+      opacity: 0.72;
+      pointer-events: none;
     }
     .repo-share-pct {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;

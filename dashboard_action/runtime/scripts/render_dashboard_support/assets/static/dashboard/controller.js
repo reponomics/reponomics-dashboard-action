@@ -239,8 +239,9 @@ export function installController(context) {
         bar.style.width = pct.toFixed(1) + '%';
         bar.style.setProperty(
           '--bar-color',
-          `linear-gradient(90deg, ${metric.color}, ${hexAlpha(metric.color, 0.6)})`
+          `linear-gradient(90deg, ${hexAlpha(metric.color, 0.95)}, ${hexAlpha(metric.color, 0.52)})`
         );
+        bar.style.setProperty('--bar-pattern-color', hexAlpha(metric.color, 0.24));
       });
     }
 

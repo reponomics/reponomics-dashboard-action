@@ -39,6 +39,16 @@ dashboard interaction stay in the user's repository boundary unless the user
 chooses to disclose something. This product position is stronger when the
 configured repository set is explicit, handwritten, and predictable.
 
+The explicit model is also intended to increase engagement with the dashboard
+repository itself. If Reponomics passively collects everything visible to a
+token, users can treat the dashboard as ambient storage they might check later.
+Hand-maintained lists create a small maintenance ritual: when a user creates,
+adopts, or stops caring about a repository, they return to the dashboard repo
+and decide whether that project should be remembered and whether it deserves
+published attention. Users can still collect more repositories than they
+actively publish, but the collection registry remains a conscious portfolio
+rather than a background sweep.
+
 There are currently no external production users. Breaking changes are
 acceptable when they simplify the beta product, but they should be documented
 clearly because they affect collection continuity, dashboard shape, and user
@@ -55,6 +65,8 @@ expectations.
 - Avoid a dashboard repository picker in the current beta plan.
 - Make publication curation low-risk while making collection removal an
   intentional choice.
+- Encourage users to revisit the dashboard repository when repository ownership
+  or attention changes.
 - Reinforce the trust-minimized product positioning.
 
 ## Decision
@@ -190,7 +202,9 @@ versioned deletion or purge feature is introduced.
 
 These tradeoffs are intentional for beta. The friction asks users to make
 explicit choices about what they want Reponomics to remember and what they want
-the dashboard to watch closely.
+the dashboard to watch closely. It also makes the dashboard repository a place
+the user comes back to when their project set changes, instead of a passive
+collector they can ignore indefinitely.
 
 ## Rejected Alternatives
 

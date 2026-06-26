@@ -358,6 +358,14 @@
         linear-gradient(90deg, rgba(107, 184, 255, 0.085), transparent 30%),
         linear-gradient(180deg, var(--bg-card), var(--bg-card-2));
     }
+    .controls-card::after {
+      background:
+        linear-gradient(115deg, transparent 0 51%, rgba(214, 168, 75, 0.055) 51.2% 51.55%, transparent 51.9% 100%),
+        linear-gradient(78deg, transparent 0 64%, rgba(79, 200, 165, 0.060) 64.15% 64.45%, transparent 64.7% 100%),
+        repeating-conic-gradient(from 45deg, rgba(107, 184, 255, 0.030) 0 25%, transparent 0 50%) 0 0 / 22px 22px,
+        repeating-linear-gradient(90deg, transparent 0 30px, rgba(255, 255, 255, 0.018) 30px 31px);
+      opacity: 0.58;
+    }
     .controls-main {
       min-width: 0;
       flex: 1 1 460px;
@@ -879,19 +887,20 @@
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 0.85rem;
-      margin-bottom: 1.2rem;
+      gap: 1rem;
+      margin-bottom: 1.3rem;
     }
     .stat-card {
       position: relative;
       overflow: hidden;
-      min-height: 148px;
-      padding: 1.05rem 1.08rem 0.98rem;
+      min-height: 168px;
+      padding: 1.1rem 1.1rem 1rem;
       display: grid;
       grid-template-rows: auto 1fr auto;
-      gap: 0.55rem;
+      gap: 0.62rem;
       background:
         linear-gradient(160deg, var(--metric-wash, rgba(107, 184, 255, 0.13)), transparent 48%),
+        var(--metric-texture, repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 12px)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.050), rgba(255, 255, 255, 0.004)),
         var(--bg-card);
       transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
@@ -909,6 +918,13 @@
       stroke-dasharray: 1;
       animation: spark-draw 900ms ease-out 80ms both;
     }
+    .stat-card::after {
+      background:
+        linear-gradient(var(--metric-rail-angle, 118deg), transparent 0 45%, var(--metric-glow, rgba(107, 184, 255, 0.14)) 45.15% 45.45%, transparent 45.8% 100%),
+        linear-gradient(90deg, transparent 0 58%, rgba(255, 255, 255, 0.028) 58% 59%, transparent 68%),
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(255, 255, 255, 0.012) 23px 24px);
+      opacity: 0.76;
+    }
     .stat-card::before {
       content: '';
       position: absolute;
@@ -919,15 +935,55 @@
       background: linear-gradient(180deg, var(--metric-color, var(--accent)), transparent);
       opacity: 0.95;
     }
-    .stat-card[data-metric="repos"] { --metric-color: var(--accent); --metric-wash: rgba(107, 184, 255, 0.13); }
-    .stat-card[data-metric="views"] { --metric-color: var(--c-views); --metric-wash: rgba(107, 184, 255, 0.16); }
-    .stat-card[data-metric="uniques"] { --metric-color: var(--c-uniques); --metric-wash: rgba(79, 200, 165, 0.14); }
-    .stat-card[data-metric="clones"] { --metric-color: var(--c-clones); --metric-wash: rgba(217, 126, 183, 0.14); }
-    .stat-card[data-metric="cloners"] { --metric-color: var(--c-cloners); --metric-wash: rgba(240, 183, 90, 0.13); }
+    .stat-card[data-metric="repos"] {
+      --metric-color: var(--accent);
+      --metric-wash: rgba(107, 184, 255, 0.13);
+      --metric-glow: rgba(107, 184, 255, 0.18);
+      --metric-rail-angle: 112deg;
+      --metric-texture:
+        repeating-linear-gradient(90deg, rgba(107, 184, 255, 0.040) 0 1px, transparent 1px 18px),
+        repeating-linear-gradient(0deg, rgba(107, 184, 255, 0.024) 0 1px, transparent 1px 18px);
+    }
+    .stat-card[data-metric="views"] {
+      --metric-color: var(--c-views);
+      --metric-wash: rgba(107, 184, 255, 0.18);
+      --metric-glow: rgba(107, 184, 255, 0.24);
+      --metric-rail-angle: 122deg;
+      --metric-texture:
+        linear-gradient(115deg, transparent 0 38%, rgba(107, 184, 255, 0.045) 38.2% 38.8%, transparent 39.2% 100%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.017) 0 1px, transparent 1px 10px);
+    }
+    .stat-card[data-metric="uniques"] {
+      --metric-color: var(--c-uniques);
+      --metric-wash: rgba(79, 200, 165, 0.16);
+      --metric-glow: rgba(79, 200, 165, 0.20);
+      --metric-rail-angle: 64deg;
+      --metric-texture:
+        repeating-linear-gradient(45deg, rgba(79, 200, 165, 0.040) 0 1px, transparent 1px 14px),
+        repeating-linear-gradient(-45deg, rgba(79, 200, 165, 0.022) 0 1px, transparent 1px 18px);
+    }
+    .stat-card[data-metric="clones"] {
+      --metric-color: var(--c-clones);
+      --metric-wash: rgba(217, 126, 183, 0.16);
+      --metric-glow: rgba(217, 126, 183, 0.20);
+      --metric-rail-angle: 136deg;
+      --metric-texture:
+        repeating-linear-gradient(90deg, rgba(217, 126, 183, 0.040) 0 7px, transparent 7px 14px),
+        repeating-linear-gradient(0deg, rgba(217, 126, 183, 0.020) 0 7px, transparent 7px 14px);
+    }
+    .stat-card[data-metric="cloners"] {
+      --metric-color: var(--c-cloners);
+      --metric-wash: rgba(240, 183, 90, 0.15);
+      --metric-glow: rgba(240, 183, 90, 0.20);
+      --metric-rail-angle: 48deg;
+      --metric-texture:
+        repeating-conic-gradient(from 45deg, rgba(240, 183, 90, 0.046) 0 25%, transparent 0 50%) 0 0 / 18px 18px,
+        linear-gradient(100deg, transparent 0 28%, rgba(240, 183, 90, 0.034) 28.2% 28.7%, transparent 29% 100%);
+    }
     .stat-card[data-metric="stars"] { --metric-color: var(--accent-2); }
     .stat-card[data-metric="repos"] { grid-column: span 2; }
-    .stat-card[data-metric="views"] { grid-column: span 3; }
-    .stat-card[data-metric="uniques"] { grid-column: span 3; }
+    .stat-card[data-metric="views"] { grid-column: span 4; }
+    .stat-card[data-metric="uniques"] { grid-column: span 2; }
     .stat-card[data-metric="clones"] { grid-column: span 2; }
     .stat-card[data-metric="cloners"] { grid-column: span 2; }
     .growth-model-grid {
@@ -1046,6 +1102,9 @@
       letter-spacing: 0;
       align-self: end;
     }
+    .stat-card[data-metric="views"] .stat-value {
+      font-size: clamp(2.05rem, 3vw, 2.7rem);
+    }
     .stat-label {
       color: var(--text-muted);
       font-size: 0.72rem;
@@ -1070,13 +1129,40 @@
     .stat-delta.flat { color: var(--text-muted); background: rgba(139, 148, 158, 0.08); border-color: rgba(139, 148, 158, 0.22); }
     .stat-delta.hidden { display: none; }
     .stat-spark {
-      height: 34px;
+      height: 46px;
       width: 100%;
       display: block;
-      opacity: 0.9;
+      opacity: 1;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.20));
     }
-    .stat-spark path.line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
-    .stat-spark path.area { stroke: none; opacity: 0.22; }
+    .stat-spark path.line {
+      fill: none;
+      stroke-width: 2.15;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+    .stat-spark path.spark-glow {
+      fill: none;
+      stroke-width: 5.2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      opacity: 0.18;
+      filter: blur(1.5px);
+    }
+    .stat-spark path.area {
+      stroke: none;
+      opacity: 1;
+    }
+    .stat-spark path.spark-pattern {
+      stroke: none;
+      opacity: 0.55;
+      mix-blend-mode: screen;
+    }
+    .stat-spark .spark-terminal {
+      stroke: var(--bg-card);
+      stroke-width: 1.25;
+      filter: drop-shadow(0 0 6px currentColor);
+    }
     .dashboard-hidden { display: none; }
     .compare-summary {
       display: none;

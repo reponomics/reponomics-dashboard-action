@@ -104,6 +104,10 @@ Repository configuration should shift from "choose the small set to protect" to
 still be able to exclude repositories, pin repositories for display, and set a
 lower cost ceiling.
 
+Superseded by ADR 029 for repository selection and dashboard publication:
+Reponomics now uses explicit `collect.repositories` and `publish.repositories`
+lists instead of broad automatic collection with exclusions.
+
 ### Schedule
 
 The default schedule should be once per day.

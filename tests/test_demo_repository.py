@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -160,6 +162,17 @@ def test_demo_dataset_has_single_owner_and_expected_size() -> None:
     assert all("/demo-" in item for item in dataset["featured_repositories"])
 
 
+def test_demo_seed_manifest_does_not_include_selection_state(tmp_path: Path) -> None:
+    dataset = build_demo_repo._load_dataset(ROOT / "demo" / "dataset.yml")
+
+    build_demo_repo._materialize_data(tmp_path, dataset, date(2026, 6, 27))
+
+    manifest = json.loads((tmp_path / "data" / "manifest.json").read_text(encoding="utf-8"))
+    assert "selection_state" not in manifest
+    assert "auto_seeded_at" not in json.dumps(manifest)
+    assert manifest["schema_version"] == "4"
+
+
 def test_demo_dataset_rejects_ambiguous_public_brand_names(tmp_path: Path) -> None:
     dataset = {
         "schema_version": 1,
@@ -242,7 +255,9 @@ def test_demo_publish_tree_allows_readme_svg_assets_only(tmp_path: Path) -> None
     (assets / "chart.umd.min.js").write_text("window.Chart = {}", encoding="utf-8")
     with pytest.raises(build_demo_repo.DemoBuildError, match="docs/assets/chart\\.umd\\.min\\.js"):
         build_demo_repo._assert_no_committed_html_dashboard_outputs(output)
-    with pytest.raises(publish_demo_repo.DemoPublishError, match="docs/assets/chart\\.umd\\.min\\.js"):
+    with pytest.raises(
+        publish_demo_repo.DemoPublishError, match="docs/assets/chart\\.umd\\.min\\.js"
+    ):
         publish_demo_repo._assert_publish_tree_shape(output)
 
 
@@ -266,7 +281,9 @@ def test_demo_publisher_rejects_gitignored_publish_files(tmp_path: Path) -> None
     (output / "ignored.txt").write_text("intended generated file\n", encoding="utf-8")
     expected_files = publish_demo_repo._output_files(output)
 
-    with pytest.raises(publish_demo_repo.DemoPublishError, match="missing from git add -A: ignored.txt"):
+    with pytest.raises(
+        publish_demo_repo.DemoPublishError, match="missing from git add -A: ignored.txt"
+    ):
         publish_demo_repo._assert_git_add_stages_publish_tree(output, "main", expected_files)
 
 
@@ -288,15 +305,23 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert "environment" not in build_job
     assert build_job["permissions"] == {"contents": "read"}
     build_step_names = [step["name"] for step in build_job["steps"]]
-    assert build_step_names.index("Resolve publication source") < build_step_names.index("Checkout source")
-    resolve_step = next(step for step in build_job["steps"] if step["name"] == "Resolve publication source")
+    assert build_step_names.index("Resolve publication source") < build_step_names.index(
+        "Checkout source"
+    )
+    resolve_step = next(
+        step for step in build_job["steps"] if step["name"] == "Resolve publication source"
+    )
     assert "DEMO_DAILY_SOURCE_REF" in resolve_step["run"]
     assert "demo-stable" in resolve_step["run"]
-    build_step = next(step for step in build_job["steps"] if step["name"] == "Build and verify generated demo")
+    build_step = next(
+        step for step in build_job["steps"] if step["name"] == "Build and verify generated demo"
+    )
     assert "make build-demo" not in build_step["run"]
     assert "make verify-demo" in build_step["run"]
     assert any(step["name"] == "Upload generated demo artifact" for step in build_job["steps"])
-    assert any(step["name"] == "Upload encrypted demo dashboard data seed" for step in build_job["steps"])
+    assert any(
+        step["name"] == "Upload encrypted demo dashboard data seed" for step in build_job["steps"]
+    )
 
     publish_job = workflow["jobs"]["publish-demo"]
     assert publish_job["needs"] == "build-demo-artifact"
@@ -307,7 +332,9 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert step_names.index("Validate downloaded demo artifact") < step_names.index(
         "Create demo publication app token"
     )
-    validation_step = next(step for step in steps if step["name"] == "Validate downloaded demo artifact")
+    validation_step = next(
+        step for step in steps if step["name"] == "Validate downloaded demo artifact"
+    )
     validation_script = validation_step["run"]
     assert "grep -q 'docs/assets/hero-stats.svg' demo-repo/README.md" in validation_script
     assert "test -f demo-repo/docs/assets/hero-stats.svg" in validation_script
@@ -321,7 +348,9 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert token_step["with"]["permission-contents"] == "write"
     assert token_step["with"]["permission-workflows"] == "write"
     assert token_step["with"]["permission-actions"] == "write"
-    publish_step = next(step for step in steps if step["name"] == "Publish generated demo repository")
+    publish_step = next(
+        step for step in steps if step["name"] == "Publish generated demo repository"
+    )
     assert "make publish-demo" not in publish_step["run"]
     assert "git push" in publish_step["run"]
     assert "seed-and-publish-demo-dashboard.yml/dispatches" in publish_step["run"]

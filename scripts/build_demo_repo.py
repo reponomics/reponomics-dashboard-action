@@ -133,7 +133,9 @@ def _validate_public_demo_names(dataset: dict[str, Any]) -> None:
         raise DemoBuildError("Demo dataset must define featured_repositories.")
     for item in featured:
         if not isinstance(item, str) or not item.startswith(f"{DEMO_OWNER}/{DEMO_REPO_PREFIX}"):
-            raise DemoBuildError("Demo featured repositories must use reponomics-demo/demo-* names.")
+            raise DemoBuildError(
+                "Demo featured repositories must use reponomics-demo/demo-* names."
+            )
     for raw in dataset["repositories"]:
         if not isinstance(raw, dict):
             raise DemoBuildError("Each demo repository entry must be a mapping.")
@@ -157,7 +159,9 @@ def _assert_no_demo_brand_risk_terms(output_dir: Path) -> None:
         for term in DEMO_DATASET_DENYLIST:
             if term in content:
                 relative = path.relative_to(output_dir)
-                raise DemoBuildError(f"Generated demo output contains brand-risk term {term}: {relative}")
+                raise DemoBuildError(
+                    f"Generated demo output contains brand-risk term {term}: {relative}"
+                )
 
 
 def _repo_specs(dataset: dict[str, Any]) -> list[RepoSpec]:
@@ -239,7 +243,9 @@ def _aggregate_views(rows: list[dict[str, str]]) -> dict[str, int]:
     return totals
 
 
-def _referrer_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_of: date) -> list[dict[str, str]]:
+def _referrer_rows(
+    specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_of: date
+) -> list[dict[str, str]]:
     totals = _aggregate_views(daily_rows)
     referrers = [
         ("github.com", 0.34),
@@ -269,7 +275,9 @@ def _referrer_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_o
     return rows
 
 
-def _path_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_of: date) -> list[dict[str, str]]:
+def _path_rows(
+    specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_of: date
+) -> list[dict[str, str]]:
     totals = _aggregate_views(daily_rows)
     templates = [
         ("", "Repository overview", 0.40),
@@ -300,10 +308,7 @@ def _path_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]], as_of: d
 
 
 def _metric_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]]) -> list[dict[str, str]]:
-    by_repo_day = {
-        (row["repo"], row["ts"]): int(row["views_count"])
-        for row in daily_rows
-    }
+    by_repo_day = {(row["repo"], row["ts"]): int(row["views_count"]) for row in daily_rows}
     days = sorted({row["ts"] for row in daily_rows})
     rows: list[dict[str, str]] = []
     for spec in specs:
@@ -333,7 +338,9 @@ def _metric_rows(specs: list[RepoSpec], daily_rows: list[dict[str, str]]) -> lis
                     "visibility": "public",
                     "default_branch": "main",
                     "has_pages": (
-                        "True" if spec.name in {"demo-docs", "demo-website", "demo-status-page"} else "False"
+                        "True"
+                        if spec.name in {"demo-docs", "demo-website", "demo-status-page"}
+                        else "False"
                     ),
                     "has_discussions": "True",
                     "archived": "True" if spec.shape == "declining" else "False",
@@ -413,11 +420,23 @@ def _materialize_data(output_dir: Path, dataset: dict[str, Any], as_of: date) ->
         [{key: row[key] for key in storage.SNAPSHOT_FIELDS} for row in daily_rows],
         storage.SNAPSHOT_FIELDS,
     )
-    _write_csv(data_dir / "traffic-referrers.csv", _referrer_rows(specs, daily_rows, as_of), storage.REFERRER_FIELDS)
-    _write_csv(data_dir / "traffic-paths.csv", _path_rows(specs, daily_rows, as_of), storage.PATH_FIELDS)
-    _write_csv(data_dir / "repo-metrics.csv", _metric_rows(specs, daily_rows), storage.REPO_METRIC_FIELDS)
+    _write_csv(
+        data_dir / "traffic-referrers.csv",
+        _referrer_rows(specs, daily_rows, as_of),
+        storage.REFERRER_FIELDS,
+    )
+    _write_csv(
+        data_dir / "traffic-paths.csv", _path_rows(specs, daily_rows, as_of), storage.PATH_FIELDS
+    )
+    _write_csv(
+        data_dir / "repo-metrics.csv", _metric_rows(specs, daily_rows), storage.REPO_METRIC_FIELDS
+    )
     _write_csv(data_dir / "collection-status.csv", status_rows, storage.COLLECTION_STATUS_FIELDS)
-    _write_csv(data_dir / "collection-days.csv", traffic_reporting.collection_day_rows(status_rows), storage.COLLECTION_DAY_FIELDS)
+    _write_csv(
+        data_dir / "collection-days.csv",
+        traffic_reporting.collection_day_rows(status_rows),
+        storage.COLLECTION_DAY_FIELDS,
+    )
     _write_csv(
         data_dir / "traffic-coverage.csv",
         traffic_reporting.traffic_coverage_rows(daily_rows, status_rows),
@@ -427,10 +446,6 @@ def _materialize_data(output_dir: Path, dataset: dict[str, Any], as_of: date) ->
     manifest = storage._default_manifest()
     manifest["created_at"] = f"{start.isoformat()}T12:00:00Z"
     manifest["last_updated"] = f"{as_of.isoformat()}T12:00:00Z"
-    manifest["selection_state"] = {
-        "auto_seeded_at": f"{start.isoformat()}T12:00:00Z",
-        "auto_cutoff_created_at": "2025-01-01T00:00:00Z",
-    }
     (data_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
@@ -571,7 +586,9 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _write_encrypted_seed_artifact(data_dir: Path, seed_output_dir: Path, dataset: dict[str, Any]) -> Path:
+def _write_encrypted_seed_artifact(
+    data_dir: Path, seed_output_dir: Path, dataset: dict[str, Any]
+) -> Path:
     shutil.rmtree(seed_output_dir, ignore_errors=True)
     seed_path = seed_output_dir / DEMO_SEED_ARTIFACT_PATH
     with _temporary_env({"REPONOMICS_DEMO_DASHBOARD_KEY": str(dataset["demo_key"])}):
@@ -599,9 +616,7 @@ def _assert_no_committed_html_dashboard_outputs(output_dir: Path) -> None:
 
 def _write_demo_config(output_dir: Path, dataset: dict[str, Any]) -> None:
     owner = str(dataset["owner"])
-    collect_repositories = [
-        f"{owner}/{repo['name']}" for repo in dataset.get("repositories", [])
-    ]
+    collect_repositories = [f"{owner}/{repo['name']}" for repo in dataset.get("repositories", [])]
     publish_repositories = list(dataset.get("featured_repositories", []))[:8]
     payload = {
         "i_have_read_the_readme": True,
@@ -643,7 +658,9 @@ def _write_demo_provenance(
         "dataset_revision": dataset["dataset_revision"],
         "as_of": as_of.isoformat(),
         "synthetic_data": True,
-        "public_demo_key_sha256": hashlib.sha256(str(dataset["demo_key"]).encode("utf-8")).hexdigest(),
+        "public_demo_key_sha256": hashlib.sha256(
+            str(dataset["demo_key"]).encode("utf-8")
+        ).hexdigest(),
         "payload_digest": {
             "algorithm": "sha256",
             "format": template_provenance.TREE_MANIFEST_FORMAT,
@@ -672,7 +689,9 @@ def _assert_csv_headers(data_dir: Path) -> None:
         _assert_csv_header(data_dir / filename, fields)
 
 
-def build_demo(output_dir: Path, dataset_path: Path, as_of: date, seed_output_dir: Path = DEMO_SEED_DIR) -> None:
+def build_demo(
+    output_dir: Path, dataset_path: Path, as_of: date, seed_output_dir: Path = DEMO_SEED_DIR
+) -> None:
     if not TEMPLATE_DIR.exists():
         raise DemoBuildError("dist/template does not exist; run make build-template first.")
     dataset = _load_dataset(dataset_path)
@@ -680,7 +699,9 @@ def build_demo(output_dir: Path, dataset_path: Path, as_of: date, seed_output_di
     shutil.copytree(TEMPLATE_DIR, output_dir)
     _materialize_data(output_dir, dataset, as_of)
     _assert_csv_headers(output_dir / "data")
-    seed_artifact_path = _write_encrypted_seed_artifact(output_dir / "data", seed_output_dir, dataset)
+    seed_artifact_path = _write_encrypted_seed_artifact(
+        output_dir / "data", seed_output_dir, dataset
+    )
     _write_demo_config(output_dir, dataset)
     _write_demo_workflow(output_dir, str(dataset["demo_key"]))
     _render_demo_readme(output_dir, dataset)
@@ -708,7 +729,16 @@ def _load_encrypted_seed(seed_path: Path) -> dict[str, Any]:
         raise DemoBuildError(f"Encrypted demo seed artifact is invalid JSON: {seed_path}") from exc
     if not isinstance(payload, dict):
         raise DemoBuildError(f"Encrypted demo seed artifact must be a JSON object: {seed_path}")
-    required = {"version", "created_at", "kdf", "iterations", "algorithm", "salt", "iv", "ciphertext"}
+    required = {
+        "version",
+        "created_at",
+        "kdf",
+        "iterations",
+        "algorithm",
+        "salt",
+        "iv",
+        "ciphertext",
+    }
     missing = sorted(required - set(payload))
     if missing:
         raise DemoBuildError(f"Encrypted demo seed artifact is missing keys: {missing}")
@@ -717,7 +747,9 @@ def _load_encrypted_seed(seed_path: Path) -> dict[str, Any]:
     return payload
 
 
-def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output_dir: Path = DEMO_SEED_DIR) -> None:
+def verify_demo(
+    output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output_dir: Path = DEMO_SEED_DIR
+) -> None:
     dataset = _load_dataset(dataset_path)
     required = [
         output_dir / "README.md",
@@ -770,7 +802,9 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     if not isinstance(payload_digest, dict):
         raise DemoBuildError("Demo provenance payload_digest must be a mapping.")
     if payload_digest.get("digest") != expected_digest.digest:
-        raise DemoBuildError("Demo provenance payload digest does not match generated publish tree.")
+        raise DemoBuildError(
+            "Demo provenance payload digest does not match generated publish tree."
+        )
     if payload_digest.get("file_count") != expected_digest.file_count:
         raise DemoBuildError("Demo provenance file_count does not match generated publish tree.")
     if payload_digest.get("byte_count") != expected_digest.byte_count:
@@ -785,9 +819,13 @@ def verify_demo(output_dir: Path, dataset_path: Path = DATASET_PATH, seed_output
     if seed_evidence.get("target_artifact_name") != DEMO_SEED_DASHBOARD_DATA_ARTIFACT_NAME:
         raise DemoBuildError("Demo provenance retained_data_seed target artifact name is wrong.")
     if seed_evidence.get("sha256") != _sha256_file(seed_path):
-        raise DemoBuildError("Demo provenance retained_data_seed digest does not match seed artifact.")
+        raise DemoBuildError(
+            "Demo provenance retained_data_seed digest does not match seed artifact."
+        )
     if seed_evidence.get("byte_count") != seed_path.stat().st_size:
-        raise DemoBuildError("Demo provenance retained_data_seed byte_count does not match seed artifact.")
+        raise DemoBuildError(
+            "Demo provenance retained_data_seed byte_count does not match seed artifact."
+        )
     print(f"Verified demo repository at {output_dir}")
 
 
@@ -811,7 +849,9 @@ def main() -> None:
     if args.verify_only:
         verify_demo(args.output, args.dataset, seed_output_dir=args.seed_output)
     else:
-        build_demo(args.output, args.dataset, _parse_as_of(args.as_of), seed_output_dir=args.seed_output)
+        build_demo(
+            args.output, args.dataset, _parse_as_of(args.as_of), seed_output_dir=args.seed_output
+        )
 
 
 if __name__ == "__main__":

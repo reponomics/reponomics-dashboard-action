@@ -465,69 +465,26 @@ def test_discover_repositories_rejects_malformed_app_responses(
         run.collect_mod.discover_repositories({})
 
 
-def test_resolve_repositories_applies_stable_auto_selection(
+def test_resolve_repositories_tracks_only_explicit_collect_repositories(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     discovered: list[run.collect_mod.RepoMetadata] = [
         {
             "full_name": "demo/manual",
-            "created_at": "2025-01-01T00:00:00Z",
             "permissions": {"push": True},
         },
         {
-            "full_name": "demo/current",
-            "created_at": "2025-02-01T00:00:00Z",
-            "permissions": {"push": True},
-        },
-        {
-            "full_name": "demo/new",
-            "created_at": "2026-02-01T00:00:00Z",
-            "permissions": {"push": True},
-        },
-        {
-            "full_name": "demo/private",
-            "created_at": "2025-03-01T00:00:00Z",
-            "private": True,
-            "permissions": {"push": True},
-        },
-        {
-            "full_name": "demo/old-a",
-            "created_at": "2025-04-01T00:00:00Z",
-            "permissions": {"push": True},
-        },
-        {
-            "full_name": "demo/old-b",
-            "created_at": "2025-03-01T00:00:00Z",
-            "permissions": {"push": True},
-        },
-        {
-            "full_name": "demo/fork",
-            "created_at": "2025-05-01T00:00:00Z",
-            "fork": True,
+            "full_name": "demo/other",
             "permissions": {"push": True},
         },
     ]
 
-    def fake_discover(_headers: run.collect_mod.Headers) -> list[run.collect_mod.RepoMetadata]:
-        return discovered
-
-    monkeypatch.setenv("GITHUB_REPOSITORY", "demo/current")
-    monkeypatch.setattr(run.collect_mod, "discover_repositories", fake_discover)
+    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
     config: dict[str, Any] = {
-        "include_only": [],
-        "include": ["demo/manual", "demo/missing"],
-        "exclude": [],
-        "max_repos": 3,
-        "include_others": True,
-        "include_private": False,
-        "include_new": False,
+        "collect_repositories": ["demo/manual"],
+        "publish_repositories": ["demo/manual"],
     }
-    manifest: dict[str, Any] = {
-        "selection_state": {
-            "auto_seeded_at": "2026-01-01T00:00:00Z",
-            "auto_cutoff_created_at": "",
-        }
-    }
+    manifest: dict[str, Any] = {}
 
     resolved, updated_manifest, metadata = run.collect_mod.resolve_repositories(
         {},
@@ -535,12 +492,9 @@ def test_resolve_repositories_applies_stable_auto_selection(
         manifest,
     )
 
-    assert resolved == ["demo/manual", "demo/old-a", "demo/old-b"]
-    assert sorted(metadata) == sorted(resolved)
-    assert updated_manifest["selection_state"] == {
-        "auto_seeded_at": "2026-01-01T00:00:00Z",
-        "auto_cutoff_created_at": "2025-03-01T00:00:00Z",
-    }
+    assert resolved == ["demo/manual"]
+    assert updated_manifest == manifest
+    assert sorted(metadata) == ["demo/manual"]
 
 
 def test_resolve_repositories_accepts_pull_only_permissions_for_github_app(
@@ -557,17 +511,10 @@ def test_resolve_repositories_accepts_pull_only_permissions_for_github_app(
     monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
     config: dict[str, Any] = {
-        "include_only": [],
-        "include": [],
-        "exclude": [],
-        "max_repos": 5,
-        "include_others": True,
-        "include_private": True,
-        "include_new": True,
+        "collect_repositories": ["demo/read-only"],
+        "publish_repositories": ["demo/read-only"],
     }
-    manifest: dict[str, Any] = {
-        "selection_state": {"auto_seeded_at": "", "auto_cutoff_created_at": ""}
-    }
+    manifest: dict[str, Any] = {}
 
     resolved, _updated_manifest, metadata = run.collect_mod.resolve_repositories(
         {}, config, manifest
@@ -577,7 +524,7 @@ def test_resolve_repositories_accepts_pull_only_permissions_for_github_app(
     assert sorted(metadata) == ["demo/read-only"]
 
 
-def test_resolve_repositories_include_only_warns_and_exits_when_empty(
+def test_resolve_repositories_warns_and_skips_ineligible_collect_repos(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -586,65 +533,29 @@ def test_resolve_repositories_include_only_warns_and_exits_when_empty(
             "full_name": "demo/fork",
             "permissions": {"push": True},
             "fork": True,
-        }
-    ]
-    config: dict[str, Any] = {
-        "include_only": ["demo/fork", "demo/missing"],
-        "include": [],
-        "exclude": [],
-        "max_repos": 5,
-        "include_others": False,
-        "include_private": True,
-        "include_new": True,
-    }
-
-    monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
-
-    with pytest.raises(SystemExit):
-        run.collect_mod.resolve_repositories({}, config, {})
-
-    output = capsys.readouterr().out
-    assert "include_only repos were not eligible" in output
-    assert "no eligible repositories remain in 'include_only'" in output
-
-
-def test_resolve_repositories_clears_auto_cutoff_when_auto_fill_disabled(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    discovered = [
+        },
         {
-            "full_name": "demo/manual",
-            "permissions": {"admin": True},
-            "created_at": "2025-01-01T00:00:00Z",
-        }
+            "full_name": "demo/ok",
+            "permissions": {"push": True},
+        },
     ]
     config: dict[str, Any] = {
-        "include_only": [],
-        "include": ["demo/manual", "demo/manual"],
-        "exclude": [],
-        "max_repos": 5,
-        "include_others": False,
-        "include_private": True,
-        "include_new": True,
-    }
-    manifest: dict[str, Any] = {
-        "selection_state": {
-            "auto_seeded_at": "2026-01-01T00:00:00Z",
-            "auto_cutoff_created_at": "2025-01-01T00:00:00Z",
-        }
+        "collect_repositories": ["demo/fork", "demo/missing", "demo/ok"],
+        "publish_repositories": ["demo/ok"],
     }
 
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: discovered)
 
-    resolved, updated_manifest, metadata = run.collect_mod.resolve_repositories(
-        {},
-        config,
-        manifest,
+    resolved, _updated_manifest, metadata = run.collect_mod.resolve_repositories(
+        {}, config, {}
     )
 
-    assert resolved == ["demo/manual"]
-    assert sorted(metadata) == ["demo/manual"]
-    assert updated_manifest["selection_state"]["auto_cutoff_created_at"] == ""
+    assert resolved == ["demo/ok"]
+    assert sorted(metadata) == ["demo/ok"]
+    output = capsys.readouterr().out
+    assert "collect.repositories repos were not eligible" in output
+    assert "demo/fork" in output
+    assert "demo/missing" in output
 
 
 def test_resolve_repositories_exits_when_no_repos_are_eligible(
@@ -652,13 +563,8 @@ def test_resolve_repositories_exits_when_no_repos_are_eligible(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     config: dict[str, Any] = {
-        "include_only": [],
-        "include": [],
-        "exclude": [],
-        "max_repos": 5,
-        "include_others": False,
-        "include_private": True,
-        "include_new": True,
+        "collect_repositories": ["demo/missing"],
+        "publish_repositories": ["demo/missing"],
     }
 
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: [])
@@ -666,4 +572,4 @@ def test_resolve_repositories_exits_when_no_repos_are_eligible(
     with pytest.raises(SystemExit):
         run.collect_mod.resolve_repositories({}, config, {})
 
-    assert "no eligible repositories found" in capsys.readouterr().out
+    assert "no collect.repositories entries resolved" in capsys.readouterr().out

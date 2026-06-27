@@ -47,33 +47,18 @@ auto_doctor_every_n_days: 0
 # REPOSITORY SELECTION ------------------------------------------------------- *
 # * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
 #
-# By default, Reponomics auto-discovers up to 200 eligible repositories visible
-# to COLLECTION_TOKEN and fills the tracked set from newest to oldest by creation
-# date.
+# Reponomics only collects repositories you list explicitly.
 #
-# Use full owner/repo names for explicit entries.
+# Use bare repo names for repositories owned by this dashboard repository's
+# owner. Use owner/repo names when collecting from another owner.
 #
-max_repos: 200
+collect:
+  repositories:
+#   - repo-name
+#   - other-owner/repo-name
 #
-# If non-empty, ONLY these and NO other repositories will be tracked.
-include_only:
-#   - owner/repo-name
-#
-# Repositories that must always be tracked when accessible.
-include:
-#  - owner/important-repo
-#
-# Repositories that must never be tracked automatically.
-exclude:
-#  - owner/noisy-repo
-#
-# Fill remaining slots with other eligible repositories.
-include_others: true
-#
-# Allow repositories created after the initial automatic-selection baseline to
-# enter the automatic pool.
-include_new: false
-#
-# Allow private repositories in the automatic pool when COLLECTION_TOKEN can see
-# them.
-include_private: true
+# The published dashboard is intentionally narrow. It must be a subset of
+# collect.repositories and can contain at most 8 repositories.
+publish:
+  repositories:
+#   - repo-name

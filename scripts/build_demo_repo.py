@@ -597,7 +597,12 @@ def _assert_no_committed_html_dashboard_outputs(output_dir: Path) -> None:
             raise DemoBuildError(f"Generated demo publish tree must not include {relative_path}.")
 
 
-def _write_demo_config(output_dir: Path) -> None:
+def _write_demo_config(output_dir: Path, dataset: dict[str, Any]) -> None:
+    owner = str(dataset["owner"])
+    collect_repositories = [
+        f"{owner}/{repo['name']}" for repo in dataset.get("repositories", [])
+    ]
+    publish_repositories = list(dataset.get("featured_repositories", []))[:8]
     payload = {
         "i_have_read_the_readme": True,
         "data_mode": "encrypted",
@@ -605,12 +610,12 @@ def _write_demo_config(output_dir: Path) -> None:
         "publish_readme_dashboard": False,
         "artifact_retention_days": 90,
         "use_github_app": False,
-        "include_only": [],
-        "exclude": [],
-        "max_repos": 200,
-        "include_others": True,
-        "include_new": False,
-        "include_private": True,
+        "collect": {
+            "repositories": collect_repositories,
+        },
+        "publish": {
+            "repositories": publish_repositories,
+        },
     }
     (output_dir / "config.yaml").write_text(
         yaml.safe_dump(payload, sort_keys=False),
@@ -676,7 +681,7 @@ def build_demo(output_dir: Path, dataset_path: Path, as_of: date, seed_output_di
     _materialize_data(output_dir, dataset, as_of)
     _assert_csv_headers(output_dir / "data")
     seed_artifact_path = _write_encrypted_seed_artifact(output_dir / "data", seed_output_dir, dataset)
-    _write_demo_config(output_dir)
+    _write_demo_config(output_dir, dataset)
     _write_demo_workflow(output_dir, str(dataset["demo_key"]))
     _render_demo_readme(output_dir, dataset)
     _prune_retained_data_from_publish_tree(output_dir)

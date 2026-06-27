@@ -65,7 +65,7 @@ __all__ = [
     "_bool_or_none",
     "_content_label",
     "_counter_snapshot",
-    "_filter_excluded_rows",
+    "_filter_published_rows",
     "_growth_insight_candidates",
     "_int_or_none",
     "_latest_date_from_rows",
@@ -111,7 +111,7 @@ def load_daily(data_dir=None):
     rows = storage.read_csv(os.path.join(data_path, "traffic-daily.csv"))
     if not rows:
         rows = storage.read_csv(os.path.join(data_path, "traffic-log.csv"))
-    return _filter_excluded_rows(rows)
+    return _filter_published_rows(rows)
 
 
 def load_referrers(data_dir=None):
@@ -146,17 +146,17 @@ def load_traffic_coverage(data_dir=None):
 
 def _load_csv(filename, data_dir=None):
     data_path = data_dir or storage.DATA_DIR
-    return _filter_excluded_rows(storage.read_csv(os.path.join(data_path, filename)))
+    return _filter_published_rows(storage.read_csv(os.path.join(data_path, filename)))
 
 
-def _excluded_repos():
-    """Return excluded repos from config, ignoring missing config files."""
-    return set(load_repo_config().get("exclude_repos", []))
+def _published_repos():
+    """Return repos selected for rendering, ignoring missing config files."""
+    return set(load_repo_config().get("publish_repositories", []))
 
 
-def _filter_excluded_rows(rows):
-    """Hide excluded repos from rendered outputs while retaining artifact history."""
-    excluded = _excluded_repos()
-    if not excluded:
+def _filter_published_rows(rows):
+    """Limit rendered outputs to publish.repositories while retaining history."""
+    published = _published_repos()
+    if not published:
         return rows
-    return [row for row in rows if row.get("repo") not in excluded]
+    return [row for row in rows if not row.get("repo") or row.get("repo") in published]

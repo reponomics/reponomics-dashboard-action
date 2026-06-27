@@ -6,6 +6,11 @@ Date: 2026-06-26
 
 Proposed
 
+Implementation started on 2026-06-27. The first implementation pass treats
+syntax and structural config errors as fail-fast, while warning and skipping
+individual `collect.repositories` entries that are inaccessible or ineligible
+so one repository access failure does not abort the whole collection run.
+
 ## Context
 
 Reponomics is preparing for beta users. The current repository-selection model

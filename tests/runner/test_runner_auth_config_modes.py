@@ -382,7 +382,16 @@ def test_runtime_config_requires_setup_fields(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("max_repos: 200\n", encoding="utf-8")
+    config_path.write_text(
+        """collect:
+  repositories:
+    - demo/reponomics
+publish:
+  repositories:
+    - demo/reponomics
+""",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("GITHUB_EVENT_REPOSITORY_PRIVATE", "true")
     monkeypatch.setenv("REPONOMICS_CONFIG_PATH", str(config_path))
 

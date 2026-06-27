@@ -67,14 +67,11 @@ from collect_modules.http import (
     secondary_retry_window as _http_secondary_retry_window,
 )
 from collect_modules.repositories import (
-    build_auto_candidates as _repositories_build_auto_candidates,
     current_repository as _repositories_current_repository,
     discover_repositories as _repositories_discover_repositories,
     is_trackable_repo as _repositories_is_trackable_repo,
     resolve_named_repos as _repositories_resolve_named_repos,
     resolve_repositories as _repositories_resolve_repositories,
-    selection_state as _repositories_selection_state,
-    sort_auto_candidates as _repositories_sort_auto_candidates,
 )
 from collect_modules.runner import CollectionDependencies, run_collection
 from collect_modules.status import (
@@ -270,30 +267,8 @@ def discover_repositories(headers: Headers) -> list[RepoMetadata]:
 
 
 _is_trackable_repo = _repositories_is_trackable_repo
-_selection_state = _repositories_selection_state
 _current_repository = _repositories_current_repository
 _resolve_named_repos = _repositories_resolve_named_repos
-_sort_auto_candidates = _repositories_sort_auto_candidates
-
-
-def _build_auto_candidates(
-    eligible: dict[str, RepoMetadata],
-    excluded: set[str],
-    selected_names: set[str],
-    current_repository: str,
-    include_private: bool,
-    include_new: bool,
-    auto_seeded_at: str,
-) -> list[RepoMetadata]:
-    return _repositories_build_auto_candidates(
-        eligible,
-        excluded,
-        selected_names,
-        current_repository,
-        include_private,
-        include_new,
-        auto_seeded_at,
-    )
 
 
 def resolve_repositories(

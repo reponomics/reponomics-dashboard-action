@@ -63,7 +63,7 @@ def _status_row(
     }
 
 
-def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
+def test_load_daily_falls_back_to_legacy_log_and_filters_to_published_rows(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -82,7 +82,7 @@ def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
     monkeypatch.setattr(
         load_data,
         "load_repo_config",
-        lambda: {"exclude_repos": ["demo/private"]},
+        lambda: {"publish_repositories": ["demo/public"]},
     )
 
     assert load_data.load_daily(str(tmp_path)) == [
@@ -91,21 +91,36 @@ def test_load_daily_falls_back_to_legacy_log_and_filters_excluded_rows(
     assert calls == ["traffic-daily.csv", "traffic-log.csv"]
 
 
-def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
+def test_csv_loaders_read_expected_files_and_filter_to_published_repos(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     rows_by_file = {
-        "traffic-referrers.csv": [{"repo": "demo/app", "referrer": "github.com"}],
-        "traffic-paths.csv": [{"repo": "demo/app", "path": "/demo/app"}],
-        "repo-metrics.csv": [_metric_row("demo/app", "2026-05-01", 8, 2, 1)],
+        "traffic-referrers.csv": [
+            {"repo": "demo/app", "referrer": "github.com"},
+            {"repo": "demo/hidden", "referrer": "example.com"},
+        ],
+        "traffic-paths.csv": [
+            {"repo": "demo/app", "path": "/demo/app"},
+            {"repo": "demo/hidden", "path": "/demo/hidden"},
+        ],
+        "repo-metrics.csv": [
+            _metric_row("demo/app", "2026-05-01", 8, 2, 1),
+            _metric_row("demo/hidden", "2026-05-01", 10, 3, 2),
+        ],
         "collection-status.csv": [
-            _status_row("demo/app", "2026-05-01T12:00:00Z", "ok_with_data")
+            _status_row("demo/app", "2026-05-01T12:00:00Z", "ok_with_data"),
+            _status_row("demo/hidden", "2026-05-01T12:00:00Z", "ok_with_data"),
         ],
         "collection-days.csv": [{"ts": "2026-05-01", "status": "healthy"}],
         "traffic-coverage.csv": [
             {
                 "repo": "demo/app",
+                "ts": "2026-05-01",
+                "coverage_state": "reported",
+            },
+            {
+                "repo": "demo/hidden",
                 "ts": "2026-05-01",
                 "coverage_state": "reported",
             }
@@ -116,19 +131,33 @@ def test_csv_loaders_read_expected_files_and_preserve_rows_without_exclusions(
         return rows_by_file[os.path.basename(path)]
 
     monkeypatch.setattr(load_data.storage, "read_csv", read_csv)
-    monkeypatch.setattr(load_data, "load_repo_config", lambda: {})
+    monkeypatch.setattr(
+        load_data,
+        "load_repo_config",
+        lambda: {"publish_repositories": ["demo/app"]},
+    )
 
-    assert load_data.load_referrers(str(tmp_path)) is rows_by_file["traffic-referrers.csv"]
-    assert load_data.load_paths(str(tmp_path)) is rows_by_file["traffic-paths.csv"]
-    assert load_data.load_repo_metrics(str(tmp_path)) is rows_by_file["repo-metrics.csv"]
-    assert load_data.load_collection_status(str(tmp_path)) is rows_by_file[
-        "collection-status.csv"
+    assert load_data.load_referrers(str(tmp_path)) == [
+        {"repo": "demo/app", "referrer": "github.com"}
     ]
-    assert load_data.load_collection_days(str(tmp_path)) is rows_by_file[
-        "collection-days.csv"
+    assert load_data.load_paths(str(tmp_path)) == [
+        {"repo": "demo/app", "path": "/demo/app"}
     ]
-    assert load_data.load_traffic_coverage(str(tmp_path)) is rows_by_file[
-        "traffic-coverage.csv"
+    assert load_data.load_repo_metrics(str(tmp_path)) == [
+        _metric_row("demo/app", "2026-05-01", 8, 2, 1)
+    ]
+    assert load_data.load_collection_status(str(tmp_path)) == [
+        _status_row("demo/app", "2026-05-01T12:00:00Z", "ok_with_data")
+    ]
+    assert load_data.load_collection_days(str(tmp_path)) == [
+        {"ts": "2026-05-01", "status": "healthy"}
+    ]
+    assert load_data.load_traffic_coverage(str(tmp_path)) == [
+        {
+            "repo": "demo/app",
+            "ts": "2026-05-01",
+            "coverage_state": "reported",
+        }
     ]
 
 

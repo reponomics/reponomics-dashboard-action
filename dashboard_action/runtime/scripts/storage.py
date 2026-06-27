@@ -704,10 +704,6 @@ def _default_manifest():
         "last_updated": "",
         "retention_days": RETENTION_DAYS,
         "files": list(CSV_REGISTRY.keys()),
-        "selection_state": {
-            "auto_seeded_at": "",
-            "auto_cutoff_created_at": "",
-        },
     }
     if DATA_MODE in VALID_DATA_MODES:
         manifest["data_mode"] = DATA_MODE

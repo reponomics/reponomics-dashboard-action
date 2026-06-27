@@ -4,12 +4,13 @@ Date: 2026-06-26
 
 ## Status
 
-Proposed
+Accepted. Implemented on 2026-06-27.
 
-Implementation started on 2026-06-27. The first implementation pass treats
-syntax and structural config errors as fail-fast, while warning and skipping
-individual `collect.repositories` entries that are inaccessible or ineligible
-so one repository access failure does not abort the whole collection run.
+The implementation treats syntax and structural config errors as fail-fast,
+while warning and skipping individual `collect.repositories` entries that are
+inaccessible or ineligible so one repository access failure does not abort the
+whole collection run. The beta collection cap is hard-coded at 100
+repositories, and the publish cap is hard-coded at 8 repositories.
 
 ## Context
 
@@ -248,11 +249,11 @@ ending an ephemeral data stream.
 
 ## Compatibility And Migration Notes
 
-If accepted, this ADR supersedes the repository-selection direction in
-ADR 016 where it recommends broad automatic collection with exclusions,
-display pinning, and budget-limited fill behavior.
+This ADR supersedes the repository-selection direction in ADR 016 where it
+recommends broad automatic collection with exclusions, display pinning, and
+budget-limited fill behavior.
 
-The implementation should provide a clear migration from the old keys:
+The implementation rejects the old repository-selection keys:
 
 - `include_only`
 - `include`
@@ -262,22 +263,19 @@ The implementation should provide a clear migration from the old keys:
 - `include_private`
 - `max_repos`
 
-The migration should prefer explicitness over inference. If the existing config
-does not unambiguously express the desired collection and publication lists, the
-runtime should fail with a precise message rather than silently choosing
-repositories.
+The runtime fails with a precise message rather than silently choosing
+repositories from removed keys. Because this change is pre-public and pre-beta,
+the implementation does not carry a compatibility parser for old configs.
 
 Release notes must call out the breaking configuration change before beta users
 are invited.
 
-## Open Questions
+## Resolved Questions
 
-- Should the `collect.repositories` cap be hard-coded at 100 for beta or be a
-  documented recommended limit with a higher internal safety ceiling?
-- Should export include all retained historical data, all currently collected
-  repositories, or only the published set? Existing export behavior favors the
-  full canonical retained history.
-- Should removing a repository from `collect.repositories` emit a warning when
-  retained data for that repository already exists?
-- Should publish runs report repositories present in retained data but absent
-  from both current lists?
+- The beta implementation hard-codes `collect.repositories` at 100.
+- Export includes full canonical retained history, including repositories not
+  currently listed in `publish.repositories`.
+- Removing a repository from `collect.repositories` does not currently warn
+  when retained data for that repository already exists.
+- Publish runs do not currently report repositories present in retained data
+  but absent from both current lists.

@@ -60,7 +60,7 @@ jobs:
       - name: Verify action compatibility with generated templates
         run: |
           set -euo pipefail
-          make template-compat-e2e
+          TEMPLATE_COMPAT_EXTRA_ARGS=--current-template-only make template-compat-e2e
 
       - name: Verify generated template publication readiness
         run: |

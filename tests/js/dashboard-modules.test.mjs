@@ -6,6 +6,7 @@ import { installDataProvider } from '../../dashboard_action/runtime/scripts/rend
 import { installEventGraph } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/event-graph.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/opportunity-map.js';
+import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
@@ -494,6 +495,63 @@ test('event graph filters retained code events to the selected window', () => {
   assert.deepEqual(lanes[0].events.map((event) => event.id), ['commit:new', 'release:v1']);
   assert.equal(helpers.projectEventX('2026-06-06', bounds), 22);
   assert.equal(helpers.projectEventX('2026-06-12', bounds), 95);
+});
+
+test('readiness queue ranks visible repo setup gaps', () => {
+  const helpers = installReadinessQueue({
+    document: fakeDocument(),
+    activateRepo() {},
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [];
+    },
+  });
+  const rows = helpers.buildReadinessRows([
+    {
+      name: 'owner/active-gap',
+      activity: 80,
+      community: {
+        health_percentage: 70,
+        has_readme: true,
+        has_license: 'false',
+        has_contributing: 'false',
+        has_issue_template: true,
+        has_pull_request_template: true,
+        has_code_of_conduct: true,
+      },
+    },
+    {
+      name: 'owner/ready',
+      activity: 120,
+      community: {
+        health_percentage: 96,
+        has_readme: true,
+        has_license: true,
+        has_contributing: true,
+        has_issue_template: true,
+        has_pull_request_template: true,
+        has_code_of_conduct: true,
+      },
+    },
+  ]);
+  const summary = helpers.readinessSummary(rows);
+
+  assert.equal(rows[0].missing.length, 2);
+  assert.equal(rows[0].missing[0].label, 'License');
+  assert.equal(rows[1].missing.length, 0);
+  assert.equal(summary.present, 10);
+  assert.equal(summary.known, 12);
+  assert.equal(summary.missingRepos, 1);
+  assert.equal(summary.avgHealth, 83);
+  assert.ok(rows[0].priority > rows[1].priority);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {

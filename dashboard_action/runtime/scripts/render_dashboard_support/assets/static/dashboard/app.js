@@ -12,6 +12,7 @@ import { installControls } from './controls.js';
 import { installCharts } from './charts.js';
 import { installOpportunityMap } from './opportunity-map.js';
 import { installEventGraph } from './event-graph.js';
+import { installReadinessQueue } from './readiness-queue.js';
 import { installTables } from './tables.js';
 import { installController } from './controller.js';
 
@@ -29,6 +30,7 @@ const installers = [
   installCharts,
   installOpportunityMap,
   installEventGraph,
+  installReadinessQueue,
   installTables,
   installController,
 ];

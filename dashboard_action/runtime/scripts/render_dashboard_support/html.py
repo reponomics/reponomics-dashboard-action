@@ -58,6 +58,7 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
     "dashboard/app.js",
@@ -83,6 +84,7 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
     "dashboard/app.js",
@@ -250,6 +252,21 @@ def build_dashboard_shell(
         <div class="event-graph-layout">
           <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Git-style code event graph"></div>
           <div class="event-log" id="event-log" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid full readiness-section">
+      <div class="card readiness-card" id="readiness-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Readiness queue</h2>
+            <p class="click-hint">Small public-facing fixes that make attention easier to convert into useful adoption or contribution.</p>
+          </div>
+        </div>
+        <div class="readiness-layout">
+          <div class="readiness-summary" id="readiness-summary" aria-live="polite"></div>
+          <div class="readiness-list" id="readiness-list" aria-live="polite"></div>
         </div>
       </div>
     </div>

@@ -46,6 +46,7 @@ export function installController(context) {
   const renderMomentum = (...args) => context.renderMomentum(...args);
   const renderOpportunityMap = (...args) => context.renderOpportunityMap(...args);
   const renderPathsTable = (...args) => context.renderPathsTable(...args);
+  const renderReadinessQueue = (...args) => context.renderReadinessQueue(...args);
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
   const setMetric = (...args) => context.setMetric(...args);
@@ -426,6 +427,7 @@ export function installController(context) {
       updateStackedChart();
       renderOpportunityMap();
       renderEventGraph();
+      renderReadinessQueue();
       renderReferrerTable(getCurrentReferrerRows());
       renderPathsTable(getCurrentPathRows());
       renderMomentum();

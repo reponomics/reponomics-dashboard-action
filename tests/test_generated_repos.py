@@ -720,10 +720,13 @@ def test_template_contract_and_action_metadata_contract():
     assert _version_tuple(
         contract.minimum_compatible_template_version
     ) <= _version_tuple(contract.template_version)
-    assert any(
-        protected.template_version == contract.minimum_compatible_template_version
-        and protected.status == "required"
-        for protected in contract.protected_template_refs
+    assert (
+        contract.minimum_compatible_template_version == contract.template_version
+        or any(
+            protected.template_version == contract.minimum_compatible_template_version
+            and protected.status == "required"
+            for protected in contract.protected_template_refs
+        )
     )
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
 

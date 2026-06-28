@@ -5,7 +5,7 @@
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo render-demo-preview preview-demo-site publish-demo-dry-run publish-demo
-.PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
+.PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -13,6 +13,7 @@ PIP := $(VENV)/bin/pip
 NODE ?= node
 PIPX ?= pipx
 JS_SMOKE_PYTHON ?= python3
+GUIDE_PYTHON ?= python3
 ANTIPASTA := $(VENV)/bin/antipasta
 PIP_AUDIT := $(VENV)/bin/pip-audit
 PIP_COMPILE := $(VENV)/bin/pip-compile
@@ -181,6 +182,9 @@ js-coverage: ## Run JavaScript module tests with Node coverage reporting
 
 js-smoke: ## Check dashboard JavaScript syntax and flattened secure runtime assembly
 	NODE=$(NODE) $(JS_SMOKE_PYTHON) scripts/check_dashboard_js_smoke.py
+
+dashboard-guide: ## Build editable HTML and PDF dashboard guide artifacts
+	$(GUIDE_PYTHON) scripts/build_dashboard_guide.py
 
 coverage: install ## Run tests with coverage report
 	$(PYTHON) -m pytest tests -v --cov=dashboard_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)

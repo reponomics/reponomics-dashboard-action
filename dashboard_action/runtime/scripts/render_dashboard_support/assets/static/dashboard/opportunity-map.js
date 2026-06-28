@@ -61,7 +61,7 @@ export function installOpportunityMap(context) {
       return {
         x: left + point.attentionScore * (right - left),
         y: bottom - point.growthScore * (bottom - top),
-        r: 1.7 + point.adoptionScore * 2.9
+        r: 1.25 + point.adoptionScore * 2.05
       };
     }
 
@@ -111,10 +111,10 @@ export function installOpportunityMap(context) {
       const pointMarkup = points.map((point, idx) => {
         const mapped = mapPoint(point);
         const label = classifyOpportunityPoint(point);
-        const labelDy = idx % 2 ? -mapped.r - 0.9 : mapped.r + 2.7;
+        const labelDy = idx % 2 ? -mapped.r - 0.8 : mapped.r + 2.35;
         return `
           <g class="opportunity-point" data-repo="${escapeHtml(point.repo)}" tabindex="0" role="button" aria-label="${escapeHtml(point.shortName + ': ' + label)}">
-            <circle class="point-halo" cx="${mapped.x.toFixed(2)}" cy="${mapped.y.toFixed(2)}" r="${(mapped.r + 1.1).toFixed(2)}"></circle>
+            <circle class="point-halo" cx="${mapped.x.toFixed(2)}" cy="${mapped.y.toFixed(2)}" r="${(mapped.r + 0.75).toFixed(2)}"></circle>
             <circle class="point-dot" cx="${mapped.x.toFixed(2)}" cy="${mapped.y.toFixed(2)}" r="${mapped.r.toFixed(2)}"></circle>
             <text x="${mapped.x.toFixed(2)}" y="${(mapped.y + labelDy).toFixed(2)}">${escapeHtml(point.shortName)}</text>
             <title>${escapeHtml(point.shortName)} · ${label} · ${formatNumber(point.attention)} attention · ${formatSigned(point.downstream)} growth · ${formatNumber(point.adoption)} clone activity</title>

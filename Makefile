@@ -4,7 +4,7 @@
 .PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo render-demo-preview preview-demo-site publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots clean
 
 VENV := venv
@@ -41,6 +41,10 @@ TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
 DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
 DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
+DEMO_PREVIEW_DIR ?= dist/demo/docs
+DEMO_PREVIEW_HOST ?= 127.0.0.1
+DEMO_PREVIEW_PORT ?= 8765
+DEMO_PREVIEW_KEY ?= reponomics-demo-public-key-2026-keep-this-visible-do-not-reuse
 ACTION_REPO ?= .
 ACTION_PYTHON ?= $(PYTHON)
 TEMPLATE_COMPAT_EXTRA_ARGS ?=
@@ -289,6 +293,28 @@ build-demo: build-template ## Build the public demo repository tree in dist/demo
 	$(PYTHON) scripts/build_demo_repo.py --output dist/demo
 
 verify-demo: build-demo ## Build and verify dist/demo/ public demo repository output
+
+render-demo-preview: build-demo ## Render the demo Pages dashboard locally in dist/demo/docs/
+	mkdir -p dist/demo/data
+	cp dist/demo-seed/dashboard-data.enc dist/demo/data/dashboard-data.enc
+	cd dist/demo && \
+		REPONOMICS_MODE=publish \
+		REPONOMICS_CONFIG_PATH=config.yaml \
+		REPONOMICS_DATA_MODE=encrypted \
+		REPONOMICS_DASHBOARD_SECRET="$(DEMO_PREVIEW_KEY)" \
+		REPONOMICS_DEMO_UNLOCK_KEY="$(DEMO_PREVIEW_KEY)" \
+		REPONOMICS_PUBLISH_PAGES=true \
+		REPONOMICS_GENERATE_README=false \
+		GITHUB_EVENT_REPOSITORY_PRIVATE=false \
+		$(abspath $(PYTHON)) -m dashboard_action.run
+	@test -s $(DEMO_PREVIEW_DIR)/index.html
+	@test -s $(DEMO_PREVIEW_DIR)/assets/encrypted-dashboard-data.json
+	@test -s $(DEMO_PREVIEW_DIR)/assets/demo-unlock.css
+	@echo "Demo Pages preview rendered: $(DEMO_PREVIEW_DIR)/index.html"
+
+preview-demo-site: render-demo-preview ## Serve the local demo Pages dashboard preview
+	@echo "Serving demo preview at http://$(DEMO_PREVIEW_HOST):$(DEMO_PREVIEW_PORT)/"
+	$(PYTHON) -m http.server $(DEMO_PREVIEW_PORT) --bind $(DEMO_PREVIEW_HOST) --directory $(DEMO_PREVIEW_DIR)
 
 publish-demo-dry-run: build-demo ## Show the generated demo publish target without pushing
 	$(PYTHON) scripts/publish_demo_repo.py --output dist/demo --remote $(DEMO_REMOTE) --branch main --expected-repo $(DEMO_EXPECTED_REPO) --message "$(DEMO_PUBLISH_MESSAGE)"

@@ -305,6 +305,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "/users/${APP_SLUG}[bot]" in app_user_step["run"]
     assert "python3 scripts/enforce_release_policy.py" in commands
     assert "make template-compat-e2e" in commands
+    assert "TEMPLATE_COMPAT_EXTRA_ARGS=--current-template-only make template-compat-e2e" in commands
     assert "make publish-template-dry-run" in commands
     assert "make package-template-release" in commands
     assert "scripts/accept_action_release.py" in workflow_text

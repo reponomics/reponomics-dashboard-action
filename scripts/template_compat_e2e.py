@@ -595,6 +595,7 @@ def run_compatibility_checks(
     action_repo: Path,
     action_python: Path,
     extra_template_refs: list[str] | None = None,
+    current_template_only: bool = False,
     keep_temp: bool = False,
 ) -> None:
     contract = template_contract.validate_local_contract(ROOT)
@@ -626,7 +627,7 @@ def run_compatibility_checks(
         except Exception as exc:
             failures.append(f"current template: {exc}")
 
-        protected_refs = list(contract.protected_template_refs)
+        protected_refs = [] if current_template_only else list(contract.protected_template_refs)
         for extra_ref in extra_template_refs or []:
             protected_refs.append(
                 template_contract.ProtectedTemplateRef(
@@ -693,6 +694,11 @@ def main() -> None:
     )
     parser.add_argument("--action-repo", type=Path, default=DEFAULT_ACTION_REPO)
     parser.add_argument("--action-python", type=Path, default=DEFAULT_ACTION_PYTHON)
+    parser.add_argument(
+        "--current-template-only",
+        action="store_true",
+        help="Check only the current generated template before a template-floor reset.",
+    )
     parser.add_argument("--keep-temp", action="store_true")
     args = parser.parse_args()
     run_compatibility_checks(
@@ -700,6 +706,7 @@ def main() -> None:
         action_repo=args.action_repo,
         action_python=args.action_python,
         extra_template_refs=args.template_refs,
+        current_template_only=args.current_template_only,
         keep_temp=args.keep_temp,
     )
 

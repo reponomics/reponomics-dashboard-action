@@ -26,7 +26,11 @@ export function installMomentum(context) {
       const windowData = getCurrentWindowData();
       const base = 'Last updated: ' + (payload.generated_at || 'unknown');
       const rangeText = 'Window: ' + getRangeLabel();
-      const repoText = 'Showing ' + formatNumber(windowData.totals.repo_count || 0) + ' repositories';
+      const publishedCount = Number(payload.totals?.repo_count || 0);
+      const visibleCount = Number(windowData.totals?.repo_count || 0);
+      const repoText = visibleCount > 0 && visibleCount !== publishedCount
+        ? formatNumber(visibleCount) + ' visible of ' + formatNumber(publishedCount) + ' published repos'
+        : formatNumber(publishedCount) + ' published repos';
       const daysText = 'Tracking span: ' + formatNumber(payload.totals.days_tracked || 0) + ' collected days total';
       return [base, rangeText, repoText, daysText].join(' | ');
     }

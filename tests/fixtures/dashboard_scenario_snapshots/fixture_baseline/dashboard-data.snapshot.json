@@ -6,6 +6,7 @@
   },
   "encoding": "json",
   "summary": {
+    "contextual_insights": [],
     "daily": {
       "clone_uniques": [
         2,

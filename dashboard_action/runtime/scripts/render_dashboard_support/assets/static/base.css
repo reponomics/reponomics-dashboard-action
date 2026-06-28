@@ -779,6 +779,9 @@
       box-shadow: var(--card-shadow);
       z-index: 20;
     }
+    .export-verify-tip:not([open]) .export-verify-popover {
+      display: none;
+    }
     .export-verify-popover p + p {
       margin-top: 0.5rem;
     }
@@ -1284,6 +1287,7 @@
     .chart-container.tall { height: 360px; }
     .metric-tabs {
       display: inline-flex;
+      flex-wrap: wrap;
       gap: 0.3rem;
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
@@ -1334,6 +1338,15 @@
       margin-bottom: 1.1rem;
     }
     .section-grid.full { grid-template-columns: 1fr; }
+    .insight-section {
+      margin-top: 0.9rem;
+    }
+    .insight-card {
+      border-color: rgba(214, 168, 75, 0.20);
+      background:
+        linear-gradient(135deg, rgba(214, 168, 75, 0.075), transparent 34%, rgba(107, 184, 255, 0.055)),
+        var(--bg-card);
+    }
     .repo-strip-card {
       padding: 0.75rem 0.9rem;
       display: grid;
@@ -1563,6 +1576,9 @@
     .insight-item.up { --icon-color: var(--c-positive); --icon-bg: rgba(79, 200, 165, 0.12); --icon-border: rgba(79, 200, 165, 0.32); --insight-wash: rgba(79, 200, 165, 0.08); }
     .insight-item.down { --icon-color: var(--c-negative); --icon-bg: rgba(255, 107, 107, 0.12); --icon-border: rgba(255, 107, 107, 0.32); --insight-wash: rgba(255, 107, 107, 0.08); }
     .insight-item.neutral { --icon-color: var(--accent); --icon-bg: rgba(107, 184, 255, 0.12); --icon-border: rgba(107, 184, 255, 0.32); --insight-wash: rgba(107, 184, 255, 0.08); }
+    .insight-item.narrative {
+      align-items: start;
+    }
     .insight-body { min-width: 0; }
     .insight-headline {
       font-size: 0.95rem;
@@ -1584,6 +1600,86 @@
       font-size: 0.82rem;
       margin-top: 0.2rem;
       font-variant-numeric: tabular-nums;
+    }
+    .insight-evidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.65rem;
+    }
+    .evidence-chip {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      min-width: 0;
+      max-width: 100%;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.035);
+      padding: 0.32rem 0.45rem;
+      font-size: 0.76rem;
+      line-height: 1.25;
+    }
+    .evidence-label {
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .evidence-value {
+      color: var(--text);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+    .evidence-detail {
+      color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
+    .insight-context {
+      display: grid;
+      gap: 0.35rem;
+      margin-top: 0.65rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+    .context-row {
+      display: grid;
+      grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
+      gap: 0.55rem;
+      align-items: baseline;
+    }
+    .context-date {
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .context-label {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .context-label a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--border);
+    }
+    .context-detail {
+      display: block;
+      color: var(--text-dim);
+    }
+    .insight-action {
+      margin-top: 0.65rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .insight-action span {
+      color: var(--accent-2);
+      display: inline-block;
+      font-weight: 700;
+      margin-right: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .insight-pct {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
@@ -2591,6 +2687,86 @@
       .stat-card[data-metric="cloners"] {
         grid-column: span 1;
       }
+      .repo-table-wrap {
+        overflow-x: visible;
+      }
+      #repo-table table,
+      #repo-table tbody,
+      #repo-table tr,
+      #repo-table td {
+        display: block;
+        width: 100%;
+      }
+      #repo-table thead {
+        display: none;
+      }
+      #repo-table tbody {
+        display: grid;
+        gap: 0.75rem;
+      }
+      #repo-table tr.repo-row {
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent),
+          var(--bg-card-2);
+        overflow: hidden;
+      }
+      #repo-table tr.repo-row.selected {
+        box-shadow: inset 0 0 0 1px rgba(107, 184, 255, 0.35);
+      }
+      #repo-table td {
+        border-bottom: 1px solid var(--border-soft);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.85rem;
+        text-align: right;
+      }
+      #repo-table td:last-child {
+        border-bottom: none;
+      }
+      #repo-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        flex: 0 0 auto;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #repo-table td.checkbox-col {
+        justify-content: flex-start;
+      }
+      #repo-table td.checkbox-col::before {
+        content: "";
+      }
+      #repo-table td.repo-name {
+        align-items: flex-start;
+        text-align: left;
+        white-space: normal;
+      }
+      #repo-table td.repo-name::before {
+        padding-top: 0.08rem;
+      }
+      #repo-table .repo-name-wrap {
+        justify-content: flex-end;
+        min-width: 0;
+        text-align: right;
+        overflow-wrap: anywhere;
+      }
+      #repo-table .growth-cell {
+        align-items: end;
+        min-width: 0;
+      }
+      #repo-table .community-cell {
+        align-items: end;
+        min-width: 0;
+      }
+      #repo-table .repo-share {
+        min-width: min(13rem, 62%);
+        justify-content: flex-end;
+      }
     }
     @media (max-width: 1240px) {
       .hero {
@@ -2642,6 +2818,17 @@
       }
       #export-status.visible {
         display: block;
+      }
+      .export-verify-popover {
+        position: fixed;
+        top: 6.75rem;
+        left: max(1rem, calc((100vw - 42rem) / 2));
+        right: max(1rem, calc((100vw - 42rem) / 2));
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        max-height: min(60vh, 24rem);
+        overflow: auto;
       }
       .chart-grid, .section-grid { grid-template-columns: 1fr; }
       .section-grid.full { grid-template-columns: 1fr; }
@@ -2754,8 +2941,26 @@
       .repo-strip-card { grid-template-columns: 1fr; gap: 0.5rem; }
       .repo-strip-hint { display: none; }
       .section-header { flex-direction: column; align-items: stretch; }
-      .section-actions { justify-content: flex-start; }
-      .metric-tabs { overflow-x: auto; max-width: 100%; }
+      .section-copy,
+      .section-actions {
+        max-width: 100%;
+        min-width: 0;
+        width: 100%;
+      }
+      .section-actions {
+        justify-content: flex-start;
+        overflow: hidden;
+      }
+      .metric-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        max-width: 100%;
+        min-width: 0;
+        width: 100%;
+        scrollbar-width: thin;
+      }
+      .metric-tab { flex: 0 0 auto; }
       .chart-container { height: 280px; }
       .chart-grid > .card:first-child .chart-container {
         height: 300px;
@@ -2763,13 +2968,13 @@
       .momentum-cell { padding: 0.5rem 0; border-left: none; border-top: 1px solid var(--border-soft); }
       .momentum-cell:first-child { padding-top: 0; border-top: none; }
       .export-verify-popover {
-        position: absolute;
-        top: calc(100% + 0.45rem);
-        left: 0;
-        right: auto;
-        width: min(24rem, calc(100vw - 2rem));
-        min-width: 16rem;
-        max-width: calc(100vw - 2rem);
+        position: fixed;
+        top: 7.25rem;
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+        min-width: 0;
+        max-width: none;
         max-height: min(50vh, 20rem);
         overflow: auto;
       }

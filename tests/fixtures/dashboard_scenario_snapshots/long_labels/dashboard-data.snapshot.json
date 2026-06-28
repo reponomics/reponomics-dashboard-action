@@ -10,6 +10,57 @@
   },
   "encoding": "json",
   "summary": {
+    "contextual_insights": [
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "203"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "109",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "109",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "maintainer-tools/community-health-profile-snapshotter",
+        "subtype": "steady_attention_next_step",
+        "summary": "community-health-profile-snapshotter drew 203 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      }
+    ],
     "daily": {
       "clone_uniques": [
         4,
@@ -915,6 +966,55 @@
       "`archive/really-small-but-noisy-repo` views -15% over the last 7d (119 -> 101, -18)."
     ],
     "insights_v2": [
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "203"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "109",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "109",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "maintainer-tools/community-health-profile-snapshotter",
+        "subtype": "steady_attention_next_step",
+        "summary": "community-health-profile-snapshotter drew 203 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
       {
         "current": 263,
         "delta": -32,

@@ -106,6 +106,39 @@ def _write_scenario_data(
     )
 
 
+def _scenario_repositories(dataset: dashboard_scenarios.ScenarioDataset) -> list[str]:
+    seen: set[str] = set()
+    repositories: list[str] = []
+    for row in dataset.daily_rows:
+        repo = row.get("repo", "").strip()
+        if repo and repo not in seen:
+            repositories.append(repo)
+            seen.add(repo)
+    return repositories
+
+
+def _write_scenario_config(
+    workdir: Path,
+    dataset: dashboard_scenarios.ScenarioDataset,
+) -> None:
+    repositories = _scenario_repositories(dataset)
+    if not repositories:
+        return
+    lines = [
+        "i_have_read_the_readme: true",
+        "data_mode: plaintext",
+        "publish_pages_dashboard: true",
+        "collect:",
+        "  repositories:",
+        *[f"    - {repo}" for repo in repositories],
+        "publish:",
+        "  repositories:",
+        *[f"    - {repo}" for repo in repositories[:8]],
+        "",
+    ]
+    (workdir / "config.yaml").write_text("\n".join(lines), encoding="utf-8")
+
+
 def _render_production_outputs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -134,6 +167,7 @@ def _render_production_outputs(
             }
         ],
     )
+    _write_scenario_config(workdir, dataset)
     _write_scenario_data(data_dir, dataset)
 
     config = run.RuntimeConfig(

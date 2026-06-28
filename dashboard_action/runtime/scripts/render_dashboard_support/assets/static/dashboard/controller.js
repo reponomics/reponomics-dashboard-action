@@ -114,9 +114,9 @@ export function installController(context) {
       });
 
       if (hint) {
-        if (isComparing()) hint.textContent = `Comparing ${state.compareRepos.length} · ⌘/Ctrl-click to add or remove`;
+        if (isComparing()) hint.textContent = `Comparing ${state.compareRepos.length} published repos · modifier-click to add or remove`;
         else if (state.selectedRepo) hint.textContent = `Focused on ${getShortName(state.selectedRepo)} · click again to clear`;
-        else hint.textContent = 'Click to focus · ⌘/Ctrl-click to compare';
+        else hint.textContent = 'Focus or compare within this published set';
       }
     }
 
@@ -182,27 +182,27 @@ export function installController(context) {
         const showDaysMeta = Number(repo.days || 0) > 0 && Number(repo.days || 0) < maxDays;
         const daysMeta = showDaysMeta ? `<span class="repo-name-meta">tracked ${repo.days}d of ${maxDays}d</span>` : '';
         html += `
-          <tr class="${rowClass}" data-repo="${repo.name}" tabindex="0" role="button" aria-pressed="${isSelected}" aria-label="Focus on ${escapeHtml(getShortName(repo.name))}">
-            <td class="checkbox-col"><input type="checkbox" data-repo="${repo.name}"${checked} aria-label="Compare ${escapeHtml(getShortName(repo.name))}"></td>
-            <td class="repo-name">
+          <tr class="${rowClass}" data-repo="${escapeHtml(repo.name)}" tabindex="0" role="button" aria-pressed="${isSelected}" aria-label="Focus on ${escapeHtml(getShortName(repo.name))}">
+            <td class="checkbox-col" data-label="Compare"><input type="checkbox" data-repo="${escapeHtml(repo.name)}"${checked} aria-label="Compare ${escapeHtml(getShortName(repo.name))}"></td>
+            <td class="repo-name" data-label="Repository">
               <span class="repo-name-wrap">
                 <span class="repo-color-dot"></span>
                 <span>${escapeHtml(repo.name)}${daysMeta}</span>
               </span>
             </td>
-            <td class="num mono">${formatNumber(repo.views)}</td>
-            <td class="num mono">${formatNumber(repo.uniques)}</td>
-            <td class="num mono">${formatNumber(repo.clones)}</td>
-            <td class="num mono">
+            <td class="num mono" data-label="Views">${formatNumber(repo.views)}</td>
+            <td class="num mono" data-label="Visitors">${formatNumber(repo.uniques)}</td>
+            <td class="num mono" data-label="Clones">${formatNumber(repo.clones)}</td>
+            <td class="num mono" data-label="Growth">
               <span class="growth-cell">
                 <span class="growth-row"><strong>${formatSigned(repo.stars_delta)}</strong><span class="growth-label">stars</span><span class="growth-total">(${formatNumber(repo.stars)})</span></span>
                 <span class="growth-row"><strong>${formatSigned(repo.subscribers_delta)}</strong><span class="growth-label">watchers</span><span class="growth-total">(${formatNumber(repo.subscribers)})</span></span>
                 <span class="growth-row"><strong>${formatSigned(repo.forks_delta)}</strong><span class="growth-label">forks</span><span class="growth-total">(${formatNumber(repo.forks)})</span></span>
               </span>
             </td>
-            <td>${renderCommunityCell(repo)}</td>
-            <td>${sparkSVG}</td>
-            <td>
+            <td data-label="Community">${renderCommunityCell(repo)}</td>
+            <td data-label="Trend">${sparkSVG}</td>
+            <td data-label="Share">
               <div class="repo-share">
                 <div class="repo-bar-track" aria-hidden="true">
                   <div class="repo-bar" data-bar-pct="${barPct.toFixed(1)}"></div>

@@ -51,7 +51,16 @@ from load_data import (
     load_repo_metrics,
     load_collection_status,
     load_collection_days,
+    load_collection_endpoints,
+    load_code_frequency_weekly,
+    load_contributor_activity_weekly,
     load_traffic_coverage,
+    load_event_index,
+    load_issue_label_snapshots,
+    load_issue_pr_snapshots,
+    load_languages,
+    load_release_assets,
+    load_topics,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -63,6 +72,7 @@ from load_data import (
     growth_analytics,
     latest_repo_community_profiles,
     latest_repo_metadata,
+    narrative_insights_structured,
     traffic_reporting_summary,
 )
 
@@ -302,6 +312,7 @@ def _build_payload(
     traffic_reporting,
     community_profiles,
     repo_metadata,
+    narrative_insights,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
     repos = []
@@ -380,9 +391,34 @@ def _build_payload(
         },
         "insights": insights,
         "insights_v2": insights_structured,
+        "contextual_insights": narrative_insights,
         "data_quality": data_quality,
         "traffic_reporting": traffic_reporting,
     }
+
+
+def _merge_structured_insights(
+    narrative_insights: list[dict[str, Any]],
+    metric_insights: list[dict[str, Any]],
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Merge contextual narratives with metric fallbacks for the insight feed."""
+    selected: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for item in [*narrative_insights, *metric_insights]:
+        key = (
+            str(item.get("kind") or ""),
+            str(item.get("subtype") or item.get("metric") or ""),
+            str(item.get("repo") or ""),
+        )
+        if key in seen_keys:
+            continue
+        selected.append(item)
+        seen_keys.add(key)
+        if len(selected) >= limit:
+            return selected
+    return selected
 
 
 def _kdf_descriptor() -> dict[str, object]:
@@ -575,6 +611,15 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     status_rows = load_collection_status()
     collection_day_rows = load_collection_days()
     coverage_rows = load_traffic_coverage()
+    event_rows = load_event_index()
+    release_asset_rows = load_release_assets()
+    issue_pr_rows = load_issue_pr_snapshots()
+    issue_label_rows = load_issue_label_snapshots()
+    endpoint_rows = load_collection_endpoints()
+    language_rows = load_languages()
+    topic_rows = load_topics()
+    code_frequency_rows = load_code_frequency_weekly()
+    contributor_activity_rows = load_contributor_activity_weekly()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -597,8 +642,30 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     repo_series = _pad_repo_series(repo_series, reporting_end_date)
     data_quality = collection_quality(status_rows, collection_day_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
-    insights_structured = actionable_insights_structured(
+    metric_insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
+    )
+    narrative_insights = narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=path_rows,
+        referrer_rows=referrer_rows,
+        event_rows=event_rows,
+        release_asset_rows=release_asset_rows,
+        issue_pr_rows=issue_pr_rows,
+        issue_label_rows=issue_label_rows,
+        endpoint_rows=endpoint_rows,
+        language_rows=language_rows,
+        topic_rows=topic_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_activity_rows=contributor_activity_rows,
+        growth=growth,
+        limit=5,
+    )
+    insights_structured = _merge_structured_insights(
+        narrative_insights,
+        metric_insights_structured,
+        limit=5,
     )
     payload = _build_payload(
         now,
@@ -620,6 +687,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         traffic_reporting,
         community_profiles,
         repo_metadata,
+        narrative_insights,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

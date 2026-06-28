@@ -313,6 +313,83 @@ test('series helpers preserve selected-window and growth aggregation contracts',
   );
 });
 
+test('series helpers preserve published repository order by default', () => {
+  const repos = [
+    { name: 'owner/repo-b', views: 5, uniques: 2, clones: 0, clone_uniques: 0, days: 1, updated_at: '2026-06-01T00:00:00Z' },
+    { name: 'owner/repo-a', views: 9, uniques: 4, clones: 1, clone_uniques: 1, days: 1, updated_at: '2026-06-20T00:00:00Z' },
+    { name: 'owner/repo-c', views: 3, uniques: 1, clones: 0, clone_uniques: 0, days: 1, updated_at: '2026-05-20T00:00:00Z' },
+  ];
+  const byName = new Map(repos.map((repo) => [repo.name, repo]));
+  const context = {
+    MAX_DISPLAY_REPOS: 8,
+    SERIES_METRIC_KEYS: [
+      'views',
+      'uniques',
+      'clones',
+      'clone_uniques',
+      'stars_delta',
+      'subscribers_delta',
+      'forks_delta',
+    ],
+    currentPayload() {
+      return {};
+    },
+    dashboardData() {
+      return {
+        getRepos() {
+          return repos;
+        },
+        getRepoSummary(name) {
+          return byName.get(name);
+        },
+        getRepoSeries(name) {
+          const repo = byName.get(name);
+          return {
+            dates: ['2026-06-20'],
+            views: [repo.views],
+            uniques: [repo.uniques],
+            clones: [repo.clones],
+            clone_uniques: [repo.clone_uniques],
+          };
+        },
+        getRepoGrowth() {
+          return {};
+        },
+      };
+    },
+    getSelectedWindow() {
+      return 'all';
+    },
+    getWindowCutoffDate() {
+      return '';
+    },
+    hasChunkLoadError() {
+      return false;
+    },
+    isComparing() {
+      return false;
+    },
+    parseIsoDate(value) {
+      return new Date(`${value}T00:00:00Z`);
+    },
+    state: {
+      compareRepos: [],
+      minActivity: 0,
+      selectedRepo: null,
+    },
+  };
+  const helpers = installSeries(context);
+
+  assert.deepEqual(
+    helpers.getAllRepoMetrics().map((repo) => repo.name),
+    ['owner/repo-b', 'owner/repo-a', 'owner/repo-c'],
+  );
+  assert.deepEqual(
+    helpers.getVisibleRepos().map((repo) => repo.name),
+    ['owner/repo-b', 'owner/repo-a', 'owner/repo-c'],
+  );
+});
+
 test('secure core validates encrypted dashboard and export metadata contracts', () => {
   const data = validEncryptedData();
   const validated = secureCore.validateEncryptedDashboardData(data);

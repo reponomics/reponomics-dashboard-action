@@ -148,6 +148,11 @@ export function installTables(context) {
     }
 
     function classifyInsight(item) {
+      if (item.kind === 'narrative') {
+        if (item.tone === 'opportunity') return 'up';
+        if (item.tone === 'risk') return 'down';
+        return 'neutral';
+      }
       if (item.kind === 'spike') {
         return item.direction === 'spiked' ? 'up' : 'down';
       }
@@ -163,6 +168,59 @@ export function installTables(context) {
           : 'up';
       }
       return 'neutral';
+    }
+
+    function narrativeToneLabel(tone) {
+      if (tone === 'opportunity') return 'signal';
+      if (tone === 'risk') return 'watch';
+      if (tone === 'watch') return 'watch';
+      if (tone === 'explain') return 'context';
+      return 'note';
+    }
+
+    function safeInsightUrl(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      try {
+        const base = (window.location && window.location.href) || 'https://github.com/';
+        const url = new URL(raw, base);
+        return url.hostname === 'github.com' ? url.href : '';
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    function renderNarrativeEvidence(evidence) {
+      const rows = Array.isArray(evidence) ? evidence.filter(Boolean).slice(0, 4) : [];
+      if (!rows.length) return '';
+      return '<div class="insight-evidence">' + rows.map((row) => {
+        const label = escapeHtml(row.label || '');
+        const value = escapeHtml(row.value || '');
+        const detail = escapeHtml(row.detail || '');
+        return '<span class="evidence-chip">' +
+          (label ? '<span class="evidence-label">' + label + '</span>' : '') +
+          (value ? '<span class="evidence-value">' + value + '</span>' : '') +
+          (detail ? '<span class="evidence-detail">' + detail + '</span>' : '') +
+          '</span>';
+      }).join('') + '</div>';
+    }
+
+    function renderNearbyContext(contextRows) {
+      const rows = Array.isArray(contextRows) ? contextRows.filter(Boolean).slice(0, 3) : [];
+      if (!rows.length) return '';
+      return '<div class="insight-context">' + rows.map((row) => {
+        const label = escapeHtml(row.label || 'Context');
+        const detail = escapeHtml(row.detail || '');
+        const date = escapeHtml(row.date || '');
+        const url = safeInsightUrl(row.url || '');
+        const labelHtml = url
+          ? '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
+          : '<span>' + label + '</span>';
+        return '<div class="context-row">' +
+          '<span class="context-date mono">' + (date || 'context') + '</span>' +
+          '<span class="context-label">' + labelHtml + (detail ? '<span class="context-detail">' + detail + '</span>' : '') + '</span>' +
+          '</div>';
+      }).join('') + '</div>';
     }
 
     function renderInsights() {
@@ -195,8 +253,18 @@ export function installTables(context) {
         let headline = '';
         let meta = '';
         let pctLabel = '';
+        let detailHtml = '';
 
-        if (item.kind === 'trend') {
+        if (item.kind === 'narrative') {
+          li.classList.add('narrative');
+          headline = '<span class="repo">' + escapeHtml(shortRepo) + '</span> ' + escapeHtml(item.title || 'Signal worth a look');
+          meta = item.summary || '';
+          pctLabel = narrativeToneLabel(item.tone);
+          detailHtml =
+            renderNarrativeEvidence(item.evidence) +
+            renderNearbyContext(item.nearby_context) +
+            (item.action ? '<div class="insight-action"><span>Try next</span>' + escapeHtml(item.action) + '</div>' : '');
+        } else if (item.kind === 'trend') {
           const verb = (item.pct === null || item.pct === undefined)
             ? 'started getting'
             : (item.pct > 0 ? 'is up on' : 'is down on');
@@ -234,6 +302,7 @@ export function installTables(context) {
           `<div class="insight-icon" aria-hidden="true">${icon}</div>` +
           `<div class="insight-body"><div class="insight-headline">${headline}</div>` +
           (meta ? `<div class="insight-meta mono">${escapeHtml(meta)}</div>` : '') +
+          detailHtml +
           `</div>` +
           (pctLabel ? `<div class="insight-pct">${escapeHtml(pctLabel)}</div>` : '');
 

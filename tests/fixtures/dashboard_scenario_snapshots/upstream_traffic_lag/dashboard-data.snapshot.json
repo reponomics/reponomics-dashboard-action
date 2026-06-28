@@ -7,6 +7,155 @@
   },
   "encoding": "json",
   "summary": {
+    "contextual_insights": [
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "88"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "16",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "16",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "16 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "16 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/toolkit",
+        "subtype": "steady_attention_next_step",
+        "summary": "toolkit drew 88 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "72"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "14",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "14",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "14 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "14 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/docs-site",
+        "subtype": "steady_attention_next_step",
+        "summary": "docs-site drew 72 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "56"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "11",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "11",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "11 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "11 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/api-monitor",
+        "subtype": "steady_attention_next_step",
+        "summary": "api-monitor drew 56 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      }
+    ],
     "daily": {
       "clone_uniques": [
         6,
@@ -127,6 +276,153 @@
     ],
     "insights_v2": [
       {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "88"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "16",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "16",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "16 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "16 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/toolkit",
+        "subtype": "steady_attention_next_step",
+        "summary": "toolkit drew 88 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "72"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "14",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "14",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "14 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "14 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/docs-site",
+        "subtype": "steady_attention_next_step",
+        "summary": "docs-site drew 72 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "56"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+0"
+          },
+          {
+            "detail": "11",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "11",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-06-08",
+            "detail": "11 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          },
+          {
+            "date": "2026-06-08",
+            "detail": "11 views",
+            "label": "github.com",
+            "type": "referrer",
+            "url": ""
+          }
+        ],
+        "repo": "demo/api-monitor",
+        "subtype": "steady_attention_next_step",
+        "summary": "api-monitor drew 56 visitors across 8 active days with +0 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
         "downstream_delta": 0,
         "kind": "growth",
         "metric": "growth",
@@ -145,16 +441,6 @@
         "text": "`demo/docs-site` drew 156 views and 72 visitors without downstream growth in the selected window.",
         "traffic": 156,
         "visitors": 72
-      },
-      {
-        "downstream_delta": 0,
-        "kind": "growth",
-        "metric": "growth",
-        "repo": "demo/api-monitor",
-        "subtype": "high_attention_low_interest",
-        "text": "`demo/api-monitor` drew 124 views and 56 visitors without downstream growth in the selected window.",
-        "traffic": 124,
-        "visitors": 56
       }
     ],
     "meta": {

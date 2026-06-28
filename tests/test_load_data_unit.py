@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -125,6 +126,43 @@ def test_csv_loaders_read_expected_files_and_filter_to_published_repos(
                 "coverage_state": "reported",
             }
         ],
+        "repo-event-index.csv": [
+            {"repo": "demo/app", "event_type": "release", "title": "v1"},
+            {"repo": "demo/hidden", "event_type": "release", "title": "private"},
+        ],
+        "repo-release-assets.csv": [
+            {"repo": "demo/app", "release_id": "1", "asset": "app.whl"},
+            {"repo": "demo/hidden", "release_id": "2", "asset": "hidden.whl"},
+        ],
+        "repo-languages.csv": [
+            {"repo": "demo/app", "language": "Python", "share": "0.8"},
+            {"repo": "demo/hidden", "language": "Go", "share": "1"},
+        ],
+        "repo-topics.csv": [
+            {"repo": "demo/app", "topic": "cli"},
+            {"repo": "demo/hidden", "topic": "private"},
+        ],
+        "repo-issue-pr-snapshots.csv": [
+            {"repo": "demo/app", "open_issues_count": "2"},
+            {"repo": "demo/hidden", "open_issues_count": "99"},
+        ],
+        "repo-issue-label-snapshots.csv": [
+            {"repo": "demo/app", "label": "bug"},
+            {"repo": "demo/hidden", "label": "secret"},
+        ],
+        "collection-endpoints.csv": [
+            {"repo": "demo/app", "endpoint": "traffic"},
+            {"repo": "demo/hidden", "endpoint": "traffic"},
+            {"endpoint": "global"},
+        ],
+        "repo-code-frequency-weekly.csv": [
+            {"repo": "demo/app", "week_start": "2026-04-27", "additions": "5"},
+            {"repo": "demo/hidden", "week_start": "2026-04-27", "additions": "500"},
+        ],
+        "repo-contributor-activity-weekly.csv": [
+            {"repo": "demo/app", "week_start": "2026-04-27", "contributors": "2"},
+            {"repo": "demo/hidden", "week_start": "2026-04-27", "contributors": "9"},
+        ],
     }
 
     def read_csv(path: str) -> list[dict[str, str]]:
@@ -159,6 +197,177 @@ def test_csv_loaders_read_expected_files_and_filter_to_published_repos(
             "coverage_state": "reported",
         }
     ]
+    assert load_data.load_event_index(str(tmp_path)) == [
+        {"repo": "demo/app", "event_type": "release", "title": "v1"}
+    ]
+    assert load_data.load_release_assets(str(tmp_path)) == [
+        {"repo": "demo/app", "release_id": "1", "asset": "app.whl"}
+    ]
+    assert load_data.load_languages(str(tmp_path)) == [
+        {"repo": "demo/app", "language": "Python", "share": "0.8"}
+    ]
+    assert load_data.load_topics(str(tmp_path)) == [{"repo": "demo/app", "topic": "cli"}]
+    assert load_data.load_issue_pr_snapshots(str(tmp_path)) == [
+        {"repo": "demo/app", "open_issues_count": "2"}
+    ]
+    assert load_data.load_issue_label_snapshots(str(tmp_path)) == [
+        {"repo": "demo/app", "label": "bug"}
+    ]
+    assert load_data.load_collection_endpoints(str(tmp_path)) == [
+        {"repo": "demo/app", "endpoint": "traffic"},
+        {"endpoint": "global"},
+    ]
+    assert load_data.load_code_frequency_weekly(str(tmp_path)) == [
+        {"repo": "demo/app", "week_start": "2026-04-27", "additions": "5"}
+    ]
+    assert load_data.load_contributor_activity_weekly(str(tmp_path)) == [
+        {"repo": "demo/app", "week_start": "2026-04-27", "contributors": "2"}
+    ]
+
+
+def test_narrative_insights_connect_traffic_peak_to_nearby_repo_event() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 2, 1)
+        for offset in range(20)
+    ]
+    daily_rows[18] = _daily_row("demo/app", "2026-06-19", 40, 15, 5, 3)
+    daily_rows[19] = _daily_row("demo/app", "2026-06-20", 4, 2, 1, 1)
+    metric_rows = [
+        {
+            **_metric_row("demo/app", "2026-06-20", 12, 4, 2),
+            "community_health_percentage": "80",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_contributing": "true",
+            "community_has_issue_template": "true",
+            "community_has_pull_request_template": "true",
+            "community_has_code_of_conduct": "true",
+        }
+    ]
+    event_rows = [
+        {
+            "repo": "demo/app",
+            "event_date": "2026-06-19",
+            "event_type": "release",
+            "classification": "release",
+            "title": "v1.2.0",
+            "url": "https://github.com/demo/app/releases/tag/v1.2.0",
+            "magnitude": "6",
+            "release_id": "release-1",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=event_rows,
+        release_asset_rows=[
+            {"repo": "demo/app", "release_id": "release-1", "download_count": "7"}
+        ],
+        path_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-20T12:00:00Z",
+                "path": "/demo/app",
+                "title": "README",
+                "count": "18",
+            }
+        ],
+        referrer_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-20T12:00:00Z",
+                "referrer": "github.com",
+                "count": "12",
+            }
+        ],
+        limit=3,
+    )
+
+    assert insights
+    assert insights[0]["kind"] == "narrative"
+    assert insights[0]["subtype"] == "event_aligned_attention"
+    assert insights[0]["tone"] == "opportunity"
+    assert "proof" not in insights[0]["summary"].lower()
+    assert "causal" not in insights[0]["summary"].lower()
+    assert {row["label"] for row in insights[0]["evidence"]} >= {
+        "Peak day",
+        "Nearby event",
+    }
+
+
+def test_narrative_insights_surface_next_moves_for_flat_attention() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/steady", (start + timedelta(days=offset)).isoformat(), 7, 4)
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/steady", "2026-06-01", 20, 5, 2),
+            "community_health_percentage": "100",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_contributing": "true",
+            "community_has_issue_template": "true",
+            "community_has_pull_request_template": "true",
+            "community_has_code_of_conduct": "true",
+        },
+        {
+            **_metric_row("demo/steady", "2026-06-14", 20, 5, 2),
+            "community_health_percentage": "100",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_contributing": "true",
+            "community_has_issue_template": "true",
+            "community_has_pull_request_template": "true",
+            "community_has_code_of_conduct": "true",
+        },
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=[
+            {
+                "repo": "demo/steady",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "path": "/demo/steady/blob/main/README.md",
+                "title": "README",
+                "count": "25",
+            }
+        ],
+        referrer_rows=[
+            {
+                "repo": "demo/steady",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "referrer": "google.com",
+                "count": "15",
+            }
+        ],
+        language_rows=[
+            {
+                "repo": "demo/steady",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "language": "Python",
+                "share": "1.0",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=2,
+    )
+
+    assert insights
+    assert insights[0]["subtype"] == "steady_attention_next_step"
+    assert insights[0]["tone"] == "opportunity"
+    assert "next step" in insights[0]["title"].lower()
+    assert "install command" in insights[0]["action"]
+    assert {row["label"] for row in insights[0]["evidence"]} >= {
+        "Visitors",
+        "Downstream",
+        "Top content",
+    }
 
 
 def test_load_daily_uses_default_data_dir_when_not_supplied(

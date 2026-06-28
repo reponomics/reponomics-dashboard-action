@@ -1114,21 +1114,21 @@
     }
     .opportunity-point .point-halo {
       fill: var(--point-color, var(--accent));
-      opacity: 0.13;
+      opacity: 0.10;
     }
     .opportunity-point .point-dot {
       fill: var(--point-color, var(--accent));
-      stroke: rgba(255, 255, 255, 0.64);
-      stroke-width: 0.55;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.26));
+      stroke: rgba(255, 255, 255, 0.58);
+      stroke-width: 0.36;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
     }
     .opportunity-point text {
       fill: var(--text);
       paint-order: stroke;
       stroke: var(--bg-card-2);
-      stroke-width: 0.9px;
+      stroke-width: 0.54px;
       stroke-linejoin: round;
-      font-size: 2.25px;
+      font-size: 1.68px;
       font-weight: 700;
       text-anchor: middle;
       pointer-events: none;

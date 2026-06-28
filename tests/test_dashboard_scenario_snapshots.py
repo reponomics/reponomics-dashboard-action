@@ -104,6 +104,11 @@ def _write_scenario_data(
         run.storage.TRAFFIC_COVERAGE_FIELDS,
         dataset.traffic_coverage_rows,
     )
+    _write_csv(
+        data_dir / "repo-event-index.csv",
+        run.storage.REPO_EVENT_INDEX_FIELDS,
+        dataset.event_rows,
+    )
 
 
 def _scenario_repositories(dataset: dashboard_scenarios.ScenarioDataset) -> list[str]:

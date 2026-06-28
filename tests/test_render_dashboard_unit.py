@@ -18,3 +18,78 @@ def test_pad_metric_series_appends_only_trailing_unreported_dates() -> None:
         "views": [10, 30, None, None],
         "clones": [1, 3, None, None],
     }
+
+
+def test_event_graph_compacts_published_events_with_nearby_traffic() -> None:
+    daily_rows = [
+        {
+            "repo": "demo/app",
+            "ts": "2026-06-10",
+            "views_count": "4",
+            "views_uniques": "2",
+        },
+        {
+            "repo": "demo/app",
+            "ts": "2026-06-11",
+            "views_count": "6",
+            "views_uniques": "3",
+        },
+        {
+            "repo": "demo/hidden",
+            "ts": "2026-06-11",
+            "views_count": "90",
+            "views_uniques": "45",
+        },
+    ]
+    event_rows = [
+        {
+            "repo": "demo/app",
+            "event_id": "commit:a",
+            "event_date": "2026-06-09",
+            "event_type": "commit",
+            "classification": "docs",
+            "title": "Document install flow",
+            "primary_sha": "abc123456789",
+            "magnitude": "9",
+        },
+        {
+            "repo": "demo/app",
+            "event_id": "release:b",
+            "event_date": "2026-06-11",
+            "event_type": "release",
+            "classification": "release",
+            "title": "v1.2.0",
+            "magnitude": "4",
+        },
+        {
+            "repo": "demo/hidden",
+            "event_id": "commit:hidden",
+            "event_date": "2026-06-11",
+            "event_type": "commit",
+            "title": "Private work",
+        },
+    ]
+
+    graph = render_dashboard._build_event_graph(
+        event_rows,
+        daily_rows,
+        [{"repo": "demo/app"}],
+        per_repo_limit=2,
+    )
+
+    assert graph["event_count"] == 2
+    assert graph["repos"][0]["repo"] == "demo/app"
+    assert [event["id"] for event in graph["repos"][0]["events"]] == [
+        "commit:a",
+        "release:b",
+    ]
+    assert graph["repos"][0]["events"][0]["traffic"] == {
+        "nearby_views": 4,
+        "nearby_visitors": 2,
+        "event_day_views": 0,
+    }
+    assert graph["repos"][0]["events"][1]["traffic"] == {
+        "nearby_views": 10,
+        "nearby_visitors": 5,
+        "event_day_views": 6,
+    }

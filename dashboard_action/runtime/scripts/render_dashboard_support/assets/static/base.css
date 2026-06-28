@@ -1039,6 +1039,311 @@
       font-size: 0.82rem;
       line-height: 1.35;
     }
+    .opportunity-section {
+      margin-bottom: 1.1rem;
+    }
+    .opportunity-card {
+      border-color: rgba(107, 184, 255, 0.18);
+      background:
+        linear-gradient(135deg, rgba(107, 184, 255, 0.08), transparent 42%, rgba(79, 200, 165, 0.06)),
+        var(--bg-card);
+    }
+    .opportunity-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.36fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .opportunity-map {
+      height: clamp(18rem, 32vw, 25rem);
+      min-height: 18rem;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 78% 20%, rgba(79, 200, 165, 0.10), transparent 28%),
+        radial-gradient(circle at 82% 78%, rgba(214, 168, 75, 0.10), transparent 30%),
+        var(--bg-card-2);
+      overflow: hidden;
+    }
+    .opportunity-map svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+    .map-frame {
+      fill: rgba(255, 255, 255, 0.018);
+      stroke: var(--border);
+      stroke-width: 0.45;
+    }
+    .map-grid {
+      fill: url(#opportunity-grid);
+      opacity: 0.35;
+    }
+    #opportunity-grid path {
+      stroke: rgba(255, 255, 255, 0.16);
+      stroke-width: 0.25;
+    }
+    .map-midline {
+      stroke: var(--border);
+      stroke-dasharray: 1.6 1.4;
+      stroke-width: 0.45;
+      opacity: 0.85;
+    }
+    .map-zone {
+      fill: var(--text-dim);
+      font-size: 2.05px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+    .zone-amplify { fill: var(--c-positive); }
+    .zone-clarify { fill: var(--accent-2); }
+    .zone-niche { fill: var(--accent); }
+    .map-axis {
+      fill: var(--text-muted);
+      font-size: 2.25px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .opportunity-point {
+      cursor: pointer;
+      outline: none;
+    }
+    .opportunity-point .point-halo {
+      fill: var(--point-color, var(--accent));
+      opacity: 0.13;
+    }
+    .opportunity-point .point-dot {
+      fill: var(--point-color, var(--accent));
+      stroke: rgba(255, 255, 255, 0.64);
+      stroke-width: 0.55;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.26));
+    }
+    .opportunity-point text {
+      fill: var(--text);
+      paint-order: stroke;
+      stroke: var(--bg-card-2);
+      stroke-width: 0.9px;
+      stroke-linejoin: round;
+      font-size: 2.25px;
+      font-weight: 700;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+    .opportunity-point:hover .point-dot,
+    .opportunity-point:focus-visible .point-dot {
+      stroke: var(--text);
+      stroke-width: 0.75;
+    }
+    .opportunity-notes {
+      display: grid;
+      align-content: start;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+    .opportunity-note {
+      display: grid;
+      gap: 0.24rem;
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent),
+        var(--bg-card-2);
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.72rem 0.82rem;
+      text-align: left;
+      transition: border-color 150ms ease, background 150ms ease, transform 120ms ease;
+    }
+    .opportunity-note:hover {
+      border-color: rgba(107, 184, 255, 0.45);
+      background: rgba(107, 184, 255, 0.055);
+    }
+    .opportunity-note:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .note-repo {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .note-label {
+      color: var(--accent-2);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .note-meta {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .event-graph-section {
+      margin-bottom: 1.1rem;
+    }
+    .event-graph-card {
+      border-color: rgba(79, 200, 165, 0.18);
+      background:
+        linear-gradient(125deg, rgba(79, 200, 165, 0.075), transparent 44%, rgba(217, 126, 183, 0.055)),
+        var(--bg-card);
+    }
+    .event-graph-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.42fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .event-graph-canvas {
+      height: clamp(18rem, 30vw, 24rem);
+      min-height: 17rem;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.020), transparent),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.020) 0 1px, transparent 1px 26px),
+        linear-gradient(180deg, var(--bg-card-2), var(--bg-card));
+      overflow: hidden;
+    }
+    .event-graph-canvas svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+    .git-lane-label {
+      fill: var(--text-muted);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 2.1px;
+      font-weight: 700;
+    }
+    .git-rail {
+      stroke: var(--event-color, var(--accent));
+      stroke-width: 0.8;
+      stroke-linecap: round;
+      opacity: 0.62;
+    }
+    .git-branch-link {
+      fill: none;
+      stroke: var(--event-color, var(--accent));
+      stroke-width: 0.55;
+      stroke-linecap: round;
+      opacity: 0.46;
+    }
+    .git-event-node {
+      cursor: pointer;
+      outline: none;
+    }
+    .git-event-dot,
+    .git-event-tag {
+      fill: var(--event-color, var(--accent));
+      stroke: rgba(255, 255, 255, 0.72);
+      stroke-width: 0.55;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.28));
+    }
+    .git-event-node.type-release .git-event-tag {
+      fill: var(--accent-2);
+      stroke: rgba(255, 255, 255, 0.78);
+    }
+    .git-event-node.class-docs .git-event-dot {
+      fill: var(--accent);
+    }
+    .git-event-kicker,
+    .git-axis {
+      fill: var(--text-dim);
+      font-size: 1.9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .git-axis-end {
+      text-anchor: end;
+    }
+    .git-event-node:hover .git-event-dot,
+    .git-event-node:focus-visible .git-event-dot,
+    .git-event-node:hover .git-event-tag,
+    .git-event-node:focus-visible .git-event-tag {
+      stroke: var(--text);
+      stroke-width: 0.82;
+    }
+    .event-log {
+      display: grid;
+      align-content: start;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .event-log-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.28rem 0.5rem;
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--event-color, var(--accent)) 12%, transparent), transparent 62%),
+        var(--bg-card-2);
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.68rem 0.76rem;
+      text-align: left;
+      transition: border-color 150ms ease, background 150ms ease, transform 120ms ease;
+    }
+    .event-log-item:hover {
+      border-color: var(--event-color, var(--accent));
+      transform: translateY(-1px);
+    }
+    .event-log-item:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .event-log-kind {
+      align-self: start;
+      border: 1px solid color-mix(in srgb, var(--event-color, var(--accent)) 52%, transparent);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      line-height: 1.1;
+      padding: 0.2rem 0.4rem;
+      text-transform: uppercase;
+    }
+    .event-log-kind.type-release {
+      border-color: rgba(214, 168, 75, 0.52);
+      color: var(--accent-2);
+    }
+    .event-log-title {
+      font-size: 0.82rem;
+      font-weight: 650;
+      line-height: 1.25;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .event-log-meta {
+      grid-column: 2 / 3;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.25;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .event-graph-empty {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 17rem;
+      padding: 1rem;
+      text-align: center;
+    }
     .growth-cell {
       display: inline-grid;
       gap: 0.2rem;
@@ -2687,6 +2992,18 @@
       .stat-card[data-metric="cloners"] {
         grid-column: span 1;
       }
+      .opportunity-layout {
+        grid-template-columns: 1fr;
+      }
+      .opportunity-notes {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .event-graph-layout {
+        grid-template-columns: 1fr;
+      }
+      .event-log {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .repo-table-wrap {
         overflow-x: visible;
       }
@@ -2964,6 +3281,28 @@
       .chart-container { height: 280px; }
       .chart-grid > .card:first-child .chart-container {
         height: 300px;
+      }
+      .opportunity-map,
+      .opportunity-map svg {
+        height: 15rem;
+        min-height: 15rem;
+      }
+      .opportunity-notes {
+        grid-template-columns: 1fr;
+      }
+      .opportunity-point text {
+        display: none;
+      }
+      .event-graph-canvas,
+      .event-graph-canvas svg {
+        height: 15rem;
+        min-height: 15rem;
+      }
+      .event-log {
+        grid-template-columns: 1fr;
+      }
+      .event-log-title {
+        white-space: normal;
       }
       .momentum-cell { padding: 0.5rem 0; border-left: none; border-top: 1px solid var(--border-soft); }
       .momentum-cell:first-child { padding-top: 0; border-top: none; }

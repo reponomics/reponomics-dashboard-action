@@ -14,48 +14,60 @@
   "summary": {
     "contextual_insights": [
       {
-        "action": "Make the next visit easier by adding the highest-impact missing files.",
-        "anchor_date": "",
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-13",
         "confidence": "medium",
         "evidence": [
           {
+            "detail": "2026-05-13",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
             "detail": "14d window",
-            "label": "Visitors",
-            "value": "614"
+            "label": "Views",
+            "value": "1,089"
           },
           {
-            "detail": "community profile",
-            "label": "Missing",
-            "value": "contributing guide"
+            "detail": "640",
+            "label": "Top content",
+            "value": "not docs-specific"
           },
           {
-            "detail": "latest snapshot",
-            "label": "Health",
-            "value": "96%"
+            "detail": "640",
+            "label": "Top referrer",
+            "value": "github.com"
           }
         ],
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-25",
-            "detail": "640 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/action/commit/0101abc123ef45"
           },
           {
-            "date": "2026-05-25",
-            "detail": "640 views",
-            "label": "github.com",
-            "type": "referrer",
-            "url": ""
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/action/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/action/commit/0101abc123ef45"
           }
         ],
         "repo": "reponomics/action",
-        "subtype": "attention_without_readiness",
-        "summary": "action drew 614 visitors, while the community profile is still missing contributing guide.",
-        "title": "Attention is arriving while setup files are incomplete",
-        "tone": "watch"
+        "subtype": "docs_found_audience",
+        "summary": "action has docs/example activity in the retained event trail and 1,089 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       },
       {
         "action": "Make the next visit easier by adding the highest-impact missing files.",
@@ -81,17 +93,24 @@
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-25",
-            "detail": "381 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-21",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
           },
           {
             "date": "2026-05-25",
             "detail": "381 views",
-            "label": "github.com",
-            "type": "referrer",
+            "label": "Repository overview",
+            "type": "path",
             "url": ""
           }
         ],
@@ -100,6 +119,155 @@
         "summary": "docs-site drew 356 visitors, while the community profile is still missing contributing guide.",
         "title": "Attention is arriving while setup files are incomplete",
         "tone": "watch"
+      },
+      {
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-21",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-21",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "67"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+0"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-21",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/reponomics/dashboard-template/releases/tag/v0.2.1"
+          }
+        ],
+        "repo": "reponomics/dashboard-template",
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for dashboard-template; the same window shows 67 clones, 30 cloners, and +0 forks.",
+        "title": "A release window has adoption signals",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Compare paths, referrers, and follow-on growth around that event.",
+        "anchor_date": "2026-05-15",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-15",
+            "label": "Peak day",
+            "value": "42"
+          },
+          {
+            "detail": "trailing median",
+            "label": "Baseline",
+            "value": "24"
+          },
+          {
+            "detail": "2026-05-17",
+            "label": "Nearby event",
+            "value": "feature: Wire selected repository publish flow"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/charts/commit/0801abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/charts/commit/0801abc123ef45"
+          },
+          {
+            "date": "2026-05-25",
+            "detail": "205 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "reponomics/charts",
+        "subtype": "event_aligned_attention",
+        "summary": "charts reached 42 views on 2026-05-15, 2d before feature: Wire selected repository publish flow. That makes the event a useful place to inspect the follow-on traffic.",
+        "title": "Repository activity lines up with an attention peak",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-13",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-13",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "635"
+          },
+          {
+            "detail": "381",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "381",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
+          }
+        ],
+        "repo": "reponomics/docs-site",
+        "subtype": "docs_found_audience",
+        "summary": "docs-site has docs/example activity in the retained event trail and 635 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       }
     ],
     "daily": {
@@ -1840,6 +2008,250 @@
       "with_data_repos": 8,
       "zero_traffic_repos": 0
     },
+    "event_graph": {
+      "date_end": "2026-05-21",
+      "date_start": "2026-05-13",
+      "event_count": 13,
+      "per_repo_limit": 10,
+      "repos": [
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-13",
+              "id": "commit:0101abc123ef45",
+              "magnitude": 12,
+              "sha": "0101abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 95,
+                "nearby_views": 285,
+                "nearby_visitors": 161
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/action/commit/0101abc123ef45"
+            },
+            {
+              "classification": "feature",
+              "date": "2026-05-17",
+              "id": "commit:0102abc123ef45",
+              "magnitude": 19,
+              "sha": "0102abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 53,
+                "nearby_views": 194,
+                "nearby_visitors": 109
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/action/commit/0102abc123ef45"
+            }
+          ],
+          "repo": "reponomics/action"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-17",
+              "id": "commit:0201abc123ef45",
+              "magnitude": 15,
+              "sha": "0201abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 40,
+                "nearby_views": 147,
+                "nearby_visitors": 82
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/dashboard-template/commit/0201abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-21",
+              "id": "release:scenario-release-2",
+              "magnitude": 22,
+              "sha": "0202abc123ef",
+              "title": "v0.2.1",
+              "traffic": {
+                "event_day_views": 60,
+                "nearby_views": 180,
+                "nearby_visitors": 101
+              },
+              "type": "release",
+              "url": "https://github.com/reponomics/dashboard-template/releases/tag/v0.2.1"
+            }
+          ],
+          "repo": "reponomics/dashboard-template"
+        },
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-13",
+              "id": "commit:0302abc123ef45",
+              "magnitude": 25,
+              "sha": "0302abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 48,
+                "nearby_views": 144,
+                "nearby_visitors": 81
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-21",
+              "id": "release:scenario-release-3",
+              "magnitude": 18,
+              "sha": "0301abc123ef",
+              "title": "v0.3.0",
+              "traffic": {
+                "event_day_views": 46,
+                "nearby_views": 138,
+                "nearby_visitors": 78
+              },
+              "type": "release",
+              "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
+            }
+          ],
+          "repo": "reponomics/docs-site"
+        },
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-13",
+              "id": "commit:0401abc123ef45",
+              "magnitude": 21,
+              "sha": "0401abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 36,
+                "nearby_views": 137,
+                "nearby_visitors": 77
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/collector/commit/0401abc123ef45"
+            },
+            {
+              "classification": "feature",
+              "date": "2026-05-17",
+              "id": "commit:0402abc123ef45",
+              "magnitude": 28,
+              "sha": "0402abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 24,
+                "nearby_views": 108,
+                "nearby_visitors": 60
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/collector/commit/0402abc123ef45"
+            }
+          ],
+          "repo": "reponomics/collector"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-17",
+              "id": "commit:0501abc123ef45",
+              "magnitude": 24,
+              "sha": "0501abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 17,
+                "nearby_views": 83,
+                "nearby_visitors": 46
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/examples/commit/0501abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-21",
+              "id": "release:scenario-release-5",
+              "magnitude": 31,
+              "sha": "0502abc123ef",
+              "title": "v0.5.1",
+              "traffic": {
+                "event_day_views": 35,
+                "nearby_views": 105,
+                "nearby_visitors": 58
+              },
+              "type": "release",
+              "url": "https://github.com/reponomics/examples/releases/tag/v0.5.1"
+            }
+          ],
+          "repo": "reponomics/examples"
+        },
+        {
+          "events": [
+            {
+              "classification": "release",
+              "date": "2026-05-21",
+              "id": "release:scenario-release-6",
+              "magnitude": 27,
+              "sha": "0601abc123ef",
+              "title": "v0.6.0",
+              "traffic": {
+                "event_day_views": 31,
+                "nearby_views": 93,
+                "nearby_visitors": 51
+              },
+              "type": "release",
+              "url": "https://github.com/reponomics/infra/releases/tag/v0.6.0"
+            }
+          ],
+          "repo": "reponomics/infra"
+        },
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-13",
+              "id": "commit:0701abc123ef45",
+              "magnitude": 30,
+              "sha": "0701abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 27,
+                "nearby_views": 110,
+                "nearby_visitors": 61
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/cli/commit/0701abc123ef45"
+            }
+          ],
+          "repo": "reponomics/cli"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-17",
+              "id": "commit:0801abc123ef45",
+              "magnitude": 33,
+              "sha": "0801abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 22,
+                "nearby_views": 57,
+                "nearby_visitors": 31
+              },
+              "type": "commit",
+              "url": "https://github.com/reponomics/charts/commit/0801abc123ef45"
+            }
+          ],
+          "repo": "reponomics/charts"
+        }
+      ],
+      "source": "repo-event-index.csv"
+    },
     "generated_at": "2026-05-28 12:00 UTC",
     "growth": {
       "cutoff": "2026-05-12",
@@ -1863,48 +2275,60 @@
     ],
     "insights_v2": [
       {
-        "action": "Make the next visit easier by adding the highest-impact missing files.",
-        "anchor_date": "",
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-13",
         "confidence": "medium",
         "evidence": [
           {
+            "detail": "2026-05-13",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
             "detail": "14d window",
-            "label": "Visitors",
-            "value": "614"
+            "label": "Views",
+            "value": "1,089"
           },
           {
-            "detail": "community profile",
-            "label": "Missing",
-            "value": "contributing guide"
+            "detail": "640",
+            "label": "Top content",
+            "value": "not docs-specific"
           },
           {
-            "detail": "latest snapshot",
-            "label": "Health",
-            "value": "96%"
+            "detail": "640",
+            "label": "Top referrer",
+            "value": "github.com"
           }
         ],
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-25",
-            "detail": "640 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/action/commit/0101abc123ef45"
           },
           {
-            "date": "2026-05-25",
-            "detail": "640 views",
-            "label": "github.com",
-            "type": "referrer",
-            "url": ""
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/action/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/action/commit/0101abc123ef45"
           }
         ],
         "repo": "reponomics/action",
-        "subtype": "attention_without_readiness",
-        "summary": "action drew 614 visitors, while the community profile is still missing contributing guide.",
-        "title": "Attention is arriving while setup files are incomplete",
-        "tone": "watch"
+        "subtype": "docs_found_audience",
+        "summary": "action has docs/example activity in the retained event trail and 1,089 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       },
       {
         "action": "Make the next visit easier by adding the highest-impact missing files.",
@@ -1930,17 +2354,24 @@
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-25",
-            "detail": "381 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-21",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
           },
           {
             "date": "2026-05-25",
             "detail": "381 views",
-            "label": "github.com",
-            "type": "referrer",
+            "label": "Repository overview",
+            "type": "path",
             "url": ""
           }
         ],
@@ -1951,36 +2382,153 @@
         "tone": "watch"
       },
       {
-        "baseline": 26.5,
-        "current": 43,
-        "delta": 16.5,
-        "direction": "spiked",
-        "kind": "spike",
-        "metric": "views",
-        "repo": "reponomics/cli",
-        "text": "`reponomics/cli` views spiked versus baseline (latest 43 vs trailing median 26)."
-      },
-      {
-        "current": 404,
-        "delta": -35,
-        "kind": "trend",
-        "metric": "views",
-        "pct": -7.972665148063782,
-        "prior": 439,
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-21",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-21",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "67"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+0"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-21",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/reponomics/dashboard-template/releases/tag/v0.2.1"
+          }
+        ],
         "repo": "reponomics/dashboard-template",
-        "text": "`reponomics/dashboard-template` views -8% over the last 7d (439 -> 404, -35).",
-        "window_days": 7
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for dashboard-template; the same window shows 67 clones, 30 cloners, and +0 forks.",
+        "title": "A release window has adoption signals",
+        "tone": "opportunity"
       },
       {
-        "current": 207,
-        "delta": -20,
-        "kind": "trend",
-        "metric": "views",
-        "pct": -8.81057268722467,
-        "prior": 227,
-        "repo": "reponomics/infra",
-        "text": "`reponomics/infra` views -9% over the last 7d (227 -> 207, -20).",
-        "window_days": 7
+        "action": "Compare paths, referrers, and follow-on growth around that event.",
+        "anchor_date": "2026-05-15",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-15",
+            "label": "Peak day",
+            "value": "42"
+          },
+          {
+            "detail": "trailing median",
+            "label": "Baseline",
+            "value": "24"
+          },
+          {
+            "detail": "2026-05-17",
+            "label": "Nearby event",
+            "value": "feature: Wire selected repository publish flow"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/charts/commit/0801abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/reponomics/charts/commit/0801abc123ef45"
+          },
+          {
+            "date": "2026-05-25",
+            "detail": "205 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "reponomics/charts",
+        "subtype": "event_aligned_attention",
+        "summary": "charts reached 42 views on 2026-05-15, 2d before feature: Wire selected repository publish flow. That makes the event a useful place to inspect the follow-on traffic.",
+        "title": "Repository activity lines up with an attention peak",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-13",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-13",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "635"
+          },
+          {
+            "detail": "381",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "381",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-13",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
+          }
+        ],
+        "repo": "reponomics/docs-site",
+        "subtype": "docs_found_audience",
+        "summary": "docs-site has docs/example activity in the retained event trail and 635 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       }
     ],
     "meta": {

@@ -41,8 +41,10 @@ export function installController(context) {
   const renderCollectionCalendar = (...args) => context.renderCollectionCalendar(...args);
   const renderCommunityCell = (...args) => context.renderCommunityCell(...args);
   const renderDashboardNotice = (...args) => context.renderDashboardNotice(...args);
+  const renderEventGraph = (...args) => context.renderEventGraph(...args);
   const renderInsights = (...args) => context.renderInsights(...args);
   const renderMomentum = (...args) => context.renderMomentum(...args);
+  const renderOpportunityMap = (...args) => context.renderOpportunityMap(...args);
   const renderPathsTable = (...args) => context.renderPathsTable(...args);
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
@@ -422,6 +424,8 @@ export function installController(context) {
       updateDailyChart();
       updateWeekdayChart();
       updateStackedChart();
+      renderOpportunityMap();
+      renderEventGraph();
       renderReferrerTable(getCurrentReferrerRows());
       renderPathsTable(getCurrentPathRows());
       renderMomentum();

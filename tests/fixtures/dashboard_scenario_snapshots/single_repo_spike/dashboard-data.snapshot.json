@@ -8,6 +8,62 @@
   "summary": {
     "contextual_insights": [
       {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-17",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-17",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "184"
+          },
+          {
+            "detail": "185",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "185",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/sudden-breakout/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          }
+        ],
+        "repo": "demo/sudden-breakout",
+        "subtype": "docs_found_audience",
+        "summary": "sudden-breakout has docs/example activity in the retained event trail and 184 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      },
+      {
         "action": "Add a short README path from problem to install command to first result.",
         "anchor_date": "",
         "confidence": "medium",
@@ -36,17 +92,24 @@
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-29",
-            "detail": "88 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/steady-companion/commit/0201abc123ef45"
           },
           {
             "date": "2026-05-29",
             "detail": "88 views",
-            "label": "github.com",
-            "type": "referrer",
+            "label": "Repository overview",
+            "type": "path",
             "url": ""
           }
         ],
@@ -54,6 +117,48 @@
         "subtype": "steady_attention_next_step",
         "summary": "steady-companion drew 85 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
         "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-25",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-25",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "21"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+0"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          }
+        ],
+        "repo": "demo/steady-companion",
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for steady-companion; the same window shows 21 clones, 14 cloners, and +0 forks.",
+        "title": "A release window has adoption signals",
         "tone": "opportunity"
       }
     ],
@@ -1795,6 +1900,85 @@
       "with_data_repos": 2,
       "zero_traffic_repos": 0
     },
+    "event_graph": {
+      "date_end": "2026-05-25",
+      "date_start": "2026-05-17",
+      "event_count": 4,
+      "per_repo_limit": 10,
+      "repos": [
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-17",
+              "id": "commit:0101abc123ef45",
+              "magnitude": 12,
+              "sha": "0101abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 13,
+                "nearby_views": 39,
+                "nearby_visitors": 23
+              },
+              "type": "commit",
+              "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+            },
+            {
+              "classification": "feature",
+              "date": "2026-05-21",
+              "id": "commit:0102abc123ef45",
+              "magnitude": 19,
+              "sha": "0102abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 12,
+                "nearby_views": 36,
+                "nearby_visitors": 22
+              },
+              "type": "commit",
+              "url": "https://github.com/demo/sudden-breakout/commit/0102abc123ef45"
+            }
+          ],
+          "repo": "demo/sudden-breakout"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-21",
+              "id": "commit:0201abc123ef45",
+              "magnitude": 15,
+              "sha": "0201abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 12,
+                "nearby_views": 36,
+                "nearby_visitors": 18
+              },
+              "type": "commit",
+              "url": "https://github.com/demo/steady-companion/commit/0201abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-25",
+              "id": "release:scenario-release-2",
+              "magnitude": 22,
+              "sha": "0202abc123ef",
+              "title": "v0.2.1",
+              "traffic": {
+                "event_day_views": 9,
+                "nearby_views": 27,
+                "nearby_visitors": 18
+              },
+              "type": "release",
+              "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+            }
+          ],
+          "repo": "demo/steady-companion"
+        }
+      ],
+      "source": "repo-event-index.csv"
+    },
     "generated_at": "2026-05-28 12:00 UTC",
     "growth": {
       "cutoff": "2026-05-16",
@@ -1816,6 +2000,62 @@
       "`demo/steady-companion` clones +10% over the last 7d (10 -> 11, +1)."
     ],
     "insights_v2": [
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-17",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-17",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "184"
+          },
+          {
+            "detail": "185",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "185",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/sudden-breakout/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          }
+        ],
+        "repo": "demo/sudden-breakout",
+        "subtype": "docs_found_audience",
+        "summary": "sudden-breakout has docs/example activity in the retained event trail and 184 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      },
       {
         "action": "Add a short README path from problem to install command to first result.",
         "anchor_date": "",
@@ -1845,17 +2085,24 @@
         "kind": "narrative",
         "nearby_context": [
           {
-            "date": "2026-05-29",
-            "detail": "88 views",
-            "label": "Repository overview",
-            "type": "path",
-            "url": ""
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/steady-companion/commit/0201abc123ef45"
           },
           {
             "date": "2026-05-29",
             "detail": "88 views",
-            "label": "github.com",
-            "type": "referrer",
+            "label": "Repository overview",
+            "type": "path",
             "url": ""
           }
         ],
@@ -1863,6 +2110,48 @@
         "subtype": "steady_attention_next_step",
         "summary": "steady-companion drew 85 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
         "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-25",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-25",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "21"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+0"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          }
+        ],
+        "repo": "demo/steady-companion",
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for steady-companion; the same window shows 21 clones, 14 cloners, and +0 forks.",
+        "title": "A release window has adoption signals",
         "tone": "opportunity"
       },
       {

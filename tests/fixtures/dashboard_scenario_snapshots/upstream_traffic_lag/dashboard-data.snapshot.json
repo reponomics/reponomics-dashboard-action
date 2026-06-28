@@ -253,6 +253,14 @@
       "with_data_repos": 3,
       "zero_traffic_repos": 0
     },
+    "event_graph": {
+      "date_end": "",
+      "date_start": "",
+      "event_count": 0,
+      "per_repo_limit": 10,
+      "repos": [],
+      "source": "repo-event-index.csv"
+    },
     "generated_at": "2026-05-28 12:00 UTC",
     "growth": {
       "cutoff": "2026-05-26",

@@ -10,13 +10,29 @@ import yaml
 
 
 CONFIG_PATH = "config.yaml"
-DEFAULT_MAX_REPOS = 200
+DEFAULT_MAX_COLLECT_REPOS = 100
+MAX_PUBLISH_REPOS = 8
 MAX_OWNER_LENGTH = 39
 MAX_REPO_NAME_LENGTH = 100
 MAX_FULL_NAME_LENGTH = MAX_OWNER_LENGTH + 1 + MAX_REPO_NAME_LENGTH
 OWNER_RE = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
 REPO_NAME_RE = r"[A-Za-z0-9_.-]{1,100}"
+REPO_NAME_ONLY_RE = re.compile(rf"^{REPO_NAME_RE}$")
 FULL_REPO_NAME_RE = re.compile(rf"^({OWNER_RE})/({REPO_NAME_RE})$")
+CURRENT_REPOSITORY_ENV_KEYS = ("GITHUB_REPOSITORY", "GH_REPO")
+REMOVED_SELECTION_KEYS = frozenset(
+    {
+        "include_only",
+        "include",
+        "repos",
+        "exclude",
+        "exclude_repos",
+        "include_others",
+        "include_new",
+        "include_private",
+        "max_repos",
+    }
+)
 
 
 def load_repo_config(config_path: str = CONFIG_PATH) -> dict[str, Any]:
@@ -30,63 +46,100 @@ def load_repo_config(config_path: str = CONFIG_PATH) -> dict[str, Any]:
     if not isinstance(config, dict):
         raise ValueError(f"'{config_path}' must contain a YAML mapping.")
 
-    include_only = _normalize_repo_list(
+    removed_keys = sorted(REMOVED_SELECTION_KEYS.intersection(config))
+    if removed_keys:
+        raise ValueError(
+            f"'{config_path}' uses removed repository-selection key(s): "
+            + ", ".join(removed_keys)
+            + ". Use collect.repositories and publish.repositories."
+        )
+
+    default_owner = _current_repository_owner()
+    collect_repos = _normalize_nested_repo_list(
         config_path,
-        "include_only",
-        config.get("include_only"),
+        "collect",
+        config.get("collect"),
+        "repositories",
+        default_owner=default_owner,
     )
-    include = _normalize_repo_list(
+    publish_repos = _normalize_nested_repo_list(
         config_path,
-        "include",
-        config.get("include", config.get("repos")),
-    )
-    exclude = _normalize_repo_list(
-        config_path,
-        "exclude",
-        config.get("exclude", config.get("exclude_repos")),
-    )
-    max_repos = _normalize_positive_int(
-        config_path,
-        "max_repos",
-        config.get("max_repos", DEFAULT_MAX_REPOS),
+        "publish",
+        config.get("publish"),
+        "repositories",
+        default_owner=default_owner,
     )
 
-    if len(include_only) > max_repos:
+    if not collect_repos:
         raise ValueError(
-            f"'{config_path}' key 'include_only' contains {len(include_only)} " +
-            f"repositories but 'max_repos' is {max_repos}."
+            f"'{config_path}' key 'collect.repositories' must contain at least "
+            + "one repository."
         )
-    if len(include) > max_repos:
+    if not publish_repos:
         raise ValueError(
-            f"'{config_path}' key 'include' contains {len(include)} " +
-            f"repositories but 'max_repos' is {max_repos}."
+            f"'{config_path}' key 'publish.repositories' must contain at least "
+            + "one repository."
+        )
+    if len(collect_repos) > DEFAULT_MAX_COLLECT_REPOS:
+        raise ValueError(
+            f"'{config_path}' key 'collect.repositories' contains "
+            + f"{len(collect_repos)} repositories but the beta cap is "
+            + f"{DEFAULT_MAX_COLLECT_REPOS}."
+        )
+    if len(publish_repos) > MAX_PUBLISH_REPOS:
+        raise ValueError(
+            f"'{config_path}' key 'publish.repositories' contains "
+            + f"{len(publish_repos)} repositories but the dashboard cap is "
+            + f"{MAX_PUBLISH_REPOS}."
+        )
+
+    collect_set = set(collect_repos)
+    missing_from_collect = [repo for repo in publish_repos if repo not in collect_set]
+    if missing_from_collect:
+        raise ValueError(
+            f"'{config_path}' key 'publish.repositories' includes repos that "
+            + "are not listed in 'collect.repositories': "
+            + ", ".join(missing_from_collect)
         )
 
     return {
-        "max_repos": max_repos,
-        "include_only": include_only,
-        "include": include,
-        "exclude": exclude,
-        "include_others": _normalize_bool(
-            config_path,
-            "include_others",
-            config.get("include_others", True),
-        ),
-        "include_new": _normalize_bool(
-            config_path,
-            "include_new",
-            config.get("include_new", False),
-        ),
-        "include_private": _normalize_bool(
-            config_path,
-            "include_private",
-            config.get("include_private", True),
-        ),
+        "max_collect_repos": DEFAULT_MAX_COLLECT_REPOS,
+        "max_publish_repos": MAX_PUBLISH_REPOS,
+        "collect_repositories": collect_repos,
+        "publish_repositories": publish_repos,
     }
 
 
-def _normalize_repo_list(config_path: str, key: str, value) -> list[str]:
-    """Normalize a repo list and validate owner/repo formatting."""
+def _normalize_nested_repo_list(
+    config_path: str,
+    parent_key: str,
+    parent_value: Any,
+    child_key: str,
+    *,
+    default_owner: str,
+) -> list[str]:
+    """Normalize a repository list from a nested config mapping."""
+    full_key = f"{parent_key}.{child_key}"
+    if not isinstance(parent_value, dict):
+        raise ValueError(f"'{config_path}' key '{parent_key}' must be a mapping.")
+    if any(not isinstance(key, str) for key in parent_value):
+        raise ValueError(f"'{config_path}' key '{parent_key}' must contain string keys.")
+    return _normalize_repo_list(
+        config_path,
+        full_key,
+        parent_value.get(child_key),
+        default_owner=default_owner,
+    )
+
+
+def _normalize_repo_list(
+    config_path: str,
+    key: str,
+    value: Any,
+    *,
+    default_owner: str,
+) -> list[str]:
+    """Normalize repo entries and validate GitHub repository formatting."""
     value = value or []
     if not isinstance(value, list):
         raise ValueError(f"'{config_path}' key '{key}' must be a list.")
@@ -102,11 +155,39 @@ def _normalize_repo_list(config_path: str, key: str, value) -> list[str]:
         repo = raw_repo.strip()
         if not repo:
             continue
-        _validate_repo_full_name(config_path, key, repo)
-        if repo not in seen:
-            normalized.append(repo)
-            seen.add(repo)
+        normalized_repo = _normalize_repo_name(
+            config_path,
+            key,
+            repo,
+            default_owner=default_owner,
+        )
+        if normalized_repo not in seen:
+            normalized.append(normalized_repo)
+            seen.add(normalized_repo)
     return normalized
+
+
+def _normalize_repo_name(
+    config_path: str,
+    key: str,
+    repo: str,
+    *,
+    default_owner: str,
+) -> str:
+    """Return a full owner/repo name for a configured repository entry."""
+    if "/" in repo:
+        _validate_repo_full_name(config_path, key, repo)
+        return repo
+    _validate_repo_short_name(config_path, key, repo)
+    if not default_owner:
+        raise ValueError(
+            f"invalid repository entry {repo!r} under '{key}' in {config_path}; "
+            + "bare repository names require GITHUB_REPOSITORY or GH_REPO so "
+            + "the dashboard repository owner can be inferred."
+        )
+    full_name = f"{default_owner}/{repo}"
+    _validate_repo_full_name(config_path, key, full_name)
+    return full_name
 
 
 def _validate_repo_full_name(config_path: str, key: str, repo: str) -> None:
@@ -136,32 +217,46 @@ def _validate_repo_full_name(config_path: str, key: str, repo: str) -> None:
         )
 
 
-def _normalize_bool(config_path: str, key: str, value: Any) -> bool:
-    """Validate a YAML boolean setting."""
-    if isinstance(value, bool):
-        return value
-    raise ValueError(
-        f"'{config_path}' key '{key}' must be true or false, got {value!r}."
-    )
-
-
-def _normalize_positive_int(config_path: str, key: str, value: Any) -> int:
-    """Validate a positive integer setting."""
-    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+def _validate_repo_short_name(config_path: str, key: str, repo_name: str) -> None:
+    """Validate a bare GitHub repository name."""
+    if len(repo_name) > MAX_REPO_NAME_LENGTH:
         raise ValueError(
-            f"'{config_path}' key '{key}' must be a positive integer, " +
-            f"got {value!r}."
+            f"invalid repository entry {repo_name!r} under '{key}' in {config_path}; "
+            + f"repository names must be at most {MAX_REPO_NAME_LENGTH} characters."
         )
-    return value
+    if not REPO_NAME_ONLY_RE.fullmatch(repo_name):
+        raise ValueError(
+            f"invalid repository entry {repo_name!r} under '{key}' in {config_path}; "
+            + "use 'repo' or 'owner/repo' with names containing only ASCII "
+            + "letters, digits, '.', '-', or '_'."
+        )
+    if repo_name in {".", ".."}:
+        raise ValueError(
+            f"invalid repository entry {repo_name!r} under '{key}' in {config_path}; "
+            + "repository name cannot be '.' or '..'."
+        )
+    if repo_name.lower().endswith((".git", ".wiki")):
+        raise ValueError(
+            f"invalid repository entry {repo_name!r} under '{key}' in {config_path}; "
+            + "repository name cannot end with '.git' or '.wiki'."
+        )
+
+
+def _current_repository_owner() -> str:
+    """Return the owner of the dashboard repository from the workflow env."""
+    for env_key in CURRENT_REPOSITORY_ENV_KEYS:
+        full_name = (os.environ.get(env_key) or "").strip()
+        if "/" in full_name:
+            owner = full_name.split("/", 1)[0].strip()
+            if owner:
+                return owner
+    return ""
 
 
 def _default_config() -> dict[str, Any]:
     return {
-        "max_repos": DEFAULT_MAX_REPOS,
-        "include_only": [],
-        "include": [],
-        "exclude": [],
-        "include_others": True,
-        "include_new": False,
-        "include_private": True,
+        "max_collect_repos": DEFAULT_MAX_COLLECT_REPOS,
+        "max_publish_repos": MAX_PUBLISH_REPOS,
+        "collect_repositories": [],
+        "publish_repositories": [],
     }

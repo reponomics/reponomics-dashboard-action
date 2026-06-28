@@ -22,11 +22,14 @@ from runner_support import (
     _dashboard_json,
     _decode_plaintext_dashboard_data,
     _decrypt_encrypted_dashboard_data,
+    _daily_row,
+    _metric_row,
     _parse_dashboard_html,
     _published_runtime_text,
     _published_script_sources,
     _seed_log,
     _seed_scenario,
+    _write_csv,
 )
 
 
@@ -58,6 +61,80 @@ def test_publish_large_corpus_writes_one_encrypted_chunk_per_repo(
     assert len(chunks) == 200
     assert "series" not in summary["growth"]
     assert "reponomics-scale/repo-001" not in dashboard
+
+
+def test_publish_can_switch_publish_repositories_without_recollection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    repos = ["demo/alpha", "demo/beta", "demo/gamma"]
+    _write_csv(
+        config.data_dir / "traffic-daily.csv",
+        run.storage.DAILY_FIELDS,
+        [
+            _daily_row("demo/alpha", "2026-05-01", 30, 10, 3),
+            _daily_row("demo/beta", "2026-05-01", 20, 8, 2),
+            _daily_row("demo/gamma", "2026-05-01", 10, 4, 1),
+        ],
+    )
+    _write_csv(
+        config.data_dir / "repo-metrics.csv",
+        run.storage.REPO_METRIC_FIELDS,
+        [
+            _metric_row("demo/alpha", "2026-05-01", 30, 5, 3),
+            _metric_row("demo/beta", "2026-05-01", 20, 4, 2),
+            _metric_row("demo/gamma", "2026-05-01", 10, 3, 1),
+        ],
+    )
+
+    def write_config(publish_repos: list[str]) -> None:
+        collect_yaml = "\n".join(f"    - {repo}" for repo in repos)
+        publish_yaml = "\n".join(f"    - {repo}" for repo in publish_repos)
+        config.config_path.write_text(
+            "\n".join(
+                [
+                    "collect:",
+                    "  repositories:",
+                    collect_yaml,
+                    "publish:",
+                    "  repositories:",
+                    publish_yaml,
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    def published_repo_names() -> tuple[list[str], dict[str, dict[str, object]]]:
+        dashboard = config.pages_index_path.read_text(encoding="utf-8")
+        encrypted_data = _dashboard_json(
+            config.pages_index_path,
+            dashboard,
+            "encrypted-dashboard-data",
+            "encrypted-dashboard-data.json",
+        )
+        summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
+        return [repo["name"] for repo in summary["repos"]], chunks
+
+    write_config(["demo/alpha", "demo/beta"])
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    first_repo_names, first_chunks = published_repo_names()
+    assert first_repo_names == ["demo/alpha", "demo/beta"]
+    assert {chunk["repo"] for chunk in first_chunks.values()} == {"demo/alpha", "demo/beta"}
+
+    write_config(["demo/gamma"])
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    second_repo_names, second_chunks = published_repo_names()
+    assert second_repo_names == ["demo/gamma"]
+    assert {chunk["repo"] for chunk in second_chunks.values()} == {"demo/gamma"}
+    retained_daily = (config.data_dir / "traffic-daily.csv").read_text(encoding="utf-8")
+    assert retained_daily.count("demo/") == 3
 
 
 def test_publish_skips_readme_when_generate_readme_is_false(

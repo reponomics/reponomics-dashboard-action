@@ -26,7 +26,7 @@ The export bundle is built from canonical retained files:
 - every CSV file registered in `storage.CSV_REGISTRY`
 - `manifest.json`
 
-This includes repos currently excluded from dashboard rendering, because export is for retained-data portability and parity.
+This includes repos not currently listed in `publish.repositories`, because export is for retained-data portability and parity.
 For a relationship-oriented view of these retained CSV files, see
 [Retained Data ERD](./RETAINED_DATA_ERD.md).
 

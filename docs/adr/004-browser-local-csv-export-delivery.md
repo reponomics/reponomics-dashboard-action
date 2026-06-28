@@ -120,9 +120,9 @@ avoiding plaintext workflow artifacts.
 ## Implementation Qualifications
 
 - Export scope defaults to canonical retained data fidelity. The bundle includes
-  the full retained canonical file set (including repos currently excluded from
-  dashboard rendering) unless a future decision explicitly introduces scoped
-  export modes.
+  the full retained canonical file set, including repositories not currently
+  listed in `publish.repositories`, unless a future decision explicitly
+  introduces scoped export modes.
 - Offline/local-file export is best-effort. If browser origin rules block asset
   fetch (for example `file://` behavior), the runtime must fail closed with a
   clear user-facing error and no partial plaintext output.
@@ -134,8 +134,9 @@ avoiding plaintext workflow artifacts.
 1. Should export include excluded repos from retained canonical history, or only
    currently visible dashboard scope?
    Answer: canonical retained scope. Export includes the full canonical retained
-   fileset (including excluded repos) to preserve portability and deterministic
-   parity with retained artifacts.
+   fileset, including repositories not currently listed in
+   `publish.repositories`, to preserve portability and deterministic parity
+   with retained artifacts.
 
 2. Is offline `file://` export support mandatory or best-effort?
    Answer: best-effort. Hosted Pages and local HTTP serving are supported paths.

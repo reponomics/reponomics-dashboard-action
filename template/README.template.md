@@ -42,20 +42,14 @@ artifact_retention_days: 90 # integer between 14-90
 
 auto_doctor_every_n_days: 0 # 0 disables; otherwise integer between 1-30
 
-max_repos: 200
+collect:
+  repositories:
+    # - repo-name
+    # - other-owner/repo-name
 
-include_only:
-  # - owner/repo-name
-
-include:
-  # - owner/important-repo
-
-exclude:
-  # - owner/noisy-repo
-
-include_others: true
-include_new: false
-include_private: true
+publish:
+  repositories:
+    # - repo-name
 
 # Advanced: set to `true` if you wish to use your own GitHub App installation token.
 use_github_app: false
@@ -63,11 +57,11 @@ use_github_app: false
 
 The template starts with `artifact_retention_days: 90`, `use_github_app: false`, and `auto_doctor_every_n_days: 0`; these are validated by setup and workflow runs. Set `auto_doctor_every_n_days` to `1` through `30` to check the marker and run doctor as part of the collect-and-publish cadence when that many UTC days have elapsed since the last successful auto-doctor.
 
-If `include_only` is non-empty, Reponomics tracks exactly those repositories and ignores the automatic pool. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).
+Add repositories to `collect.repositories` when you want Reponomics to keep history for them. Add up to 8 of those same repositories to `publish.repositories` when you want them shown in the README and Pages dashboards. For more detail, see [Dashboard repository documentation](docs/reponomics/repository-guide.md).
 
 ### Token Scope And Repository Owners
 
-Repository entries use full `owner/repo` names because a dashboard can be configured against repositories owned by users or organizations. The token you choose still controls which owners can actually be collected.
+Repository entries can use bare names such as `api` for repositories owned by the dashboard repository owner. Use full `owner/repo` names when a dashboard is configured against repositories owned by another user or organization. The token you choose still controls which owners can actually be collected.
 
 Fine-grained personal access tokens are scoped to one GitHub resource owner. If your dashboard only tracks repositories under one user or one organization, a fine-grained token with repository `Administration: read` is the preferred path.
 

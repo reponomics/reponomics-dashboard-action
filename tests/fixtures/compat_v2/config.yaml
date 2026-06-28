@@ -1,4 +1,6 @@
-repos:
-  - demo/reponomics
-exclude_repos: []
-max_repos: 5
+collect:
+  repositories:
+    - demo/reponomics
+publish:
+  repositories:
+    - demo/reponomics

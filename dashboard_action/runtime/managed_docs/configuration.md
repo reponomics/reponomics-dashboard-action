@@ -33,19 +33,11 @@ The setup fields at the top of `config.yaml` represent important user preference
 
 - `auto_doctor_every_n_days`: integer from `0` to `30`; `0` disables automatic doctor diagnostics. When set from `1` to `30`, collect-and-publish runs check the auto-doctor marker and run doctor when at least that many UTC days have elapsed since the last successful auto-doctor.
 
-- `max_repos`: positive integer; caps how many repositories the dashboard tracks.
+- `collect.repositories`: required list of repositories to collect. Entries may be bare repository names such as `api`, which resolve to the dashboard repository owner, or full names such as `other-owner/api`. Reponomics does not auto-discover or add repositories by default.
 
-- `include_only`: list of `owner/repo` names; when non-empty, track only these repositories and ignore automatic discovery.
+- `publish.repositories`: required list of repositories to render in the README and Pages dashboards. Every entry must also be present in `collect.repositories`, and the list can contain at most 8 repositories.
 
-- `include`: list of `owner/repo` names; always include these repositories when the collection token can access them.
-
-- `exclude`: list of `owner/repo` names; never include these repositories through automatic selection.
-
-- `include_others`: boolean; when `true`, fill remaining `max_repos` slots from automatically discovered eligible repositories.
-
-- `include_new`: boolean; when `true`, allow repositories created after the initial automatic-selection baseline into the automatic pool.
-
-- `include_private`: boolean; when `true`, allow private repositories into the automatic pool when the collection token can access them.
+`collect.repositories` is usually append-mostly: add a repository when you want Reponomics to start keeping history for it. To change what appears in dashboards, edit `publish.repositories`; removing a repository from `publish.repositories` does not stop collection.
 
 ## Constraints
 

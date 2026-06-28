@@ -17,13 +17,32 @@ from runner_support import (
 )
 
 
+SINGLE_REPO_CONFIG = """collect:
+  repositories:
+    - demo/reponomics
+publish:
+  repositories:
+    - demo/reponomics
+"""
+
+TWO_REPO_CONFIG = """collect:
+  repositories:
+    - demo/one
+    - demo/two
+publish:
+  repositories:
+    - demo/one
+    - demo/two
+"""
+
+
 def test_collect_appends_context_rows_for_selected_repo(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     config = _config(tmp_path, config_path=config_path)
     discovered = [
         {
@@ -242,7 +261,7 @@ def test_collect_context_failure_records_warning_without_failing_collection(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     summary_path = tmp_path / "summary.md"
     config = _config(tmp_path, config_path=config_path)
     discovered = [
@@ -312,7 +331,7 @@ def test_collect_records_pending_statistics_endpoint_without_warning(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     summary_path = tmp_path / "summary.md"
     config = _config(tmp_path, config_path=config_path)
     discovered = [
@@ -412,10 +431,7 @@ def test_collect_requests_one_detail_per_selected_repo(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text(
-        "include_only:\n  - demo/one\n  - demo/two\nmax_repos: 2\n",
-        encoding="utf-8",
-    )
+    config_path.write_text(TWO_REPO_CONFIG, encoding="utf-8")
     config = _config(tmp_path, config_path=config_path)
     discovered = [
         {
@@ -504,7 +520,7 @@ def test_detail_failure_falls_back_without_losing_traffic(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     config = _config(tmp_path, config_path=config_path)
     discovered = [
         {
@@ -576,7 +592,7 @@ def test_community_profile_failure_records_warning_without_losing_metrics(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     summary_path = tmp_path / "summary.md"
     config = _config(tmp_path, config_path=config_path)
     discovered = [
@@ -636,7 +652,7 @@ def test_collect_records_skipped_unavailable_repo_status(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     config = _config(tmp_path, config_path=config_path)
     discovered = [
         {
@@ -692,7 +708,7 @@ def test_collect_secondary_rate_limit_aborts_with_status_and_summary(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     summary_path = tmp_path / "summary.md"
     config = _config(tmp_path, config_path=config_path)
     discovered = [
@@ -750,7 +766,7 @@ def test_collect_records_generic_collection_errors_and_exits(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "config.yaml"
-    config_path.write_text("include_only:\n  - demo/reponomics\n", encoding="utf-8")
+    config_path.write_text(SINGLE_REPO_CONFIG, encoding="utf-8")
     summary_path = tmp_path / "summary.md"
     config = _config(tmp_path, config_path=config_path)
     discovered = [

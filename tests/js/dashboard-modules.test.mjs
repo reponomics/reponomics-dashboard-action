@@ -211,7 +211,7 @@ test('format helpers install independently of app lifecycle', () => {
 
 test('series helpers preserve selected-window and growth aggregation contracts', () => {
   const context = {
-    MAX_DISPLAY_REPOS: 20,
+    MAX_DISPLAY_REPOS: 8,
     SERIES_METRIC_KEYS: [
       'views',
       'uniques',

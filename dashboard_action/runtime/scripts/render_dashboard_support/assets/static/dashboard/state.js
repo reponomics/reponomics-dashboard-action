@@ -52,7 +52,7 @@ export function installState(context) {
     const SERIES_METRIC_KEYS = ['views', 'uniques', 'clones', 'clone_uniques', 'stars_delta', 'subscribers_delta', 'forks_delta'];
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
     const DEFAULT_WINDOW = '14';
-    const MAX_DISPLAY_REPOS = 20;
+    const MAX_DISPLAY_REPOS = 8;
     const MAX_COMPARE_REPOS = 8;
     const CHUNK_FAILURE_LABELS = {
       missing: 'Missing chunk',

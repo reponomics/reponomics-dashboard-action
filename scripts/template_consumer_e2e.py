@@ -18,8 +18,10 @@ import yaml
 
 try:
     from scripts.repo_paths import find_repo_root
+    from scripts import dashboard_scenarios
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from repo_paths import find_repo_root  # type: ignore[import-not-found,no-redef]
+    import dashboard_scenarios  # type: ignore[import-not-found,no-redef]
 
 
 ROOT = find_repo_root(Path(__file__))
@@ -235,11 +237,13 @@ def _write_setup_config(
     publish_readme_dashboard: bool = False,
     artifact_retention_days: int = 90,
     use_github_app: bool = False,
+    repositories: list[str] | None = None,
 ) -> None:
     config_path = consumer_dir / "config.yaml"
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     if not isinstance(payload, dict):
         raise TemplateConsumerE2EError("Generated config.yaml must contain a mapping")
+    repo_names = repositories or ["demo/alpha", "demo/beta"]
     payload.update(
         {
             "i_have_read_the_readme": True,
@@ -248,9 +252,20 @@ def _write_setup_config(
             "publish_readme_dashboard": publish_readme_dashboard,
             "artifact_retention_days": artifact_retention_days,
             "use_github_app": use_github_app,
+            "collect": {"repositories": repo_names},
+            "publish": {"repositories": repo_names[:8]},
         }
     )
     config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def _scenario_repositories(profile: ConsumerProfile) -> list[str]:
+    scenario = next(
+        item
+        for item in dashboard_scenarios.build_scenarios()
+        if item.key == profile.scenario
+    )
+    return sorted({row["repo"] for row in scenario.daily_rows if row.get("repo")})
 
 
 def _init_consumer_git_repo(consumer_dir: Path, remote_dir: Path) -> None:
@@ -522,6 +537,7 @@ def run_e2e(
                 data_mode=profile.data_mode,
                 publish_pages_dashboard=profile.expected_publish_pages,
                 publish_readme_dashboard=profile.generate_readme,
+                repositories=_scenario_repositories(profile),
             )
             _init_consumer_git_repo(consumer_dir, remote_dir)
             _invoke_action_runtime(

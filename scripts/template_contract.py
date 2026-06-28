@@ -164,6 +164,7 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
     _validate_protected_template_refs(
         protected_template_refs,
         minimum_compatible_template_version=minimum_compatible_template_version,
+        template_version=template_version,
     )
 
     return TemplateContract(
@@ -215,8 +216,8 @@ def _parse_protected_template_refs(
     *,
     path: Path,
 ) -> list[ProtectedTemplateRef]:
-    if not isinstance(raw_refs, list) or not raw_refs:
-        raise TemplateContractError(f"{path} must declare non-empty protected_template_refs")
+    if not isinstance(raw_refs, list):
+        raise TemplateContractError(f"{path} must declare protected_template_refs as a list")
 
     protected: list[ProtectedTemplateRef] = []
     for index, raw_ref in enumerate(raw_refs):
@@ -312,6 +313,7 @@ def _validate_protected_template_refs(
     protected_template_refs: list[ProtectedTemplateRef],
     *,
     minimum_compatible_template_version: str,
+    template_version: str,
 ) -> None:
     seen_versions: set[str] = set()
     for protected in protected_template_refs:
@@ -320,9 +322,13 @@ def _validate_protected_template_refs(
                 f"duplicate protected template version: {protected.template_version}"
             )
         seen_versions.add(protected.template_version)
-    if minimum_compatible_template_version not in seen_versions:
+    if (
+        minimum_compatible_template_version != template_version
+        and minimum_compatible_template_version not in seen_versions
+    ):
         raise TemplateContractError(
-            "minimum_compatible_template_version must be covered by protected_template_refs"
+            "historical minimum_compatible_template_version must be covered "
+            + "by protected_template_refs"
         )
 
 

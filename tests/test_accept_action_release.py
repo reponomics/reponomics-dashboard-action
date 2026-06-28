@@ -23,6 +23,8 @@ def _write_root(tmp_path: Path, *, template_version: str | None = None) -> Path:
     assert isinstance(payload, dict)
     if template_version is not None:
         payload["template_version"] = template_version
+        if not payload.get("protected_template_refs"):
+            payload["minimum_compatible_template_version"] = template_version
     (tmp_path / "template-contract.yml").write_text(
         yaml.safe_dump(payload, sort_keys=False),
         encoding="utf-8",
@@ -76,6 +78,7 @@ def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path)
     assert payload["template_version"] == expected_template
     written = _contract_payload(root)
     assert written["template_version"] == expected_template
+    assert written["minimum_compatible_template_version"] == expected_template
     assert written["accepted_action"] == {
         "repository": "reponomics/reponomics-dashboard-action",
         "version": action_version,
@@ -98,6 +101,7 @@ def test_accept_action_release_bumps_template_minor_for_action_minor(tmp_path):
 
     assert changed is True
     assert payload["template_version"] == expected_template
+    assert payload["minimum_compatible_template_version"] == expected_template
 
 
 def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, monkeypatch):
@@ -113,6 +117,7 @@ def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, m
 
     assert changed is True
     assert payload["template_version"] == expected_template
+    assert payload["minimum_compatible_template_version"] == expected_template
     assert payload["compatible_action_major"] == 1
     assert payload["default_action_ref"] == "v1"
     assert payload["accepted_action"] == {
@@ -188,6 +193,7 @@ def test_prepare_template_release_bumps_template_patch_only(tmp_path):
     assert returned_previous == previous
     assert current == expected
     assert payload["template_version"] == expected
+    assert payload["minimum_compatible_template_version"] == expected
     assert payload["accepted_action"]["version"] == accepted_action_version
     assert _contract_payload(root)["template_version"] == expected
 

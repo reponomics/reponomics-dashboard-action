@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.28.0...v0.29.0) (2026-06-28)
+
+
+### Features
+
+* explicit hand-maintained repo list ([8eed010](https://github.com/reponomics/reponomics-dashboard-action/commit/8eed0109b09188330bbf0d0dd802c214e4456858))
+
 ## [0.28.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.27.1...v0.28.0) (2026-06-25)
 
 

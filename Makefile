@@ -4,7 +4,7 @@
 .PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo render-demo-preview preview-demo-site publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide-assets dashboard-guide dashboard-guide-refresh clean
 
 VENV := venv
@@ -327,6 +327,8 @@ render-demo-preview: build-demo ## Render the demo Pages dashboard locally in di
 	@test -s $(DEMO_PREVIEW_DIR)/assets/encrypted-dashboard-data.json
 	@test -s $(DEMO_PREVIEW_DIR)/assets/demo-unlock.css
 	@echo "Demo Pages preview rendered: $(DEMO_PREVIEW_DIR)/index.html"
+
+preview-demo: preview-demo-site ## Render and serve the local demo dashboard preview
 
 preview-demo-site: render-demo-preview ## Serve the local demo Pages dashboard preview
 	@echo "Serving demo preview at http://$(DEMO_PREVIEW_HOST):$(DEMO_PREVIEW_PORT)/"

@@ -65,8 +65,6 @@ def prepare_template_release(
     previous_version = contract.template_version
     next_version = bump_version(previous_version, release_type)
     payload["template_version"] = next_version
-    if not payload.get("protected_template_refs"):
-        payload["minimum_compatible_template_version"] = next_version
     contract_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
     try:
         template_contract.validate_local_contract(root)

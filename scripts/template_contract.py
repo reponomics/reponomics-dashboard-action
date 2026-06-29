@@ -52,21 +52,9 @@ SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
 INPUT_EXPR_RE = re.compile(r"\$\{\{\s*inputs\.([A-Za-z0-9_-]+)\s*\}\}")
 GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
-TEMPLATE_RELEASE_REF_RE = re.compile(
-    r"^reponomics-dashboard-v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$"
-)
-
 
 class TemplateContractError(RuntimeError):
     """Raised when the local action/template contract is invalid."""
-
-
-@dataclass(frozen=True)
-class ProtectedTemplateRef:
-    ref: str
-    template_version: str
-    source_commit: str
-    status: str = "required"
 
 
 @dataclass(frozen=True)
@@ -86,7 +74,6 @@ class TemplateContract:
     compatible_action_major: int
     accepted_action: AcceptedActionRelease
     minimum_compatible_template_version: str
-    protected_template_refs: tuple[ProtectedTemplateRef, ...]
     managed_docs_namespace: Path
 
     @property
@@ -122,11 +109,6 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
         payload.get("accepted_action"),
         path=path,
     )
-    protected_template_refs = _parse_protected_template_refs(
-        payload.get("protected_template_refs"),
-        path=path,
-    )
-
     if not SEMVER_RE.fullmatch(template_version):
         raise TemplateContractError(f"template_version must be SemVer, got {template_version!r}")
     if not SEMVER_RE.fullmatch(minimum_compatible_template_version):
@@ -161,11 +143,6 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
     )
     if managed_docs_namespace.as_posix() != "docs/reponomics":
         raise TemplateContractError("managed_docs_namespace must be docs/reponomics")
-    _validate_protected_template_refs(
-        protected_template_refs,
-        minimum_compatible_template_version=minimum_compatible_template_version,
-        template_version=template_version,
-    )
 
     return TemplateContract(
         template_version=template_version,
@@ -174,7 +151,6 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
         compatible_action_major=compatible_action_major,
         accepted_action=accepted_action,
         minimum_compatible_template_version=minimum_compatible_template_version,
-        protected_template_refs=tuple(protected_template_refs),
         managed_docs_namespace=managed_docs_namespace,
     )
 
@@ -209,57 +185,6 @@ def validate_local_contract(root: Path = ROOT) -> TemplateContract:
             )
         )
     return contract
-
-
-def _parse_protected_template_refs(
-    raw_refs: object,
-    *,
-    path: Path,
-) -> list[ProtectedTemplateRef]:
-    if not isinstance(raw_refs, list):
-        raise TemplateContractError(f"{path} must declare protected_template_refs as a list")
-
-    protected: list[ProtectedTemplateRef] = []
-    for index, raw_ref in enumerate(raw_refs):
-        if not isinstance(raw_ref, dict):
-            raise TemplateContractError(
-                f"protected_template_refs[{index}] must be a YAML object"
-            )
-        ref = str(raw_ref.get("ref") or "")
-        template_version = str(raw_ref.get("template_version") or "")
-        source_commit = str(raw_ref.get("source_commit") or "")
-        status = str(raw_ref.get("status") or "required")
-
-        if not TEMPLATE_RELEASE_REF_RE.fullmatch(ref):
-            raise TemplateContractError(
-                f"protected_template_refs[{index}].ref must be reponomics-dashboard-vX.Y.Z"
-            )
-        if not SEMVER_RE.fullmatch(template_version):
-            raise TemplateContractError(
-                f"protected_template_refs[{index}].template_version must be SemVer"
-            )
-        if ref != f"reponomics-dashboard-v{template_version}":
-            raise TemplateContractError(
-                f"protected_template_refs[{index}] ref must match template_version"
-            )
-        if not GIT_SHA_RE.fullmatch(source_commit):
-            raise TemplateContractError(
-                "protected_template_refs"
-                + f"[{index}].source_commit must be a 40-character commit SHA"
-            )
-        if status != "required":
-            raise TemplateContractError(
-                f"protected_template_refs[{index}].status must be required"
-            )
-        protected.append(
-            ProtectedTemplateRef(
-                ref=ref,
-                template_version=template_version,
-                source_commit=source_commit,
-                status=status,
-            )
-        )
-    return protected
 
 
 def _parse_accepted_action_release(
@@ -307,29 +232,6 @@ def _validate_accepted_action_release(
         )
     if not GIT_SHA_RE.fullmatch(accepted_action.sha):
         raise TemplateContractError("accepted_action.sha must be a 40-character commit SHA")
-
-
-def _validate_protected_template_refs(
-    protected_template_refs: list[ProtectedTemplateRef],
-    *,
-    minimum_compatible_template_version: str,
-    template_version: str,
-) -> None:
-    seen_versions: set[str] = set()
-    for protected in protected_template_refs:
-        if protected.template_version in seen_versions:
-            raise TemplateContractError(
-                f"duplicate protected template version: {protected.template_version}"
-            )
-        seen_versions.add(protected.template_version)
-    if (
-        minimum_compatible_template_version != template_version
-        and minimum_compatible_template_version not in seen_versions
-    ):
-        raise TemplateContractError(
-            "historical minimum_compatible_template_version must be covered "
-            + "by protected_template_refs"
-        )
 
 
 def render_managed_docs_snapshot(

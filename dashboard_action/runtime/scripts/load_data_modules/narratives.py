@@ -798,7 +798,9 @@ def _recent_code_frequency(rows: Rows, repo: str, latest_date: str) -> Candidate
     scoped = [
         row
         for row in rows
-        if row.get("repo") == repo and (not cutoff or str(row.get("week_start") or "") >= cutoff)
+        if row.get("repo") == repo
+        and (not cutoff or str(row.get("week_start") or "") >= cutoff)
+        and (not latest_date or str(row.get("week_start") or "")[:10] <= latest_date[:10])
     ]
     return {
         "additions": sum(_int(row.get("additions")) for row in scoped),
@@ -831,7 +833,7 @@ def _latest_recent_release(events: Rows, latest_date: str) -> Candidate | None:
         row
         for row in events
         if row.get("event_type") == "release"
-        and abs(_days_between(latest_date, str(row.get("event_date") or ""))) <= RELEASE_NEAR_DAYS
+        and 0 <= _days_between(latest_date, str(row.get("event_date") or "")) <= RELEASE_NEAR_DAYS
     ]
     if not releases:
         return None
@@ -851,7 +853,13 @@ def _latest_classified_event(events: Rows, classifications: set[str]) -> Candida
 
 def _release_downloads(assets_by_release: dict[str, Rows], release: Candidate) -> int:
     rows = assets_by_release.get(str(release.get("release_id") or ""), [])
-    return sum(_int(row.get("download_count")) for row in rows)
+    if not rows:
+        return 0
+    latest_capture = max(str(row.get("captured_at") or "") for row in rows)
+    latest_rows = [
+        row for row in rows if str(row.get("captured_at") or "") == latest_capture
+    ]
+    return sum(_int(row.get("download_count")) for row in latest_rows)
 
 
 def _top_row(rows: Rows, key: str) -> Candidate:

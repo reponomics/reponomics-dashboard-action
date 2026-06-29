@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.29.0...v0.30.0) (2026-06-29)
+
+
+### Features
+
+* dashboard design polish ([#185](https://github.com/reponomics/reponomics-dashboard-action/issues/185)) ([f15d689](https://github.com/reponomics/reponomics-dashboard-action/commit/f15d689e33b557debe549dd3edb4b8b2ee483eba))
+
 ## [0.29.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.28.0...v0.29.0) (2026-06-28)
 
 

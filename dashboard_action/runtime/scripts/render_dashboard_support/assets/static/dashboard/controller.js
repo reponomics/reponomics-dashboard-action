@@ -445,6 +445,7 @@ export function installController(context) {
       state.compareRepos = [];
       state.chunkLoadErrors = {};
       state.calendarMonth = null;
+      state.storyIndex = 0;
       const thresholdInput = document.getElementById('thresholdInput');
       if (thresholdInput) {
         thresholdInput.addEventListener('change', function() {

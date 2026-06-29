@@ -22,6 +22,8 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`publish-demo.yml`](publish-demo.yml) builds the generated public demo repository and publishes it to `reponomics-dashboard-demo`. It supports manual publication and scheduled daily refresh. Scheduled refresh uses an approved source ref, imports the encrypted synthetic data seed into the demo repository's Actions artifact storage, and deploys the committed Pages dashboard shell without requiring daily human approval.
 
+- [`promotional-dashboard-guide.yml`](promotional-dashboard-guide.yml) is a manual skeleton for refreshing the promotional HTML/PDF dashboard guide. It runs the same `make dashboard-guide-refresh` path used locally, with ephemeral `npx`/`pipx` guide tooling, and intentionally does not publish or commit artifacts by default.
+
 - [`pre-release-validation.yml`](pre-release-validation.yml) is a manual, non-publishing validation pass for candidate refs. It builds the template from the candidate source, runs template smoke checks, runs generated-template consumer e2e against the same candidate action runtime, dry-runs template publication, and uploads the generated template for inspection.
 
 - [`sbom-provenance.yml`](sbom-provenance.yml) generates a repository SPDX SBOM and creates release source/SBOM attestations for release and manual runs. Release asset upload is explicitly disabled because immutable releases cannot be mutated after publication, and dependency snapshot upload is disabled so the third-party SBOM action runs with a read-only job token.

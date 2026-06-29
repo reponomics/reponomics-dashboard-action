@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reponomics Dashboard Map</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1118;
+      --panel: #111a24;
+      --panel-2: #162230;
+      --border: #29384a;
+      --text: #e6edf5;
+      --muted: #9aa8ba;
+      --dim: #748397;
+      --green: #4fc8a5;
+      --blue: #6bb8ff;
+      --gold: #d6a84b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(79, 200, 165, 0.11), transparent 32rem),
+        radial-gradient(circle at 82% 22%, rgba(107, 184, 255, 0.12), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--blue); }
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding: 22px 0 26px;
+      border-bottom: 1px solid var(--border);
+    }
+    .eyebrow {
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 { margin-top: 6px; font-size: clamp(2.2rem, 6vw, 4.8rem); line-height: 0.94; }
+    .lede { max-width: 42rem; margin-top: 14px; color: var(--muted); font-size: 1.05rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 9px 12px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .map-grid {
+      display: grid;
+      grid-template-columns: minmax(12rem, 0.34fr) minmax(0, 1fr);
+      gap: 22px;
+      margin-top: 26px;
+    }
+    .screen-card, .legend-card, .section {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.035), transparent 42%),
+        var(--panel);
+      box-shadow: 0 22px 60px rgba(0,0,0,0.22);
+    }
+    .screen-card { padding: 14px; }
+    .screen-card img, .section-shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 7px;
+      border: 1px solid rgba(41,56,74,0.7);
+    }
+    .legend-card { padding: 18px; }
+    .legend-card h2 { font-size: 1rem; margin-bottom: 14px; }
+    .overview-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+    .overview-list li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
+    .marker {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: var(--item-color);
+      color: var(--bg);
+      font-weight: 900;
+      font-size: 0.8rem;
+    }
+    .overview-list h3 { color: var(--item-color); font-size: 0.92rem; }
+    .overview-list p { color: var(--muted); font-size: 0.88rem; }
+    .section {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.34fr);
+      gap: 22px;
+      margin-top: 28px;
+      padding: 18px;
+    }
+    .section h2 { font-size: 1.45rem; margin-bottom: 12px; }
+    .section-shot p { color: var(--dim); font-size: 0.85rem; margin-top: 10px; }
+    .notes {
+      border: 1px solid rgba(41,56,74,0.75);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 16px;
+      align-self: start;
+    }
+    .notes h3 { margin-bottom: 14px; font-size: 1rem; }
+    .note { margin-top: 14px; }
+    .note:first-of-type { margin-top: 0; }
+    .note strong { display: block; color: var(--note-color); font-size: 0.86rem; }
+    .note p { color: var(--muted); font-size: 0.9rem; }
+    footer { color: var(--dim); margin-top: 32px; font-size: 0.8rem; }
+    @media (max-width: 850px) {
+      .hero, .map-grid, .section { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Reader guide</div>
+        <h1>Dashboard Map</h1>
+        <p class="lede">A concise visual guide to the Reponomics dashboard: what each section is for, how the lead story connects metrics to practical repo events, and what is interactive in the demo.</p>
+      </div>
+      <nav class="actions" aria-label="Guide actions">
+        <a class="button" href="../pdf/reponomics-dashboard-map.pdf">Open PDF</a>
+        <a class="button" href="assets/full-page.png">Full screenshot</a>
+      </nav>
+    </header>
+
+    <section class="map-grid" aria-labelledby="overview-title">
+      <figure class="screen-card">
+        <img src="assets/full-page.png" alt="Full dashboard screenshot">
+      </figure>
+      <div class="legend-card">
+        <h2 id="overview-title">How the page is organized</h2>
+        <ol class="overview-list">
+
+        <li style="--item-color: #6bb8ff">
+          <span class="marker">1</span>
+          <div>
+            <h3>Scope, controls, and summary</h3>
+            <p>Last updated, selected window, theme/export controls, the 8 published repos premise, and the first metrics overview.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #4fc8a5">
+          <span class="marker">2</span>
+          <div>
+            <h3>Lead story and next moves</h3>
+            <p>A focused article carousel plus queue, both generated from the same rules-based prompts that connect metrics to repo context.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #d6a84b">
+          <span class="marker">3</span>
+          <div>
+            <h3>Opportunity map</h3>
+            <p>Attention on the x-axis, downstream growth on the y-axis, and clone activity as mark size.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #6bb8ff">
+          <span class="marker">4</span>
+          <div>
+            <h3>Code event graph</h3>
+            <p>Git-log inspired lanes for commits and releases in the selected traffic window. Markers focus the related repo in this static guide.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #4fc8a5">
+          <span class="marker">5</span>
+          <div>
+            <h3>Readiness queue</h3>
+            <p>Community-health checks translated into practical setup fixes for the visible published repos.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #d6a84b">
+          <span class="marker">6</span>
+          <div>
+            <h3>Growth model</h3>
+            <p>Attention, interest, and adoption cards summarize the path from visibility to downstream project response.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #6bb8ff">
+          <span class="marker">7</span>
+          <div>
+            <h3>Repo strip and momentum</h3>
+            <p>Published repo chips focus or compare the 8 selected repos; momentum summarizes streaks and notable days.</p>
+          </div>
+        </li>
+
+
+        <li style="--item-color: #4fc8a5">
+          <span class="marker">8</span>
+          <div>
+            <h3>Tables</h3>
+            <p>Sortable referrer, path, and repository detail surfaces for source inspection.</p>
+          </div>
+        </li>
+
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="scope-title">
+      <div class="section-shot">
+        <h2 id="scope-title">Scope, Controls, Summary, and Published Repos</h2>
+        <img src="assets/top-dashboard.png" alt="Dashboard header and controls">
+        <img src="assets/repo-selection.png" alt="Published repository selection strip" style="margin-top: 14px">
+        <p>The dashboard renders the selected publication subset, even when collection includes more repos.</p>
+      </div>
+      <aside class="notes">
+        <h3>Interaction model</h3>
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>8 published repos</strong>
+          <p>Publication is scoped to the selected set.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Summary cards</strong>
+          <p>The first metrics strip anchors the lead story in visible counts before the user reads recommendations.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Window and metric controls</strong>
+          <p>Changing the window or metric redraws charts, maps, tables, and recipes.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Repo chips</strong>
+          <p>Click a published repo chip or card to focus it; modifier keys support compare-style selection where enabled.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Demo affordances</strong>
+          <p>Export, theme, sorting, and focus controls are functional in the static dashboard.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <section class="section" aria-labelledby="lead-story-and-next-moves-title">
+      <div class="section-shot">
+        <h2 id="lead-story-and-next-moves-title">Lead Story and Next Moves</h2>
+        <img src="assets/next-moves.png" alt="Lead Story and Next Moves screenshot">
+        <p>The focused article creates the first read; the queue preserves the practical next-move list for scanning and repo focus.</p>
+      </div>
+      <aside class="notes">
+        <h3>What to look for</h3>
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Purpose</strong>
+          <p>Create an above-the-fold story without inventing analysis: the lead card reframes existing rules-based prompts as a focused read.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Carousel</strong>
+          <p>Story tabs and arrow controls rotate through the strongest prompts for the selected window.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Affordance</strong>
+          <p>Lead buttons and queue cards focus the associated repo across the dashboard.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Use case</strong>
+          <p>Useful for flat or mixed windows because it emphasizes what to do next, not only what already spiked.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <section class="section" aria-labelledby="opportunity-map-title">
+      <div class="section-shot">
+        <h2 id="opportunity-map-title">Opportunity Map</h2>
+        <img src="assets/relationship-visuals.png" alt="Opportunity Map screenshot">
+        <p>Clustered demo data now uses smaller marks so labels and quadrants stay readable.</p>
+      </div>
+      <aside class="notes">
+        <h3>What to look for</h3>
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Axes</strong>
+          <p>Right means more attention; up means more downstream growth from stars, forks, and subscribers.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Bubble size</strong>
+          <p>Size follows clone activity. The scale is compact so crowded portfolios still read cleanly.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Quadrants</strong>
+          <p>Labels suggest practical recipes such as clarify next step or amplify.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Affordance</strong>
+          <p>Points and right-side notes focus the repo. Hover/title text carries exact values.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <section class="section" aria-labelledby="code-event-graph-title">
+      <div class="section-shot">
+        <h2 id="code-event-graph-title">Code Event Graph</h2>
+        <img src="assets/code-event-graph.png" alt="Code Event Graph screenshot">
+        <p>A git-log inspired navigation aid for traffic-adjacent codebase activity.</p>
+      </div>
+      <aside class="notes">
+        <h3>What to look for</h3>
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Purpose</strong>
+          <p>Bring codebase activity into the same time window as traffic, so maintainers can inspect temporal adjacency.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Visual language</strong>
+          <p>Each lane is a repo. Circles are commits; tag diamonds are releases.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Nearby views</strong>
+          <p>Tooltips and log items show nearby traffic counts as context for follow-up.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Affordance</strong>
+          <p>Nodes and log rows focus the repo inside the dashboard; commit-link navigation can be added where event URLs are available.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <section class="section" aria-labelledby="readiness-queue-title">
+      <div class="section-shot">
+        <h2 id="readiness-queue-title">Readiness Queue</h2>
+        <img src="assets/readiness-queue.png" alt="Readiness Queue screenshot">
+        <p>A compact path from current attention to public-facing setup improvements.</p>
+      </div>
+      <aside class="notes">
+        <h3>What to look for</h3>
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Purpose</strong>
+          <p>Convert attention into practical maintenance actions: README, license, contributing guide, templates, and conduct files.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Score</strong>
+          <p>The score uses known community-health checks and reports visible coverage.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Priority</strong>
+          <p>Repos with setup gaps and current views plus clones rise in the queue.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Affordance</strong>
+          <p>Fix cards focus the repo and make the next maintenance step explicit.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <section class="section" aria-labelledby="tables-and-source-inspection-title">
+      <div class="section-shot">
+        <h2 id="tables-and-source-inspection-title">Tables and Source Inspection</h2>
+        <img src="assets/tables.png" alt="Tables and Source Inspection screenshot">
+        <p>Use the tables when you need the underlying rows behind a visual or prompt.</p>
+      </div>
+      <aside class="notes">
+        <h3>What to look for</h3>
+
+        <div class="note" style="--note-color: #6bb8ff">
+          <strong>Referrers</strong>
+          <p>Shows where attention came from in the selected window; column headers sort the table.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Popular paths</strong>
+          <p>Useful for spotting docs, release notes, or entry pages that deserve a clearer next step.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #d6a84b">
+          <strong>Repositories</strong>
+          <p>Detailed per-repo metrics backstop the heuristic sections with raw values.</p>
+        </div>
+
+
+        <div class="note" style="--note-color: #4fc8a5">
+          <strong>Mobile behavior</strong>
+          <p>Wide tables scroll inside the table area so the page layout remains stable.</p>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <footer>Reponomics dashboard guide - generated from local demo preview.</footer>
+  </main>
+</body>
+</html>

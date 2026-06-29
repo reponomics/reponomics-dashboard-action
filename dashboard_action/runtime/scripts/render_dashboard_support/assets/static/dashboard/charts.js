@@ -83,7 +83,7 @@ export function installCharts(context) {
 
       compareSummary.classList.remove('visible');
       compareSummary.innerHTML = '';
-      statsGrid.style.display = 'grid';
+      statsGrid.style.display = '';
 
       const sparkSource = focusedRepo ? focusedRepo.series : windowData.daily;
       const split = splitWindow(sparkSource);

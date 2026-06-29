@@ -196,16 +196,78 @@ def build_dashboard_shell(
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
-    <div class="section-grid full insight-section">
-      <div class="card insight-card">
+    <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
+      <div class="card stat-card" data-metric="repos">
+        <div class="stat-head">
+          <span class="stat-label">Published Repos</span>
+          <span class="stat-delta hidden" id="deltaRepos"></span>
+        </div>
+        <div class="stat-value" id="statRepos">{stat_values['repo_count']}</div>
+        <svg class="stat-spark" id="sparkRepos" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="card stat-card" data-metric="views" title="Total page views across tracked repos">
+        <div class="stat-head">
+          <span class="stat-label">Attention: Views</span>
+          <span class="stat-delta hidden" id="deltaViews"></span>
+        </div>
+        <div class="stat-value" id="statViews">{stat_values['total_views']}</div>
+        <svg class="stat-spark" id="sparkViews" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="card stat-card" data-metric="uniques" title="Unique visitors — distinct viewers (GitHub deduplicates by IP per day)">
+        <div class="stat-head">
+          <span class="stat-label">Attention: Visitors</span>
+          <span class="stat-delta hidden" id="deltaUniques"></span>
+        </div>
+        <div class="stat-value" id="statUniques">{stat_values['total_uniques']}</div>
+        <svg class="stat-spark" id="sparkUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="card stat-card" data-metric="clones" title="Total git-clone operations across tracked repos">
+        <div class="stat-head">
+          <span class="stat-label">Adoption: Clones</span>
+          <span class="stat-delta hidden" id="deltaClones"></span>
+        </div>
+        <div class="stat-value" id="statClones">{stat_values['total_clones']}</div>
+        <svg class="stat-spark" id="sparkClones" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="card stat-card" data-metric="cloners" title="Unique cloners — distinct clients that ran git clone (deduplicated by GitHub)">
+        <div class="stat-head">
+          <span class="stat-label">Adoption: Cloners</span>
+          <span class="stat-delta hidden" id="deltaCloneUniques"></span>
+        </div>
+        <div class="stat-value" id="statCloneUniques">{stat_values['total_clone_uniques']}</div>
+        <svg class="stat-spark" id="sparkCloneUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+    </div>
+
+    <div class="story-board insight-section" aria-label="Dashboard lead story and next moves">
+      <section class="card insight-card lead-story-card" aria-labelledby="leadStoryTitle">
         <div class="section-header">
           <div class="section-copy">
-            <h2>Next moves</h2>
-            <p class="click-hint">Rules-based prompts from traffic, growth, and codebase context. Click a card to focus the repo.</p>
+            <div class="section-kicker">Lead read</div>
+            <h2 id="leadStoryTitle">What to check next</h2>
+            <p class="click-hint">A focused pass through the strongest rules-based prompts from traffic, growth, and codebase context.</p>
+          </div>
+          <div class="story-stepper" aria-label="Browse lead stories">
+            <button class="story-step" id="storyPrevBtn" type="button" aria-label="Previous story">&lt;</button>
+            <button class="story-step" id="storyNextBtn" type="button" aria-label="Next story">&gt;</button>
+          </div>
+        </div>
+        <div class="story-tabs" id="storyControls" aria-label="Story highlights"></div>
+        <div class="lead-story-carousel" id="leadStoryCarousel" aria-live="polite">
+          <p class="empty-msg">Looking for a useful story in the selected data.</p>
+        </div>
+      </section>
+
+      <aside class="card next-move-queue-card" aria-labelledby="nextMoveQueueTitle">
+        <div class="section-header compact">
+          <div class="section-copy">
+            <div class="section-kicker">Queue</div>
+            <h2 id="nextMoveQueueTitle">Next moves</h2>
+            <p class="click-hint">Click a card to focus the repo. These are the same prompts behind the lead story.</p>
           </div>
         </div>
         <div id="insights-list"></div>
-      </div>
+      </aside>
     </div>
 
     <div class="growth-model-grid" aria-label="Repository growth model">
@@ -268,49 +330,6 @@ def build_dashboard_shell(
           <div class="readiness-summary" id="readiness-summary" aria-live="polite"></div>
           <div class="readiness-list" id="readiness-list" aria-live="polite"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="stats-grid" id="stats-grid">
-      <div class="card stat-card" data-metric="repos">
-        <div class="stat-head">
-          <span class="stat-label">Published Repos</span>
-          <span class="stat-delta hidden" id="deltaRepos"></span>
-        </div>
-        <div class="stat-value" id="statRepos">{stat_values['repo_count']}</div>
-        <svg class="stat-spark" id="sparkRepos" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
-      </div>
-      <div class="card stat-card" data-metric="views" title="Total page views across tracked repos">
-        <div class="stat-head">
-          <span class="stat-label">Attention: Views</span>
-          <span class="stat-delta hidden" id="deltaViews"></span>
-        </div>
-        <div class="stat-value" id="statViews">{stat_values['total_views']}</div>
-        <svg class="stat-spark" id="sparkViews" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
-      </div>
-      <div class="card stat-card" data-metric="uniques" title="Unique visitors — distinct viewers (GitHub deduplicates by IP per day)">
-        <div class="stat-head">
-          <span class="stat-label">Attention: Visitors</span>
-          <span class="stat-delta hidden" id="deltaUniques"></span>
-        </div>
-        <div class="stat-value" id="statUniques">{stat_values['total_uniques']}</div>
-        <svg class="stat-spark" id="sparkUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
-      </div>
-      <div class="card stat-card" data-metric="clones" title="Total git-clone operations across tracked repos">
-        <div class="stat-head">
-          <span class="stat-label">Adoption: Clones</span>
-          <span class="stat-delta hidden" id="deltaClones"></span>
-        </div>
-        <div class="stat-value" id="statClones">{stat_values['total_clones']}</div>
-        <svg class="stat-spark" id="sparkClones" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
-      </div>
-      <div class="card stat-card" data-metric="cloners" title="Unique cloners — distinct clients that ran git clone (deduplicated by GitHub)">
-        <div class="stat-head">
-          <span class="stat-label">Adoption: Cloners</span>
-          <span class="stat-delta hidden" id="deltaCloneUniques"></span>
-        </div>
-        <div class="stat-value" id="statCloneUniques">{stat_values['total_clone_uniques']}</div>
-        <svg class="stat-spark" id="sparkCloneUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
     </div>
 

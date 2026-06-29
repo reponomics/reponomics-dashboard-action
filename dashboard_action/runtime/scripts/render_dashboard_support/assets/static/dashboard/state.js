@@ -72,7 +72,8 @@ export function installState(context) {
       metric: 'views',
       repoSortKey: null,
       repoSortDir: null,
-      calendarMonth: null
+      calendarMonth: null,
+      storyIndex: 0
     };
     function dashboardChunkError(stage, message, details) {
       const error = new Error(message);

@@ -16,6 +16,7 @@ docs/index.html
 README.generated.md
 .DS_Store
 .vscode/
+.playwright-mcp/
 
 .tmp/
 

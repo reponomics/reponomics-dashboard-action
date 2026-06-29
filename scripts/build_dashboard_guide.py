@@ -10,9 +10,9 @@ from typing import Any, TypedDict
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GUIDE_DIR = ROOT / "output/dashboard-guide"
+GUIDE_DIR = ROOT / "docs/promotional/dashboard-guide"
 ASSET_DIR = GUIDE_DIR / "assets"
-PDF_DIR = ROOT / "output/pdf"
+PDF_DIR = ROOT / "docs/promotional/pdf"
 HTML_OUT = GUIDE_DIR / "index.html"
 PDF_OUT = PDF_DIR / "reponomics-dashboard-map.pdf"
 Notes = list[tuple[str, str, str]]
@@ -28,15 +28,15 @@ class SectionPage(TypedDict):
 
 OVERVIEW_ITEMS = [
     (
-        "Scope and controls",
-        "Last updated, selected window, metric controls, theme/export controls, and the "
-        "8 published repos premise.",
+        "Scope, controls, and summary",
+        "Last updated, selected window, theme/export controls, the 8 published repos "
+        "premise, and the first metrics overview.",
         "blue",
     ),
     (
-        "Next moves",
-        "Rules-based prompts that connect traffic and growth changes to nearby repo context. "
-        "Click a card to focus that repo.",
+        "Lead story and next moves",
+        "A focused article carousel plus queue, both generated from the same rules-based "
+        "prompts that connect metrics to repo context.",
         "green",
     ),
     (
@@ -58,8 +58,9 @@ OVERVIEW_ITEMS = [
         "green",
     ),
     (
-        "Snapshot stats",
-        "Portfolio-level totals for the currently selected metric and time window.",
+        "Growth model",
+        "Attention, interest, and adoption cards summarize the path from visibility to "
+        "downstream project response.",
         "gold",
     ),
     (
@@ -78,31 +79,35 @@ OVERVIEW_ITEMS = [
 
 SECTION_PAGES: list[SectionPage] = [
     {
-        "title": "Next Moves",
+        "title": "Lead Story and Next Moves",
         "asset": "next-moves.png",
-        "caption": "Rules-based prompts turn traffic and codebase context into focused actions.",
+        "caption": (
+            "The focused article creates the first read; the queue preserves the practical "
+            "next-move list for scanning and repo focus."
+        ),
         "image_h": 348,
         "notes": [
             (
                 "Purpose",
-                "Translate routine metrics into maintainable prompts: what changed, why it "
-                "may matter, and what to inspect next.",
+                "Create an above-the-fold story without inventing analysis: the lead card "
+                "reframes existing rules-based prompts as a focused read.",
                 "green",
             ),
             (
-                "Evidence line",
-                "Cards cite visible traffic, growth, freshness, or codebase context.",
+                "Carousel",
+                "Story tabs and arrow controls rotate through the strongest prompts for the "
+                "selected window.",
                 "blue",
             ),
             (
                 "Affordance",
-                "Clicking a card focuses the associated repo across the dashboard.",
+                "Lead buttons and queue cards focus the associated repo across the dashboard.",
                 "gold",
             ),
             (
                 "Use case",
-                "Especially useful after flat or mixed traffic windows, when the next move "
-                "is more important than a spike explanation.",
+                "Useful for flat or mixed windows because it emphasizes what to do next, not "
+                "only what already spiked.",
                 "green",
             ),
         ],
@@ -261,6 +266,10 @@ def color_value(name: str) -> str:
     }.get(name, "#4fc8a5")
 
 
+def clean_generated_text(value: str) -> str:
+    return "\n".join(line.rstrip() for line in value.splitlines()) + "\n"
+
+
 def build_html() -> None:
     GUIDE_DIR.mkdir(parents=True, exist_ok=True)
     sections_html = "\n".join(
@@ -280,7 +289,8 @@ def build_html() -> None:
         for idx, (title, body, color) in enumerate(OVERVIEW_ITEMS, 1)
     )
     HTML_OUT.write_text(
-        f"""<!doctype html>
+        clean_generated_text(
+            f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -417,7 +427,7 @@ def build_html() -> None:
       <div>
         <div class="eyebrow">Reader guide</div>
         <h1>Dashboard Map</h1>
-        <p class="lede">A concise visual guide to the Reponomics dashboard: what each section is for, how it supports project growth decisions, and what is interactive in the demo.</p>
+        <p class="lede">A concise visual guide to the Reponomics dashboard: what each section is for, how the lead story connects metrics to practical repo events, and what is interactive in the demo.</p>
       </div>
       <nav class="actions" aria-label="Guide actions">
         <a class="button" href="../pdf/reponomics-dashboard-map.pdf">Open PDF</a>
@@ -439,7 +449,7 @@ def build_html() -> None:
 
     <section class="section" aria-labelledby="scope-title">
       <div class="section-shot">
-        <h2 id="scope-title">Scope, Controls, and Published Repos</h2>
+        <h2 id="scope-title">Scope, Controls, Summary, and Published Repos</h2>
         <img src="assets/top-dashboard.png" alt="Dashboard header and controls">
         <img src="assets/repo-selection.png" alt="Published repository selection strip" style="margin-top: 14px">
         <p>The dashboard renders the selected publication subset, even when collection includes more repos.</p>
@@ -448,8 +458,9 @@ def build_html() -> None:
         <h3>Interaction model</h3>
         {notes_html([
             ("8 published repos", "Publication is scoped to the selected set.", "green"),
-            ("Window and metric controls", "Changing the window or metric redraws charts, maps, tables, and recipes.", "blue"),
-            ("Repo chips", "Click a published repo chip or card to focus it; modifier keys support compare-style selection where enabled.", "gold"),
+            ("Summary cards", "The first metrics strip anchors the lead story in visible counts before the user reads recommendations.", "blue"),
+            ("Window and metric controls", "Changing the window or metric redraws charts, maps, tables, and recipes.", "gold"),
+            ("Repo chips", "Click a published repo chip or card to focus it; modifier keys support compare-style selection where enabled.", "green"),
             ("Demo affordances", "Export, theme, sorting, and focus controls are functional in the static dashboard.", "green"),
         ])}
       </aside>
@@ -462,6 +473,7 @@ def build_html() -> None:
 </body>
 </html>
 """,
+        ),
         encoding="utf-8",
     )
 
@@ -650,8 +662,8 @@ def build_pdf() -> None:
     paragraph(
         256,
         127,
-        "Deterministic recipes surface where to inspect, what changed, and the next "
-        "maintainable action.",
+        "The summary cards establish factual context; the lead story creates a focused "
+        "read; the lower modules keep the evidence visible.",
         width=442,
         size=8,
         leading=10,
@@ -659,22 +671,28 @@ def build_pdf() -> None:
     draw_footer()
     pdf.showPage()
 
-    new_page("Scope, Controls, and Published Repos", "dashboard map")
+    new_page("Scope, Controls, Summary, and Published Repos", "dashboard map")
     draw_image_fit(ASSET_DIR / "top-dashboard.png", margin, 338, 456, 150)
     draw_image_fit(ASSET_DIR / "repo-selection.png", margin, 258, 456, 52)
     notes_panel(
         [
             ("8 published repos", "Publication is scoped to the selected set.", "green"),
             (
+                "Summary cards",
+                "The first metrics strip anchors the lead story in visible counts before "
+                "the user reads recommendations.",
+                "blue",
+            ),
+            (
                 "Window and metric controls",
                 "Changing the window or metric redraws charts, maps, tables, and recipes.",
-                "blue",
+                "gold",
             ),
             (
                 "Repo chips",
                 "Click a published repo chip or card to focus it; modifier keys support "
                 "compare-style selection where enabled.",
-                "gold",
+                "green",
             ),
             (
                 "Demo affordances",

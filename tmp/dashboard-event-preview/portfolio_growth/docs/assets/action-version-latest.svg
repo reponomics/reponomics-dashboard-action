@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 22" width="176" height="22">
-  <rect width="176" height="22" fill="#555"/>
-  <rect x="111" width="65" height="22" fill="#1a7f37"/>
-  <rect x="111" width="4" height="22" fill="#1a7f37"/>
-  <text x="55" y="15" text-anchor="middle" fill="#fff"
-        font-size="11" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">latest version</text>
-  <text x="143" y="15" text-anchor="middle" fill="#fff"
-        font-size="11" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">v0.13.1</text>
-</svg>

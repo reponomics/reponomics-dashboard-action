@@ -66,6 +66,27 @@
       ]
     },
     "paths": [],
+    "portfolio_profile": {
+      "bucket": "empty",
+      "data_gaps": [
+        {
+          "candidate_table": "repo-readme-snapshots.csv",
+          "key": "readme_content",
+          "label": "README content snapshot",
+          "reason": "Community profile tells whether a README exists, but not whether it explains audience, setup, examples, or next steps."
+        }
+      ],
+      "guidance": [],
+      "id": "empty",
+      "label": "Waiting for data",
+      "primary_goal": "Collect a few runs, then inspect the first visible traffic and readiness signals.",
+      "recipe_emphasis": [],
+      "repo_count": 0,
+      "repo_stats": {},
+      "signals": {},
+      "summary": "The dashboard needs retained collection rows before it can tune guidance.",
+      "window_days": 14
+    },
     "referrers": [],
     "repo_chunks": {},
     "repos": [],

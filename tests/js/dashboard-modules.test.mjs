@@ -6,6 +6,7 @@ import { installDataProvider } from '../../dashboard_action/runtime/scripts/rend
 import { installEventGraph } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/event-graph.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/opportunity-map.js';
+import { installPortfolioGuide } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/portfolio-guide.js';
 import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
 
@@ -550,12 +551,47 @@ test('readiness queue ranks visible repo setup gaps', () => {
 
   assert.equal(rows[0].missing.length, 2);
   assert.equal(rows[0].missing[0].label, 'License');
+  assert.match(rows[0].missing[0].href, /^https:\/\/docs\.github\.com\//);
   assert.equal(rows[1].missing.length, 0);
   assert.equal(summary.present, 10);
   assert.equal(summary.known, 12);
   assert.equal(summary.missingRepos, 1);
   assert.equal(summary.avgHealth, 83);
   assert.ok(rows[0].priority > rows[1].priority);
+});
+
+test('portfolio guide summarizes dashboard profile signals', () => {
+  const helpers = installPortfolioGuide({
+    document: fakeDocument(),
+    currentPayload() {
+      return {};
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+  });
+  const rows = helpers.signalRows({
+    repo_count: 2,
+    signals: {
+      active_repos: 1,
+      quiet_repos: 1,
+      recent_event_count: 3,
+      readiness_gap_repos: 1,
+      maintenance_items: 0,
+    },
+  });
+
+  assert.deepEqual(rows.map((row) => row[0]), [
+    'Published',
+    'Active',
+    'Quiet',
+    'Events',
+    'Readiness',
+    'Maint.',
+  ]);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {

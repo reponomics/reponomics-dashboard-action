@@ -370,6 +370,131 @@ def test_narrative_insights_surface_next_moves_for_flat_attention() -> None:
     }
 
 
+def test_portfolio_profile_classifies_single_repo_launch() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row(
+            "demo/launch",
+            (start + timedelta(days=offset)).isoformat(),
+            5 if offset in {1, 6, 11} else 0,
+            2 if offset in {1, 6, 11} else 0,
+            1 if offset == 11 else 0,
+        )
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/launch", "2026-06-14", 3, 1, 0),
+            "created_at": "2026-05-01T00:00:00Z",
+            "community_health_percentage": "60",
+            "community_has_readme": "true",
+            "community_has_license": "false",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "false",
+        }
+    ]
+
+    profile = load_data.build_portfolio_profile(daily_rows, metric_rows)
+
+    assert profile["id"] == "first_app_launch"
+    assert profile["bucket"] == "solo"
+    assert profile["signals"]["quiet_repos"] == 1
+    assert "solo_launch_positioning" in profile["recipe_emphasis"]
+    assert profile["data_gaps"][0]["candidate_table"] == "repo-readme-snapshots.csv"
+
+
+def test_narrative_insights_tune_for_single_repo_launch_quiet_days() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row(
+            "demo/launch",
+            (start + timedelta(days=offset)).isoformat(),
+            6 if offset in {1, 5, 12} else 0,
+            3 if offset in {1, 5, 12} else 0,
+            1 if offset == 12 else 0,
+        )
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/launch", "2026-06-14", 3, 1, 0),
+            "created_at": "2026-05-01T00:00:00Z",
+            "community_health_percentage": "60",
+            "community_has_readme": "true",
+            "community_has_license": "false",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "false",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=[
+            {
+                "repo": "demo/launch",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "path": "/demo/launch/blob/main/README.md",
+                "title": "README",
+                "count": "10",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    subtypes = {item["subtype"] for item in insights}
+    assert "solo_launch_positioning" in subtypes
+    assert "quiet_day_reactivation" in subtypes
+    assert all("causal" not in item["summary"].lower() for item in insights)
+
+
+def test_narrative_insights_add_maintainer_portfolio_triage() -> None:
+    start = date(2026, 6, 1)
+    repos = [f"demo/repo-{idx}" for idx in range(6)]
+    daily_rows = [
+        _daily_row(repo, (start + timedelta(days=offset)).isoformat(), 3, 1)
+        for repo in repos
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row(repo, "2026-06-14", 20, 4, 2),
+            "community_health_percentage": "70",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "true",
+        }
+        for repo in repos
+    ]
+    issue_rows = [
+        {
+            "repo": repo,
+            "captured_at": "2026-06-14T12:00:00Z",
+            "open_issues_count": "3",
+            "open_prs_count": "2",
+        }
+        for repo in repos
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        issue_pr_rows=issue_rows,
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert any(item["subtype"] == "maintainer_triage_sweep" for item in insights)
+
+
 def test_load_daily_uses_default_data_dir_when_not_supplied(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

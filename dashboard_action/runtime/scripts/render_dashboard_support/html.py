@@ -58,6 +58,7 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/portfolio-guide.js",
     "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
@@ -84,6 +85,7 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/portfolio-guide.js",
     "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
@@ -268,6 +270,18 @@ def build_dashboard_shell(
         </div>
         <div id="insights-list"></div>
       </aside>
+    </div>
+
+    <div class="section-grid full portfolio-guide-section">
+      <div class="card portfolio-guide-card" id="portfolio-guide-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Dashboard profile</h2>
+            <p class="click-hint">Guidance tuned to the published repo set and the signals currently retained.</p>
+          </div>
+        </div>
+        <div class="portfolio-guide" id="portfolio-guide" aria-live="polite"></div>
+      </div>
     </div>
 
     <div class="growth-model-grid" aria-label="Repository growth model">

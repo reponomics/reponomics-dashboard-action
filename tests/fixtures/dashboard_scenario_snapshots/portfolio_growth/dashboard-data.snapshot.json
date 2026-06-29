@@ -163,6 +163,40 @@
         "tone": "opportunity"
       },
       {
+        "action": "Start with labels, issue templates, PR templates, and contributing docs before the next release or traffic spike.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "latest snapshots",
+            "label": "Open issues/PRs",
+            "value": "0"
+          },
+          {
+            "detail": "repos",
+            "label": "Readiness gaps",
+            "value": "3"
+          },
+          {
+            "detail": "14d window",
+            "label": "Recent events",
+            "value": "13"
+          },
+          {
+            "detail": "repo",
+            "label": "Highest load",
+            "value": "none"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [],
+        "repo": "",
+        "subtype": "maintainer_triage_sweep",
+        "summary": "This published set has enough code, release, or issue context to make maintenance structure a useful follow-up.",
+        "title": "Maintainer mode needs lightweight structure",
+        "tone": "watch"
+      },
+      {
         "action": "Compare paths, referrers, and follow-on growth around that event.",
         "anchor_date": "2026-05-15",
         "confidence": "medium",
@@ -211,62 +245,6 @@
         "subtype": "event_aligned_attention",
         "summary": "charts reached 42 views on 2026-05-15, 2d before feature: Wire selected repository publish flow. That makes the event a useful place to inspect the follow-on traffic.",
         "title": "Repository activity lines up with an attention peak",
-        "tone": "opportunity"
-      },
-      {
-        "action": "Check whether the docs page or README explains the next step clearly.",
-        "anchor_date": "2026-05-13",
-        "confidence": "medium",
-        "evidence": [
-          {
-            "detail": "2026-05-13",
-            "label": "Docs event",
-            "value": "docs: Refresh README onboarding"
-          },
-          {
-            "detail": "14d window",
-            "label": "Views",
-            "value": "635"
-          },
-          {
-            "detail": "381",
-            "label": "Top content",
-            "value": "Repository overview"
-          },
-          {
-            "detail": "381",
-            "label": "Top referrer",
-            "value": "github.com"
-          }
-        ],
-        "kind": "narrative",
-        "nearby_context": [
-          {
-            "date": "2026-05-13",
-            "detail": "Refresh README onboarding",
-            "label": "docs: Refresh README onboarding",
-            "type": "docs",
-            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
-          },
-          {
-            "date": "2026-05-21",
-            "detail": "v0.3.0",
-            "label": "release: v0.3.0",
-            "type": "release",
-            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
-          },
-          {
-            "date": "2026-05-13",
-            "detail": "Refresh README onboarding",
-            "label": "docs: Refresh README onboarding",
-            "type": "docs",
-            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
-          }
-        ],
-        "repo": "reponomics/docs-site",
-        "subtype": "docs_found_audience",
-        "summary": "docs-site has docs/example activity in the retained event trail and 635 views in the selected window.",
-        "title": "Documentation work has audience context",
         "tone": "opportunity"
       }
     ],
@@ -2424,6 +2402,40 @@
         "tone": "opportunity"
       },
       {
+        "action": "Start with labels, issue templates, PR templates, and contributing docs before the next release or traffic spike.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "latest snapshots",
+            "label": "Open issues/PRs",
+            "value": "0"
+          },
+          {
+            "detail": "repos",
+            "label": "Readiness gaps",
+            "value": "3"
+          },
+          {
+            "detail": "14d window",
+            "label": "Recent events",
+            "value": "13"
+          },
+          {
+            "detail": "repo",
+            "label": "Highest load",
+            "value": "none"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [],
+        "repo": "",
+        "subtype": "maintainer_triage_sweep",
+        "summary": "This published set has enough code, release, or issue context to make maintenance structure a useful follow-up.",
+        "title": "Maintainer mode needs lightweight structure",
+        "tone": "watch"
+      },
+      {
         "action": "Compare paths, referrers, and follow-on growth around that event.",
         "anchor_date": "2026-05-15",
         "confidence": "medium",
@@ -2472,62 +2484,6 @@
         "subtype": "event_aligned_attention",
         "summary": "charts reached 42 views on 2026-05-15, 2d before feature: Wire selected repository publish flow. That makes the event a useful place to inspect the follow-on traffic.",
         "title": "Repository activity lines up with an attention peak",
-        "tone": "opportunity"
-      },
-      {
-        "action": "Check whether the docs page or README explains the next step clearly.",
-        "anchor_date": "2026-05-13",
-        "confidence": "medium",
-        "evidence": [
-          {
-            "detail": "2026-05-13",
-            "label": "Docs event",
-            "value": "docs: Refresh README onboarding"
-          },
-          {
-            "detail": "14d window",
-            "label": "Views",
-            "value": "635"
-          },
-          {
-            "detail": "381",
-            "label": "Top content",
-            "value": "Repository overview"
-          },
-          {
-            "detail": "381",
-            "label": "Top referrer",
-            "value": "github.com"
-          }
-        ],
-        "kind": "narrative",
-        "nearby_context": [
-          {
-            "date": "2026-05-13",
-            "detail": "Refresh README onboarding",
-            "label": "docs: Refresh README onboarding",
-            "type": "docs",
-            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
-          },
-          {
-            "date": "2026-05-21",
-            "detail": "v0.3.0",
-            "label": "release: v0.3.0",
-            "type": "release",
-            "url": "https://github.com/reponomics/docs-site/releases/tag/v0.3.0"
-          },
-          {
-            "date": "2026-05-13",
-            "detail": "Refresh README onboarding",
-            "label": "docs: Refresh README onboarding",
-            "type": "docs",
-            "url": "https://github.com/reponomics/docs-site/commit/0302abc123ef45"
-          }
-        ],
-        "repo": "reponomics/docs-site",
-        "subtype": "docs_found_audience",
-        "summary": "docs-site has docs/example activity in the retained event trail and 635 views in the selected window.",
-        "title": "Documentation work has audience context",
         "tone": "opportunity"
       }
     ],
@@ -2626,6 +2582,149 @@
         "uniques": 117
       }
     ],
+    "portfolio_profile": {
+      "bucket": "published_portfolio",
+      "data_gaps": [
+        {
+          "candidate_table": "repo-readme-snapshots.csv",
+          "key": "readme_content",
+          "label": "README content snapshot",
+          "reason": "Community profile tells whether a README exists, but not whether it explains audience, setup, examples, or next steps."
+        }
+      ],
+      "guidance": [
+        {
+          "label": "Watch",
+          "text": "Use code and release events as anchors when traffic moves."
+        },
+        {
+          "label": "Triage",
+          "text": "Fix issue templates, PR templates, and contribution docs before spikes turn into unstructured work."
+        },
+        {
+          "label": "Curate",
+          "text": "Publish the eight repos that deserve attention this cycle; rotate the set when another project becomes active."
+        }
+      ],
+      "id": "maintainer_portfolio",
+      "label": "Maintainer portfolio",
+      "primary_goal": "Stay aware of code, release, and maintenance events that deserve a follow-up.",
+      "recipe_emphasis": [
+        "maintainer_triage_sweep",
+        "event_aligned_attention",
+        "code_churn_context",
+        "maintenance_pressure"
+      ],
+      "repo_count": 8,
+      "repo_stats": {
+        "reponomics/action": {
+          "active_days": 14,
+          "attention": 1180,
+          "cloners": 44,
+          "clones": 91,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 1089,
+          "visitors": 614
+        },
+        "reponomics/charts": {
+          "active_days": 14,
+          "attention": 369,
+          "cloners": 6,
+          "clones": 23,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 346,
+          "visitors": 190
+        },
+        "reponomics/cli": {
+          "active_days": 14,
+          "attention": 422,
+          "cloners": 10,
+          "clones": 29,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 393,
+          "visitors": 215
+        },
+        "reponomics/collector": {
+          "active_days": 14,
+          "attention": 626,
+          "cloners": 19,
+          "clones": 46,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 580,
+          "visitors": 323
+        },
+        "reponomics/dashboard-template": {
+          "active_days": 14,
+          "attention": 910,
+          "cloners": 30,
+          "clones": 67,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 843,
+          "visitors": 473
+        },
+        "reponomics/docs-site": {
+          "active_days": 14,
+          "attention": 685,
+          "cloners": 22,
+          "clones": 50,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 635,
+          "visitors": 356
+        },
+        "reponomics/examples": {
+          "active_days": 14,
+          "attention": 524,
+          "cloners": 14,
+          "clones": 36,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 488,
+          "visitors": 272
+        },
+        "reponomics/infra": {
+          "active_days": 14,
+          "attention": 465,
+          "cloners": 12,
+          "clones": 31,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 434,
+          "visitors": 239
+        }
+      },
+      "signals": {
+        "active_repos": 8,
+        "avg_community_health": 82,
+        "downstream_delta": 24,
+        "maintenance_items": 0,
+        "quiet_repos": 0,
+        "readiness_gap_repos": 3,
+        "recent_event_count": 13,
+        "selected_set_full": true,
+        "top_attention_share": 0.228,
+        "top_repo": "reponomics/action",
+        "total_clones": 373,
+        "total_views": 4808,
+        "total_visitors": 2682,
+        "young_repos": 0
+      },
+      "summary": "8 published repos make this a maintenance and awareness view. The dashboard should surface spikes, code events, triage load, and public-readiness gaps.",
+      "window_days": 14
+    },
     "referrers": [
       {
         "count": 2855,

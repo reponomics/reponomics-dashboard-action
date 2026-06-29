@@ -63,6 +63,8 @@ without changing the dashboard payload shape.
    - Each recipe either emits a normalized candidate or returns nothing.
    - Recipes use volume floors, sample guards, time-window checks, and missing
      data checks to avoid low-signal cards.
+   - Portfolio-level recipes may emit dashboard-wide candidates when the
+     published set itself is the useful unit of guidance.
 
 3. **Score candidates**
    - Scores are heuristic weights, not probabilities.
@@ -89,6 +91,32 @@ without changing the dashboard payload shape.
      - nearby context when useful;
      - a concrete "Try next" action.
 
+## Portfolio Profile Layer
+
+Implemented in
+`dashboard_action/runtime/scripts/load_data_modules/portfolio_profile.py`.
+
+The profile layer is a data-shape classifier, not a personal or behavioral
+classifier. It looks only at retained artifacts for the published repo set. If a
+user collects 12 repos but publishes 8, the dashboard profile describes those 8
+selected repos. Unselected repos should not affect rendered guidance until the
+user rotates them into the published set.
+
+Current profiles:
+
+| Profile | Typical shape | Guidance emphasis |
+| --- | --- | --- |
+| `first_app_launch` | 1 published repo. | Positioning, first-visit path, quiet-day reactivation, readiness basics. |
+| `focused_builder` | 2 published repos. | Compare the pair; decide which repo needs the next public-facing improvement. |
+| `builder_portfolio` | 3-5 repos, often young or lightly active. | Select one repo per cycle and clarify project positioning. |
+| `product_operator` | 3-5 repos with enough variation for comparison. | Rank opportunities across repos without losing concrete next actions. |
+| `maintainer_portfolio` | 6-8 published repos, high maintenance load, or dense event context. | Watch code/release events, triage load, and public-readiness gaps. |
+
+The profile payload includes a label, summary, primary goal, compact signal
+counts, recipe emphasis, and known data gaps. It gives the client dashboard a
+small "Dashboard profile" panel and gives the recipe engine a stable way to
+tune scoring and copy without guessing who the user is.
+
 ## Current Recipe Catalog
 
 ### Narrative Next Moves
@@ -101,12 +129,17 @@ Implemented in
 | `event_aligned_attention` | A peak day is meaningfully above trailing baseline and near a retained commit or release event. | Compare paths, referrers, and follow-on growth around that event. |
 | `release_adoption_lift` | A recent release window has clones, cloners, fork movement, or release asset downloads. | Use release notes and install docs as the next comparison point. |
 | `docs_found_audience` | Docs/example activity exists and the selected window has meaningful views. | Check whether the docs page or README explains the next step clearly. |
+| `solo_launch_positioning` | A one- or two-repo published set has early visitors or clones. | Make the README opening answer audience, first command, and first success state. |
+| `quiet_day_reactivation` | A small published set has many quiet days but some retained activity. | Ship one visible follow-up such as an example, release note, screenshot, or README path. |
 | `steady_attention_next_step` | A repo has steady attention, enough visitors and active days, but little downstream movement. | Add a short README path from problem to install command to first result. |
 | `discovery_surface_next_step` | A repo has traffic but a lightweight discovery surface, such as few retained topics. | Add GitHub topics and make the README opening sentence problem-shaped. |
 | `attention_without_readiness` | A repo has attention while known community/readiness files are missing. | Add the highest-impact missing files. |
 | `maintenance_pressure` | A repo has audience attention and enough open issue/PR load to warrant triage structure. | Triage labels and contribution docs before the next traffic bump. |
 | `code_churn_context` | Views are down versus the prior window while recent code-frequency churn is high. | Use the churn window as a starting point when reviewing the dip. |
 | `positioning_shift` | Topics or language mix changed and the repo has enough attention to inspect positioning. | Check whether repo description, topics, and README match the audience now arriving. |
+| `portfolio_attention_concentration` | A multi-repo published set has one repo carrying most visible attention. | Compare the leading repo against a quieter repo and make one positioning change. |
+| `maintainer_triage_sweep` | A maintainer-shaped published set has issue/PR load, readiness gaps, or dense code/release events. | Start with labels, templates, and contribution docs before the next release or spike. |
+| `published_set_curation` | The published set is at the eight-repo limit. | Treat the eight slots as an editorial choice and rotate repos by current focus. |
 
 ### Metric and Growth Fallbacks
 
@@ -149,6 +182,9 @@ Tracked readiness signals:
 - Issue template
 - Pull request template
 - Code of conduct
+
+Each readiness item also links to the relevant GitHub Docs page so the queue can
+teach the expected file shape instead of only reporting absence.
 
 ### Opportunity Map
 
@@ -197,6 +233,37 @@ Avoid:
 
 The dashboard itself should make the evidence visible. Methodological caveats
 belong in documentation, not repeated inside every product surface.
+
+## Known Data Gaps
+
+### README Content
+
+GitHub's community profile tells us whether a README exists. It does not tell us
+whether that README explains:
+
+- who the project is for;
+- what problem it solves;
+- the first install or usage command;
+- a runnable example;
+- project status;
+- contribution expectations;
+- whether the top traffic path is aligned with the README's promise.
+
+A future retained table such as `repo-readme-snapshots.csv` should capture a
+privacy-conscious README snapshot. The first version should probably avoid
+storing arbitrary full README text in plaintext dashboards. Better candidates:
+
+- content hash;
+- byte/line counts;
+- heading outline;
+- detected install/code-block presence;
+- detected links to docs, examples, releases, issues, discussions, and package
+  registries;
+- optional small excerpt fields only if the privacy and artifact policy is made
+  explicit.
+
+README content would unlock stronger launch-positioning, docs-conversion, and
+maintainer-onboarding recipes without requiring an analyst service.
 
 ## Extension Checklist
 

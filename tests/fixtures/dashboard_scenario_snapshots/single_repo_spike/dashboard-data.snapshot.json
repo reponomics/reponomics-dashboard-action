@@ -120,6 +120,118 @@
         "tone": "opportunity"
       },
       {
+        "action": "Make the README opening answer who it is for, the first command, and the first success state.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "110"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "14"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+2"
+          },
+          {
+            "detail": "185",
+            "label": "Top content",
+            "value": "Repository overview"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/sudden-breakout/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-29",
+            "detail": "185 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "demo/sudden-breakout",
+        "subtype": "solo_launch_positioning",
+        "summary": "sudden-breakout is part of a small published set and has 110 visitors in the selected window. This is a good moment to make the first-visit path explicit.",
+        "title": "Early attention needs launch-positioning clarity",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Make the README opening answer who it is for, the first command, and the first success state.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "85"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "21"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "88",
+            "label": "Top content",
+            "value": "Repository overview"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/steady-companion/commit/0201abc123ef45"
+          },
+          {
+            "date": "2026-05-29",
+            "detail": "88 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "demo/steady-companion",
+        "subtype": "solo_launch_positioning",
+        "summary": "steady-companion is part of a small published set and has 85 visitors in the selected window. This is a good moment to make the first-visit path explicit.",
+        "title": "Early attention needs launch-positioning clarity",
+        "tone": "opportunity"
+      },
+      {
         "action": "Use release notes and install docs as the next comparison point.",
         "anchor_date": "2026-05-25",
         "confidence": "medium",
@@ -2113,6 +2225,118 @@
         "tone": "opportunity"
       },
       {
+        "action": "Make the README opening answer who it is for, the first command, and the first success state.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "110"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "14"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+2"
+          },
+          {
+            "detail": "185",
+            "label": "Top content",
+            "value": "Repository overview"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/sudden-breakout/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-17",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/demo/sudden-breakout/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-29",
+            "detail": "185 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "demo/sudden-breakout",
+        "subtype": "solo_launch_positioning",
+        "summary": "sudden-breakout is part of a small published set and has 110 visitors in the selected window. This is a good moment to make the first-visit path explicit.",
+        "title": "Early attention needs launch-positioning clarity",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Make the README opening answer who it is for, the first command, and the first success state.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "85"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "21"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "88",
+            "label": "Top content",
+            "value": "Repository overview"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-25",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/demo/steady-companion/releases/tag/v0.2.1"
+          },
+          {
+            "date": "2026-05-21",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/demo/steady-companion/commit/0201abc123ef45"
+          },
+          {
+            "date": "2026-05-29",
+            "detail": "88 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "demo/steady-companion",
+        "subtype": "solo_launch_positioning",
+        "summary": "steady-companion is part of a small published set and has 85 visitors in the selected window. This is a good moment to make the first-visit path explicit.",
+        "title": "Early attention needs launch-positioning clarity",
+        "tone": "opportunity"
+      },
+      {
         "action": "Use release notes and install docs as the next comparison point.",
         "anchor_date": "2026-05-25",
         "confidence": "medium",
@@ -2153,28 +2377,6 @@
         "summary": "release: v0.2.1 is in the recent window for steady-companion; the same window shows 21 clones, 14 cloners, and +0 forks.",
         "title": "A release window has adoption signals",
         "tone": "opportunity"
-      },
-      {
-        "current": 94,
-        "delta": 4,
-        "kind": "trend",
-        "metric": "views",
-        "pct": 4.444444444444445,
-        "prior": 90,
-        "repo": "demo/sudden-breakout",
-        "text": "`demo/sudden-breakout` views +4% over the last 7d (90 -> 94, +4).",
-        "window_days": 7
-      },
-      {
-        "current": 11,
-        "delta": 1,
-        "kind": "trend",
-        "metric": "clones",
-        "pct": 10.0,
-        "prior": 10,
-        "repo": "demo/steady-companion",
-        "text": "`demo/steady-companion` clones +10% over the last 7d (10 -> 11, +1).",
-        "window_days": 7
       }
     ],
     "meta": {
@@ -2272,6 +2474,82 @@
         "uniques": 7
       }
     ],
+    "portfolio_profile": {
+      "bucket": "pair",
+      "data_gaps": [
+        {
+          "candidate_table": "repo-readme-snapshots.csv",
+          "key": "readme_content",
+          "label": "README content snapshot",
+          "reason": "Community profile tells whether a README exists, but not whether it explains audience, setup, examples, or next steps."
+        }
+      ],
+      "guidance": [
+        {
+          "label": "Compare",
+          "text": "Look for the repo that gets attention without a matching next step."
+        },
+        {
+          "label": "Support",
+          "text": "Use the quieter repo to strengthen docs, examples, or install flow if it supports the main app."
+        },
+        {
+          "label": "Publish",
+          "text": "Keep the published set small and intentional while the projects are still finding their audience."
+        }
+      ],
+      "id": "focused_builder",
+      "label": "Focused builder",
+      "primary_goal": "Compare the two projects and pick the one next public-facing improvement.",
+      "recipe_emphasis": [
+        "solo_launch_positioning",
+        "portfolio_attention_concentration",
+        "discovery_surface_next_step"
+      ],
+      "repo_count": 2,
+      "repo_stats": {
+        "demo/steady-companion": {
+          "active_days": 14,
+          "attention": 175,
+          "cloners": 14,
+          "clones": 21,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 154,
+          "visitors": 85
+        },
+        "demo/sudden-breakout": {
+          "active_days": 14,
+          "attention": 198,
+          "cloners": 3,
+          "clones": 14,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 14,
+          "views": 184,
+          "visitors": 110
+        }
+      },
+      "signals": {
+        "active_repos": 2,
+        "avg_community_health": 92,
+        "downstream_delta": 3,
+        "maintenance_items": 0,
+        "quiet_repos": 0,
+        "readiness_gap_repos": 1,
+        "recent_event_count": 4,
+        "selected_set_full": false,
+        "top_attention_share": 0.531,
+        "top_repo": "demo/sudden-breakout",
+        "total_clones": 35,
+        "total_views": 338,
+        "total_visitors": 195,
+        "young_repos": 0
+      },
+      "summary": "Two published repos make comparison useful, but the work is still mostly about positioning and momentum. sudden-breakout has about 53% of visible attention.",
+      "window_days": 14
+    },
     "referrers": [
       {
         "count": 273,

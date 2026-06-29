@@ -69,6 +69,7 @@ from load_data import (
     actionable_insights,
     actionable_insights_structured,
     collection_quality,
+    build_portfolio_profile,
     growth_analytics,
     latest_repo_community_profiles,
     latest_repo_metadata,
@@ -432,6 +433,7 @@ def _build_payload(
     repo_metadata,
     event_graph,
     narrative_insights,
+    portfolio_profile,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
     repos = []
@@ -512,6 +514,7 @@ def _build_payload(
         "insights_v2": insights_structured,
         "contextual_insights": narrative_insights,
         "event_graph": event_graph,
+        "portfolio_profile": portfolio_profile,
         "data_quality": data_quality,
         "traffic_reporting": traffic_reporting,
     }
@@ -766,6 +769,13 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     metric_insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
     )
+    portfolio_profile = build_portfolio_profile(
+        daily_rows,
+        metric_rows,
+        issue_pr_rows=issue_pr_rows,
+        event_rows=event_rows,
+        growth=growth,
+    )
     narrative_insights = narrative_insights_structured(
         daily_rows,
         metric_rows,
@@ -781,6 +791,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         code_frequency_rows=code_frequency_rows,
         contributor_activity_rows=contributor_activity_rows,
         growth=growth,
+        portfolio_profile=portfolio_profile,
         limit=5,
     )
     insights_structured = _merge_structured_insights(
@@ -810,6 +821,7 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         repo_metadata,
         event_graph,
         narrative_insights,
+        portfolio_profile,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

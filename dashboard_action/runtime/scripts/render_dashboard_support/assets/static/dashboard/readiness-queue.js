@@ -11,37 +11,49 @@ export function installReadinessQueue(context) {
       key: 'has_readme',
       label: 'README',
       filename: 'README.md',
-      action: 'Make the first visit explain the value, setup path, and next step.'
+      action: 'Make the first visit explain the value, setup path, and next step.',
+      href: 'https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes',
+      guide: 'README guide'
     },
     {
       key: 'has_license',
       label: 'License',
       filename: 'LICENSE',
-      action: 'Make adoption terms explicit before interested users evaluate the project.'
+      action: 'Make adoption terms explicit before interested users evaluate the project.',
+      href: 'https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository',
+      guide: 'License guide'
     },
     {
       key: 'has_contributing',
       label: 'Contributing',
       filename: 'CONTRIBUTING.md',
-      action: 'Give interested visitors a clear route from curiosity to useful contribution.'
+      action: 'Give interested visitors a clear route from curiosity to useful contribution.',
+      href: 'https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors',
+      guide: 'Contributor guide'
     },
     {
       key: 'has_issue_template',
       label: 'Issue template',
       filename: '.github/ISSUE_TEMPLATE',
-      action: 'Shape new attention into reports that maintainers can act on.'
+      action: 'Shape new attention into reports that maintainers can act on.',
+      href: 'https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository',
+      guide: 'Issue template guide'
     },
     {
       key: 'has_pull_request_template',
       label: 'PR template',
       filename: '.github/pull_request_template.md',
-      action: 'Make incoming changes arrive with review context.'
+      action: 'Make incoming changes arrive with review context.',
+      href: 'https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository',
+      guide: 'PR template guide'
     },
     {
       key: 'has_code_of_conduct',
       label: 'Code of conduct',
       filename: 'CODE_OF_CONDUCT.md',
-      action: 'Set participation expectations while the project is still small enough to steer.'
+      action: 'Set participation expectations while the project is still small enough to steer.',
+      href: 'https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project',
+      guide: 'Conduct guide'
     }
   ];
 
@@ -149,18 +161,27 @@ export function installReadinessQueue(context) {
       const primary = row.missing[0];
       const extra = row.missing.length - 1;
       return `
-          <button class="readiness-fix" type="button" data-repo="${escapeHtml(row.repo.name)}">
+          <div class="readiness-fix" role="button" tabindex="0" data-repo="${escapeHtml(row.repo.name)}">
             <span class="readiness-fix-head">
               <span class="readiness-repo">${escapeHtml(getShortName(row.repo.name))}</span>
               <span class="readiness-meta">${formatNumber(row.activity)} views + clones</span>
             </span>
             <span class="readiness-file">${escapeHtml(primary.filename || primary.label)}${extra > 0 ? ' +' + formatNumber(extra) : ''}</span>
             <span class="readiness-action">${escapeHtml(primary.action)}</span>
-          </button>`;
+            <span class="readiness-learn"><a href="${escapeHtml(primary.href || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(primary.guide || 'Guide')}</a></span>
+          </div>`;
     }).join('');
-    container.querySelectorAll('.readiness-fix').forEach((button) => {
-      button.addEventListener('click', function(event) {
-        activateRepo(button.dataset.repo, !!(event && (event.metaKey || event.ctrlKey || event.shiftKey)));
+    container.querySelectorAll('.readiness-fix').forEach((card) => {
+      const focusRepo = function(event) {
+        if (event?.target?.closest && event.target.closest('a')) return;
+        activateRepo(card.dataset.repo, !!(event && (event.metaKey || event.ctrlKey || event.shiftKey)));
+      };
+      card.addEventListener('click', focusRepo);
+      card.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          focusRepo(event);
+        }
       });
     });
   }

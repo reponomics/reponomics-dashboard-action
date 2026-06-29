@@ -1528,6 +1528,24 @@
       font-size: 0.78rem;
       line-height: 1.35;
     }
+    .readiness-learn {
+      align-self: end;
+      justify-self: start;
+      min-width: 0;
+    }
+    .readiness-learn a {
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 750;
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(107, 184, 255, 0.48);
+    }
+    .readiness-learn a:hover,
+    .readiness-learn a:focus-visible {
+      color: var(--accent-3);
+      border-bottom-color: var(--accent-3);
+      outline: none;
+    }
     .growth-cell {
       display: inline-grid;
       gap: 0.2rem;
@@ -1876,6 +1894,139 @@
       background:
         linear-gradient(145deg, rgba(107, 184, 255, 0.09), transparent 42%, rgba(217, 126, 183, 0.045)),
         var(--bg-card);
+    }
+    .portfolio-guide-section {
+      margin-bottom: 1.1rem;
+    }
+    .portfolio-guide-card {
+      border-color: rgba(79, 200, 165, 0.20);
+      background:
+        linear-gradient(115deg, rgba(79, 200, 165, 0.085), transparent 42%, rgba(214, 168, 75, 0.055)),
+        var(--bg-card);
+    }
+    .portfolio-guide {
+      display: grid;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+    .profile-overview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.64fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .profile-copy {
+      display: grid;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .profile-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+      min-width: 0;
+    }
+    .profile-pill,
+    .profile-bucket,
+    .profile-note {
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      line-height: 1.1;
+      padding: 0.28rem 0.52rem;
+      text-transform: uppercase;
+    }
+    .profile-pill {
+      border-color: rgba(79, 200, 165, 0.44);
+      color: var(--accent-3);
+      background: rgba(79, 200, 165, 0.095);
+    }
+    .profile-bucket,
+    .profile-note {
+      color: var(--text-muted);
+      background: rgba(148, 163, 184, 0.06);
+    }
+    .profile-copy p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin: 0;
+      max-width: 78ch;
+    }
+    .profile-copy strong {
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.35;
+    }
+    .profile-signal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .profile-signal {
+      display: grid;
+      gap: 0.2rem;
+      min-width: 0;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card-2);
+      padding: 0.58rem 0.62rem;
+    }
+    .profile-signal span,
+    .profile-signal em {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-style: normal;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .profile-signal strong {
+      color: var(--text);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+    .profile-guidance {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.65rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .profile-guidance li {
+      display: grid;
+      grid-template-columns: minmax(4.2rem, auto) minmax(0, 1fr);
+      gap: 0.65rem;
+      align-items: start;
+      min-width: 0;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.035), transparent 60%),
+        var(--bg-card-2);
+      padding: 0.72rem 0.78rem;
+    }
+    .profile-guidance span {
+      color: var(--accent-3);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .profile-guidance p {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.38;
+      margin: 0;
+      min-width: 0;
     }
     .section-kicker {
       color: var(--accent-2);
@@ -3638,6 +3789,13 @@
       .story-board {
         grid-template-columns: 1fr;
       }
+      .profile-overview,
+      .profile-guidance {
+        grid-template-columns: 1fr;
+      }
+      .profile-signal-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
       .lead-story-card,
       .next-move-queue-card {
         min-height: auto;
@@ -3654,6 +3812,13 @@
     }
     @media (max-width: 720px) {
       body { padding: 1rem; }
+      .profile-signal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .profile-guidance li {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+      }
       body.auth-locked {
         min-height: 100svh;
         padding: 0;

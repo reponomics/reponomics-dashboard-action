@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from functools import cached_property
 from pathlib import Path
@@ -39,6 +39,7 @@ class ScenarioDataset:
     path_rows: list[dict[str, str]]
     metric_rows: list[dict[str, str]]
     status_rows: list[dict[str, str]]
+    event_rows: list[dict[str, str]] = field(default_factory=list)
 
     @cached_property
     def totals(self) -> dict[str, Any]:
@@ -265,6 +266,62 @@ def _synthetic_status(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return result
 
 
+def _synthetic_event_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    dates = _all_dates(rows)
+    if not dates:
+        return []
+    repos = [row["repo"] for row in load_data.aggregate_per_repo(rows)[:8]]
+    if not repos:
+        return []
+    offsets = [-13, -9, -5]
+    titles = [
+        ("commit", "docs", "Refresh README onboarding"),
+        ("commit", "feature", "Wire selected repository publish flow"),
+        ("release", "release", "v0.{major}.{minor}"),
+    ]
+    result: list[dict[str, str]] = []
+    for repo_index, repo in enumerate(repos):
+        event_count = 2 if repo_index < 5 else 1
+        for event_index in range(event_count):
+            event_type, classification, title_template = titles[
+                (repo_index + event_index) % len(titles)
+            ]
+            date_index = max(0, len(dates) + offsets[(repo_index + event_index) % len(offsets)])
+            event_date = dates[min(date_index, len(dates) - 1)]
+            sha = f"{repo_index + 1:02x}{event_index + 1:02x}" + "abc123ef45"
+            release_id = f"scenario-release-{repo_index + 1}" if event_type == "release" else ""
+            title = title_template.format(major=repo_index + 1, minor=event_index)
+            event_id = (
+                f"release:{release_id}"
+                if event_type == "release"
+                else f"commit:{sha}"
+            )
+            result.append(
+                {
+                    "repo": repo,
+                    "event_id": event_id,
+                    "event_type": event_type,
+                    "event_ts": f"{event_date}T10:30:00Z",
+                    "event_date": event_date,
+                    "title": title,
+                    "url": f"https://github.com/{repo}/releases/tag/{title}"
+                    if event_type == "release"
+                    else f"https://github.com/{repo}/commit/{sha}",
+                    "primary_sha": sha,
+                    "release_id": release_id,
+                    "issue_or_pr_number": str(100 + repo_index + event_index)
+                    if event_type == "commit"
+                    else "",
+                    "magnitude": str(12 + repo_index * 3 + event_index * 7),
+                    "classification": classification,
+                    "source_table": "dashboard-scenario",
+                    "captured_at": f"{event_date}T12:00:00Z",
+                    "schema_version": storage.SCHEMA_VERSION,
+                }
+            )
+    return result
+
+
 def _scenario_from_daily(
     *,
     key: str,
@@ -281,6 +338,7 @@ def _scenario_from_daily(
         path_rows=_synthetic_paths(daily_rows),
         metric_rows=_synthetic_metrics(daily_rows),
         status_rows=_synthetic_status(daily_rows),
+        event_rows=_synthetic_event_rows(daily_rows),
     )
 
 
@@ -296,6 +354,7 @@ def _fixture_scenario(data_dir: Path) -> ScenarioDataset:
         metric_rows=_read_csv_rows(data_dir, "repo-metrics.csv"),
         status_rows=_read_csv_rows(data_dir, "collection-status.csv")
         or _synthetic_status(daily_rows),
+        event_rows=_read_csv_rows(data_dir, "repo-event-index.csv"),
     )
 
 

@@ -30,10 +30,10 @@ export function installFormat(context) {
 
     function buildSparklinePath(values, width, height) {
       const n = (values || []).length;
-      if (!n) { return { line: '', area: '' }; }
+      if (!n) { return { line: '', area: '', points: [] }; }
       if (n === 1) {
         const y = height / 2;
-        return { line: `M0 ${y.toFixed(2)} L${width} ${y.toFixed(2)}`, area: '' };
+        return { line: `M0 ${y.toFixed(2)} L${width} ${y.toFixed(2)}`, area: '', points: [[0, y], [width, y]] };
       }
       const max = Math.max(...values);
       const min = Math.min(...values);
@@ -47,7 +47,7 @@ export function installFormat(context) {
       });
       const line = pts.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2)).join(' ');
       const area = line + ` L${width} ${height} L0 ${height} Z`;
-      return { line, area };
+      return { line, area, points: pts };
     }
 
     function renderSparkline(id, values, color) {
@@ -57,15 +57,32 @@ export function installFormat(context) {
         el.innerHTML = '';
         return;
       }
-      const { line, area } = buildSparklinePath(values, 100, 34);
+      const { line, area, points } = buildSparklinePath(values, 100, 34);
+      const safeId = String(id || 'spark').replace(/[^a-zA-Z0-9_-]/g, '');
+      const fillId = `${safeId}-fill`;
+      const patternId = `${safeId}-pattern`;
+      const last = points && points.length ? points[points.length - 1] : [100, 17];
       // pathLength="1" normalizes the path's apparent stroke length to 1
       // unit so the CSS draw-in animation (stroke-dasharray: 1) always
       // covers the entire line regardless of how spiky the underlying
       // data is. Without this, jagged metrics (Views, Visitors) had path
       // lengths that exceeded the dash and clipped the tail.
       el.innerHTML =
-        `<path class="area" d="${area}" fill="${color}"></path>` +
-        `<path class="line" d="${line}" stroke="${color}" pathLength="1"></path>`;
+        `<defs>` +
+        `<linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0%" stop-color="${color}" stop-opacity="0.48"></stop>` +
+        `<stop offset="58%" stop-color="${color}" stop-opacity="0.18"></stop>` +
+        `<stop offset="100%" stop-color="${color}" stop-opacity="0.03"></stop>` +
+        `</linearGradient>` +
+        `<pattern id="${patternId}" width="8" height="8" patternUnits="userSpaceOnUse">` +
+        `<path d="M0 0H4V4H0Z M4 4H8V8H4Z" fill="${color}" opacity="0.12"></path>` +
+        `</pattern>` +
+        `</defs>` +
+        `<path class="area" d="${area}" fill="url(#${fillId})"></path>` +
+        `<path class="spark-pattern" d="${area}" fill="url(#${patternId})"></path>` +
+        `<path class="spark-glow" d="${line}" stroke="${color}" pathLength="1"></path>` +
+        `<path class="line" d="${line}" stroke="${color}" pathLength="1"></path>` +
+        `<circle class="spark-terminal" cx="${last[0].toFixed(2)}" cy="${last[1].toFixed(2)}" r="2.1" fill="${color}"></circle>`;
     }
 
     function splitWindow(series) {

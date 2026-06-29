@@ -51,7 +51,16 @@ from load_data import (
     load_repo_metrics,
     load_collection_status,
     load_collection_days,
+    load_collection_endpoints,
+    load_code_frequency_weekly,
+    load_contributor_activity_weekly,
     load_traffic_coverage,
+    load_event_index,
+    load_issue_label_snapshots,
+    load_issue_pr_snapshots,
+    load_languages,
+    load_release_assets,
+    load_topics,
     aggregate_totals,
     aggregate_by_date,
     aggregate_per_repo,
@@ -63,6 +72,7 @@ from load_data import (
     growth_analytics,
     latest_repo_community_profiles,
     latest_repo_metadata,
+    narrative_insights_structured,
     traffic_reporting_summary,
 )
 
@@ -109,6 +119,7 @@ EXPORT_ASSET_SUFFIX = ".enc"
 EXPORT_MANIFEST_VERSION = 1
 DASHBOARD_DATA_VERSION = 2
 ENCRYPTED_DASHBOARD_DATA_VERSION = DASHBOARD_DATA_VERSION
+EVENT_GRAPH_PER_REPO_LIMIT = 10
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
 BASE_STYLES = dashboard_html.BASE_STYLES
@@ -212,6 +223,123 @@ def _pad_repo_series(repo_series, end_date: str):
     return padded
 
 
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _compact_event_title(value: Any) -> str:
+    title = " ".join(str(value or "").split())
+    if len(title) <= 86:
+        return title
+    return title[:83].rstrip() + "..."
+
+
+def _event_date(row: dict[str, Any]) -> str:
+    event_date = str(row.get("event_date") or "")
+    if event_date:
+        return event_date[:10]
+    event_ts = str(row.get("event_ts") or row.get("captured_at") or "")
+    return event_ts[:10] if event_ts else ""
+
+
+def _traffic_near_event(
+    traffic_by_repo_date: dict[tuple[str, str], dict[str, int]],
+    repo: str,
+    event_date: str,
+) -> dict[str, int]:
+    dates = [event_date]
+    try:
+        parsed = datetime.strptime(event_date, "%Y-%m-%d").date()
+    except ValueError:
+        parsed = None
+    if parsed:
+        dates = [
+            (parsed + timedelta(days=offset)).isoformat()
+            for offset in (-1, 0, 1)
+        ]
+    nearby = [
+        traffic_by_repo_date.get((repo, date), {"views": 0, "visitors": 0})
+        for date in dates
+    ]
+    return {
+        "nearby_views": sum(row["views"] for row in nearby),
+        "nearby_visitors": sum(row["visitors"] for row in nearby),
+        "event_day_views": traffic_by_repo_date.get(
+            (repo, event_date), {"views": 0}
+        )["views"],
+    }
+
+
+def _build_event_graph(
+    event_rows: list[dict[str, Any]],
+    daily_rows: list[dict[str, Any]],
+    per_repo: list[dict[str, Any]],
+    *,
+    per_repo_limit: int = EVENT_GRAPH_PER_REPO_LIMIT,
+) -> dict[str, Any]:
+    repo_order = [str(row.get("repo") or "") for row in per_repo if row.get("repo")]
+    published_repos = set(repo_order)
+    traffic_by_repo_date: dict[tuple[str, str], dict[str, int]] = defaultdict(
+        lambda: {"views": 0, "visitors": 0}
+    )
+    for row in daily_rows:
+        repo = str(row.get("repo") or "")
+        ts = str(row.get("ts") or "")
+        if not repo or not ts:
+            continue
+        bucket = traffic_by_repo_date[(repo, ts)]
+        bucket["views"] += _safe_int(row.get("views_count"))
+        bucket["visitors"] += _safe_int(row.get("views_uniques"))
+
+    events_by_repo: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in event_rows:
+        repo = str(row.get("repo") or "")
+        event_date = _event_date(row)
+        if not repo or repo not in published_repos or not event_date:
+            continue
+        event_type = str(row.get("event_type") or "event")
+        sha = str(row.get("primary_sha") or "")
+        event_id = str(row.get("event_id") or f"{event_type}:{repo}:{event_date}:{sha}")
+        events_by_repo[repo].append(
+            {
+                "id": event_id,
+                "date": event_date,
+                "type": event_type,
+                "classification": str(row.get("classification") or "unknown"),
+                "title": _compact_event_title(row.get("title") or sha[:12] or event_type),
+                "url": str(row.get("url") or ""),
+                "sha": sha[:12],
+                "magnitude": _safe_int(row.get("magnitude")),
+                "traffic": _traffic_near_event(traffic_by_repo_date, repo, event_date),
+            }
+        )
+
+    graph_repos = []
+    all_event_dates: list[str] = []
+    for repo in repo_order:
+        repo_events = sorted(
+            events_by_repo.get(repo, []),
+            key=lambda item: (item["date"], item["id"]),
+        )
+        if per_repo_limit > 0:
+            repo_events = repo_events[-per_repo_limit:]
+        if repo_events:
+            graph_repos.append({"repo": repo, "events": repo_events})
+            all_event_dates.extend(event["date"] for event in repo_events)
+
+    return {
+        "source": "repo-event-index.csv",
+        "per_repo_limit": per_repo_limit,
+        "event_count": sum(len(repo["events"]) for repo in graph_repos),
+        "date_start": min(all_event_dates) if all_event_dates else "",
+        "date_end": max(all_event_dates) if all_event_dates else "",
+        "repos": graph_repos,
+    }
+
+
 def _build_weekday_summary(daily_rows):
     """Build average views/clones by weekday for a daily row collection."""
     daily_totals = defaultdict(lambda: {"views": 0, "clones": 0})
@@ -302,6 +430,8 @@ def _build_payload(
     traffic_reporting,
     community_profiles,
     repo_metadata,
+    event_graph,
+    narrative_insights,
 ):
     """Build the full JSON-safe dashboard data before summary/chunk splitting."""
     repos = []
@@ -380,9 +510,35 @@ def _build_payload(
         },
         "insights": insights,
         "insights_v2": insights_structured,
+        "contextual_insights": narrative_insights,
+        "event_graph": event_graph,
         "data_quality": data_quality,
         "traffic_reporting": traffic_reporting,
     }
+
+
+def _merge_structured_insights(
+    narrative_insights: list[dict[str, Any]],
+    metric_insights: list[dict[str, Any]],
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Merge contextual narratives with metric fallbacks for the insight feed."""
+    selected: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for item in [*narrative_insights, *metric_insights]:
+        key = (
+            str(item.get("kind") or ""),
+            str(item.get("subtype") or item.get("metric") or ""),
+            str(item.get("repo") or ""),
+        )
+        if key in seen_keys:
+            continue
+        selected.append(item)
+        seen_keys.add(key)
+        if len(selected) >= limit:
+            return selected
+    return selected
 
 
 def _kdf_descriptor() -> dict[str, object]:
@@ -575,6 +731,15 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     status_rows = load_collection_status()
     collection_day_rows = load_collection_days()
     coverage_rows = load_traffic_coverage()
+    event_rows = load_event_index()
+    release_asset_rows = load_release_assets()
+    issue_pr_rows = load_issue_pr_snapshots()
+    issue_label_rows = load_issue_label_snapshots()
+    endpoint_rows = load_collection_endpoints()
+    language_rows = load_languages()
+    topic_rows = load_topics()
+    code_frequency_rows = load_code_frequency_weekly()
+    contributor_activity_rows = load_contributor_activity_weekly()
 
     access_mode = _load_access_mode()
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -591,14 +756,37 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
     growth = growth_analytics(daily_rows, metric_rows)
     community_profiles = latest_repo_community_profiles(metric_rows)
     repo_metadata = latest_repo_metadata(metric_rows)
+    event_graph = _build_event_graph(event_rows, daily_rows, per_repo)
     traffic_reporting = traffic_reporting_summary(coverage_rows, collection_day_rows)
     reporting_end_date = traffic_reporting.get("latest_collection_date", "")
     dates, series = _pad_metric_series(dates, series, reporting_end_date)
     repo_series = _pad_repo_series(repo_series, reporting_end_date)
     data_quality = collection_quality(status_rows, collection_day_rows)
     insights = actionable_insights(daily_rows, metric_rows, limit=3, growth=growth)
-    insights_structured = actionable_insights_structured(
+    metric_insights_structured = actionable_insights_structured(
         daily_rows, metric_rows, limit=3, growth=growth
+    )
+    narrative_insights = narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=path_rows,
+        referrer_rows=referrer_rows,
+        event_rows=event_rows,
+        release_asset_rows=release_asset_rows,
+        issue_pr_rows=issue_pr_rows,
+        issue_label_rows=issue_label_rows,
+        endpoint_rows=endpoint_rows,
+        language_rows=language_rows,
+        topic_rows=topic_rows,
+        code_frequency_rows=code_frequency_rows,
+        contributor_activity_rows=contributor_activity_rows,
+        growth=growth,
+        limit=5,
+    )
+    insights_structured = _merge_structured_insights(
+        narrative_insights,
+        metric_insights_structured,
+        limit=5,
     )
     payload = _build_payload(
         now,
@@ -620,6 +808,8 @@ def render(*, demo_unlock: DemoUnlockMetadata | None = None):
         traffic_reporting,
         community_profiles,
         repo_metadata,
+        event_graph,
+        narrative_insights,
     )
 
     if access_mode == ACCESS_MODE_ENCRYPTED:

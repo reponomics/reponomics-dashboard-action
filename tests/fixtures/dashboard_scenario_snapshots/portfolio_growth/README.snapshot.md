@@ -14,9 +14,9 @@
   <img src="docs/assets/hero-stats.svg" alt="Summary">
 </picture>
 
-<sub>🔥 **1-day streak** above baseline (~467/d) &nbsp;·&nbsp; ⭐ Best overall day: **615 views** (35d ago) &nbsp;·&nbsp; 🏆 Best single-repo day: **`action`** 124 on 2026-04-20</sub>
+<sub>🔥 **1-day streak** above baseline (~378/d) &nbsp;·&nbsp; ⭐ Best overall day: **526 views** (35d ago) &nbsp;·&nbsp; 🏆 Best single-repo day: **`action`** 124 on 2026-04-20</sub>
 
-<sub>**Growth (14d):** attention **38,654 views** / **21,457 visitors**; interest **+24 stars** / **+6 watchers** (now 1,183 / 317); adoption **2,919 clones** / **+3 forks** (now 206).</sub>
+<sub>**Growth (14d):** attention **31,748 views** / **17,717 visitors**; interest **+18 stars** / **+4 watchers** (now 704 / 188); adoption **2,493 clones** / **+2 forks** (now 123).</sub>
 
 ### Views Trend
 
@@ -48,26 +48,11 @@
 
 ### Insights
 
-- `reponomics/archive-reader` views -42% over the last 7d (163 -> 94, -69).
-- `reponomics/schema` views +37% over the last 7d (109 -> 149, +40).
 - `reponomics/cli` views spiked versus baseline (latest 43 vs trailing median 26).
+- `reponomics/dashboard-template` views -8% over the last 7d (439 -> 404, -35).
+- `reponomics/infra` views -9% over the last 7d (227 -> 207, -20).
 
-<details><summary><strong>Repositories</strong> &mdash; top 10 of 12</summary>
-
-| Repository | Views | Visitors | Clones | Cloners |
-|------------|------:|---------:|-------:|--------:|
-| reponomics/action | 7,116 | 4,011 | 598 | 283 |
-| reponomics/dashboard-template | 5,641 | 3,169 | 468 | 207 |
-| reponomics/docs-site | 4,238 | 2,375 | 334 | 142 |
-| reponomics/collector | 4,034 | 2,254 | 323 | 135 |
-| reponomics/examples | 3,202 | 1,777 | 238 | 100 |
-| reponomics/infra | 2,779 | 1,534 | 203 | 78 |
-| reponomics/cli | 2,456 | 1,348 | 172 | 57 |
-| reponomics/charts | 2,282 | 1,249 | 157 | 49 |
-| reponomics/playground | 2,059 | 1,123 | 139 | 41 |
-| reponomics/schema | 1,838 | 1,000 | 117 | 33 |
-
-<details><summary>Show all 12 repositories</summary>
+<details><summary><strong>Repositories</strong> &mdash; top 8 of 8</summary>
 
 | Repository | Views | Visitors | Clones | Cloners |
 |------------|------:|---------:|-------:|--------:|
@@ -79,16 +64,11 @@
 | reponomics/infra | 2,779 | 1,534 | 203 | 78 |
 | reponomics/cli | 2,456 | 1,348 | 172 | 57 |
 | reponomics/charts | 2,282 | 1,249 | 157 | 49 |
-| reponomics/playground | 2,059 | 1,123 | 139 | 41 |
-| reponomics/schema | 1,838 | 1,000 | 117 | 33 |
-| reponomics/archive-reader | 1,574 | 847 | 89 | 25 |
-| reponomics/release-tools | 1,435 | 770 | 81 | 23 |
+
 
 </details>
 
-</details>
-
-<details><summary><strong>Repository Growth</strong> &mdash; top 10 by growth</summary>
+<details><summary><strong>Repository Growth</strong> &mdash; top 8 by growth</summary>
 
 | Repository | Attention | Interest growth | Adoption growth |
 |------------|----------:|----------------:|----------------:|
@@ -97,11 +77,9 @@
 | `reponomics/dashboard-template` | 5,641 views / 3,169 visitors | +3 stars (99) / +1 watchers (27) | 468 clones / +0 forks (17) |
 | `reponomics/collector` | 4,034 views / 2,254 visitors | +2 stars (84) / +0 watchers (22) | 323 clones / +1 forks (15) |
 | `reponomics/examples` | 3,202 views / 1,777 visitors | +2 stars (115) / +1 watchers (31) | 238 clones / +0 forks (20) |
-| `reponomics/release-tools` | 1,435 views / 770 visitors | +2 stars (144) / +1 watchers (39) | 81 clones / +0 forks (25) |
 | `reponomics/infra` | 2,779 views / 1,534 visitors | +2 stars (125) / +0 watchers (33) | 203 clones / +0 forks (22) |
 | `reponomics/charts` | 2,282 views / 1,249 visitors | +2 stars (58) / +0 watchers (15) | 157 clones / +0 forks (10) |
-| `reponomics/playground` | 2,059 views / 1,123 visitors | +1 stars (134) / +0 watchers (36) | 139 clones / +1 forks (24) |
-| `reponomics/schema` | 1,838 views / 1,000 visitors | +2 stars (156) / +0 watchers (42) | 117 clones / +0 forks (27) |
+| `reponomics/cli` | 2,456 views / 1,348 visitors | +1 stars (69) / +0 watchers (18) | 172 clones / +0 forks (12) |
 
 </details>
 

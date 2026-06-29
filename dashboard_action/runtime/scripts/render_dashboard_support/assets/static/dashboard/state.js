@@ -41,13 +41,13 @@ export function installState(context) {
       return dashForRepoIndex(idx >= 0 ? idx : 0);
     }
     const METRICS = {
-      views:    { key: 'views',         label: 'Views',         color: '#58a6ff' },
-      uniques:  { key: 'uniques',       label: 'Visitors',      color: '#3fb950' },
-      clones:   { key: 'clones',        label: 'Clones',        color: '#CC79A7' },
-      cloners:  { key: 'clone_uniques', label: 'Unique Clones', color: '#ffa657' },
-      stars:    { key: 'stars_delta',   label: 'Star Growth',   color: '#bf6a02', growth: true },
-      subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#1f6feb', growth: true },
-      forks:    { key: 'forks_delta',   label: 'Fork Growth',   color: '#3fb950', growth: true }
+      views:    { key: 'views',         label: 'Views',         color: '#6bb8ff' },
+      uniques:  { key: 'uniques',       label: 'Visitors',      color: '#4fc8a5' },
+      clones:   { key: 'clones',        label: 'Clones',        color: '#d97eb7' },
+      cloners:  { key: 'clone_uniques', label: 'Unique Clones', color: '#f0b75a' },
+      stars:    { key: 'stars_delta',   label: 'Star Growth',   color: '#d6a84b', growth: true },
+      subscribers: { key: 'subscribers_delta', label: 'Watcher Growth', color: '#6bb8ff', growth: true },
+      forks:    { key: 'forks_delta',   label: 'Fork Growth',   color: '#4fc8a5', growth: true }
     };
     const SERIES_METRIC_KEYS = ['views', 'uniques', 'clones', 'clone_uniques', 'stars_delta', 'subscribers_delta', 'forks_delta'];
     const WINDOW_PRESETS = ['7', '14', '30', '90', 'all'];
@@ -72,7 +72,8 @@ export function installState(context) {
       metric: 'views',
       repoSortKey: null,
       repoSortDir: null,
-      calendarMonth: null
+      calendarMonth: null,
+      storyIndex: 0
     };
     function dashboardChunkError(stage, message, details) {
       const error = new Error(message);

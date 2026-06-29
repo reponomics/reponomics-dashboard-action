@@ -71,6 +71,7 @@ write_csv(data_dir / "traffic-daily.csv", run.storage.DAILY_FIELDS, scenario.dai
 write_csv(data_dir / "traffic-referrers.csv", run.storage.REFERRER_FIELDS, scenario.referrer_rows)
 write_csv(data_dir / "traffic-paths.csv", run.storage.PATH_FIELDS, scenario.path_rows)
 write_csv(data_dir / "repo-metrics.csv", run.storage.REPO_METRIC_FIELDS, scenario.metric_rows)
+write_csv(data_dir / "repo-event-index.csv", run.storage.REPO_EVENT_INDEX_FIELDS, scenario.event_rows)
 write_csv(
     data_dir / "collection-status.csv",
     run.storage.COLLECTION_STATUS_FIELDS,

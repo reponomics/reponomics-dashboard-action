@@ -180,8 +180,7 @@ export function installSeries(context) {
 
     function getAllRepoMetrics() {
       return (dashboardData()?.getRepos() || [])
-        .map((repo) => buildRepoMetrics(repo.name))
-        .sort((a, b) => compareRepoFreshness(a, b) || a.name.localeCompare(b.name));
+        .map((repo) => buildRepoMetrics(repo.name));
     }
 
     function getSelectableRepos() {

@@ -56,7 +56,7 @@ export function installControls(context) {
       document.querySelectorAll('.metric-tab').forEach((btn) => {
         const isActive = btn.dataset.metric === state.metric;
         btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
     }
 
@@ -147,7 +147,7 @@ export function installControls(context) {
 
       if (isComparing()) {
         activeBadge.classList.remove('visible');
-        compareBadge.textContent = 'Comparing ' + state.compareRepos.length + ' repos';
+        compareBadge.textContent = 'Comparing ' + state.compareRepos.length + ' published repos';
         compareBadge.classList.add('visible');
         clearButton.classList.add('visible');
       } else if (state.selectedRepo) {

@@ -56,6 +56,9 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
+    "dashboard/opportunity-map.js",
+    "dashboard/event-graph.js",
+    "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
     "dashboard/app.js",
@@ -79,6 +82,9 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
+    "dashboard/opportunity-map.js",
+    "dashboard/event-graph.js",
+    "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
     "dashboard/app.js",
@@ -157,7 +163,7 @@ def build_dashboard_shell(
   <div id="dashboard-app"{hidden_attr}>
     <div class="hero">
       <div class="hero-copy">
-        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>Traffic and growth data for your repos</span></p>
+        <p class="tagline"><span class="pulse-dot" aria-hidden="true"></span><span>Traffic, growth, and codebase signals for your published repos</span></p>
         <div class="brand-lockup">
           <h1 class="brand">reponomics<span class="accent">.</span></h1>
           <div class="brand-eyebrow">Dashboard</div>
@@ -190,28 +196,10 @@ def build_dashboard_shell(
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
-    <div class="growth-model-grid" aria-label="Repository growth model">
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Attention</div>
-        <div class="growth-stage-value" id="growthAttentionValue">0 / 0</div>
-        <div class="growth-stage-context" id="growthAttentionContext">views / visitors in the selected window</div>
-      </div>
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Interest</div>
-        <div class="growth-stage-value" id="growthInterestValue">+0 / +0</div>
-        <div class="growth-stage-context" id="growthInterestContext">stars / watchers; current totals as context</div>
-      </div>
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Adoption</div>
-        <div class="growth-stage-value" id="growthAdoptionValue">0 / +0</div>
-        <div class="growth-stage-context" id="growthAdoptionContext">clones / forks; current total as context</div>
-      </div>
-    </div>
-
-    <div class="stats-grid" id="stats-grid">
+    <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
       <div class="card stat-card" data-metric="repos">
         <div class="stat-head">
-          <span class="stat-label">Tracked Repos</span>
+          <span class="stat-label">Published Repos</span>
           <span class="stat-delta hidden" id="deltaRepos"></span>
         </div>
         <div class="stat-value" id="statRepos">{stat_values['repo_count']}</div>
@@ -248,6 +236,100 @@ def build_dashboard_shell(
         </div>
         <div class="stat-value" id="statCloneUniques">{stat_values['total_clone_uniques']}</div>
         <svg class="stat-spark" id="sparkCloneUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+    </div>
+
+    <div class="story-board insight-section" aria-label="Dashboard lead story and next moves">
+      <section class="card insight-card lead-story-card" aria-labelledby="leadStoryTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <div class="section-kicker">Lead read</div>
+            <h2 id="leadStoryTitle">What to check next</h2>
+            <p class="click-hint">A focused pass through the strongest rules-based prompts from traffic, growth, and codebase context.</p>
+          </div>
+          <div class="story-stepper" aria-label="Browse lead stories">
+            <button class="story-step" id="storyPrevBtn" type="button" aria-label="Previous story">&lt;</button>
+            <button class="story-step" id="storyNextBtn" type="button" aria-label="Next story">&gt;</button>
+          </div>
+        </div>
+        <div class="story-tabs" id="storyControls" aria-label="Story highlights"></div>
+        <div class="lead-story-carousel" id="leadStoryCarousel" aria-live="polite">
+          <p class="empty-msg">Looking for a useful story in the selected data.</p>
+        </div>
+      </section>
+
+      <aside class="card next-move-queue-card" aria-labelledby="nextMoveQueueTitle">
+        <div class="section-header compact">
+          <div class="section-copy">
+            <div class="section-kicker">Queue</div>
+            <h2 id="nextMoveQueueTitle">Next moves</h2>
+            <p class="click-hint">Click a card to focus the repo. These are the same prompts behind the lead story.</p>
+          </div>
+        </div>
+        <div id="insights-list"></div>
+      </aside>
+    </div>
+
+    <div class="growth-model-grid" aria-label="Repository growth model">
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Attention</div>
+        <div class="growth-stage-value" id="growthAttentionValue">0 / 0</div>
+        <div class="growth-stage-context" id="growthAttentionContext">views / visitors in the selected window</div>
+      </div>
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Interest</div>
+        <div class="growth-stage-value" id="growthInterestValue">+0 / +0</div>
+        <div class="growth-stage-context" id="growthInterestContext">stars / watchers; current totals as context</div>
+      </div>
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Adoption</div>
+        <div class="growth-stage-value" id="growthAdoptionValue">0 / +0</div>
+        <div class="growth-stage-context" id="growthAdoptionContext">clones / forks; current total as context</div>
+      </div>
+    </div>
+
+    <div class="section-grid full opportunity-section">
+      <div class="card opportunity-card" id="opportunity-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Opportunity map</h2>
+            <p class="click-hint">Published repos by attention and downstream growth. Bubble size follows clone activity.</p>
+          </div>
+        </div>
+        <div class="opportunity-layout">
+          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
+          <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid full event-graph-section">
+      <div class="card event-graph-card" id="event-graph-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Code activity ribbon</h2>
+            <p class="click-hint">Commit and release clusters in the selected traffic window. Use it to inspect where code activity and attention sit near each other.</p>
+          </div>
+        </div>
+        <div class="event-graph-layout">
+          <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Code activity timeline ribbon"></div>
+          <div class="event-log" id="event-log" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid full readiness-section">
+      <div class="card readiness-card" id="readiness-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Readiness queue</h2>
+            <p class="click-hint">Small public-facing fixes that make attention easier to convert into useful adoption or contribution.</p>
+          </div>
+        </div>
+        <div class="readiness-layout">
+          <div class="readiness-summary" id="readiness-summary" aria-live="polite"></div>
+          <div class="readiness-list" id="readiness-list" aria-live="polite"></div>
+        </div>
       </div>
     </div>
 
@@ -297,9 +379,9 @@ def build_dashboard_shell(
     </div>
 
     <div class="card repo-strip-card" id="repo-strip-card">
-      <span class="repo-strip-label">Repos</span>
-      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Repository selector"></div>
-      <span class="repo-strip-hint" id="repo-strip-hint">Click to focus · ⌘/Ctrl-click to compare</span>
+      <span class="repo-strip-label">Published repos</span>
+      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
+      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
     </div>
 
     <div class="chart-grid">
@@ -307,17 +389,17 @@ def build_dashboard_shell(
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Click a repo to focus. Toggle metrics, or ⌘/Ctrl-click repos to compare.</p>
+            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
-            <div class="metric-tabs" role="tablist" aria-label="Metric">
-              <button class="metric-tab" data-metric="views" role="tab" type="button" title="Total page views"><span class="swatch"></span>Views</button>
-              <button class="metric-tab" data-metric="uniques" role="tab" type="button" title="Unique visitors — distinct viewers per day"><span class="swatch"></span>Visitors</button>
-              <button class="metric-tab" data-metric="clones" role="tab" type="button" title="Total git-clone operations"><span class="swatch"></span>Clones</button>
-              <button class="metric-tab" data-metric="cloners" role="tab" type="button" title="Unique cloners — distinct clients that ran git clone"><span class="swatch"></span>Unique Clones</button>
-              <button class="metric-tab" data-metric="stars" role="tab" type="button" title="Star delta in the selected window"><span class="swatch"></span>Stars</button>
-              <button class="metric-tab" data-metric="subscribers" role="tab" type="button" title="Watcher delta in the selected window"><span class="swatch"></span>Watchers</button>
-              <button class="metric-tab" data-metric="forks" role="tab" type="button" title="Fork delta in the selected window"><span class="swatch"></span>Forks</button>
+            <div class="metric-tabs" aria-label="Metric">
+              <button class="metric-tab" data-metric="views" type="button" title="Total page views"><span class="swatch"></span>Views</button>
+              <button class="metric-tab" data-metric="uniques" type="button" title="Unique visitors - distinct viewers per day"><span class="swatch"></span>Visitors</button>
+              <button class="metric-tab" data-metric="clones" type="button" title="Total git-clone operations"><span class="swatch"></span>Clones</button>
+              <button class="metric-tab" data-metric="cloners" type="button" title="Unique cloners - distinct clients that ran git clone"><span class="swatch"></span>Unique Clones</button>
+              <button class="metric-tab" data-metric="stars" type="button" title="Star delta in the selected window"><span class="swatch"></span>Stars</button>
+              <button class="metric-tab" data-metric="subscribers" type="button" title="Watcher delta in the selected window"><span class="swatch"></span>Watchers</button>
+              <button class="metric-tab" data-metric="forks" type="button" title="Fork delta in the selected window"><span class="swatch"></span>Forks</button>
             </div>
           </div>
         </div>
@@ -356,19 +438,6 @@ def build_dashboard_shell(
         <div class="momentum-grid" id="momentum-grid"></div>
       </div>
     </div>
-
-    <div class="section-grid full">
-      <div class="card">
-        <div class="section-header">
-          <div class="section-copy">
-            <h2>What's moving</h2>
-            <p class="click-hint">Auto-detected traffic, conversion, and growth anomalies. Click a card to focus on the repo.</p>
-          </div>
-        </div>
-        <div id="insights-list"></div>
-      </div>
-    </div>
-
     <div class="section-grid">
       <div class="card">
         <div class="section-header">
@@ -394,7 +463,7 @@ def build_dashboard_shell(
       <div class="section-header">
         <div class="section-copy">
           <h2>Repositories</h2>
-          <p class="click-hint">Click a row to focus on one repo. Use checkboxes to compare multiple repos at the bottom of the dashboard.</p>
+          <p class="click-hint">Focus or compare repositories from the published set.</p>
         </div>
       </div>
       <div id="repo-table"></div>
@@ -621,7 +690,7 @@ def wrap_html(
       <span class="dot">·</span>
       <span><b>No third parties</b></span>
       <span class="dot">·</span>
-      <span>Rich <b>personalized insights</b></span>
+      <span>Personalized <b>project signals</b></span>
       <span class="dot">·</span>
       <span>Private hosting on <b>GitHub Pages</b></span>
     </div>
@@ -651,7 +720,7 @@ def build_public_html(
     shell = build_dashboard_shell(
         (
             f"Last updated: {summary['generated_at']} | " +
-            f"Tracking {totals['repo_count']} repositories | " +
+            f"Published repos: {totals['repo_count']} | " +
             f"{totals['days_tracked']} days of data"
         ),
         {

@@ -3,7 +3,10 @@ import test from 'node:test';
 
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
+import { installEventGraph } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/event-graph.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
+import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/opportunity-map.js';
+import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
@@ -311,6 +314,248 @@ test('series helpers preserve selected-window and growth aggregation contracts',
       forks_delta: [0, 0],
     },
   );
+});
+
+test('series helpers preserve published repository order by default', () => {
+  const repos = [
+    { name: 'owner/repo-b', views: 5, uniques: 2, clones: 0, clone_uniques: 0, days: 1, updated_at: '2026-06-01T00:00:00Z' },
+    { name: 'owner/repo-a', views: 9, uniques: 4, clones: 1, clone_uniques: 1, days: 1, updated_at: '2026-06-20T00:00:00Z' },
+    { name: 'owner/repo-c', views: 3, uniques: 1, clones: 0, clone_uniques: 0, days: 1, updated_at: '2026-05-20T00:00:00Z' },
+  ];
+  const byName = new Map(repos.map((repo) => [repo.name, repo]));
+  const context = {
+    MAX_DISPLAY_REPOS: 8,
+    SERIES_METRIC_KEYS: [
+      'views',
+      'uniques',
+      'clones',
+      'clone_uniques',
+      'stars_delta',
+      'subscribers_delta',
+      'forks_delta',
+    ],
+    currentPayload() {
+      return {};
+    },
+    dashboardData() {
+      return {
+        getRepos() {
+          return repos;
+        },
+        getRepoSummary(name) {
+          return byName.get(name);
+        },
+        getRepoSeries(name) {
+          const repo = byName.get(name);
+          return {
+            dates: ['2026-06-20'],
+            views: [repo.views],
+            uniques: [repo.uniques],
+            clones: [repo.clones],
+            clone_uniques: [repo.clone_uniques],
+          };
+        },
+        getRepoGrowth() {
+          return {};
+        },
+      };
+    },
+    getSelectedWindow() {
+      return 'all';
+    },
+    getWindowCutoffDate() {
+      return '';
+    },
+    hasChunkLoadError() {
+      return false;
+    },
+    isComparing() {
+      return false;
+    },
+    parseIsoDate(value) {
+      return new Date(`${value}T00:00:00Z`);
+    },
+    state: {
+      compareRepos: [],
+      minActivity: 0,
+      selectedRepo: null,
+    },
+  };
+  const helpers = installSeries(context);
+
+  assert.deepEqual(
+    helpers.getAllRepoMetrics().map((repo) => repo.name),
+    ['owner/repo-b', 'owner/repo-a', 'owner/repo-c'],
+  );
+  assert.deepEqual(
+    helpers.getVisibleRepos().map((repo) => repo.name),
+    ['owner/repo-b', 'owner/repo-a', 'owner/repo-c'],
+  );
+});
+
+test('opportunity map projects repos into attention-growth quadrants', () => {
+  const helpers = installOpportunityMap({
+    document: fakeDocument(),
+    activateRepo() {},
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number >= 0 ? '+' : ''}${number}`;
+    },
+    getRepoColor() {
+      return '#6bb8ff';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [];
+    },
+  });
+  const points = helpers.buildOpportunityPoints([
+    { name: 'owner/high-low', views: 1000, uniques: 500, clones: 12, clone_uniques: 5, stars_delta: 0, subscribers_delta: 0, forks_delta: 0 },
+    { name: 'owner/high-high', views: 900, uniques: 400, clones: 10, clone_uniques: 3, stars_delta: 8, subscribers_delta: 3, forks_delta: 2 },
+    { name: 'owner/low-high', views: 20, uniques: 10, clones: 1, clone_uniques: 1, stars_delta: 11, subscribers_delta: 2, forks_delta: 0 },
+    { name: 'owner/low-low', views: 5, uniques: 2, clones: 0, clone_uniques: 0, stars_delta: 0, subscribers_delta: 0, forks_delta: 0 },
+  ]);
+  const byRepo = new Map(points.map((point) => [point.repo, helpers.classifyOpportunityPoint(point)]));
+
+  assert.equal(points.length, 4);
+  assert.equal(byRepo.get('owner/high-low'), 'clarify next step');
+  assert.equal(byRepo.get('owner/high-high'), 'amplify');
+  assert.equal(byRepo.get('owner/low-high'), 'protect niche pull');
+  assert.equal(byRepo.get('owner/low-low'), 'seed discovery');
+});
+
+test('event graph filters retained code events to the selected window', () => {
+  const eventGraph = {
+    repos: [
+      {
+        repo: 'owner/app',
+        events: [
+          { id: 'commit:old', date: '2026-06-01', type: 'commit', classification: 'docs', title: 'Old docs' },
+          { id: 'commit:new', date: '2026-06-10', type: 'commit', classification: 'feature', title: 'New feature' },
+          { id: 'release:v1', date: '2026-06-12', type: 'release', classification: 'release', title: 'v1.0.0' },
+        ],
+      },
+      {
+        repo: 'owner/hidden',
+        events: [
+          { id: 'commit:hidden', date: '2026-06-12', type: 'commit', classification: 'fix', title: 'Hidden' },
+        ],
+      },
+    ],
+  };
+  const helpers = installEventGraph({
+    document: fakeDocument(),
+    activateRepo() {},
+    currentPayload() {
+      return { daily: { dates: ['2026-06-01', '2026-06-12'] }, event_graph: eventGraph };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    getRepoColor() {
+      return '#6bb8ff';
+    },
+    getSelectedWindow() {
+      return '7';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [];
+    },
+    getWindowCutoffDate() {
+      return '2026-06-06';
+    },
+    parseIsoDate(value) {
+      return value ? new Date(`${value}T00:00:00Z`) : null;
+    },
+  });
+
+  const bounds = helpers.eventWindowBounds(eventGraph);
+  const lanes = helpers.buildEventLanes(
+    eventGraph,
+    [{ name: 'owner/app' }],
+    bounds,
+  );
+  const clusters = helpers.buildEventClusters(lanes);
+
+  assert.deepEqual(bounds, { start: '2026-06-06', end: '2026-06-12' });
+  assert.equal(lanes.length, 1);
+  assert.deepEqual(lanes[0].events.map((event) => event.id), ['commit:new', 'release:v1']);
+  assert.deepEqual(clusters.map((cluster) => cluster.date), ['2026-06-10', '2026-06-12']);
+  assert.equal(clusters[1].releaseCount, 1);
+  assert.equal(clusters[1].repo, 'owner/app');
+  assert.equal(helpers.projectEventX('2026-06-06', bounds), 22);
+  assert.equal(helpers.projectEventX('2026-06-12', bounds), 95);
+});
+
+test('readiness queue ranks visible repo setup gaps', () => {
+  const helpers = installReadinessQueue({
+    document: fakeDocument(),
+    activateRepo() {},
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [];
+    },
+  });
+  const rows = helpers.buildReadinessRows([
+    {
+      name: 'owner/active-gap',
+      activity: 80,
+      community: {
+        health_percentage: 70,
+        has_readme: true,
+        has_license: 'false',
+        has_contributing: 'false',
+        has_issue_template: true,
+        has_pull_request_template: true,
+        has_code_of_conduct: true,
+      },
+    },
+    {
+      name: 'owner/ready',
+      activity: 120,
+      community: {
+        health_percentage: 96,
+        has_readme: true,
+        has_license: true,
+        has_contributing: true,
+        has_issue_template: true,
+        has_pull_request_template: true,
+        has_code_of_conduct: true,
+      },
+    },
+  ]);
+  const summary = helpers.readinessSummary(rows);
+
+  assert.equal(rows[0].missing.length, 2);
+  assert.equal(rows[0].missing[0].label, 'License');
+  assert.equal(rows[1].missing.length, 0);
+  assert.equal(summary.present, 10);
+  assert.equal(summary.known, 12);
+  assert.equal(summary.missingRepos, 1);
+  assert.equal(summary.avgHealth, 83);
+  assert.ok(rows[0].priority > rows[1].priority);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {

@@ -6,6 +6,7 @@
   },
   "encoding": "json",
   "summary": {
+    "contextual_insights": [],
     "daily": {
       "clone_uniques": [
         2,
@@ -498,6 +499,14 @@
       "tracked_repos": 2,
       "with_data_repos": 1,
       "zero_traffic_repos": 0
+    },
+    "event_graph": {
+      "date_end": "",
+      "date_start": "",
+      "event_count": 0,
+      "per_repo_limit": 10,
+      "repos": [],
+      "source": "repo-event-index.csv"
     },
     "generated_at": "2026-05-28 12:00 UTC",
     "growth": {

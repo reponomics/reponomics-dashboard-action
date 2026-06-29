@@ -10,6 +10,274 @@
   },
   "encoding": "json",
   "summary": {
+    "contextual_insights": [
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "1,029"
+          },
+          {
+            "detail": "297",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "297",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0101abc123ef45"
+          }
+        ],
+        "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
+        "subtype": "docs_found_audience",
+        "summary": "reponomics-dashboard-super-long-private-mirror has docs/example activity in the retained event trail and 1,029 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "203"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "109",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "109",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-11",
+            "detail": "v0.5.1",
+            "label": "release: v0.5.1",
+            "type": "release",
+            "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v0.5.1"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/0501abc123ef45"
+          },
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "maintainer-tools/community-health-profile-snapshotter",
+        "subtype": "steady_attention_next_step",
+        "summary": "community-health-profile-snapshotter drew 203 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-11",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-11",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "57"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+1"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-11",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v0.2.1"
+          }
+        ],
+        "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for collector-migration-compatibility-fixtures; the same window shows 57 clones, 26 cloners, and +1 forks.",
+        "title": "A release window has adoption signals",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "558"
+          },
+          {
+            "detail": "160",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "160",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0302abc123ef45"
+          },
+          {
+            "date": "2026-05-11",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0302abc123ef45"
+          }
+        ],
+        "repo": "developer-experience/release-note-policy-validation-toolkit",
+        "subtype": "docs_found_audience",
+        "summary": "release-note-policy-validation-toolkit has docs/example activity in the retained event trail and 558 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "453"
+          },
+          {
+            "detail": "132",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "132",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0401abc123ef45"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0402abc123ef45"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0401abc123ef45"
+          }
+        ],
+        "repo": "platform-infra/plain-artifact-export-verification-service",
+        "subtype": "docs_found_audience",
+        "summary": "plain-artifact-export-verification-service has docs/example activity in the retained event trail and 453 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      }
+    ],
     "daily": {
       "clone_uniques": [
         4,
@@ -893,6 +1161,210 @@
       "with_data_repos": 6,
       "zero_traffic_repos": 0
     },
+    "event_graph": {
+      "date_end": "2026-05-11",
+      "date_start": "2026-05-03",
+      "event_count": 11,
+      "per_repo_limit": 10,
+      "repos": [
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-03",
+              "id": "commit:0101abc123ef45",
+              "magnitude": 12,
+              "sha": "0101abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 72,
+                "nearby_views": 216,
+                "nearby_visitors": 117
+              },
+              "type": "commit",
+              "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0101abc123ef45"
+            },
+            {
+              "classification": "feature",
+              "date": "2026-05-07",
+              "id": "commit:0102abc123ef45",
+              "magnitude": 19,
+              "sha": "0102abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 80,
+                "nearby_views": 240,
+                "nearby_visitors": 131
+              },
+              "type": "commit",
+              "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0102abc123ef45"
+            }
+          ],
+          "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-07",
+              "id": "commit:0201abc123ef45",
+              "magnitude": 15,
+              "sha": "0201abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 60,
+                "nearby_views": 180,
+                "nearby_visitors": 98
+              },
+              "type": "commit",
+              "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/commit/0201abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-11",
+              "id": "release:scenario-release-2",
+              "magnitude": 22,
+              "sha": "0202abc123ef",
+              "title": "v0.2.1",
+              "traffic": {
+                "event_day_views": 53,
+                "nearby_views": 159,
+                "nearby_visitors": 86
+              },
+              "type": "release",
+              "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v0.2.1"
+            }
+          ],
+          "repo": "research-platform-team/collector-migration-compatibility-fixtures"
+        },
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-03",
+              "id": "commit:0302abc123ef45",
+              "magnitude": 25,
+              "sha": "0302abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 45,
+                "nearby_views": 135,
+                "nearby_visitors": 72
+              },
+              "type": "commit",
+              "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0302abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-11",
+              "id": "release:scenario-release-3",
+              "magnitude": 18,
+              "sha": "0301abc123ef",
+              "title": "v0.3.0",
+              "traffic": {
+                "event_day_views": 39,
+                "nearby_views": 117,
+                "nearby_visitors": 63
+              },
+              "type": "release",
+              "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v0.3.0"
+            }
+          ],
+          "repo": "developer-experience/release-note-policy-validation-toolkit"
+        },
+        {
+          "events": [
+            {
+              "classification": "docs",
+              "date": "2026-05-03",
+              "id": "commit:0401abc123ef45",
+              "magnitude": 21,
+              "sha": "0401abc123ef",
+              "title": "Refresh README onboarding",
+              "traffic": {
+                "event_day_views": 32,
+                "nearby_views": 96,
+                "nearby_visitors": 51
+              },
+              "type": "commit",
+              "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0401abc123ef45"
+            },
+            {
+              "classification": "feature",
+              "date": "2026-05-07",
+              "id": "commit:0402abc123ef45",
+              "magnitude": 28,
+              "sha": "0402abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 33,
+                "nearby_views": 99,
+                "nearby_visitors": 53
+              },
+              "type": "commit",
+              "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0402abc123ef45"
+            }
+          ],
+          "repo": "platform-infra/plain-artifact-export-verification-service"
+        },
+        {
+          "events": [
+            {
+              "classification": "feature",
+              "date": "2026-05-07",
+              "id": "commit:0501abc123ef45",
+              "magnitude": 24,
+              "sha": "0501abc123ef",
+              "title": "Wire selected repository publish flow",
+              "traffic": {
+                "event_day_views": 25,
+                "nearby_views": 75,
+                "nearby_visitors": 40
+              },
+              "type": "commit",
+              "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/0501abc123ef45"
+            },
+            {
+              "classification": "release",
+              "date": "2026-05-11",
+              "id": "release:scenario-release-5",
+              "magnitude": 31,
+              "sha": "0502abc123ef",
+              "title": "v0.5.1",
+              "traffic": {
+                "event_day_views": 30,
+                "nearby_views": 90,
+                "nearby_visitors": 48
+              },
+              "type": "release",
+              "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v0.5.1"
+            }
+          ],
+          "repo": "maintainer-tools/community-health-profile-snapshotter"
+        },
+        {
+          "events": [
+            {
+              "classification": "release",
+              "date": "2026-05-11",
+              "id": "release:scenario-release-6",
+              "magnitude": 27,
+              "sha": "0601abc123ef",
+              "title": "v0.6.0",
+              "traffic": {
+                "event_day_views": 21,
+                "nearby_views": 44,
+                "nearby_visitors": 22
+              },
+              "type": "release",
+              "url": "https://github.com/archive/really-small-but-noisy-repo/releases/tag/v0.6.0"
+            }
+          ],
+          "repo": "archive/really-small-but-noisy-repo"
+        }
+      ],
+      "source": "repo-event-index.csv"
+    },
     "generated_at": "2026-05-28 12:00 UTC",
     "growth": {
       "cutoff": "2026-05-02",
@@ -916,37 +1388,270 @@
     ],
     "insights_v2": [
       {
-        "current": 263,
-        "delta": -32,
-        "kind": "trend",
-        "metric": "views",
-        "pct": -10.847457627118644,
-        "prior": 295,
-        "repo": "developer-experience/release-note-policy-validation-toolkit",
-        "text": "`developer-experience/release-note-policy-validation-toolkit` views -11% over the last 7d (295 -> 263, -32).",
-        "window_days": 7
-      },
-      {
-        "current": 497,
-        "delta": -35,
-        "kind": "trend",
-        "metric": "views",
-        "pct": -6.578947368421052,
-        "prior": 532,
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "1,029"
+          },
+          {
+            "detail": "297",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "297",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0101abc123ef45"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0102abc123ef45"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror/commit/0101abc123ef45"
+          }
+        ],
         "repo": "enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror",
-        "text": "`enterprise-observability-labs/reponomics-dashboard-super-long-private-mirror` views -7% over the last 7d (532 -> 497, -35).",
-        "window_days": 7
+        "subtype": "docs_found_audience",
+        "summary": "reponomics-dashboard-super-long-private-mirror has docs/example activity in the retained event trail and 1,029 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       },
       {
-        "current": 101,
-        "delta": -18,
-        "kind": "trend",
-        "metric": "views",
-        "pct": -15.126050420168067,
-        "prior": 119,
-        "repo": "archive/really-small-but-noisy-repo",
-        "text": "`archive/really-small-but-noisy-repo` views -15% over the last 7d (119 -> 101, -18).",
-        "window_days": 7
+        "action": "Add a short README path from problem to install command to first result.",
+        "anchor_date": "",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "14d window",
+            "label": "Visitors",
+            "value": "203"
+          },
+          {
+            "detail": "stars + watchers + forks",
+            "label": "Downstream",
+            "value": "+1"
+          },
+          {
+            "detail": "109",
+            "label": "Top content",
+            "value": "Repository overview"
+          },
+          {
+            "detail": "109",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-11",
+            "detail": "v0.5.1",
+            "label": "release: v0.5.1",
+            "type": "release",
+            "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/releases/tag/v0.5.1"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/maintainer-tools/community-health-profile-snapshotter/commit/0501abc123ef45"
+          },
+          {
+            "date": "2026-05-15",
+            "detail": "109 views",
+            "label": "Repository overview",
+            "type": "path",
+            "url": ""
+          }
+        ],
+        "repo": "maintainer-tools/community-health-profile-snapshotter",
+        "subtype": "steady_attention_next_step",
+        "summary": "community-health-profile-snapshotter drew 203 visitors across 14 active days with +1 stars/watchers/forks in the selected window.",
+        "title": "Steady attention needs a clearer next step",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Use release notes and install docs as the next comparison point.",
+        "anchor_date": "2026-05-11",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-11",
+            "label": "Release",
+            "value": "release: v0.2.1"
+          },
+          {
+            "detail": "14d window",
+            "label": "Clones",
+            "value": "57"
+          },
+          {
+            "detail": "same window",
+            "label": "Forks",
+            "value": "+1"
+          },
+          {
+            "detail": "latest release snapshot",
+            "label": "Asset downloads",
+            "value": "0"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-11",
+            "detail": "v0.2.1",
+            "label": "release: v0.2.1",
+            "type": "release",
+            "url": "https://github.com/research-platform-team/collector-migration-compatibility-fixtures/releases/tag/v0.2.1"
+          }
+        ],
+        "repo": "research-platform-team/collector-migration-compatibility-fixtures",
+        "subtype": "release_adoption_lift",
+        "summary": "release: v0.2.1 is in the recent window for collector-migration-compatibility-fixtures; the same window shows 57 clones, 26 cloners, and +1 forks.",
+        "title": "A release window has adoption signals",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "558"
+          },
+          {
+            "detail": "160",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "160",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0302abc123ef45"
+          },
+          {
+            "date": "2026-05-11",
+            "detail": "v0.3.0",
+            "label": "release: v0.3.0",
+            "type": "release",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/releases/tag/v0.3.0"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/developer-experience/release-note-policy-validation-toolkit/commit/0302abc123ef45"
+          }
+        ],
+        "repo": "developer-experience/release-note-policy-validation-toolkit",
+        "subtype": "docs_found_audience",
+        "summary": "release-note-policy-validation-toolkit has docs/example activity in the retained event trail and 558 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
+      },
+      {
+        "action": "Check whether the docs page or README explains the next step clearly.",
+        "anchor_date": "2026-05-03",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "detail": "2026-05-03",
+            "label": "Docs event",
+            "value": "docs: Refresh README onboarding"
+          },
+          {
+            "detail": "14d window",
+            "label": "Views",
+            "value": "453"
+          },
+          {
+            "detail": "132",
+            "label": "Top content",
+            "value": "not docs-specific"
+          },
+          {
+            "detail": "132",
+            "label": "Top referrer",
+            "value": "github.com"
+          }
+        ],
+        "kind": "narrative",
+        "nearby_context": [
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0401abc123ef45"
+          },
+          {
+            "date": "2026-05-07",
+            "detail": "Wire selected repository publish flow",
+            "label": "feature: Wire selected repository publish flow",
+            "type": "feature",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0402abc123ef45"
+          },
+          {
+            "date": "2026-05-03",
+            "detail": "Refresh README onboarding",
+            "label": "docs: Refresh README onboarding",
+            "type": "docs",
+            "url": "https://github.com/platform-infra/plain-artifact-export-verification-service/commit/0401abc123ef45"
+          }
+        ],
+        "repo": "platform-infra/plain-artifact-export-verification-service",
+        "subtype": "docs_found_audience",
+        "summary": "plain-artifact-export-verification-service has docs/example activity in the retained event trail and 453 views in the selected window.",
+        "title": "Documentation work has audience context",
+        "tone": "opportunity"
       }
     ],
     "meta": {

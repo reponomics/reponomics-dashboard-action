@@ -419,6 +419,11 @@ def _seed_scenario(data_dir: Path, dataset: dashboard_scenarios.ScenarioDataset)
         dataset.metric_rows,
     )
     _write_csv(
+        data_dir / "repo-event-index.csv",
+        run.storage.REPO_EVENT_INDEX_FIELDS,
+        dataset.event_rows,
+    )
+    _write_csv(
         data_dir / "collection-status.csv",
         run.storage.COLLECTION_STATUS_FIELDS,
         dataset.status_rows,

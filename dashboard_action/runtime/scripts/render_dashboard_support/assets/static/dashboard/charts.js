@@ -6,10 +6,13 @@ export function installCharts(context) {
   const compactNumber = (...args) => context.compactNumber(...args);
   const computeDelta = (...args) => context.computeDelta(...args);
   const configureYAxis = (...args) => context.configureYAxis(...args);
+  const currentPayload = (...args) => context.currentPayload(...args);
   const dashboardData = (...args) => context.dashboardData(...args);
   const escapeHtml = (...args) => context.escapeHtml(...args);
   const formatNumber = (...args) => context.formatNumber(...args);
   const formatSigned = (...args) => context.formatSigned(...args);
+  const buildEventLanes = (...args) => context.buildEventLanes ? context.buildEventLanes(...args) : [];
+  const eventWindowBounds = (...args) => context.eventWindowBounds ? context.eventWindowBounds(...args) : { start: '', end: '' };
   const getCurrentWindowData = (...args) => context.getCurrentWindowData(...args);
   const getRepoByName = (...args) => context.getRepoByName(...args);
   const getRepoColor = (...args) => context.getRepoColor(...args);
@@ -27,6 +30,9 @@ export function installCharts(context) {
   const setText = (...args) => context.setText(...args);
   const splitWindow = (...args) => context.splitWindow(...args);
   const state = context.state;
+
+    let dailyEventMarkers = [];
+    let hoveredDailyEventMarker = null;
 
     function updateStats() {
       const windowData = getCurrentWindowData();
@@ -83,7 +89,7 @@ export function installCharts(context) {
 
       compareSummary.classList.remove('visible');
       compareSummary.innerHTML = '';
-      statsGrid.style.display = 'grid';
+      statsGrid.style.display = '';
 
       const sparkSource = focusedRepo ? focusedRepo.series : windowData.daily;
       const split = splitWindow(sparkSource);
@@ -121,31 +127,209 @@ export function installCharts(context) {
       renderDelta('deltaCloneUniques', computeDelta(split, 'clone_uniques'));
 
       const src = sparkSource || { views: [], uniques: [], clones: [], clone_uniques: [] };
-      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], getThemeColor('--accent', '#1f6feb'));
-      renderSparkline('sparkViews', src.views || [], getThemeColor('--c-views', '#58a6ff'));
-      renderSparkline('sparkUniques', src.uniques || [], getThemeColor('--c-uniques', '#3fb950'));
-      renderSparkline('sparkClones', src.clones || [], getThemeColor('--c-clones', '#CC79A7'));
-      renderSparkline('sparkCloneUniques', src.clone_uniques || [], getThemeColor('--c-cloners', '#ffa657'));
+      renderSparkline('sparkRepos', (windowData.daily && windowData.daily.views) || [], getThemeColor('--accent', '#6bb8ff'));
+      renderSparkline('sparkViews', src.views || [], getThemeColor('--c-views', '#6bb8ff'));
+      renderSparkline('sparkUniques', src.uniques || [], getThemeColor('--c-uniques', '#4fc8a5'));
+      renderSparkline('sparkClones', src.clones || [], getThemeColor('--c-clones', '#d97eb7'));
+      renderSparkline('sparkCloneUniques', src.clone_uniques || [], getThemeColor('--c-cloners', '#f0b75a'));
     }
+
+    function activeEventRepos() {
+      if (state.selectedRepo) return new Set([state.selectedRepo]);
+      if (isComparing()) return new Set(state.compareRepos || []);
+      return new Set(getVisibleRepos().map((repo) => repo.name));
+    }
+
+    function buildDailyEventGroups(labels) {
+      const payload = currentPayload() || {};
+      const eventGraph = payload.event_graph || {};
+      if (!labels || !labels.length || !eventGraph.repos?.length) return [];
+      const labelDates = labels.map((label) => String(label || '').slice(0, 10));
+      const labelSet = new Set(labelDates);
+      const visibleRepos = [...activeEventRepos()].map((name) => ({ name }));
+      const lanes = buildEventLanes(eventGraph, visibleRepos, eventWindowBounds(eventGraph));
+      const groups = new Map();
+      lanes.flatMap((lane) => lane.events || []).forEach((event) => {
+        const date = String(event.date || '').slice(0, 10);
+        if (!labelSet.has(date)) return;
+        const group = groups.get(date) || {
+          date,
+          events: [],
+          repos: new Set(),
+          classifications: new Map(),
+          releaseCount: 0,
+          commitCount: 0,
+        };
+        group.events.push(event);
+        group.repos.add(event.repo);
+        if (event.type === 'release') group.releaseCount += 1;
+        if (event.type === 'commit') group.commitCount += 1;
+        const type = event.type === 'release'
+          ? 'release'
+          : (event.classification && event.classification !== 'unknown' ? event.classification : 'commit');
+        group.classifications.set(type, (group.classifications.get(type) || 0) + 1);
+        groups.set(date, group);
+      });
+      return [...groups.values()].map((group) => {
+        const repos = [...group.repos];
+        const topTypes = [...group.classifications.entries()]
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 2)
+          .map(([type, count]) => count > 1 ? `${type} x${count}` : type);
+        return {
+          ...group,
+          repos,
+          repo: repos.length === 1 ? repos[0] : '',
+          repoCount: repos.length,
+          index: labelDates.indexOf(group.date),
+          topTypes,
+        };
+      }).filter((group) => group.index >= 0);
+    }
+
+    function describeEventGroup(group) {
+      const parts = [];
+      if (group.commitCount) parts.push(formatNumber(group.commitCount) + ' commit' + (group.commitCount === 1 ? '' : 's'));
+      if (group.releaseCount) parts.push(formatNumber(group.releaseCount) + ' release' + (group.releaseCount === 1 ? '' : 's'));
+      if (group.repoCount > 1) parts.push(formatNumber(group.repoCount) + ' repos');
+      else if (group.repo) parts.push(getShortName(group.repo));
+      if (group.topTypes?.length) parts.push(group.topTypes.join(', '));
+      return group.date + ' · ' + parts.join(' · ');
+    }
+
+    function drawDailyEventTooltip(chart, marker) {
+      if (!marker) return;
+      const { ctx, chartArea } = chart;
+      const text = marker.label;
+      ctx.save();
+      ctx.font = '600 11px Inter, system-ui, sans-serif';
+      const metrics = ctx.measureText(text);
+      const padX = 8;
+      const width = Math.min(chartArea.right - chartArea.left, metrics.width + padX * 2);
+      const x = Math.max(chartArea.left, Math.min(chartArea.right - width, marker.x - width / 2));
+      const y = Math.max(chartArea.top + 4, marker.y + 12);
+      ctx.fillStyle = getThemeColor('--chart-tooltip-bg', 'rgba(12, 16, 22, 0.97)');
+      ctx.strokeStyle = getThemeColor('--chart-tooltip-border', 'rgba(214, 168, 75, 0.30)');
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, 28, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = getThemeColor('--text', '#edf3f8');
+      ctx.fillText(text, x + padX, y + 18);
+      ctx.restore();
+    }
+
+    const dailyEventOverlayPlugin = {
+      id: 'reponomicsDailyEventOverlay',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        if (!chartArea || !scales?.x) return;
+        const groups = buildDailyEventGroups(chart.data.labels || []);
+        dailyEventMarkers = [];
+        if (!groups.length) {
+          hoveredDailyEventMarker = null;
+          return;
+        }
+        const axisColor = getThemeColor('--text-muted', '#a4b1c1');
+        const releaseColor = getThemeColor('--accent-2', '#d6a84b');
+        const commitColor = getThemeColor('--accent', '#4fc8a5');
+        const y = chartArea.top + 12;
+        ctx.save();
+        ctx.strokeStyle = hexAlpha(axisColor, 0.28);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        groups.forEach((group) => {
+          const x = scales.x.getPixelForValue(group.index);
+          if (!Number.isFinite(x)) return;
+          const count = group.events.length;
+          const height = Math.min(22, 5 + Math.log2(count + 1) * 5 + (group.releaseCount ? 2 : 0));
+          const markerY = y + Math.min(14, height);
+          const color = group.releaseCount ? releaseColor : commitColor;
+          const alpha = Math.min(0.92, 0.34 + Math.log2(count + 1) * 0.16);
+          ctx.strokeStyle = hexAlpha(color, alpha);
+          ctx.lineWidth = group.releaseCount ? 2 : 1.35;
+          ctx.beginPath();
+          ctx.moveTo(x, y - 2);
+          ctx.lineTo(x, markerY);
+          ctx.stroke();
+          ctx.fillStyle = hexAlpha(color, group.releaseCount ? 0.92 : 0.78);
+          ctx.strokeStyle = hexAlpha(getThemeColor('--bg', '#0b0e13'), 0.92);
+          ctx.lineWidth = 1.2;
+          if (group.releaseCount) {
+            const r = Math.min(6, 3 + Math.sqrt(count) * 0.45);
+            ctx.beginPath();
+            ctx.moveTo(x, y - r);
+            ctx.lineTo(x + r, y);
+            ctx.lineTo(x, y + r);
+            ctx.lineTo(x - r, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            const r = Math.min(4.8, 2 + Math.sqrt(count) * 0.36);
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+          dailyEventMarkers.push({
+            x,
+            y,
+            radius: 10,
+            repo: group.repo,
+            label: describeEventGroup(group),
+          });
+        });
+        if (hoveredDailyEventMarker) drawDailyEventTooltip(chart, hoveredDailyEventMarker);
+        ctx.restore();
+      },
+      afterEvent(chart, args) {
+        const event = args.event;
+        if (!event || !dailyEventMarkers.length) return;
+        const previous = hoveredDailyEventMarker;
+        hoveredDailyEventMarker = dailyEventMarkers.find((marker) => {
+          const dx = Number(event.x) - marker.x;
+          const dy = Number(event.y) - marker.y;
+          return Math.sqrt(dx * dx + dy * dy) <= marker.radius;
+        }) || null;
+        if (chart.canvas?.style) {
+          chart.canvas.style.cursor = hoveredDailyEventMarker?.repo ? 'pointer' : (hoveredDailyEventMarker ? 'help' : 'default');
+        }
+        if (event.type === 'click' && hoveredDailyEventMarker?.repo) {
+          const native = event.native || event;
+          activateRepo(hoveredDailyEventMarker.repo, !!(native && (native.metaKey || native.ctrlKey || native.shiftKey)));
+        }
+        if (previous !== hoveredDailyEventMarker) args.changed = true;
+      },
+    };
 
     function ensureCharts() {
       if (!context.charts.dailyChart) {
         context.charts.dailyChart = context.chartAdapter.createChart(document.getElementById('dailyChart'), {
           type: 'line',
           data: { labels: [], datasets: [] },
-          options: chartOptions(false)
+          options: chartOptions(false),
+          plugins: [dailyEventOverlayPlugin]
         });
       }
       if (!context.charts.weekdayChart) {
-        const tick = getThemeColor('--text-muted', '#8b949e');
+        const tick = getThemeColor('--text-muted', '#a4b1c1');
         const grid = getThemeColor('--chart-grid', 'rgba(38, 45, 56, 0.4)');
         const axis = getThemeColor('--chart-axis', 'rgba(38, 45, 56, 0.7)');
-        const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(17, 22, 29, 0.96)');
-        const tipBorder = getThemeColor('--chart-tooltip-border', '#262d38');
-        const text = getThemeColor('--text', '#e6edf3');
+        const tipBg = getThemeColor('--chart-tooltip-bg', 'rgba(12, 16, 22, 0.97)');
+        const tipBorder = getThemeColor('--chart-tooltip-border', 'rgba(214, 168, 75, 0.30)');
+        const text = getThemeColor('--text', '#edf3f8');
         context.charts.weekdayChart = context.chartAdapter.createChart(document.getElementById('weekdayChart'), {
           type: 'bar',
           data: { labels: [], datasets: [] },
+          plugins: [barTexturePlugin],
           options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -159,6 +343,8 @@ export function installCharts(context) {
                 titleColor: text,
                 bodyColor: text,
                 padding: 10,
+                cornerRadius: 8,
+                caretSize: 6,
                 callbacks: {
                   label: function(ctx) {
                     return ' ' + (ctx.dataset.label || '') + '  ' + Number(ctx.parsed.y || 0).toLocaleString();
@@ -225,6 +411,87 @@ export function installCharts(context) {
       g.addColorStop(1, hexAlpha(color, 0.02));
       return g;
     }
+
+    function buildBarGradient(ctx, chartArea, color, options) {
+      const topAlpha = options?.topAlpha ?? 0.88;
+      const midAlpha = options?.midAlpha ?? 0.62;
+      const bottomAlpha = options?.bottomAlpha ?? 0.38;
+      if (!chartArea) return hexAlpha(color, midAlpha);
+      const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, hexAlpha(color, topAlpha));
+      g.addColorStop(0.58, hexAlpha(color, midAlpha));
+      g.addColorStop(1, hexAlpha(color, bottomAlpha));
+      return g;
+    }
+
+    function makeBarFill(color, options) {
+      return function(context) {
+        const chart = context.chart;
+        return buildBarGradient(chart.ctx, chart.chartArea, color, options);
+      };
+    }
+
+    const barTexturePlugin = {
+      id: 'reponomicsBarTexture',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        if (!ctx) return;
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (!meta || meta.type !== 'bar' || meta.hidden) return;
+          const color = dataset.textureColor || dataset.borderColor || getThemeColor('--accent', '#6bb8ff');
+          const alpha = dataset.textureAlpha ?? 0.22;
+          const variant = dataset.textureVariant || (datasetIndex % 2 ? 'check' : 'stripe');
+          meta.data.forEach((bar) => {
+            const props = typeof bar.getProps === 'function'
+              ? bar.getProps(['x', 'y', 'base', 'width'], true)
+              : bar;
+            const width = Number(props.width || 0);
+            if (!width) return;
+            const left = Number(props.x) - width / 2;
+            const right = Number(props.x) + width / 2;
+            const top = Math.min(Number(props.y), Number(props.base));
+            const bottom = Math.max(Number(props.y), Number(props.base));
+            const height = bottom - top;
+            if (!Number.isFinite(height) || height < 3) return;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(left, top, right - left, height);
+            ctx.clip();
+            ctx.lineWidth = 1;
+
+            if (variant === 'check') {
+              ctx.fillStyle = hexAlpha(color, alpha * 0.52);
+              const step = 8;
+              for (let x = left - step; x < right + step; x += step) {
+                for (let y = top - step; y < bottom + step; y += step) {
+                  if (((Math.floor((x - left) / step) + Math.floor((y - top) / step)) % 2) === 0) {
+                    ctx.fillRect(x, y, step / 2, step / 2);
+                  }
+                }
+              }
+            } else {
+              ctx.strokeStyle = hexAlpha(color, alpha);
+              const step = 9;
+              for (let x = left - height; x < right + height; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, bottom + 1);
+                ctx.lineTo(x + height, top - 1);
+                ctx.stroke();
+              }
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            ctx.beginPath();
+            ctx.moveTo(left + 1, top + 1);
+            ctx.lineTo(right - 1, top + 1);
+            ctx.stroke();
+            ctx.restore();
+          });
+        });
+      }
+    };
 
     function makeAreaDataset(label, data, color, options) {
       return {
@@ -311,15 +578,27 @@ export function installCharts(context) {
       if (isComparing()) {
         title.textContent = 'Weekday rhythm — ' + metric.label.toLowerCase();
         labels = windowData.weekday?.labels || defaultLabels;
-        datasets = state.compareRepos.map((repoName) => ({
-          label: getShortName(repoName),
-          data: buildWeekdaySummaryFromSeries({
-            [repoName]: getRepoByName(repoName)?.series || { dates: [], views: [], uniques: [], clones: [], clone_uniques: [], stars_delta: [], subscribers_delta: [], forks_delta: [] }
-          })[metric.key] || labels.map(() => 0),
-          backgroundColor: hexAlpha(getRepoColor(repoName), 0.85),
-          borderRadius: 6,
-          maxBarThickness: 22
-        }));
+        datasets = state.compareRepos.map((repoName, idx) => {
+          const color = getRepoColor(repoName);
+          return {
+            type: 'bar',
+            label: getShortName(repoName),
+            data: buildWeekdaySummaryFromSeries({
+              [repoName]: getRepoByName(repoName)?.series || { dates: [], views: [], uniques: [], clones: [], clone_uniques: [], stars_delta: [], subscribers_delta: [], forks_delta: [] }
+            })[metric.key] || labels.map(() => 0),
+            backgroundColor: makeBarFill(color, { topAlpha: 0.92, midAlpha: 0.68, bottomAlpha: 0.42 }),
+            borderColor: hexAlpha(color, 0.88),
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            hoverBackgroundColor: makeBarFill(color, { topAlpha: 1, midAlpha: 0.78, bottomAlpha: 0.52 }),
+            hoverBorderColor: color,
+            maxBarThickness: 22,
+            textureColor: color,
+            textureVariant: idx % 2 ? 'check' : 'stripe',
+            textureAlpha: 0.20
+          };
+        });
       } else {
         const weekdayData = state.selectedRepo
           ? buildWeekdaySummaryFromSeries({
@@ -332,11 +611,20 @@ export function installCharts(context) {
         labels = weekdayData?.labels || defaultLabels;
         datasets = [
           {
+            type: 'bar',
             label: 'Avg ' + metric.label.toLowerCase(),
             data: weekdayData?.[metric.key] || labels.map(() => 0),
-            backgroundColor: hexAlpha(metric.color, 0.78),
-            borderRadius: 6,
-            maxBarThickness: 28
+            backgroundColor: makeBarFill(metric.color, { topAlpha: 0.92, midAlpha: 0.66, bottomAlpha: 0.36 }),
+            borderColor: hexAlpha(metric.color, 0.82),
+            borderWidth: 1,
+            borderRadius: 7,
+            borderSkipped: false,
+            hoverBackgroundColor: makeBarFill(metric.color, { topAlpha: 1, midAlpha: 0.78, bottomAlpha: 0.50 }),
+            hoverBorderColor: metric.color,
+            maxBarThickness: 28,
+            textureColor: metric.color,
+            textureVariant: state.metric === 'clone_uniques' || state.metric === 'clones' ? 'check' : 'stripe',
+            textureAlpha: 0.24
           }
         ];
       }

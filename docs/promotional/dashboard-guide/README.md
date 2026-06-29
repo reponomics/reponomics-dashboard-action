@@ -43,7 +43,7 @@ On macOS, if Playwright has not installed its managed browsers, pass the local C
 make dashboard-guide-assets GUIDE_ASSET_CAPTURE_ARGS='--chrome-executable /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome'
 ```
 
-If the regular demo fixture hides an optional section, such as the code event graph before
-event-lane data is added, the capture script preserves the existing checked-in screenshot for
-that section and continues. Once the fixture includes those events, the same capture target
-will refresh that screenshot automatically.
+If the regular demo fixture hides an optional section, such as the code activity ribbon before
+event data is added, the capture script preserves the existing checked-in screenshot for that
+section and continues. Once the fixture includes those events, the same capture target will
+refresh that screenshot automatically.

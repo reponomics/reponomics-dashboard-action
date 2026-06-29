@@ -1202,13 +1202,14 @@
       align-items: stretch;
     }
     .event-graph-canvas {
-      height: clamp(18rem, 30vw, 24rem);
-      min-height: 17rem;
+      height: clamp(11rem, 18vw, 15rem);
+      min-height: 10rem;
       border: 1px solid var(--border-soft);
       border-radius: var(--radius);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.020), transparent),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.020) 0 1px, transparent 1px 26px),
+        radial-gradient(circle at 18% 24%, rgba(79, 200, 165, 0.10), transparent 24%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 24px),
         linear-gradient(180deg, var(--bg-card-2), var(--bg-card));
       overflow: hidden;
     }
@@ -1265,6 +1266,52 @@
     }
     .git-axis-end {
       text-anchor: end;
+    }
+    .event-ribbon-axis {
+      stroke: rgba(164, 177, 193, 0.42);
+      stroke-dasharray: 1.4 2.2;
+      stroke-linecap: round;
+      stroke-width: 0.65;
+    }
+    .event-ribbon-label {
+      fill: var(--accent-2);
+      font-size: 2.1px;
+      font-weight: 850;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+    .event-cluster {
+      --event-color: var(--accent);
+      cursor: default;
+      outline: none;
+    }
+    .event-cluster[data-repo] {
+      cursor: pointer;
+    }
+    .event-cluster-stem {
+      stroke: var(--event-color, var(--accent));
+      stroke-linecap: round;
+      stroke-width: 1.05;
+      opacity: 0.62;
+    }
+    .event-cluster-dot {
+      fill: color-mix(in srgb, var(--event-color, var(--accent)) 88%, var(--bg-card));
+      stroke: rgba(255, 255, 255, 0.72);
+      stroke-width: 0.55;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.30));
+    }
+    .event-cluster-release {
+      fill: var(--accent-2);
+      stroke: rgba(255, 255, 255, 0.84);
+      stroke-width: 0.58;
+      filter: drop-shadow(0 3px 7px rgba(0, 0, 0, 0.30));
+    }
+    .event-cluster:hover .event-cluster-dot,
+    .event-cluster:focus-visible .event-cluster-dot,
+    .event-cluster:hover .event-cluster-release,
+    .event-cluster:focus-visible .event-cluster-release {
+      stroke: var(--text);
+      stroke-width: 0.82;
     }
     .git-event-node:hover .git-event-dot,
     .git-event-node:focus-visible .git-event-dot,

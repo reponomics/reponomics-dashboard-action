@@ -46,9 +46,9 @@ OVERVIEW_ITEMS = [
         "gold",
     ),
     (
-        "Code event graph",
-        "Git-log inspired lanes for commits and releases in the selected traffic window. "
-        "Markers focus the related repo in this static guide.",
+        "Code activity ribbon",
+        "Commit and release clusters sit near the traffic timeline without implying branch "
+        "topology. Markers focus a repo when the cluster belongs to one repo.",
         "blue",
     ),
     (
@@ -144,20 +144,21 @@ SECTION_PAGES: list[SectionPage] = [
         ],
     },
     {
-        "title": "Code Event Graph",
+        "title": "Code Activity Ribbon",
         "asset": "code-event-graph.png",
-        "caption": "A git-log inspired navigation aid for traffic-adjacent codebase activity.",
+        "caption": "A low-noise event layer for spotting traffic-adjacent codebase activity.",
         "image_h": 348,
         "notes": [
             (
                 "Purpose",
-                "Bring codebase activity into the same time window as traffic, so maintainers "
-                "can inspect temporal adjacency.",
+                "Bring default-branch commits and releases into the same time window as "
+                "traffic, so maintainers can inspect temporal adjacency.",
                 "green",
             ),
             (
-                "Visual language",
-                "Each lane is a repo. Circles are commits; tag diamonds are releases.",
+                "Encoding",
+                "Daily clusters aggregate commits and releases; releases use the stronger "
+                "diamond marker.",
                 "blue",
             ),
             (
@@ -167,8 +168,8 @@ SECTION_PAGES: list[SectionPage] = [
             ),
             (
                 "Affordance",
-                "Nodes and log rows focus the repo inside the dashboard; commit-link "
-                "navigation can be added where event URLs are available.",
+                "Single-repo clusters and log rows focus the repo inside the dashboard; "
+                "multi-repo clusters stay as contextual hover targets.",
                 "green",
             ),
         ],

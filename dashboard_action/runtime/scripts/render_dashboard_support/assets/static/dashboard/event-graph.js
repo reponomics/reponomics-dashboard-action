@@ -92,28 +92,73 @@ export function installEventGraph(context) {
       return event.type || 'event';
     }
 
-    function renderEventMarker(event, y) {
-      const traffic = event.traffic || {};
-      const nearbyViews = Number(traffic.nearby_views || 0);
-      const label = `${event.shortName}: ${formatEventType(event)} on ${event.date}`;
-      if (event.type === 'release') {
-        const points = [
-          [event.x, y - 3.2],
-          [event.x + 3.2, y],
-          [event.x, y + 3.2],
-          [event.x - 3.2, y]
-        ].map((point) => point.map((value) => value.toFixed(2)).join(',')).join(' ');
-        return `
-          <g class="git-event-node type-${event.typeClass} class-${event.classificationClass}" data-repo="${escapeHtml(event.repo)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}">
-            <polygon class="git-event-tag" points="${points}"></polygon>
-            <text class="git-event-kicker" x="${event.x.toFixed(2)}" y="${(y - 5.2).toFixed(2)}">tag</text>
-            <title>${escapeHtml(event.title)} · ${event.date} · ${formatNumber(nearbyViews)} nearby views</title>
-          </g>`;
-      }
+    function plural(count, singular, pluralLabel) {
+      return `${formatNumber(count)} ${count === 1 ? singular : (pluralLabel || singular + 's')}`;
+    }
+
+    function buildEventClusters(lanes) {
+      const groups = new Map();
+      lanes.flatMap((lane) => lane.events).forEach((event) => {
+        const date = String(event.date || '').slice(0, 10);
+        if (!date) return;
+        const group = groups.get(date) || { date, x: event.x, events: [], repos: new Set(), classifications: new Map(), releaseCount: 0, commitCount: 0 };
+        group.events.push(event);
+        group.repos.add(event.repo);
+        group.x = Math.min(group.x, event.x);
+        if (event.type === 'release') group.releaseCount += 1;
+        if (event.type === 'commit') group.commitCount += 1;
+        const classification = formatEventType(event);
+        group.classifications.set(classification, (group.classifications.get(classification) || 0) + 1);
+        groups.set(date, group);
+      });
+      return [...groups.values()]
+        .map((group) => {
+          const repos = [...group.repos];
+          const topClassifications = [...group.classifications.entries()]
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .slice(0, 2)
+            .map(([name, count]) => count > 1 ? `${name} x${count}` : name);
+          return {
+            ...group,
+            repos,
+            repo: repos.length === 1 ? repos[0] : '',
+            repoCount: repos.length,
+            label: [
+              plural(group.commitCount, 'commit'),
+              group.releaseCount ? plural(group.releaseCount, 'release') : '',
+              repos.length > 1 ? plural(repos.length, 'repo') : (repos[0] ? getShortName(repos[0]) : ''),
+            ].filter(Boolean).join(' · '),
+            classificationLabel: topClassifications.join(', '),
+          };
+        })
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    }
+
+    function renderEventCluster(cluster) {
+      const count = cluster.events.length;
+      const x = cluster.x;
+      const baseY = 31;
+      const height = Math.min(20, 4 + Math.log2(count + 1) * 5 + (cluster.releaseCount ? 2 : 0));
+      const topY = baseY - height;
+      const radius = Math.min(4.6, 2.2 + Math.sqrt(count) * 0.42);
+      const repoAttr = cluster.repo ? ` data-repo="${escapeHtml(cluster.repo)}"` : '';
+      const roleAttr = cluster.repo ? ' role="button"' : '';
+      const tabAttr = cluster.repo ? ' tabindex="0"' : '';
+      const title = `${cluster.date} · ${cluster.label}${cluster.classificationLabel ? ' · ' + cluster.classificationLabel : ''}`;
+      const releaseDiamond = cluster.releaseCount
+        ? `<polygon class="event-cluster-release" points="${[
+            [x, topY - 4.4],
+            [x + 4.4, topY],
+            [x, topY + 4.4],
+            [x - 4.4, topY],
+          ].map((point) => point.map((value) => value.toFixed(2)).join(',')).join(' ')}"></polygon>`
+        : '';
       return `
-        <g class="git-event-node type-${event.typeClass} class-${event.classificationClass}" data-repo="${escapeHtml(event.repo)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}">
-          <circle class="git-event-dot" cx="${event.x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.45"></circle>
-          <title>${escapeHtml(event.title)} · ${event.date} · ${formatNumber(nearbyViews)} nearby views</title>
+        <g class="event-cluster${cluster.releaseCount ? ' has-release' : ''}"${repoAttr}${roleAttr}${tabAttr} aria-label="${escapeHtml(title)}">
+          <line class="event-cluster-stem" x1="${x.toFixed(2)}" y1="${baseY.toFixed(2)}" x2="${x.toFixed(2)}" y2="${topY.toFixed(2)}"></line>
+          <circle class="event-cluster-dot" cx="${x.toFixed(2)}" cy="${topY.toFixed(2)}" r="${radius.toFixed(2)}"></circle>
+          ${releaseDiamond}
+          <title>${escapeHtml(title)}</title>
         </g>`;
     }
 
@@ -170,33 +215,20 @@ export function installEventGraph(context) {
         renderEventLog([]);
         return;
       }
-      const laneGap = 12;
-      const top = 12;
-      const height = top + laneGap * Math.max(1, lanes.length) + 12;
-      const laneMarkup = lanes.map((lane, idx) => {
-        const y = top + idx * laneGap;
-        const branch = idx > 0
-          ? `<path class="git-branch-link" d="M22 ${(y - laneGap).toFixed(2)} C28 ${(y - laneGap).toFixed(2)} 29 ${y.toFixed(2)} 36 ${y.toFixed(2)}"></path>`
-          : '';
-        const markers = lane.events.map((event) => renderEventMarker(event, y)).join('');
-        return `
-          <g class="git-lane" data-repo="${escapeHtml(lane.repo)}">
-            <text class="git-lane-label" x="2.5" y="${(y + 1.1).toFixed(2)}">${escapeHtml(lane.shortName)}</text>
-            <line class="git-rail" x1="21" y1="${y.toFixed(2)}" x2="96" y2="${y.toFixed(2)}"></line>
-            ${branch}
-            ${markers}
-          </g>`;
-      }).join('');
+      const clusters = buildEventClusters(lanes);
+      const clusterMarkup = clusters.map((cluster) => renderEventCluster(cluster)).join('');
       graph.innerHTML = `
-        <svg viewBox="0 0 100 ${height}" preserveAspectRatio="xMidYMid meet" role="list" aria-label="Code events from ${escapeHtml(bounds.start)} to ${escapeHtml(bounds.end)}">
-          <text class="git-axis git-axis-start" x="21" y="${(height - 2.5).toFixed(2)}">${escapeHtml(bounds.start || 'start')}</text>
-          <text class="git-axis git-axis-end" x="96" y="${(height - 2.5).toFixed(2)}">${escapeHtml(bounds.end || 'latest')}</text>
-          ${laneMarkup}
+        <svg viewBox="0 0 100 42" preserveAspectRatio="xMidYMid meet" role="list" aria-label="Code events from ${escapeHtml(bounds.start)} to ${escapeHtml(bounds.end)}">
+          <line class="event-ribbon-axis" x1="22" y1="31" x2="96" y2="31"></line>
+          <text class="git-axis git-axis-start" x="22" y="39">${escapeHtml(bounds.start || 'start')}</text>
+          <text class="git-axis git-axis-end" x="96" y="39">${escapeHtml(bounds.end || 'latest')}</text>
+          <text class="event-ribbon-label" x="2.5" y="9">code activity</text>
+          ${clusterMarkup}
         </svg>`;
-      graph.querySelectorAll('.git-lane, .git-event-node').forEach((node) => {
+      graph.querySelectorAll('.event-cluster[data-repo]').forEach((node) => {
         node.style.setProperty('--event-color', getRepoColor(node.dataset.repo));
       });
-      graph.querySelectorAll('.git-event-node').forEach((node) => {
+      graph.querySelectorAll('.event-cluster[data-repo]').forEach((node) => {
         node.addEventListener('click', function(event) {
           activateRepo(node.dataset.repo, !!(event && (event.metaKey || event.ctrlKey || event.shiftKey)));
         });
@@ -210,5 +242,5 @@ export function installEventGraph(context) {
       renderEventLog(lanes);
     }
 
-  return { allEventDates, eventWindowBounds, daysBetween, projectEventX, buildEventLanes, renderEventGraph };
+  return { allEventDates, eventWindowBounds, daysBetween, projectEventX, buildEventLanes, buildEventClusters, renderEventGraph };
 }

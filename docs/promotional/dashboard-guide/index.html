@@ -181,8 +181,8 @@
         <li style="--item-color: #6bb8ff">
           <span class="marker">4</span>
           <div>
-            <h3>Code event graph</h3>
-            <p>Git-log inspired lanes for commits and releases in the selected traffic window. Markers focus the related repo in this static guide.</p>
+            <h3>Code activity ribbon</h3>
+            <p>Commit and release clusters sit near the traffic timeline without implying branch topology. Markers focus a repo when the cluster belongs to one repo.</p>
           </div>
         </li>
 
@@ -341,24 +341,24 @@
     </section>
 
 
-    <section class="section" aria-labelledby="code-event-graph-title">
+    <section class="section" aria-labelledby="code-activity-ribbon-title">
       <div class="section-shot">
-        <h2 id="code-event-graph-title">Code Event Graph</h2>
-        <img src="assets/code-event-graph.png" alt="Code Event Graph screenshot">
-        <p>A git-log inspired navigation aid for traffic-adjacent codebase activity.</p>
+        <h2 id="code-activity-ribbon-title">Code Activity Ribbon</h2>
+        <img src="assets/code-event-graph.png" alt="Code Activity Ribbon screenshot">
+        <p>A low-noise event layer for spotting traffic-adjacent codebase activity.</p>
       </div>
       <aside class="notes">
         <h3>What to look for</h3>
 
         <div class="note" style="--note-color: #4fc8a5">
           <strong>Purpose</strong>
-          <p>Bring codebase activity into the same time window as traffic, so maintainers can inspect temporal adjacency.</p>
+          <p>Bring default-branch commits and releases into the same time window as traffic, so maintainers can inspect temporal adjacency.</p>
         </div>
 
 
         <div class="note" style="--note-color: #6bb8ff">
-          <strong>Visual language</strong>
-          <p>Each lane is a repo. Circles are commits; tag diamonds are releases.</p>
+          <strong>Encoding</strong>
+          <p>Daily clusters aggregate commits and releases; releases use the stronger diamond marker.</p>
         </div>
 
 
@@ -370,7 +370,7 @@
 
         <div class="note" style="--note-color: #4fc8a5">
           <strong>Affordance</strong>
-          <p>Nodes and log rows focus the repo inside the dashboard; commit-link navigation can be added where event URLs are available.</p>
+          <p>Single-repo clusters and log rows focus the repo inside the dashboard; multi-repo clusters stay as contextual hover targets.</p>
         </div>
 
       </aside>

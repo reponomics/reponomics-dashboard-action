@@ -307,12 +307,12 @@ def build_dashboard_shell(
       <div class="card event-graph-card" id="event-graph-card">
         <div class="section-header">
           <div class="section-copy">
-            <h2>Code event graph</h2>
-            <p class="click-hint">Commit and release markers in the selected traffic window. Use it to inspect where code activity and attention sit near each other.</p>
+            <h2>Code activity ribbon</h2>
+            <p class="click-hint">Commit and release clusters in the selected traffic window. Use it to inspect where code activity and attention sit near each other.</p>
           </div>
         </div>
         <div class="event-graph-layout">
-          <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Git-style code event graph"></div>
+          <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Code activity timeline ribbon"></div>
           <div class="event-log" id="event-log" aria-live="polite"></div>
         </div>
       </div>
@@ -389,7 +389,7 @@ def build_dashboard_shell(
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Focus a published repo, compare a few, or switch metrics.</p>
+            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
             <div class="metric-tabs" aria-label="Metric">

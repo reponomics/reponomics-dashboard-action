@@ -54,82 +54,7 @@
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
-    <div class="section-grid full insight-section">
-      <div class="card insight-card">
-        <div class="section-header">
-          <div class="section-copy">
-            <h2>Next moves</h2>
-            <p class="click-hint">Rules-based prompts from traffic, growth, and codebase context. Click a card to focus the repo.</p>
-          </div>
-        </div>
-        <div id="insights-list"></div>
-      </div>
-    </div>
-
-    <div class="growth-model-grid" aria-label="Repository growth model">
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Attention</div>
-        <div class="growth-stage-value" id="growthAttentionValue">0 / 0</div>
-        <div class="growth-stage-context" id="growthAttentionContext">views / visitors in the selected window</div>
-      </div>
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Interest</div>
-        <div class="growth-stage-value" id="growthInterestValue">+0 / +0</div>
-        <div class="growth-stage-context" id="growthInterestContext">stars / watchers; current totals as context</div>
-      </div>
-      <div class="card growth-stage">
-        <div class="growth-stage-title">Adoption</div>
-        <div class="growth-stage-value" id="growthAdoptionValue">0 / +0</div>
-        <div class="growth-stage-context" id="growthAdoptionContext">clones / forks; current total as context</div>
-      </div>
-    </div>
-
-    <div class="section-grid full opportunity-section">
-      <div class="card opportunity-card" id="opportunity-card">
-        <div class="section-header">
-          <div class="section-copy">
-            <h2>Opportunity map</h2>
-            <p class="click-hint">Published repos by attention and downstream growth. Bubble size follows clone activity.</p>
-          </div>
-        </div>
-        <div class="opportunity-layout">
-          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
-          <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-grid full event-graph-section">
-      <div class="card event-graph-card" id="event-graph-card">
-        <div class="section-header">
-          <div class="section-copy">
-            <h2>Code event graph</h2>
-            <p class="click-hint">Commit and release markers in the selected traffic window. Use it to inspect where code activity and attention sit near each other.</p>
-          </div>
-        </div>
-        <div class="event-graph-layout">
-          <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Git-style code event graph"></div>
-          <div class="event-log" id="event-log" aria-live="polite"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-grid full readiness-section">
-      <div class="card readiness-card" id="readiness-card">
-        <div class="section-header">
-          <div class="section-copy">
-            <h2>Readiness queue</h2>
-            <p class="click-hint">Small public-facing fixes that make attention easier to convert into useful adoption or contribution.</p>
-          </div>
-        </div>
-        <div class="readiness-layout">
-          <div class="readiness-summary" id="readiness-summary" aria-live="polite"></div>
-          <div class="readiness-list" id="readiness-list" aria-live="polite"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-grid" id="stats-grid">
+    <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
       <div class="card stat-card" data-metric="repos">
         <div class="stat-head">
           <span class="stat-label">Published Repos</span>
@@ -169,6 +94,100 @@
         </div>
         <div class="stat-value" id="statCloneUniques">0</div>
         <svg class="stat-spark" id="sparkCloneUniques" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+    </div>
+
+    <div class="story-board insight-section" aria-label="Dashboard lead story and next moves">
+      <section class="card insight-card lead-story-card" aria-labelledby="leadStoryTitle">
+        <div class="section-header">
+          <div class="section-copy">
+            <div class="section-kicker">Lead read</div>
+            <h2 id="leadStoryTitle">What to check next</h2>
+            <p class="click-hint">A focused pass through the strongest rules-based prompts from traffic, growth, and codebase context.</p>
+          </div>
+          <div class="story-stepper" aria-label="Browse lead stories">
+            <button class="story-step" id="storyPrevBtn" type="button" aria-label="Previous story">&lt;</button>
+            <button class="story-step" id="storyNextBtn" type="button" aria-label="Next story">&gt;</button>
+          </div>
+        </div>
+        <div class="story-tabs" id="storyControls" aria-label="Story highlights"></div>
+        <div class="lead-story-carousel" id="leadStoryCarousel" aria-live="polite">
+          <p class="empty-msg">Looking for a useful story in the selected data.</p>
+        </div>
+      </section>
+
+      <aside class="card next-move-queue-card" aria-labelledby="nextMoveQueueTitle">
+        <div class="section-header compact">
+          <div class="section-copy">
+            <div class="section-kicker">Queue</div>
+            <h2 id="nextMoveQueueTitle">Next moves</h2>
+            <p class="click-hint">Click a card to focus the repo. These are the same prompts behind the lead story.</p>
+          </div>
+        </div>
+        <div id="insights-list"></div>
+      </aside>
+    </div>
+
+    <div class="growth-model-grid" aria-label="Repository growth model">
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Attention</div>
+        <div class="growth-stage-value" id="growthAttentionValue">0 / 0</div>
+        <div class="growth-stage-context" id="growthAttentionContext">views / visitors in the selected window</div>
+      </div>
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Interest</div>
+        <div class="growth-stage-value" id="growthInterestValue">+0 / +0</div>
+        <div class="growth-stage-context" id="growthInterestContext">stars / watchers; current totals as context</div>
+      </div>
+      <div class="card growth-stage">
+        <div class="growth-stage-title">Adoption</div>
+        <div class="growth-stage-value" id="growthAdoptionValue">0 / +0</div>
+        <div class="growth-stage-context" id="growthAdoptionContext">clones / forks; current total as context</div>
+      </div>
+    </div>
+
+    <div class="section-grid full opportunity-section">
+      <div class="card opportunity-card" id="opportunity-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Opportunity map</h2>
+            <p class="click-hint">Published repos by attention and downstream growth. Bubble size follows clone activity.</p>
+          </div>
+        </div>
+        <div class="opportunity-layout">
+          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
+          <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid full event-graph-section">
+      <div class="card event-graph-card" id="event-graph-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Code activity ribbon</h2>
+            <p class="click-hint">Commit and release clusters in the selected traffic window. Use it to inspect where code activity and attention sit near each other.</p>
+          </div>
+        </div>
+        <div class="event-graph-layout">
+          <div class="event-graph-canvas" id="event-graph" role="group" aria-label="Code activity timeline ribbon"></div>
+          <div class="event-log" id="event-log" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid full readiness-section">
+      <div class="card readiness-card" id="readiness-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Readiness queue</h2>
+            <p class="click-hint">Small public-facing fixes that make attention easier to convert into useful adoption or contribution.</p>
+          </div>
+        </div>
+        <div class="readiness-layout">
+          <div class="readiness-summary" id="readiness-summary" aria-live="polite"></div>
+          <div class="readiness-list" id="readiness-list" aria-live="polite"></div>
+        </div>
       </div>
     </div>
 
@@ -228,7 +247,7 @@
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Focus a published repo, compare a few, or switch metrics.</p>
+            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
             <div class="metric-tabs" aria-label="Metric">

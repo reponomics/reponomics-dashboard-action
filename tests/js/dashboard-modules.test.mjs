@@ -489,10 +489,14 @@ test('event graph filters retained code events to the selected window', () => {
     [{ name: 'owner/app' }],
     bounds,
   );
+  const clusters = helpers.buildEventClusters(lanes);
 
   assert.deepEqual(bounds, { start: '2026-06-06', end: '2026-06-12' });
   assert.equal(lanes.length, 1);
   assert.deepEqual(lanes[0].events.map((event) => event.id), ['commit:new', 'release:v1']);
+  assert.deepEqual(clusters.map((cluster) => cluster.date), ['2026-06-10', '2026-06-12']);
+  assert.equal(clusters[1].releaseCount, 1);
+  assert.equal(clusters[1].repo, 'owner/app');
   assert.equal(helpers.projectEventX('2026-06-06', bounds), 22);
   assert.equal(helpers.projectEventX('2026-06-12', bounds), 95);
 });

@@ -218,6 +218,12 @@ class GeneratedTemplate:
     source_commit: str
 
 
+@dataclass(frozen=True)
+class TemplateRefFixture:
+    ref: str
+    template_version: str
+
+
 def _load_mapping(path: Path) -> dict[str, Any]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(payload, dict):
@@ -345,30 +351,27 @@ def _current_template(
     )
 
 
+def _template_ref_for_version(template_version: str) -> str:
+    return f"reponomics-dashboard-v{template_version}"
+
+
 def _build_template_from_ref(
-    protected_ref: template_contract.ProtectedTemplateRef,
+    fixture: TemplateRefFixture,
     *,
     base_python: Path,
     work_root: Path,
 ) -> GeneratedTemplate:
     source_dir = work_root / "source"
     output_dir = work_root / "generated-template"
-    source_commit = _checkout_ref(protected_ref.ref, source_dir)
-    if source_commit != protected_ref.source_commit:
-        raise TemplateCompatibilityError(
-            (
-                f"{protected_ref.ref}: expected source commit "
-                + f"{protected_ref.source_commit}, got {source_commit}"
-            )
-        )
+    source_commit = _checkout_ref(fixture.ref, source_dir)
 
     source_contract = _load_mapping(source_dir / "template-contract.yml")
     source_version = str(source_contract.get("template_version") or "")
-    if source_version != protected_ref.template_version:
+    if source_version != fixture.template_version:
         raise TemplateCompatibilityError(
             (
-                f"{protected_ref.ref}: contract version {source_version!r} does not "
-                + f"match protected version {protected_ref.template_version}"
+                f"{fixture.ref}: contract version {source_version!r} does not "
+                + f"match fixture version {fixture.template_version}"
             )
         )
 
@@ -376,7 +379,7 @@ def _build_template_from_ref(
         source_dir=source_dir,
         venv_dir=work_root / "template-build-runtime",
         base_python=base_python,
-        label=f"{protected_ref.ref} template build",
+        label=f"{fixture.ref} template build",
     )
     _git_output(
         [
@@ -389,20 +392,20 @@ def _build_template_from_ref(
     )
     provenance = _load_mapping(output_dir / ".reponomics" / "template-provenance.json")
     provenance_template_version = str(provenance.get("template", {}).get("version") or "")
-    if provenance_template_version != protected_ref.template_version:
+    if provenance_template_version != fixture.template_version:
         raise TemplateCompatibilityError(
-            f"{protected_ref.ref}: generated provenance does not match template version"
+            f"{fixture.ref}: generated provenance does not match template version"
         )
-    if str(provenance.get("source", {}).get("commit") or "") != protected_ref.source_commit:
+    if str(provenance.get("source", {}).get("commit") or "") != source_commit:
         raise TemplateCompatibilityError(
-            f"{protected_ref.ref}: generated provenance does not match source commit"
+            f"{fixture.ref}: generated provenance does not match source commit"
         )
 
     return GeneratedTemplate(
-        name=protected_ref.ref,
+        name=fixture.ref,
         repo_dir=output_dir,
-        template_version=protected_ref.template_version,
-        source_commit=protected_ref.source_commit,
+        template_version=fixture.template_version,
+        source_commit=source_commit,
     )
 
 
@@ -627,22 +630,27 @@ def run_compatibility_checks(
         except Exception as exc:
             failures.append(f"current template: {exc}")
 
-        protected_refs = [] if current_template_only else list(contract.protected_template_refs)
+        template_fixtures: list[TemplateRefFixture] = []
+        if not current_template_only:
+            template_fixtures.append(
+                TemplateRefFixture(
+                    ref=_template_ref_for_version(contract.minimum_compatible_template_version),
+                    template_version=contract.minimum_compatible_template_version,
+                )
+            )
         for extra_ref in extra_template_refs or []:
-            protected_refs.append(
-                template_contract.ProtectedTemplateRef(
+            template_fixtures.append(
+                TemplateRefFixture(
                     ref=extra_ref,
                     template_version=extra_ref.removeprefix("reponomics-dashboard-v"),
-                    source_commit=_ensure_git_ref(extra_ref),
-                    status="required",
                 )
             )
 
-        for protected_ref in protected_refs:
+        for template_fixture in template_fixtures:
             work_root = Path(tempfile.mkdtemp(prefix="template-", dir=compat_root))
             try:
                 generated_template = _build_template_from_ref(
-                    protected_ref,
+                    template_fixture,
                     base_python=base_python,
                     work_root=work_root,
                 )
@@ -662,7 +670,7 @@ def run_compatibility_checks(
                 if keep_temp:
                     print(f"Kept compatibility work tree: {work_root}")
             except Exception as exc:
-                failures.append(f"{protected_ref.ref}: {exc}")
+                failures.append(f"{template_fixture.ref}: {exc}")
             finally:
                 if not keep_temp:
                     _remove_worktree(work_root / "source")

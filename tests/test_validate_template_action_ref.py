@@ -24,13 +24,6 @@ def _contract(
             default_ref=f"v{compatible_action_major}",
         ),
         minimum_compatible_template_version=minimum_compatible_template_version,
-        protected_template_refs=(
-            template_contract.ProtectedTemplateRef(
-                ref=f"reponomics-dashboard-v{minimum_compatible_template_version}",
-                template_version=minimum_compatible_template_version,
-                source_commit="a" * 40,
-            ),
-        ),
         managed_docs_namespace=Path("docs/reponomics"),
     )
 
@@ -232,14 +225,6 @@ def _write_contract(
                     "minimum_compatible_template_version: "
                     + f"{contract.minimum_compatible_template_version}"
                 ),
-                "protected_template_refs:",
-                f"  - ref: reponomics-dashboard-v{contract.minimum_compatible_template_version}",
-                (
-                    "    template_version: "
-                    + f"{contract.minimum_compatible_template_version}"
-                ),
-                "    source_commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "    status: required",
                 f"managed_docs_namespace: {contract.managed_docs_namespace.as_posix()}",
                 "",
             ]

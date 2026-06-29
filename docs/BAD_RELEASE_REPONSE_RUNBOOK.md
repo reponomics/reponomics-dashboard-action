@@ -18,7 +18,7 @@ The guiding rule is: immutable release history is not rewritten. Recovery happen
 Use this operational runbook before and after public launch. Do not defer recovery practices until after public release. Before treating the release process as ready, ensure:
 
 - `template-contract.yml` records `accepted_action` with action tag and SHA.
-- `minimum_compatible_template_version` and `protected_template_refs` are accurate.
+- `minimum_compatible_template_version` is accurate.
 - `make template-compat-e2e` gates action releases against current and minimum compatible templates.
 - `make template-release-gates` gates template publication against the accepted action release.
 - Template release notes state compatibility resets explicitly.
@@ -54,7 +54,7 @@ First identify the failure layer:
 4. Template acceptance PR merged but template release/publication failed.
 5. Generated template release exists but publication state is incomplete.
 6. Generated template was published with wrong contents/provenance.
-7. Released action breaks an older protected template.
+7. Released action breaks an older supported template.
 8. Released template gives new users broken setup.
 
 Record:
@@ -164,7 +164,7 @@ Corrective release example:
 Corrects the generated template provenance for vA.B.C. Users who copied the previous generated template during the affected window should update from vA.B.D or verify `.reponomics/template-provenance.json`.
 ```
 
-## 7. Released Action Breaks An Older Protected Template
+## 7. Released Action Breaks An Older Supported Template
 
 Impact: compatibility promise violated.
 
@@ -216,13 +216,12 @@ Use only when supporting older templates is intentionally no longer viable.
 Required steps:
 
 1. Open a PR changing `minimum_compatible_template_version`.
-2. Update `protected_template_refs`.
-3. Explain why older templates are no longer supported.
-4. Add migration guidance.
-5. Add release notes under `## Template release notes`.
-6. Run `make template-compat-e2e`.
-7. Run `make template-release-gates`.
-8. Use a SemVer bump appropriate to user impact. While the project is pre-public and remains on `v0`, a breaking reset does not require a major version bump.
+2. Explain why older templates are no longer supported.
+3. Add migration guidance.
+4. Add release notes under `## Template release notes`.
+5. Run `make template-compat-e2e`.
+6. Run `make template-release-gates`.
+7. Use a SemVer bump appropriate to user impact. While the project is pre-public and remains on `v0`, a breaking reset does not require a major version bump.
 
 Example:
 
@@ -276,7 +275,7 @@ Use one or more scenarios:
 2. Template acceptance PR merged, but `template-release.yml` failed.
 3. Source template tag exists, but `template-release.yml` failed before generated publication.
 4. Generated template publication completed with wrong provenance.
-5. Action patch release breaks the minimum compatible protected template.
+5. Action patch release breaks the minimum compatible template.
 6. Template release gives new copied repositories broken setup.
 
 For each scenario, record:

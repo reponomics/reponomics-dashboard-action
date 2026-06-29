@@ -117,8 +117,6 @@ def accept_action_release(
         payload["compatible_action_major"] = action_major
         payload["default_action_ref"] = expected_default_ref
     payload["accepted_action"] = next_action
-    if not payload.get("protected_template_refs"):
-        payload["minimum_compatible_template_version"] = payload["template_version"]
 
     next_text = yaml.safe_dump(payload, sort_keys=False)
     contract_path.write_text(next_text, encoding="utf-8")

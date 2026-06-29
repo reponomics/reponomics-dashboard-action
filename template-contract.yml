@@ -10,5 +10,4 @@ accepted_action:
   sha: 07708b602d253512c37cf773912375784882947d
   default_ref: v0
 minimum_compatible_template_version: 0.16.0
-protected_template_refs: []
 managed_docs_namespace: docs/reponomics

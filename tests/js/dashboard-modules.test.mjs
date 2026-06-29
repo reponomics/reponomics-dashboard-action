@@ -9,6 +9,7 @@ import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/re
 import { installPortfolioGuide } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/portfolio-guide.js';
 import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+import { isPathInsideRoot } from '../../scripts/capture_dashboard_guide_assets.mjs';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
 const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
@@ -431,6 +432,59 @@ test('opportunity map projects repos into attention-growth quadrants', () => {
   assert.equal(byRepo.get('owner/high-high'), 'amplify');
   assert.equal(byRepo.get('owner/low-high'), 'protect niche pull');
   assert.equal(byRepo.get('owner/low-low'), 'seed discovery');
+});
+
+test('opportunity map keeps focusable repo points visible to assistive tech', () => {
+  const mapElement = fakeElement();
+  const cardElement = { ...fakeElement(), closest() { return null; } };
+  const notesElement = fakeElement();
+  const elements = new Map([
+    ['opportunity-map', mapElement],
+    ['opportunity-card', cardElement],
+    ['opportunity-notes', notesElement],
+  ]);
+  const helpers = installOpportunityMap({
+    document: {
+      getElementById(id) {
+        return elements.get(id) || null;
+      },
+    },
+    activateRepo() {},
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number >= 0 ? '+' : ''}${number}`;
+    },
+    getRepoColor() {
+      return '#6bb8ff';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [
+        { name: 'owner/app', views: 120, uniques: 45, clones: 6, clone_uniques: 3, stars_delta: 1, subscribers_delta: 0, forks_delta: 0 },
+      ];
+    },
+  });
+
+  helpers.renderOpportunityMap();
+
+  assert.match(mapElement.innerHTML, /<svg[^>]*role="group"/);
+  assert.doesNotMatch(mapElement.innerHTML, /aria-hidden="true"/);
+  assert.match(mapElement.innerHTML, /tabindex="0" role="button"/);
+});
+
+test('guide asset containment rejects sibling directories with shared prefixes', () => {
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide/index.html'), true);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide'), true);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide-secret/index.html'), false);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/other-guide/index.html'), false);
 });
 
 test('event graph filters retained code events to the selected window', () => {

@@ -311,7 +311,7 @@ def build_dashboard_shell(
           </div>
         </div>
         <div class="opportunity-layout">
-          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
+          <div class="opportunity-map" id="opportunity-map" role="group" aria-label="Repository opportunity map"></div>
           <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
         </div>
       </div>
@@ -650,6 +650,16 @@ def write_published_json_asset(output_path: str, asset_name: str, value: object)
     asset_path.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
 
 
+def _script_safe_json(value: object) -> str:
+    """Serialize JSON for direct embedding inside a script element."""
+    return (
+        json.dumps(value, separators=(",", ":"))
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def wrap_html(
     body: str,
     chart_loader: str,
@@ -745,7 +755,7 @@ def build_public_html(
             "total_clone_uniques": f"{totals['total_clone_uniques']:,}",
         },
     )
-    dashboard_data_json = json.dumps(dashboard_data, separators=(",", ":"))
+    dashboard_data_json = _script_safe_json(dashboard_data)
     if external_assets:
         body = shell
         extra_head = _json_asset_meta(
@@ -912,10 +922,8 @@ def build_encrypted_html(
         },
         hidden=True,
     )
-    encrypted_dashboard_data_json = json.dumps(
-        encrypted_dashboard_data, separators=(",", ":")
-    )
-    export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
+    encrypted_dashboard_data_json = _script_safe_json(encrypted_dashboard_data)
+    export_manifest_json = _script_safe_json(export_manifest)
     extra_head_parts = ['<meta name="robots" content="noindex, nofollow">']
     if external_assets:
         body = auth_card + shell

@@ -177,7 +177,11 @@ def _event_aligned_attention(candidates: list[Candidate], context: Candidate) ->
     baseline = float(traffic.get("baseline_views") or 0)
     if peak_views < max(8, baseline * 1.75):
         return
-    event = _nearest_event(context["events"], str(traffic.get("peak_date") or ""))
+    event = _nearest_event(
+        context["events"],
+        str(traffic.get("peak_date") or ""),
+        latest_date=str(context.get("latest_date") or ""),
+    )
     if not event:
         return
     gap = _days_between(str(traffic.get("peak_date") or ""), event.get("event_date", ""))
@@ -243,7 +247,11 @@ def _release_adoption_lift(candidates: list[Candidate], context: Candidate) -> N
 
 
 def _docs_or_examples_found_audience(candidates: list[Candidate], context: Candidate) -> None:
-    docs_event = _latest_classified_event(context["events"], {"docs"})
+    docs_event = _latest_classified_event(
+        context["events"],
+        {"docs"},
+        latest_date=str(context.get("latest_date") or ""),
+    )
     traffic = context["traffic"]
     top_path = _top_row(context["paths"], "count")
     top_referrer = _top_row(context["referrers"], "count")
@@ -816,11 +824,15 @@ def _attention_floor(values: Any) -> int:
     return max(25, positive[len(positive) // 2])
 
 
-def _nearest_event(events: Rows, date: str) -> Candidate | None:
+def _nearest_event(events: Rows, date: str, *, latest_date: str = "") -> Candidate | None:
     dated = [
         (abs(_days_between(date, str(row.get("event_date") or ""))), row)
         for row in events
         if row.get("event_date")
+        and (
+            not latest_date
+            or _days_between(latest_date, str(row.get("event_date") or "")) >= 0
+        )
     ]
     dated = [(distance, row) for distance, row in dated if distance <= EVENT_NEAR_DAYS]
     if not dated:
@@ -840,11 +852,20 @@ def _latest_recent_release(events: Rows, latest_date: str) -> Candidate | None:
     return sorted(releases, key=lambda row: str(row.get("event_date") or ""), reverse=True)[0]
 
 
-def _latest_classified_event(events: Rows, classifications: set[str]) -> Candidate | None:
+def _latest_classified_event(
+    events: Rows,
+    classifications: set[str],
+    *,
+    latest_date: str = "",
+) -> Candidate | None:
     matches = [
         row
         for row in events
         if str(row.get("classification") or "").lower() in classifications
+        and (
+            not latest_date
+            or _days_between(latest_date, str(row.get("event_date") or "")) >= 0
+        )
     ]
     if not matches:
         return None

@@ -362,7 +362,12 @@ def _recent_event_count(rows: Rows, latest_date: str, window_days: int) -> int:
     if not latest_date:
         return 0
     cutoff = _date_offset(latest_date, -(window_days - 1))
-    return sum(1 for row in rows if str(row.get("event_date") or "")[:10] >= cutoff)
+    latest_day = latest_date[:10]
+    return sum(
+        1
+        for row in rows
+        if cutoff <= str(row.get("event_date") or "")[:10] <= latest_day
+    )
 
 
 def _downstream_delta(growth: Candidate) -> int:

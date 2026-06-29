@@ -121,7 +121,7 @@ export function installOpportunityMap(context) {
           </g>`;
       }).join('');
       container.innerHTML = `
-        <svg viewBox="0 0 100 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg viewBox="0 0 100 64" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Repository opportunity map">
           <defs>
             <pattern id="opportunity-grid" width="7" height="7" patternUnits="userSpaceOnUse">
               <path d="M7 0H0V7" fill="none"></path>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from dashboard_action import run
 
 
@@ -18,6 +20,41 @@ def test_pad_metric_series_appends_only_trailing_unreported_dates() -> None:
         "views": [10, 30, None, None],
         "clones": [1, 3, None, None],
     }
+
+
+def test_standalone_dashboard_json_is_script_safe() -> None:
+    title = "</script><script>alert('x')</script>"
+    dashboard_data = {
+        "summary": {
+            "generated_at": "2026-06-14T12:00:00Z",
+            "totals": {
+                "repo_count": 1,
+                "total_views": 0,
+                "total_uniques": 0,
+                "total_clones": 0,
+                "total_clone_uniques": 0,
+                "days_tracked": 1,
+            },
+        },
+        "event_graph": {
+            "repos": [
+                {
+                    "repo": "demo/app",
+                    "events": [{"title": title}],
+                }
+            ]
+        },
+    }
+
+    rendered = render_dashboard.dashboard_html.build_public_html(dashboard_data, "")
+    marker = '<script id="plaintext-dashboard-data" type="application/json">'
+    start = rendered.index(marker) + len(marker)
+    end = rendered.index("</script>", start)
+    embedded_json = rendered[start:end]
+
+    assert "</script>" not in embedded_json.lower()
+    assert "\\u003c/script\\u003e" in embedded_json
+    assert json.loads(embedded_json)["event_graph"]["repos"][0]["events"][0]["title"] == title
 
 
 def test_event_graph_compacts_published_events_with_nearby_traffic() -> None:

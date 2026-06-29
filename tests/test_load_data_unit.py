@@ -489,6 +489,102 @@ def test_code_churn_context_ignores_weeks_after_latest_traffic_day() -> None:
     assert "code_churn_context" not in {item["subtype"] for item in insights}
 
 
+def test_docs_found_audience_ignores_docs_event_after_latest_traffic_day() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 6, 3)
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-18",
+                "event_type": "commit",
+                "classification": "docs",
+                "title": "Document tutorial",
+            }
+        ],
+        path_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "path": "/demo/app/blob/main/docs/tutorial.md",
+                "title": "Tutorial docs",
+                "count": "18",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert "docs_found_audience" not in {item["subtype"] for item in insights}
+
+
+def test_event_aligned_attention_ignores_event_after_latest_traffic_day() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 2, 1)
+        for offset in range(14)
+    ]
+    daily_rows[-1] = _daily_row("demo/app", "2026-06-14", 40, 16)
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-16",
+                "event_type": "commit",
+                "classification": "feature",
+                "title": "Ship future feature",
+                "magnitude": "8",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert "event_aligned_attention" not in {item["subtype"] for item in insights}
+
+
+def test_portfolio_profile_recent_event_count_ignores_future_events() -> None:
+    start = date(2026, 6, 1)
+    repos = [f"demo/repo-{idx}" for idx in range(3)]
+    daily_rows = [
+        _daily_row(repo, (start + timedelta(days=offset)).isoformat(), 3, 1)
+        for repo in repos
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row(repo, "2026-06-14", 10, 2, 1) for repo in repos]
+    event_rows = [
+        {
+            "repo": repo,
+            "event_date": "2026-06-18",
+            "event_type": "commit",
+            "classification": "feature",
+            "title": f"Future event {idx}",
+        }
+        for repo in repos
+        for idx in range(3)
+    ]
+
+    profile = load_data.build_portfolio_profile(
+        daily_rows,
+        metric_rows,
+        event_rows=event_rows,
+    )
+
+    assert profile["signals"]["recent_event_count"] == 0
+    assert profile["id"] != "maintainer_portfolio"
+
+
 def test_portfolio_profile_classifies_single_repo_launch() -> None:
     start = date(2026, 6, 1)
     daily_rows = [

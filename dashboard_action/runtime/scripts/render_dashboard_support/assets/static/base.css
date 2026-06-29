@@ -3078,6 +3078,16 @@
       inset: 0;
       z-index: 3;
       pointer-events: none;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+      padding: 0;
+    }
+    .auth-card > .hero::before,
+    .auth-card > .hero::after {
+      display: none;
     }
     .auth-hidden-username {
       position: absolute;

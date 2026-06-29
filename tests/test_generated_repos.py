@@ -720,15 +720,33 @@ def test_template_contract_and_action_metadata_contract():
     assert _version_tuple(
         contract.minimum_compatible_template_version
     ) <= _version_tuple(contract.template_version)
-    assert (
-        contract.minimum_compatible_template_version == contract.template_version
-        or any(
-            protected.template_version == contract.minimum_compatible_template_version
-            and protected.status == "required"
-            for protected in contract.protected_template_refs
-        )
+    assert any(
+        protected.template_version == contract.minimum_compatible_template_version
+        and protected.status == "required"
+        for protected in contract.protected_template_refs
     )
     template_contract.validate_action_metadata(ACTION_YML_FIXTURE)
+
+
+def test_template_contract_rejects_unprotected_minimum_template_version(tmp_path):
+    (tmp_path / "action.yml").write_text(
+        Path("action.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    payload = yaml.safe_load(Path("template-contract.yml").read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["minimum_compatible_template_version"] = payload["template_version"]
+    payload["protected_template_refs"] = []
+    (tmp_path / "template-contract.yml").write_text(
+        yaml.safe_dump(payload, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        template_contract.TemplateContractError,
+        match="minimum_compatible_template_version must be covered",
+    ):
+        template_contract.validate_local_contract(tmp_path)
 
 
 def test_template_includes_verifiable_provenance(tmp_path):

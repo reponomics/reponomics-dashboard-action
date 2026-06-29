@@ -65,6 +65,7 @@ def _contract_for_notes(
 def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path):
     root = _write_root(tmp_path)
     previous_template = _contract_payload(root)["template_version"]
+    previous_minimum = _contract_payload(root)["minimum_compatible_template_version"]
     action_version = _bump_version(_accepted_action_version(root), "patch")
     expected_template = _bump_version(previous_template, "patch")
 
@@ -78,7 +79,7 @@ def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path)
     assert payload["template_version"] == expected_template
     written = _contract_payload(root)
     assert written["template_version"] == expected_template
-    assert written["minimum_compatible_template_version"] == expected_template
+    assert written["minimum_compatible_template_version"] == previous_minimum
     assert written["accepted_action"] == {
         "repository": "reponomics/reponomics-dashboard-action",
         "version": action_version,
@@ -90,6 +91,7 @@ def test_accept_action_release_bumps_template_patch_and_records_action(tmp_path)
 
 def test_accept_action_release_bumps_template_minor_for_action_minor(tmp_path):
     root = _write_root(tmp_path)
+    previous_minimum = _contract_payload(root)["minimum_compatible_template_version"]
     action_version = _bump_version(_accepted_action_version(root), "minor")
     expected_template = _bump_version(_contract_payload(root)["template_version"], "minor")
 
@@ -101,12 +103,13 @@ def test_accept_action_release_bumps_template_minor_for_action_minor(tmp_path):
 
     assert changed is True
     assert payload["template_version"] == expected_template
-    assert payload["minimum_compatible_template_version"] == expected_template
+    assert payload["minimum_compatible_template_version"] == previous_minimum
 
 
 def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, monkeypatch):
     root = _write_root(tmp_path, template_version="0.11.0")
     monkeypatch.setattr(template_contract, "VERSION", "1.0.0")
+    previous_minimum = _contract_payload(root)["minimum_compatible_template_version"]
     expected_template = _bump_version(_contract_payload(root)["template_version"], "major")
 
     payload, changed = accept_action_release.accept_action_release(
@@ -117,7 +120,7 @@ def test_accept_action_release_bumps_template_major_for_action_major(tmp_path, m
 
     assert changed is True
     assert payload["template_version"] == expected_template
-    assert payload["minimum_compatible_template_version"] == expected_template
+    assert payload["minimum_compatible_template_version"] == previous_minimum
     assert payload["compatible_action_major"] == 1
     assert payload["default_action_ref"] == "v1"
     assert payload["accepted_action"] == {
@@ -182,6 +185,7 @@ def test_accept_action_release_writes_workflow_outputs_and_notes(tmp_path):
 def test_prepare_template_release_bumps_template_patch_only(tmp_path):
     root = _write_root(tmp_path)
     previous = _contract_payload(root)["template_version"]
+    previous_minimum = _contract_payload(root)["minimum_compatible_template_version"]
     expected = _bump_version(previous, "patch")
     accepted_action_version = _accepted_action_version(root)
 
@@ -193,7 +197,7 @@ def test_prepare_template_release_bumps_template_patch_only(tmp_path):
     assert returned_previous == previous
     assert current == expected
     assert payload["template_version"] == expected
-    assert payload["minimum_compatible_template_version"] == expected
+    assert payload["minimum_compatible_template_version"] == previous_minimum
     assert payload["accepted_action"]["version"] == accepted_action_version
     assert _contract_payload(root)["template_version"] == expected
 

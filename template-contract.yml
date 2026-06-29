@@ -10,5 +10,9 @@ accepted_action:
   sha: 07708b602d253512c37cf773912375784882947d
   default_ref: v0
 minimum_compatible_template_version: 0.16.0
-protected_template_refs: []
+protected_template_refs:
+- ref: reponomics-dashboard-v0.16.0
+  template_version: 0.16.0
+  source_commit: 55d9d6f2ce258a3d700b3ec6b986a86c8052ed56
+  status: required
 managed_docs_namespace: docs/reponomics

@@ -164,7 +164,6 @@ def load_contract(root: Path = ROOT) -> TemplateContract:
     _validate_protected_template_refs(
         protected_template_refs,
         minimum_compatible_template_version=minimum_compatible_template_version,
-        template_version=template_version,
     )
 
     return TemplateContract(
@@ -313,7 +312,6 @@ def _validate_protected_template_refs(
     protected_template_refs: list[ProtectedTemplateRef],
     *,
     minimum_compatible_template_version: str,
-    template_version: str,
 ) -> None:
     seen_versions: set[str] = set()
     for protected in protected_template_refs:
@@ -322,13 +320,9 @@ def _validate_protected_template_refs(
                 f"duplicate protected template version: {protected.template_version}"
             )
         seen_versions.add(protected.template_version)
-    if (
-        minimum_compatible_template_version != template_version
-        and minimum_compatible_template_version not in seen_versions
-    ):
+    if minimum_compatible_template_version not in seen_versions:
         raise TemplateContractError(
-            "historical minimum_compatible_template_version must be covered "
-            + "by protected_template_refs"
+            "minimum_compatible_template_version must be covered by protected_template_refs"
         )
 
 

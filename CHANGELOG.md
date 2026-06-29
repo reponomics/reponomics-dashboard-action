@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.30.0...v0.30.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* derive minimum template compatibility fixture ([21d72c2](https://github.com/reponomics/reponomics-dashboard-action/commit/21d72c27e6989a83dfe68d28e9f9d97eef00cb89))
+
 ## [0.30.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.29.0...v0.30.0) (2026-06-29)
 
 

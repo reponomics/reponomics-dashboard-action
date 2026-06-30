@@ -457,21 +457,6 @@
         var(--bg-card-2);
       box-shadow: 0 1px 0 var(--inset-highlight) inset;
     }
-    .trust-playbook::before {
-      content: "";
-      position: absolute;
-      inset: -40% auto -40% -18%;
-      width: 18%;
-      transform: skewX(-16deg);
-      background: linear-gradient(90deg, transparent, rgba(107, 184, 255, 0.12), transparent);
-      animation: trust-scan 9s ease-in-out infinite;
-      pointer-events: none;
-    }
-    @keyframes trust-scan {
-      0%, 58% { transform: translateX(0) skewX(-16deg); opacity: 0; }
-      68% { opacity: 1; }
-      100% { transform: translateX(720%) skewX(-16deg); opacity: 0; }
-    }
     .trust-playbook-head {
       position: relative;
       z-index: 1;
@@ -4318,7 +4303,6 @@
     @media (prefers-reduced-motion: reduce) {
       .stat-spark path.line { animation: none; }
       .pulse-dot { animation: none; }
-      .trust-playbook::before { animation: none; opacity: 0; }
       #auth-shell.is-opening::before,
       #auth-shell.is-opening::after,
       #auth-shell.is-revealing,

@@ -51,6 +51,7 @@ export function installController(context) {
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
   const renderTrustPlaybook = (...args) => context.renderTrustPlaybook(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
+  const selectedDailyMetricIds = (...args) => context.selectedDailyMetricIds(...args);
   const setMetric = (...args) => context.setMetric(...args);
   const setRepoSort = (...args) => context.setRepoSort(...args);
   const setText = (...args) => context.setText(...args);
@@ -253,6 +254,10 @@ export function installController(context) {
       try {
         const params = new URLSearchParams();
         if (state.metric && state.metric !== 'views') params.set('metric', state.metric);
+        const dailyMetrics = selectedDailyMetricIds();
+        if (dailyMetrics.length > 1 || dailyMetrics[0] !== state.metric) {
+          params.set('metrics', dailyMetrics.join(','));
+        }
         if (getSelectedWindow() !== getDefaultWindow()) params.set('window', getSelectedWindow());
         if (state.selectedRepo) params.set('focus', getShortName(state.selectedRepo));
         if (state.compareRepos.length >= 2) params.set('compare', state.compareRepos.map(getShortName).join(','));
@@ -272,6 +277,14 @@ export function installController(context) {
         const params = new URLSearchParams(raw);
         const metric = params.get('metric');
         if (metric && METRICS[metric]) state.metric = metric;
+        const metricList = (params.get('metrics') || '')
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value, idx, values) => METRICS[value] && values.indexOf(value) === idx);
+        state.dailyMetrics = metricList.length ? metricList : [state.metric];
+        if (!state.dailyMetrics.includes(state.metric)) {
+          state.dailyMetrics.unshift(state.metric);
+        }
         const windowParam = normalizeWindow(params.get('window'));
         if (windowParam) state.window = windowParam;
         const range = params.get('range');
@@ -438,6 +451,8 @@ export function installController(context) {
     function renderDashboard(payload) {
       state.dashboardData = createDashboardDataProvider(payload);
       state.window = getDefaultWindow();
+      state.metric = 'views';
+      state.dailyMetrics = ['views'];
       state.selectedRepo = null;
       state.compareRepos = [];
       state.chunkLoadErrors = {};

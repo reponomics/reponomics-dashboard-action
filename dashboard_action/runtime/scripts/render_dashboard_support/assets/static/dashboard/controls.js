@@ -42,16 +42,51 @@ export function installControls(context) {
     }
 
     function setMetric(nextMetric) {
-      if (!METRICS[nextMetric] || state.metric === nextMetric) return;
-      state.metric = nextMetric;
+      if (!METRICS[nextMetric]) return;
+      const current = selectedDailyMetricIds();
+      const isSelected = current.includes(nextMetric);
+      let nextDailyMetrics = current;
+
+      if (!isSelected) {
+        nextDailyMetrics = current.concat(nextMetric);
+        state.metric = nextMetric;
+      } else if (state.metric === nextMetric && current.length > 1) {
+        nextDailyMetrics = current.filter((metric) => metric !== nextMetric);
+        state.metric = nextDailyMetrics[0];
+      } else {
+        state.metric = nextMetric;
+      }
+
+      state.dailyMetrics = nextDailyMetrics;
       updateDashboard();
     }
 
+    function selectedDailyMetricIds() {
+      const source = Array.isArray(state.dailyMetrics) && state.dailyMetrics.length
+        ? state.dailyMetrics
+        : [state.metric || 'views'];
+      const seen = new Set();
+      const selected = source.filter((metric) => {
+        if (!METRICS[metric] || seen.has(metric)) return false;
+        seen.add(metric);
+        return true;
+      });
+      if (!selected.length) selected.push('views');
+      if (!METRICS[state.metric] || !selected.includes(state.metric)) {
+        state.metric = selected[0];
+      }
+      state.dailyMetrics = selected;
+      return selected;
+    }
+
     function updateMetricTabs() {
+      const selected = selectedDailyMetricIds();
       document.querySelectorAll('.metric-tab').forEach((btn) => {
-        const isActive = btn.dataset.metric === state.metric;
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        const isSelected = selected.includes(btn.dataset.metric);
+        const isPrimary = btn.dataset.metric === state.metric;
+        btn.classList.toggle('active', isSelected);
+        btn.classList.toggle('primary', isPrimary);
+        btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
       });
     }
 
@@ -146,5 +181,5 @@ export function installControls(context) {
       }
     }
 
-  return { resetCheckboxes, updateControls, setWindow, setMetric, updateMetricTabs, clearSelection, selectRepo, activateRepo, toggleRepoCompare, updateToolbar };
+  return { resetCheckboxes, updateControls, setWindow, setMetric, selectedDailyMetricIds, updateMetricTabs, clearSelection, selectRepo, activateRepo, toggleRepoCompare, updateToolbar };
 }

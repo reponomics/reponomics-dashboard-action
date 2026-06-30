@@ -69,6 +69,7 @@ export function installState(context) {
       compareRepos: [],
       chunkLoadErrors: {},
       metric: 'views',
+      dailyMetrics: ['views'],
       repoSortKey: null,
       repoSortDir: null,
       calendarMonth: null,

@@ -399,10 +399,10 @@ def build_dashboard_shell(
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
+            <p class="click-hint">Focus repos, overlay metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
-            <div class="metric-tabs" aria-label="Metric">
+            <div class="metric-tabs" aria-label="Metric overlays">
               <button class="metric-tab" data-metric="views" type="button" title="Total page views"><span class="swatch"></span>Views</button>
               <button class="metric-tab" data-metric="uniques" type="button" title="Unique visitors - distinct viewers per day"><span class="swatch"></span>Visitors</button>
               <button class="metric-tab" data-metric="clones" type="button" title="Total git-clone operations"><span class="swatch"></span>Clones</button>

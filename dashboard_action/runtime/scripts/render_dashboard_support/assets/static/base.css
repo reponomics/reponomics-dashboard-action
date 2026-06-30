@@ -1981,6 +1981,9 @@
     .metric-tab[data-metric="uniques"] { --metric-color: var(--c-uniques); }
     .metric-tab[data-metric="clones"] { --metric-color: var(--c-clones); }
     .metric-tab[data-metric="cloners"] { --metric-color: var(--c-cloners); }
+    .metric-tab[data-metric="stars"] { --metric-color: var(--accent-2); }
+    .metric-tab[data-metric="subscribers"] { --metric-color: var(--accent); }
+    .metric-tab[data-metric="forks"] { --metric-color: var(--c-uniques); }
     .metric-tab:hover { color: var(--text); }
     .metric-tab.active {
       color: var(--text);
@@ -1989,6 +1992,12 @@
         var(--bg-raised);
       border-color: var(--metric-color, var(--border));
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035), 0 0 16px rgba(107, 184, 255, 0.08);
+    }
+    .metric-tab.primary {
+      box-shadow:
+        inset 0 -2px 0 var(--metric-color, var(--accent)),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+        0 0 16px rgba(107, 184, 255, 0.08);
     }
     .metric-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .section-grid {

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
+import { installCharts } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/charts.js';
+import { installControls } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/controls.js';
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installEventGraph } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/event-graph.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
@@ -213,6 +215,208 @@ test('format helpers install independently of app lifecycle', () => {
   assert.equal(helpers.sumArray([1, '2', null, undefined, 4]), 7);
   assert.equal(helpers.buildSparklinePath([], 100, 34).line, '');
   assert.match(helpers.buildSparklinePath([3, 7, 5], 100, 34).line, /^M0\.00 /);
+});
+
+test('metric controls support daily chart overlays while preserving one primary metric', () => {
+  const classState = new Map();
+  const buttons = ['views', 'clones', 'forks'].map((metric) => ({
+    dataset: { metric },
+    classList: {
+      toggle(name, enabled) {
+        const classes = classState.get(metric) || new Set();
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+        classState.set(metric, classes);
+      },
+    },
+    setAttribute(name, value) {
+      this[name] = value;
+    },
+  }));
+  let updateCount = 0;
+  const helpers = installControls({
+    document: {
+      querySelectorAll(selector) {
+        return selector === '.metric-tab' ? buttons : [];
+      },
+      getElementById() {
+        return fakeElement();
+      },
+    },
+    MAX_COMPARE_REPOS: 8,
+    METRICS: {
+      views: { key: 'views' },
+      clones: { key: 'clones' },
+      forks: { key: 'forks_delta' },
+    },
+    getSelectedWindow() {
+      return '14';
+    },
+    getShortName(name) {
+      return name;
+    },
+    getWindowDays() {
+      return 14;
+    },
+    isComparing() {
+      return false;
+    },
+    normalizeWindow(value) {
+      return value;
+    },
+    sanitizeSelection() {},
+    state: {
+      metric: 'views',
+      dailyMetrics: ['views'],
+      compareRepos: [],
+      selectedRepo: null,
+    },
+    updateDashboard() {
+      updateCount += 1;
+    },
+  });
+
+  helpers.setMetric('clones');
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views', 'clones']);
+  assert.equal(helpers.selectedDailyMetricIds().includes('clones'), true);
+  assert.equal(updateCount, 1);
+
+  helpers.setMetric('views');
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views', 'clones']);
+
+  helpers.setMetric('views');
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones']);
+
+  helpers.setMetric('forks');
+  helpers.updateMetricTabs();
+  assert.equal(buttons.find((button) => button.dataset.metric === 'views')['aria-pressed'], 'false');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'clones')['aria-pressed'], 'true');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'forks')['aria-pressed'], 'true');
+  assert.equal(classState.get('clones').has('active'), true);
+  assert.equal(classState.get('forks').has('active'), true);
+  assert.equal(classState.get('forks').has('primary'), true);
+});
+
+test('daily chart overlays selected metrics on a shared date axis', () => {
+  const title = fakeElement();
+  const chart = {
+    data: { labels: [], datasets: [] },
+    options: { scales: { y: {} } },
+    updateCount: 0,
+    update() {
+      this.updateCount += 1;
+    },
+  };
+  let yAxisDatasetCount = 0;
+  const helpers = installCharts({
+    document: {
+      getElementById(id) {
+        return id === 'dailyChartTitle' ? title : fakeElement();
+      },
+    },
+    activateRepo() {},
+    buildWeekdaySummaryFromSeries() {
+      return {};
+    },
+    chartOptions() {
+      return {};
+    },
+    compactNumber(value) {
+      return String(value);
+    },
+    computeDelta() {
+      return null;
+    },
+    configureYAxis(_chart, _labels, datasets) {
+      yAxisDatasetCount = datasets.length;
+    },
+    currentPayload() {
+      return {};
+    },
+    dashboardData() {
+      return { getRepos: () => [] };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      return String(value);
+    },
+    getCurrentWindowData() {
+      return {
+        daily: {
+          dates: ['2026-05-14', '2026-05-15'],
+          views: [3, 4],
+          clones: [1, 5],
+          forks_delta: [0, 2],
+        },
+        totals: {},
+      };
+    },
+    getRepoByName() {
+      return null;
+    },
+    getRepoColor() {
+      return '#56b4e9';
+    },
+    getRepoDash() {
+      return [];
+    },
+    getShortName(name) {
+      return name;
+    },
+    getThemeColor(_name, fallback) {
+      return fallback;
+    },
+    getVisibleRepos() {
+      return [];
+    },
+    hexAlpha(color) {
+      return color;
+    },
+    isComparing() {
+      return false;
+    },
+    metricInfo(metric) {
+      return {
+        views: { key: 'views', label: 'Views', color: '#6bb8ff' },
+        clones: { key: 'clones', label: 'Clones', color: '#d97eb7' },
+        forks: { key: 'forks_delta', label: 'Fork Growth', color: '#4fc8a5' },
+      }[metric];
+    },
+    palette: [],
+    renderDelta() {},
+    renderSparkline() {},
+    selectedDailyMetricIds() {
+      return ['views', 'clones', 'forks'];
+    },
+    seriesValueAt(series, key, idx) {
+      return series[key][idx];
+    },
+    setText() {},
+    splitWindow() {
+      return {};
+    },
+    state: {
+      metric: 'views',
+      dailyMetrics: ['views', 'clones', 'forks'],
+      compareRepos: [],
+      selectedRepo: null,
+    },
+    charts: { dailyChart: chart },
+  });
+
+  helpers.updateDailyChart();
+
+  assert.equal(title.textContent, 'Metric overlays over time');
+  assert.deepEqual(chart.data.labels, ['2026-05-14', '2026-05-15']);
+  assert.deepEqual(chart.data.datasets.map((dataset) => dataset.label), ['Views', 'Clones', 'Fork Growth']);
+  assert.deepEqual(chart.data.datasets.map((dataset) => dataset.metricKey), ['views', 'clones', 'forks_delta']);
+  assert.equal(yAxisDatasetCount, 3);
+  assert.equal(chart.updateCount, 1);
 });
 
 test('series helpers preserve selected-window and growth aggregation contracts', () => {

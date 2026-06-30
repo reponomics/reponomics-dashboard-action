@@ -125,7 +125,7 @@
       font-weight: 700;
       letter-spacing: 0;
     }
-    /* Brand wordmark: Inter Black, lowercase, with a brass signal period. */
+    /* Brand wordmark: Inter Black, lowercase, with a blue signal period. */
     h1.brand {
       font-family: 'Inter', sans-serif;
       font-size: clamp(2.75rem, 5.2vw, 3.2rem);
@@ -137,8 +137,8 @@
       text-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
     }
     h1.brand .accent {
-      color: var(--accent-2);
-      text-shadow: 0 0 18px rgba(214, 168, 75, 0.22);
+      color: var(--accent);
+      text-shadow: 0 0 18px rgba(107, 184, 255, 0.24);
     }
     .brand-lockup {
       display: flex;
@@ -2011,7 +2011,6 @@
       margin-top: 0.9rem;
     }
     .dashboard-summary {
-      margin-top: 0.95rem;
       margin-bottom: 1rem;
     }
     .dashboard-summary .stat-card {

@@ -200,6 +200,12 @@ def build_dashboard_shell(
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
+    <div class="card repo-strip-card" id="repo-strip-card">
+      <span class="repo-strip-label">Published repos</span>
+      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
+      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
+    </div>
+
     <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
       <div class="card stat-card" data-metric="repos">
         <div class="stat-head">
@@ -386,12 +392,6 @@ def build_dashboard_shell(
         <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
       <div class="trust-playbook" id="trust-playbook" aria-live="polite"></div>
-    </div>
-
-    <div class="card repo-strip-card" id="repo-strip-card">
-      <span class="repo-strip-label">Published repos</span>
-      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
-      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
     </div>
 
     <div class="chart-grid">

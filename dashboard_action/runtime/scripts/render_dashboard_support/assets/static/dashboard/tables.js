@@ -454,7 +454,7 @@ export function installTables(context) {
         if (model.repo) {
           li.setAttribute('role', 'button');
           li.setAttribute('aria-label', `Focus on ${model.shortRepo}`);
-          const focus = function() { selectRepo(model.repo); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+          const focus = function() { selectRepo(model.repo); };
           li.addEventListener('click', focus);
           li.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focus(); }

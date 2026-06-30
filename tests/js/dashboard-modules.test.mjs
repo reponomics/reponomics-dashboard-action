@@ -11,6 +11,7 @@ import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/re
 import { installPortfolioGuide } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/portfolio-guide.js';
 import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+import { installTables } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/tables.js';
 import { isPathInsideRoot } from '../../scripts/capture_dashboard_guide_assets.mjs';
 import { installTrustPlaybook } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/trust-playbook.js';
 
@@ -417,6 +418,101 @@ test('daily chart overlays selected metrics on a shared date axis', () => {
   assert.deepEqual(chart.data.datasets.map((dataset) => dataset.metricKey), ['views', 'clones', 'forks_delta']);
   assert.equal(yAxisDatasetCount, 3);
   assert.equal(chart.updateCount, 1);
+});
+
+test('next move queue focuses repos without scrolling the page', () => {
+  const created = [];
+  const insightsContainer = {
+    innerHTML: '',
+    children: [],
+    appendChild(child) {
+      this.children.push(child);
+    },
+  };
+  function element(tagName = 'div') {
+    return {
+      tagName,
+      children: [],
+      dataset: {},
+      style: {},
+      className: '',
+      tabIndex: -1,
+      innerHTML: '',
+      addEventListener(type, handler) {
+        this[`on${type}`] = handler;
+      },
+      appendChild(child) {
+        this.children.push(child);
+      },
+      setAttribute(name, value) {
+        this[name] = value;
+      },
+    };
+  }
+  let selectedRepo = '';
+  let scrollCount = 0;
+  const helpers = installTables({
+    document: {
+      createElement(tagName) {
+        const node = element(tagName);
+        created.push(node);
+        return node;
+      },
+      getElementById(id) {
+        return id === 'insights-list' ? insightsContainer : null;
+      },
+    },
+    window: {
+      scrollTo() {
+        scrollCount += 1;
+      },
+    },
+    buildSparklinePath() {
+      return { line: '', area: '' };
+    },
+    currentPayload() {
+      return {
+        insights_v2: [
+          {
+            kind: 'growth',
+            repo: 'owner/app',
+            text: '`owner/app` gained attention',
+            traffic: 12,
+            downstream_delta: 3,
+          },
+        ],
+      };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number >= 0 ? '+' : ''}${number}`;
+    },
+    getShortName(name) {
+      return String(name || '').split('/').pop();
+    },
+    renderRepoTable() {},
+    selectRepo(repo) {
+      selectedRepo = repo;
+    },
+    state: {
+      storyIndex: 0,
+    },
+    updateDashboard() {},
+  });
+
+  helpers.renderInsights();
+  const item = created.find((node) => node.tagName === 'li');
+
+  assert.equal(typeof item.onclick, 'function');
+  item.onclick();
+  assert.equal(selectedRepo, 'owner/app');
+  assert.equal(scrollCount, 0);
 });
 
 test('series helpers preserve selected-window and growth aggregation contracts', () => {

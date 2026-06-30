@@ -185,7 +185,6 @@ export function installSeries(context) {
 
     function getSelectableRepos() {
       return getAllRepoMetrics()
-        .filter((repo) => repo.activity >= state.minActivity)
         .filter((repo) => !hasChunkLoadError(repo.name));
     }
 

@@ -49,11 +49,11 @@ export function installController(context) {
   const renderPortfolioGuide = (...args) => context.renderPortfolioGuide(...args);
   const renderReadinessQueue = (...args) => context.renderReadinessQueue(...args);
   const renderReferrerTable = (...args) => context.renderReferrerTable(...args);
+  const renderTrustPlaybook = (...args) => context.renderTrustPlaybook(...args);
   const sanitizeSelection = (...args) => context.sanitizeSelection(...args);
   const setMetric = (...args) => context.setMetric(...args);
   const setRepoSort = (...args) => context.setRepoSort(...args);
   const setText = (...args) => context.setText(...args);
-  const setThreshold = (...args) => context.setThreshold(...args);
   const setWindow = (...args) => context.setWindow(...args);
   const shiftCalendarMonth = (...args) => context.shiftCalendarMonth(...args);
   const sortRepos = (...args) => context.sortRepos(...args);
@@ -254,7 +254,6 @@ export function installController(context) {
         const params = new URLSearchParams();
         if (state.metric && state.metric !== 'views') params.set('metric', state.metric);
         if (getSelectedWindow() !== getDefaultWindow()) params.set('window', getSelectedWindow());
-        if (state.minActivity && state.minActivity !== (dashboardData()?.getMeta()?.default_min_activity || 1)) params.set('min', String(state.minActivity));
         if (state.selectedRepo) params.set('focus', getShortName(state.selectedRepo));
         if (state.compareRepos.length >= 2) params.set('compare', state.compareRepos.map(getShortName).join(','));
         const hash = params.toString();
@@ -278,9 +277,6 @@ export function installController(context) {
         const range = params.get('range');
         if (!windowParam && range === 'recent') state.window = DEFAULT_WINDOW;
         if (!windowParam && range === 'all') state.window = 'all';
-        const min = Number(params.get('min'));
-        if (Number.isFinite(min) && min >= 0) state.minActivity = Math.floor(min);
-
         const repoNames = (dashboardData()?.getRepos() || []).map((r) => r.name);
         const matchByShort = (short) => repoNames.find((n) => getShortName(n) === short) || null;
 
@@ -429,6 +425,7 @@ export function installController(context) {
       renderOpportunityMap();
       renderEventGraph();
       renderPortfolioGuide();
+      renderTrustPlaybook();
       renderReadinessQueue();
       renderReferrerTable(getCurrentReferrerRows());
       renderPathsTable(getCurrentPathRows());
@@ -440,23 +437,12 @@ export function installController(context) {
 
     function renderDashboard(payload) {
       state.dashboardData = createDashboardDataProvider(payload);
-      const meta = dashboardData()?.getMeta() || {};
       state.window = getDefaultWindow();
-      state.minActivity = meta.default_min_activity || 1;
       state.selectedRepo = null;
       state.compareRepos = [];
       state.chunkLoadErrors = {};
       state.calendarMonth = null;
       state.storyIndex = 0;
-      const thresholdInput = document.getElementById('thresholdInput');
-      if (thresholdInput) {
-        thresholdInput.addEventListener('change', function() {
-          setThreshold(thresholdInput.value);
-        });
-        thresholdInput.addEventListener('input', function() {
-          document.getElementById('thresholdValue').textContent = formatNumber(Math.max(0, Math.floor(Number(thresholdInput.value || 0))));
-        });
-      }
       document.querySelectorAll('[data-window]').forEach((btn) => {
         btn.addEventListener('click', function() { setWindow(btn.dataset.window); });
       });

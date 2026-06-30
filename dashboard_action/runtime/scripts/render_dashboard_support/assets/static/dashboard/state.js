@@ -65,7 +65,6 @@ export function installState(context) {
     const state = {
       dashboardData: null,
       window: DEFAULT_WINDOW,
-      minActivity: 1,
       selectedRepo: null,
       compareRepos: [],
       chunkLoadErrors: {},

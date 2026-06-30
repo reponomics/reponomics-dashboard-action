@@ -476,7 +476,6 @@ def _build_payload(
             "window_presets": [7, 14, 30, 90, "all"],
             "default_window": "14",
             "default_range": "recent",
-            "default_min_activity": 1,
         },
         "generated_at": now,
         "totals": {

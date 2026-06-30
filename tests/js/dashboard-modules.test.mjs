@@ -10,6 +10,7 @@ import { installPortfolioGuide } from '../../dashboard_action/runtime/scripts/re
 import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
 import { isPathInsideRoot } from '../../scripts/capture_dashboard_guide_assets.mjs';
+import { installTrustPlaybook } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/trust-playbook.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
 const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
@@ -249,7 +250,6 @@ test('series helpers preserve selected-window and growth aggregation contracts',
     },
     state: {
       compareRepos: [],
-      minActivity: 1,
       selectedRepo: null,
     },
   };
@@ -379,7 +379,6 @@ test('series helpers preserve published repository order by default', () => {
     },
     state: {
       compareRepos: [],
-      minActivity: 0,
       selectedRepo: null,
     },
   };
@@ -432,6 +431,75 @@ test('opportunity map projects repos into attention-growth quadrants', () => {
   assert.equal(byRepo.get('owner/high-high'), 'amplify');
   assert.equal(byRepo.get('owner/low-high'), 'protect niche pull');
   assert.equal(byRepo.get('owner/low-low'), 'seed discovery');
+});
+
+test('trust playbook exposes higher-bar learning tracks and no-signup diagnostics', () => {
+  const helpers = installTrustPlaybook({
+    document: fakeDocument(),
+    currentPayload() {
+      return { portfolio_profile: { label: 'Maintainer portfolio' } };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    getSelectedWindow() {
+      return '14';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [
+        {
+          name: 'owner/app',
+          clones: 8,
+          clone_uniques: 4,
+          stars_delta: 2,
+          subscribers_delta: 0,
+          forks_delta: 1,
+          community: {
+            health_percentage: 70,
+            has_readme: true,
+            has_license: false,
+            has_contributing: false,
+            has_issue_template: true,
+            has_pull_request_template: false,
+            has_code_of_conduct: true,
+          },
+        },
+      ];
+    },
+  });
+
+  const items = helpers.buildTrustPlaybookItems([
+    {
+      name: 'owner/app',
+      clones: 8,
+      clone_uniques: 4,
+      stars_delta: 2,
+      subscribers_delta: 0,
+      forks_delta: 1,
+      community: {
+        health_percentage: 70,
+        has_readme: true,
+        has_license: false,
+        has_contributing: false,
+        has_issue_template: true,
+        has_pull_request_template: false,
+        has_code_of_conduct: true,
+      },
+    },
+  ], { portfolio_profile: { label: 'Maintainer portfolio' } });
+
+  assert.deepEqual(items.map((item) => item.level), ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Track']);
+  assert.equal(items[1].command, 'scorecard --repo=github.com/owner/app --show-details');
+  assert.match(items[2].command, /osv-scanner scan -r \./);
+  assert.match(items[2].command, /zizmor \./);
+  assert.equal(items[3].links.some(([label]) => label === 'SLSA levels'), true);
+  assert.equal(items[4].links.some(([label]) => label === 'SOC overview'), true);
 });
 
 test('opportunity map keeps focusable repo points visible to assistive tech', () => {
@@ -716,7 +784,7 @@ test('data provider loads lazy plaintext chunks once and exposes loaded rows', a
   const helpers = installDataProvider(context);
   const provider = helpers.createDashboardDataProvider({
     summary: {
-      meta: { default_min_activity: 2 },
+      meta: { default_window: '14' },
       repos: [{ name: 'owner/repo-a' }],
       repo_chunks: { 'owner/repo-a': 'c0001' },
     },

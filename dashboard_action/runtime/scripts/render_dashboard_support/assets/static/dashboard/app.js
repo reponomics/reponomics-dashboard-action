@@ -7,6 +7,7 @@ import { installSelection } from './selection.js';
 import { installQualityCalendar } from './quality-calendar.js';
 import { installSeries } from './series.js';
 import { installMomentum } from './momentum.js';
+import { installTrustPlaybook } from './trust-playbook.js';
 import { installChartOptions } from './chart-options.js';
 import { installControls } from './controls.js';
 import { installCharts } from './charts.js';
@@ -26,6 +27,7 @@ const installers = [
   installQualityCalendar,
   installSeries,
   installMomentum,
+  installTrustPlaybook,
   installChartOptions,
   installControls,
   installEventGraph,

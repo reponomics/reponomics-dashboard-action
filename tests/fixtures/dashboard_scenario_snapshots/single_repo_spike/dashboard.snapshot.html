@@ -218,13 +218,6 @@
           </div>
           <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
         </div>
-        <div class="controls-group">
-          <div class="controls-label">Visibility threshold</div>
-          <div class="threshold-control">
-            <input class="threshold-input" id="thresholdInput" type="number" min="0" step="1" inputmode="numeric" value="1" aria-label="Minimum combined views and clones for a repo to appear">
-            <span class="controls-hint">Hide repos with fewer than <span class="threshold-value" id="thresholdValue">1</span> combined views + clones in the selected window.</span>
-          </div>
-        </div>
       </div>
       <div class="calendar-panel" id="calendar-panel">
         <div class="controls-label">Collection health</div>
@@ -246,6 +239,7 @@
         <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
         <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
+      <div class="trust-playbook" id="trust-playbook" aria-live="polite"></div>
     </div>
 
     <div class="card repo-strip-card" id="repo-strip-card">

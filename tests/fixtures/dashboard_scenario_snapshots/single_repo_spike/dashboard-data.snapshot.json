@@ -2380,7 +2380,6 @@
       }
     ],
     "meta": {
-      "default_min_activity": 1,
       "default_range": "recent",
       "default_window": "14",
       "recent_window_days": 14,

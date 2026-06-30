@@ -2,7 +2,6 @@ export function installControls(context) {
   const document = context.document;
   const MAX_COMPARE_REPOS = context.MAX_COMPARE_REPOS;
   const METRICS = context.METRICS;
-  const formatNumber = (...args) => context.formatNumber(...args);
   const getSelectedWindow = (...args) => context.getSelectedWindow(...args);
   const getShortName = (...args) => context.getShortName(...args);
   const getWindowDays = (...args) => context.getWindowDays(...args);
@@ -19,8 +18,6 @@ export function installControls(context) {
     }
 
     function updateControls() {
-      const thresholdInput = document.getElementById('thresholdInput');
-      const thresholdValue = document.getElementById('thresholdValue');
       const rangeHint = document.getElementById('rangeHint');
 
       document.querySelectorAll('[data-window]').forEach((button) => {
@@ -28,8 +25,6 @@ export function installControls(context) {
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
-      thresholdInput.value = String(state.minActivity);
-      thresholdValue.textContent = formatNumber(state.minActivity);
       const days = getWindowDays();
       rangeHint.textContent = days === null
         ? 'All shows all data since dashboard collection began.'
@@ -58,17 +53,6 @@ export function installControls(context) {
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
-    }
-
-    function setThreshold(nextValue) {
-      const parsed = Number(nextValue);
-      const safeValue = Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
-      if (safeValue === state.minActivity) {
-        return;
-      }
-      state.minActivity = safeValue;
-      sanitizeSelection();
-      updateDashboard();
     }
 
     function clearSelection() {
@@ -162,5 +146,5 @@ export function installControls(context) {
       }
     }
 
-  return { resetCheckboxes, updateControls, setWindow, setMetric, updateMetricTabs, setThreshold, clearSelection, selectRepo, activateRepo, toggleRepoCompare, updateToolbar };
+  return { resetCheckboxes, updateControls, setWindow, setMetric, updateMetricTabs, clearSelection, selectRepo, activateRepo, toggleRepoCompare, updateToolbar };
 }

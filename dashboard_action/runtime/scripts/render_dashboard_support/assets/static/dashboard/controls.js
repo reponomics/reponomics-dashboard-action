@@ -41,22 +41,25 @@ export function installControls(context) {
       updateDashboard();
     }
 
-    function setMetric(nextMetric) {
+    function setMetric(nextMetric, modifier) {
       if (!METRICS[nextMetric]) return;
       const current = selectedDailyMetricIds();
       const isSelected = current.includes(nextMetric);
-      let nextDailyMetrics = current;
 
-      if (!isSelected) {
-        nextDailyMetrics = current.concat(nextMetric);
+      if (!modifier) {
         state.metric = nextMetric;
-      } else if (state.metric === nextMetric && current.length > 1) {
-        nextDailyMetrics = current.filter((metric) => metric !== nextMetric);
-        state.metric = nextDailyMetrics[0];
-      } else {
-        state.metric = nextMetric;
+        state.dailyMetrics = [nextMetric];
+        updateDashboard();
+        return;
       }
 
+      let nextDailyMetrics = current;
+      if (isSelected && current.length > 1) {
+        nextDailyMetrics = current.filter((metric) => metric !== nextMetric);
+        if (state.metric === nextMetric) state.metric = nextDailyMetrics[0];
+      } else if (!isSelected) {
+        nextDailyMetrics = current.concat(nextMetric);
+      }
       state.dailyMetrics = nextDailyMetrics;
       updateDashboard();
     }

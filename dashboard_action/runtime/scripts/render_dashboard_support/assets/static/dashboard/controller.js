@@ -462,7 +462,9 @@ export function installController(context) {
         btn.addEventListener('click', function() { setWindow(btn.dataset.window); });
       });
       document.querySelectorAll('.metric-tab').forEach((btn) => {
-        btn.addEventListener('click', function() { setMetric(btn.dataset.metric); });
+        btn.addEventListener('click', function(event) {
+          setMetric(btn.dataset.metric, !!(event.metaKey || event.ctrlKey || event.shiftKey));
+        });
       });
       const calendarPrevBtn = document.getElementById('calendarPrevBtn');
       const calendarNextBtn = document.getElementById('calendarNextBtn');

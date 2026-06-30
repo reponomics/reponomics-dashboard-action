@@ -217,7 +217,7 @@ test('format helpers install independently of app lifecycle', () => {
   assert.match(helpers.buildSparklinePath([3, 7, 5], 100, 34).line, /^M0\.00 /);
 });
 
-test('metric controls support daily chart overlays while preserving one primary metric', () => {
+test('metric controls use modifier-click for daily chart overlays', () => {
   const classState = new Map();
   const buttons = ['views', 'clones', 'forks'].map((metric) => ({
     dataset: { metric },
@@ -277,24 +277,24 @@ test('metric controls support daily chart overlays while preserving one primary 
   });
 
   helpers.setMetric('clones');
-  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views', 'clones']);
-  assert.equal(helpers.selectedDailyMetricIds().includes('clones'), true);
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones']);
   assert.equal(updateCount, 1);
 
-  helpers.setMetric('views');
-  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views', 'clones']);
+  helpers.setMetric('forks', true);
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones', 'forks']);
+  assert.equal(updateCount, 2);
 
   helpers.setMetric('views');
-  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones']);
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views']);
 
-  helpers.setMetric('forks');
+  helpers.setMetric('clones', true);
   helpers.updateMetricTabs();
-  assert.equal(buttons.find((button) => button.dataset.metric === 'views')['aria-pressed'], 'false');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'views')['aria-pressed'], 'true');
   assert.equal(buttons.find((button) => button.dataset.metric === 'clones')['aria-pressed'], 'true');
-  assert.equal(buttons.find((button) => button.dataset.metric === 'forks')['aria-pressed'], 'true');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'forks')['aria-pressed'], 'false');
+  assert.equal(classState.get('views').has('active'), true);
   assert.equal(classState.get('clones').has('active'), true);
-  assert.equal(classState.get('forks').has('active'), true);
-  assert.equal(classState.get('forks').has('primary'), true);
+  assert.equal(classState.get('views').has('primary'), true);
 });
 
 test('daily chart overlays selected metrics on a shared date axis', () => {

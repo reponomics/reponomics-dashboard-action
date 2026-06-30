@@ -53,11 +53,13 @@ DASHBOARD_MODULE_ASSETS = (
     "dashboard/quality-calendar.js",
     "dashboard/series.js",
     "dashboard/momentum.js",
+    "dashboard/trust-playbook.js",
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/portfolio-guide.js",
     "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
@@ -79,11 +81,13 @@ STANDALONE_BUNDLE_ASSETS = (
     "dashboard/quality-calendar.js",
     "dashboard/series.js",
     "dashboard/momentum.js",
+    "dashboard/trust-playbook.js",
     "dashboard/chart-options.js",
     "dashboard/controls.js",
     "dashboard/charts.js",
     "dashboard/opportunity-map.js",
     "dashboard/event-graph.js",
+    "dashboard/portfolio-guide.js",
     "dashboard/readiness-queue.js",
     "dashboard/tables.js",
     "dashboard/controller.js",
@@ -196,6 +200,12 @@ def build_dashboard_shell(
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
+    <div class="card repo-strip-card" id="repo-strip-card">
+      <span class="repo-strip-label">Published repos</span>
+      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
+      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
+    </div>
+
     <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
       <div class="card stat-card" data-metric="repos">
         <div class="stat-head">
@@ -270,6 +280,18 @@ def build_dashboard_shell(
       </aside>
     </div>
 
+    <div class="section-grid full portfolio-guide-section">
+      <div class="card portfolio-guide-card" id="portfolio-guide-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Dashboard profile</h2>
+            <p class="click-hint">Guidance tuned to the published repo set and the signals currently retained.</p>
+          </div>
+        </div>
+        <div class="portfolio-guide" id="portfolio-guide" aria-live="polite"></div>
+      </div>
+    </div>
+
     <div class="growth-model-grid" aria-label="Repository growth model">
       <div class="card growth-stage">
         <div class="growth-stage-title">Attention</div>
@@ -297,7 +319,7 @@ def build_dashboard_shell(
           </div>
         </div>
         <div class="opportunity-layout">
-          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
+          <div class="opportunity-map" id="opportunity-map" role="group" aria-label="Repository opportunity map"></div>
           <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
         </div>
       </div>
@@ -348,13 +370,6 @@ def build_dashboard_shell(
           </div>
           <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
         </div>
-        <div class="controls-group">
-          <div class="controls-label">Visibility threshold</div>
-          <div class="threshold-control">
-            <input class="threshold-input" id="thresholdInput" type="number" min="0" step="1" inputmode="numeric" value="1" aria-label="Minimum combined views and clones for a repo to appear">
-            <span class="controls-hint">Hide repos with fewer than <span class="threshold-value" id="thresholdValue">1</span> combined views + clones in the selected window.</span>
-          </div>
-        </div>
       </div>
       <div class="calendar-panel" id="calendar-panel">
         <div class="controls-label">Collection health</div>
@@ -376,12 +391,7 @@ def build_dashboard_shell(
         <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
         <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
-    </div>
-
-    <div class="card repo-strip-card" id="repo-strip-card">
-      <span class="repo-strip-label">Published repos</span>
-      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
-      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
+      <div class="trust-playbook" id="trust-playbook" aria-live="polite"></div>
     </div>
 
     <div class="chart-grid">
@@ -389,10 +399,10 @@ def build_dashboard_shell(
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
+            <p class="click-hint">Focus repos, compare metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
-            <div class="metric-tabs" aria-label="Metric">
+            <div class="metric-tabs" aria-label="Metric overlays">
               <button class="metric-tab" data-metric="views" type="button" title="Total page views"><span class="swatch"></span>Views</button>
               <button class="metric-tab" data-metric="uniques" type="button" title="Unique visitors - distinct viewers per day"><span class="swatch"></span>Visitors</button>
               <button class="metric-tab" data-metric="clones" type="button" title="Total git-clone operations"><span class="swatch"></span>Clones</button>
@@ -636,6 +646,16 @@ def write_published_json_asset(output_path: str, asset_name: str, value: object)
     asset_path.write_text(json.dumps(value, separators=(",", ":")), encoding="utf-8")
 
 
+def _script_safe_json(value: object) -> str:
+    """Serialize JSON for direct embedding inside a script element."""
+    return (
+        json.dumps(value, separators=(",", ":"))
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def wrap_html(
     body: str,
     chart_loader: str,
@@ -731,7 +751,7 @@ def build_public_html(
             "total_clone_uniques": f"{totals['total_clone_uniques']:,}",
         },
     )
-    dashboard_data_json = json.dumps(dashboard_data, separators=(",", ":"))
+    dashboard_data_json = _script_safe_json(dashboard_data)
     if external_assets:
         body = shell
         extra_head = _json_asset_meta(
@@ -898,10 +918,8 @@ def build_encrypted_html(
         },
         hidden=True,
     )
-    encrypted_dashboard_data_json = json.dumps(
-        encrypted_dashboard_data, separators=(",", ":")
-    )
-    export_manifest_json = json.dumps(export_manifest, separators=(",", ":"))
+    encrypted_dashboard_data_json = _script_safe_json(encrypted_dashboard_data)
+    export_manifest_json = _script_safe_json(export_manifest)
     extra_head_parts = ['<meta name="robots" content="noindex, nofollow">']
     if external_assets:
         body = auth_card + shell

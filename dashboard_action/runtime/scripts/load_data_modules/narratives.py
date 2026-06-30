@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from statistics import median
 from typing import Any
 
+from load_data_modules.portfolio_profile import build_portfolio_profile
 from load_data_modules.repo_metrics import latest_repo_community_profiles
 from load_data_modules.types import Candidate, Rows
 
@@ -32,6 +33,7 @@ def narrative_insights_structured(
     code_frequency_rows: Rows | None = None,
     contributor_activity_rows: Rows | None = None,
     growth: Candidate | None = None,
+    portfolio_profile: Candidate | None = None,
     limit: int = 5,
 ) -> list[Candidate]:
     """Return ranked, rules-based narrative cards from retained context tables."""
@@ -41,6 +43,14 @@ def narrative_insights_structured(
 
     latest_date = max((str(row.get("ts") or "") for row in daily_rows), default="")
     window_days = _int((growth or {}).get("window_days")) or DEFAULT_WINDOW_DAYS
+    profile = portfolio_profile or build_portfolio_profile(
+        daily_rows,
+        metric_rows,
+        issue_pr_rows=issue_pr_rows or [],
+        event_rows=event_rows or [],
+        growth=growth or {},
+        window_days=window_days,
+    )
     traffic_by_repo = {
         repo: _traffic_stats(rows, latest_date, window_days)
         for repo, rows in _rows_by_repo(daily_rows).items()
@@ -58,6 +68,7 @@ def narrative_insights_structured(
         topic_rows=topic_rows or [],
         code_frequency_rows=code_frequency_rows or [],
         growth=growth or {},
+        portfolio_profile=profile,
         latest_date=latest_date,
         attention_floor=attention_floor,
     )
@@ -68,12 +79,17 @@ def narrative_insights_structured(
         _event_aligned_attention(candidates, row)
         _release_adoption_lift(candidates, row)
         _docs_or_examples_found_audience(candidates, row)
+        _solo_launch_positioning(candidates, row)
+        _quiet_day_reactivation(candidates, row)
         _steady_attention_next_step(candidates, row)
         _discovery_surface_next_step(candidates, row)
         _attention_without_readiness(candidates, row)
         _maintenance_pressure(candidates, row)
         _code_churn_context(candidates, row)
         _positioning_shift(candidates, row)
+    _portfolio_attention_concentration(candidates, context, profile)
+    _maintainer_triage_sweep(candidates, context, profile)
+    _published_set_curation(candidates, profile)
 
     candidates.sort(key=lambda item: float(item.get("score", 0)), reverse=True)
     return [_strip_score(item) for item in _diversified(candidates, limit)]
@@ -92,6 +108,7 @@ def _context_by_repo(
     topic_rows: Rows,
     code_frequency_rows: Rows,
     growth: Candidate,
+    portfolio_profile: Candidate,
     latest_date: str,
     attention_floor: int,
 ) -> dict[str, Candidate]:
@@ -103,6 +120,7 @@ def _context_by_repo(
             "growth": (growth.get("per_repo", {}) if isinstance(growth, dict) else {}).get(
                 repo, {}
             ),
+            "portfolio_profile": portfolio_profile,
             "community": community.get(repo, {}),
             "events": _rows_by_repo(event_rows).get(repo, []),
             "release_assets": _release_assets_by_release(release_asset_rows),
@@ -159,7 +177,11 @@ def _event_aligned_attention(candidates: list[Candidate], context: Candidate) ->
     baseline = float(traffic.get("baseline_views") or 0)
     if peak_views < max(8, baseline * 1.75):
         return
-    event = _nearest_event(context["events"], str(traffic.get("peak_date") or ""))
+    event = _nearest_event(
+        context["events"],
+        str(traffic.get("peak_date") or ""),
+        latest_date=str(context.get("latest_date") or ""),
+    )
     if not event:
         return
     gap = _days_between(str(traffic.get("peak_date") or ""), event.get("event_date", ""))
@@ -225,7 +247,11 @@ def _release_adoption_lift(candidates: list[Candidate], context: Candidate) -> N
 
 
 def _docs_or_examples_found_audience(candidates: list[Candidate], context: Candidate) -> None:
-    docs_event = _latest_classified_event(context["events"], {"docs"})
+    docs_event = _latest_classified_event(
+        context["events"],
+        {"docs"},
+        latest_date=str(context.get("latest_date") or ""),
+    )
     traffic = context["traffic"]
     top_path = _top_row(context["paths"], "count")
     top_referrer = _top_row(context["referrers"], "count")
@@ -254,6 +280,76 @@ def _docs_or_examples_found_audience(candidates: list[Candidate], context: Candi
         ],
         nearby_context=[_display_event(docs_event), *_positioning_context(context)[:2]],
         action="Check whether the docs page or README explains the next step clearly.",
+    )
+
+
+def _solo_launch_positioning(candidates: list[Candidate], context: Candidate) -> None:
+    profile = context.get("portfolio_profile", {})
+    if profile.get("id") not in {"first_app_launch", "focused_builder"}:
+        return
+    traffic = context["traffic"]
+    views = _int(traffic.get("views"))
+    visitors = _int(traffic.get("visitors"))
+    clones = _int(traffic.get("clones"))
+    if views + clones < 4 or visitors < 2:
+        return
+    missing = _missing_readiness(context["community"])
+    downstream = _downstream_delta(context)
+    top_path = _top_row(context["paths"], "count")
+    _add_candidate(
+        candidates,
+        context,
+        subtype="solo_launch_positioning",
+        tone="opportunity",
+        title="Early attention needs launch-positioning clarity",
+        summary=(
+            f"{_short_repo(context['repo'])} is part of a small published set and "
+            + f"has {_fmt(visitors)} visitors in the selected window. This is a good "
+            + "moment to make the first-visit path explicit."
+        ),
+        score=views * 0.35 + visitors * 1.6 + clones * 2 + len(missing) * 12 + 18,
+        evidence=[
+            _evidence("Visitors", _fmt(visitors), f"{traffic['window_days']}d window"),
+            _evidence("Clones", _fmt(clones), f"{traffic['window_days']}d window"),
+            _evidence("Downstream", _signed(downstream), "stars + watchers + forks"),
+            _evidence("Top content", _content_label(top_path) or "unknown", str(top_path.get("count") or "")),
+        ],
+        nearby_context=_positioning_context(context)[:3],
+        action="Make the README opening answer who it is for, the first command, and the first success state.",
+    )
+
+
+def _quiet_day_reactivation(candidates: list[Candidate], context: Candidate) -> None:
+    profile = context.get("portfolio_profile", {})
+    if profile.get("id") not in {"first_app_launch", "focused_builder", "builder_portfolio"}:
+        return
+    traffic = context["traffic"]
+    sample_count = _int(traffic.get("sample_count"))
+    active_days = _int(traffic.get("active_days"))
+    quiet_days = max(0, sample_count - active_days)
+    if sample_count < 7 or quiet_days < max(4, round(sample_count * 0.55)):
+        return
+    if _int(traffic.get("views")) + _int(traffic.get("clones")) <= 0:
+        return
+    _add_candidate(
+        candidates,
+        context,
+        subtype="quiet_day_reactivation",
+        tone="opportunity",
+        title="Quiet days can become a shipping rhythm",
+        summary=(
+            f"{_short_repo(context['repo'])} had {_fmt(quiet_days)} quiet days in a "
+            + f"{_fmt(sample_count)} day window. Use the quiet pattern to plan a "
+            + "small reason for people to return."
+        ),
+        score=quiet_days * 15 + _int(traffic.get("visitors")) * 2 + 28,
+        evidence=[
+            _evidence("Quiet days", _fmt(quiet_days), f"{sample_count}d sample"),
+            _evidence("Active days", _fmt(active_days), f"{traffic['window_days']}d window"),
+            _evidence("Views", _fmt(traffic.get("views")), f"{traffic['window_days']}d window"),
+        ],
+        nearby_context=_event_context(context)[:3],
+        action="Ship one visible follow-up: an example, release note, screenshot, or README path that gives visitors a reason to return.",
     )
 
 
@@ -454,6 +550,117 @@ def _positioning_shift(candidates: list[Candidate], context: Candidate) -> None:
     )
 
 
+def _portfolio_attention_concentration(
+    candidates: list[Candidate],
+    context_by_repo: dict[str, Candidate],
+    profile: Candidate,
+) -> None:
+    signals = profile.get("signals", {})
+    repo_count = _int(profile.get("repo_count"))
+    if repo_count < 3:
+        return
+    top_repo = str(signals.get("top_repo") or "")
+    share = float(signals.get("top_attention_share") or 0)
+    if not top_repo or share < 0.55:
+        return
+    top_context = context_by_repo.get(top_repo, {})
+    readiness_gap_repos = _int(signals.get("readiness_gap_repos"))
+    downstream = _int(signals.get("downstream_delta"))
+    _add_global_candidate(
+        candidates,
+        subtype="portfolio_attention_concentration",
+        tone="opportunity",
+        title="One repo is carrying most of the published attention",
+        summary=(
+            f"{_short_repo(top_repo)} has about {round(share * 100)}% of visible "
+            + "attention in this published set. Use it as the comparison point for "
+            + "which repo deserves the next positioning pass."
+        ),
+        score=share * 140 + readiness_gap_repos * 18 + max(0, downstream) * 4,
+        evidence=[
+            _evidence("Top repo", _short_repo(top_repo), f"{round(share * 100)}% attention"),
+            _evidence("Published repos", _fmt(repo_count), str(profile.get("bucket") or "")),
+            _evidence("Readiness gaps", _fmt(readiness_gap_repos), "repos"),
+            _evidence("Downstream", _signed(downstream), "stars + watchers + forks"),
+        ],
+        nearby_context=_positioning_context(top_context)[:3] if top_context else [],
+        action="Compare the top repo README, topics, and referrers against one quieter repo, then make one concrete positioning change.",
+    )
+
+
+def _maintainer_triage_sweep(
+    candidates: list[Candidate],
+    context_by_repo: dict[str, Candidate],
+    profile: Candidate,
+) -> None:
+    if profile.get("id") != "maintainer_portfolio":
+        return
+    signals = profile.get("signals", {})
+    maintenance_items = _int(signals.get("maintenance_items"))
+    readiness_gap_repos = _int(signals.get("readiness_gap_repos"))
+    event_count = _int(signals.get("recent_event_count"))
+    if maintenance_items < 8 and readiness_gap_repos < 2 and event_count < 4:
+        return
+    open_rows = sorted(
+        (
+            (
+                _int(row.get("issues", {}).get("open_issues_count"))
+                + _int(row.get("issues", {}).get("open_prs_count")),
+                repo,
+            )
+            for repo, row in context_by_repo.items()
+        ),
+        reverse=True,
+    )
+    top_repo = open_rows[0][1] if open_rows and open_rows[0][0] > 0 else ""
+    _add_global_candidate(
+        candidates,
+        subtype="maintainer_triage_sweep",
+        tone="watch",
+        title="Maintainer mode needs lightweight structure",
+        summary=(
+            "This published set has enough code, release, or issue context to make "
+            + "maintenance structure a useful follow-up."
+        ),
+        score=maintenance_items * 5 + readiness_gap_repos * 26 + event_count * 8 + 45,
+        evidence=[
+            _evidence("Open issues/PRs", _fmt(maintenance_items), "latest snapshots"),
+            _evidence("Readiness gaps", _fmt(readiness_gap_repos), "repos"),
+            _evidence("Recent events", _fmt(event_count), f"{profile.get('window_days')}d window"),
+            _evidence("Highest load", _short_repo(top_repo) if top_repo else "none", "repo"),
+        ],
+        nearby_context=_positioning_context(context_by_repo.get(top_repo, {}))[:3]
+        if top_repo
+        else [],
+        action="Start with labels, issue templates, PR templates, and contributing docs before the next release or traffic spike.",
+    )
+
+
+def _published_set_curation(candidates: list[Candidate], profile: Candidate) -> None:
+    signals = profile.get("signals", {})
+    if not signals.get("selected_set_full"):
+        return
+    _add_global_candidate(
+        candidates,
+        subtype="published_set_curation",
+        tone="explain",
+        title="The published set is at the eight-repo limit",
+        summary=(
+            "This dashboard is showing a full curated publish set. Repos outside "
+            + "the selected set should be rotated in when they become the current "
+            + "campaign, release, or maintenance focus."
+        ),
+        score=58,
+        evidence=[
+            _evidence("Published repos", _fmt(profile.get("repo_count")), "selected set"),
+            _evidence("Active repos", _fmt(signals.get("active_repos")), f"{profile.get('window_days')}d window"),
+            _evidence("Profile", str(profile.get("label") or ""), str(profile.get("bucket") or "")),
+        ],
+        nearby_context=[],
+        action="Use the eight slots as an editorial choice: keep active projects visible and rotate quieter repos out until they need attention.",
+    )
+
+
 def _add_candidate(
     candidates: list[Candidate],
     context: Candidate,
@@ -478,6 +685,36 @@ def _add_candidate(
             "summary": summary,
             "score": score,
             "anchor_date": anchor_date,
+            "confidence": "medium",
+            "evidence": [item for item in evidence if item.get("value")],
+            "nearby_context": nearby_context or [],
+            "action": action,
+        }
+    )
+
+
+def _add_global_candidate(
+    candidates: list[Candidate],
+    *,
+    subtype: str,
+    tone: str,
+    title: str,
+    summary: str,
+    score: float,
+    evidence: list[Candidate],
+    action: str,
+    nearby_context: list[Candidate] | None = None,
+) -> None:
+    candidates.append(
+        {
+            "kind": "narrative",
+            "repo": "",
+            "subtype": subtype,
+            "tone": tone,
+            "title": title,
+            "summary": summary,
+            "score": score,
+            "anchor_date": "",
             "confidence": "medium",
             "evidence": [item for item in evidence if item.get("value")],
             "nearby_context": nearby_context or [],
@@ -569,7 +806,9 @@ def _recent_code_frequency(rows: Rows, repo: str, latest_date: str) -> Candidate
     scoped = [
         row
         for row in rows
-        if row.get("repo") == repo and (not cutoff or str(row.get("week_start") or "") >= cutoff)
+        if row.get("repo") == repo
+        and (not cutoff or str(row.get("week_start") or "") >= cutoff)
+        and (not latest_date or str(row.get("week_start") or "")[:10] <= latest_date[:10])
     ]
     return {
         "additions": sum(_int(row.get("additions")) for row in scoped),
@@ -585,11 +824,15 @@ def _attention_floor(values: Any) -> int:
     return max(25, positive[len(positive) // 2])
 
 
-def _nearest_event(events: Rows, date: str) -> Candidate | None:
+def _nearest_event(events: Rows, date: str, *, latest_date: str = "") -> Candidate | None:
     dated = [
         (abs(_days_between(date, str(row.get("event_date") or ""))), row)
         for row in events
         if row.get("event_date")
+        and (
+            not latest_date
+            or _days_between(latest_date, str(row.get("event_date") or "")) >= 0
+        )
     ]
     dated = [(distance, row) for distance, row in dated if distance <= EVENT_NEAR_DAYS]
     if not dated:
@@ -602,18 +845,27 @@ def _latest_recent_release(events: Rows, latest_date: str) -> Candidate | None:
         row
         for row in events
         if row.get("event_type") == "release"
-        and abs(_days_between(latest_date, str(row.get("event_date") or ""))) <= RELEASE_NEAR_DAYS
+        and 0 <= _days_between(latest_date, str(row.get("event_date") or "")) <= RELEASE_NEAR_DAYS
     ]
     if not releases:
         return None
     return sorted(releases, key=lambda row: str(row.get("event_date") or ""), reverse=True)[0]
 
 
-def _latest_classified_event(events: Rows, classifications: set[str]) -> Candidate | None:
+def _latest_classified_event(
+    events: Rows,
+    classifications: set[str],
+    *,
+    latest_date: str = "",
+) -> Candidate | None:
     matches = [
         row
         for row in events
         if str(row.get("classification") or "").lower() in classifications
+        and (
+            not latest_date
+            or _days_between(latest_date, str(row.get("event_date") or "")) >= 0
+        )
     ]
     if not matches:
         return None
@@ -622,7 +874,13 @@ def _latest_classified_event(events: Rows, classifications: set[str]) -> Candida
 
 def _release_downloads(assets_by_release: dict[str, Rows], release: Candidate) -> int:
     rows = assets_by_release.get(str(release.get("release_id") or ""), [])
-    return sum(_int(row.get("download_count")) for row in rows)
+    if not rows:
+        return 0
+    latest_capture = max(str(row.get("captured_at") or "") for row in rows)
+    latest_rows = [
+        row for row in rows if str(row.get("captured_at") or "") == latest_capture
+    ]
+    return sum(_int(row.get("download_count")) for row in latest_rows)
 
 
 def _top_row(rows: Rows, key: str) -> Candidate:

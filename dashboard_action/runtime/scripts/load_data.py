@@ -50,6 +50,9 @@ from load_data_modules.insights import (
 from load_data_modules.narratives import (
     narrative_insights_structured,
 )
+from load_data_modules.portfolio_profile import (
+    build_portfolio_profile,
+)
 from load_data_modules.quality import (
     collection_quality,
 )
@@ -84,6 +87,7 @@ __all__ = [
     "aggregate_per_repo",
     "aggregate_repo_metrics",
     "aggregate_totals",
+    "build_portfolio_profile",
     "collection_quality",
     "collection_quality_days",
     "compute_momentum",

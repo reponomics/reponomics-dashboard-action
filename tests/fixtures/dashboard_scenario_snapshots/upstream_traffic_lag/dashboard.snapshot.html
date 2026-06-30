@@ -54,6 +54,12 @@
 
     <div class="dashboard-notice-region" id="dashboard-notice-region" hidden aria-live="polite" aria-atomic="true"></div>
 
+    <div class="card repo-strip-card" id="repo-strip-card">
+      <span class="repo-strip-label">Published repos</span>
+      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
+      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
+    </div>
+
     <div class="stats-grid dashboard-summary" id="stats-grid" aria-label="Published repository summary">
       <div class="card stat-card" data-metric="repos">
         <div class="stat-head">
@@ -128,6 +134,18 @@
       </aside>
     </div>
 
+    <div class="section-grid full portfolio-guide-section">
+      <div class="card portfolio-guide-card" id="portfolio-guide-card">
+        <div class="section-header">
+          <div class="section-copy">
+            <h2>Dashboard profile</h2>
+            <p class="click-hint">Guidance tuned to the published repo set and the signals currently retained.</p>
+          </div>
+        </div>
+        <div class="portfolio-guide" id="portfolio-guide" aria-live="polite"></div>
+      </div>
+    </div>
+
     <div class="growth-model-grid" aria-label="Repository growth model">
       <div class="card growth-stage">
         <div class="growth-stage-title">Attention</div>
@@ -155,7 +173,7 @@
           </div>
         </div>
         <div class="opportunity-layout">
-          <div class="opportunity-map" id="opportunity-map" role="img" aria-label="Repository opportunity map"></div>
+          <div class="opportunity-map" id="opportunity-map" role="group" aria-label="Repository opportunity map"></div>
           <div class="opportunity-notes" id="opportunity-notes" aria-live="polite"></div>
         </div>
       </div>
@@ -206,13 +224,6 @@
           </div>
           <p class="controls-hint" id="rangeHint">Choose a trailing collected-day window, or All data since collection began.</p>
         </div>
-        <div class="controls-group">
-          <div class="controls-label">Visibility threshold</div>
-          <div class="threshold-control">
-            <input class="threshold-input" id="thresholdInput" type="number" min="0" step="1" inputmode="numeric" value="1" aria-label="Minimum combined views and clones for a repo to appear">
-            <span class="controls-hint">Hide repos with fewer than <span class="threshold-value" id="thresholdValue">1</span> combined views + clones in the selected window.</span>
-          </div>
-        </div>
       </div>
       <div class="calendar-panel" id="calendar-panel">
         <div class="controls-label">Collection health</div>
@@ -234,12 +245,7 @@
         <p class="calendar-hint" id="calendarHint">Collection status per day in the selected window.</p>
         <p class="calendar-day-detail" id="calendarDayDetail" aria-live="polite">Hover or focus a day to inspect collection details.</p>
       </div>
-    </div>
-
-    <div class="card repo-strip-card" id="repo-strip-card">
-      <span class="repo-strip-label">Published repos</span>
-      <div class="repo-strip" id="repo-strip" role="toolbar" aria-label="Published repository selector"></div>
-      <span class="repo-strip-hint" id="repo-strip-hint">Focus or compare within this published set</span>
+      <div class="trust-playbook" id="trust-playbook" aria-live="polite"></div>
     </div>
 
     <div class="chart-grid">
@@ -247,10 +253,10 @@
         <div class="section-header">
           <div class="section-copy">
             <h2 id="dailyChartTitle">Traffic Overview</h2>
-            <p class="click-hint">Focus repos, switch metrics, and use small code/release markers as nearby context.</p>
+            <p class="click-hint">Focus repos, compare metrics, and use small code/release markers as nearby context.</p>
           </div>
           <div class="section-actions">
-            <div class="metric-tabs" aria-label="Metric">
+            <div class="metric-tabs" aria-label="Metric overlays">
               <button class="metric-tab" data-metric="views" type="button" title="Total page views"><span class="swatch"></span>Views</button>
               <button class="metric-tab" data-metric="uniques" type="button" title="Unique visitors - distinct viewers per day"><span class="swatch"></span>Visitors</button>
               <button class="metric-tab" data-metric="clones" type="button" title="Total git-clone operations"><span class="swatch"></span>Clones</button>

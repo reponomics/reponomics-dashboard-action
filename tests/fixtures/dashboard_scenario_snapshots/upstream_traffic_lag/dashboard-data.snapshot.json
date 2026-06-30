@@ -452,7 +452,6 @@
       }
     ],
     "meta": {
-      "default_min_activity": 1,
       "default_range": "recent",
       "default_window": "14",
       "recent_window_days": 14,
@@ -546,6 +545,93 @@
         "uniques": 1
       }
     ],
+    "portfolio_profile": {
+      "bucket": "small_portfolio",
+      "data_gaps": [
+        {
+          "candidate_table": "repo-readme-snapshots.csv",
+          "key": "readme_content",
+          "label": "README content snapshot",
+          "reason": "Community profile tells whether a README exists, but not whether it explains audience, setup, examples, or next steps."
+        }
+      ],
+      "guidance": [
+        {
+          "label": "Rank",
+          "text": "Use attention and downstream growth together to decide which repo deserves the next pass."
+        },
+        {
+          "label": "Inspect",
+          "text": "Compare referrers, paths, and code events before changing positioning."
+        },
+        {
+          "label": "Act",
+          "text": "Prefer one small public-facing improvement per repo over broad interpretation."
+        }
+      ],
+      "id": "product_operator",
+      "label": "Product operator",
+      "primary_goal": "Rank opportunities across repos without losing the concrete next action.",
+      "recipe_emphasis": [
+        "portfolio_attention_concentration",
+        "release_adoption_lift",
+        "steady_attention_next_step"
+      ],
+      "repo_count": 3,
+      "repo_stats": {
+        "demo/api-monitor": {
+          "active_days": 8,
+          "attention": 140,
+          "cloners": 8,
+          "clones": 16,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 8,
+          "views": 124,
+          "visitors": 56
+        },
+        "demo/docs-site": {
+          "active_days": 8,
+          "attention": 180,
+          "cloners": 16,
+          "clones": 24,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 8,
+          "views": 156,
+          "visitors": 72
+        },
+        "demo/toolkit": {
+          "active_days": 8,
+          "attention": 220,
+          "cloners": 24,
+          "clones": 32,
+          "quiet": false,
+          "quiet_days": 0,
+          "sample_count": 8,
+          "views": 188,
+          "visitors": 88
+        }
+      },
+      "signals": {
+        "active_repos": 3,
+        "avg_community_health": 87,
+        "downstream_delta": 0,
+        "maintenance_items": 0,
+        "quiet_repos": 0,
+        "readiness_gap_repos": 1,
+        "recent_event_count": 0,
+        "selected_set_full": false,
+        "top_attention_share": 0.407,
+        "top_repo": "demo/toolkit",
+        "total_clones": 72,
+        "total_views": 468,
+        "total_visitors": 216,
+        "young_repos": 0
+      },
+      "summary": "3 published repos make this a product-operator view: compare attention, choose where to tighten the funnel, and keep the next action small.",
+      "window_days": 14
+    },
     "referrers": [
       {
         "count": 41,

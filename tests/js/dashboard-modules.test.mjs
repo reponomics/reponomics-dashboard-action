@@ -2,12 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
+import { installCharts } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/charts.js';
+import { installControls } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/controls.js';
 import { installDataProvider } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/data-provider.js';
 import { installEventGraph } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/event-graph.js';
 import { installFormat } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/format.js';
 import { installOpportunityMap } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/opportunity-map.js';
+import { installPortfolioGuide } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/portfolio-guide.js';
 import { installReadinessQueue } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/readiness-queue.js';
 import { installSeries } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/series.js';
+import { installTables } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/tables.js';
+import { isPathInsideRoot } from '../../scripts/capture_dashboard_guide_assets.mjs';
+import { installTrustPlaybook } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/trust-playbook.js';
 
 globalThis.__PBKDF2_ITERATIONS__ = 600000;
 const secureCore = await import('../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/secure-core.js');
@@ -212,6 +218,303 @@ test('format helpers install independently of app lifecycle', () => {
   assert.match(helpers.buildSparklinePath([3, 7, 5], 100, 34).line, /^M0\.00 /);
 });
 
+test('metric controls use modifier-click for daily chart overlays', () => {
+  const classState = new Map();
+  const buttons = ['views', 'clones', 'forks'].map((metric) => ({
+    dataset: { metric },
+    classList: {
+      toggle(name, enabled) {
+        const classes = classState.get(metric) || new Set();
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+        classState.set(metric, classes);
+      },
+    },
+    setAttribute(name, value) {
+      this[name] = value;
+    },
+  }));
+  let updateCount = 0;
+  const helpers = installControls({
+    document: {
+      querySelectorAll(selector) {
+        return selector === '.metric-tab' ? buttons : [];
+      },
+      getElementById() {
+        return fakeElement();
+      },
+    },
+    MAX_COMPARE_REPOS: 8,
+    METRICS: {
+      views: { key: 'views' },
+      clones: { key: 'clones' },
+      forks: { key: 'forks_delta' },
+    },
+    getSelectedWindow() {
+      return '14';
+    },
+    getShortName(name) {
+      return name;
+    },
+    getWindowDays() {
+      return 14;
+    },
+    isComparing() {
+      return false;
+    },
+    normalizeWindow(value) {
+      return value;
+    },
+    sanitizeSelection() {},
+    state: {
+      metric: 'views',
+      dailyMetrics: ['views'],
+      compareRepos: [],
+      selectedRepo: null,
+    },
+    updateDashboard() {
+      updateCount += 1;
+    },
+  });
+
+  helpers.setMetric('clones');
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones']);
+  assert.equal(updateCount, 1);
+
+  helpers.setMetric('forks', true);
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['clones', 'forks']);
+  assert.equal(updateCount, 2);
+
+  helpers.setMetric('views');
+  assert.deepEqual(helpers.selectedDailyMetricIds(), ['views']);
+
+  helpers.setMetric('clones', true);
+  helpers.updateMetricTabs();
+  assert.equal(buttons.find((button) => button.dataset.metric === 'views')['aria-pressed'], 'true');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'clones')['aria-pressed'], 'true');
+  assert.equal(buttons.find((button) => button.dataset.metric === 'forks')['aria-pressed'], 'false');
+  assert.equal(classState.get('views').has('active'), true);
+  assert.equal(classState.get('clones').has('active'), true);
+  assert.equal(classState.get('views').has('primary'), true);
+});
+
+test('daily chart overlays selected metrics on a shared date axis', () => {
+  const title = fakeElement();
+  const chart = {
+    data: { labels: [], datasets: [] },
+    options: { scales: { y: {} } },
+    updateCount: 0,
+    update() {
+      this.updateCount += 1;
+    },
+  };
+  let yAxisDatasetCount = 0;
+  const helpers = installCharts({
+    document: {
+      getElementById(id) {
+        return id === 'dailyChartTitle' ? title : fakeElement();
+      },
+    },
+    activateRepo() {},
+    buildWeekdaySummaryFromSeries() {
+      return {};
+    },
+    chartOptions() {
+      return {};
+    },
+    compactNumber(value) {
+      return String(value);
+    },
+    computeDelta() {
+      return null;
+    },
+    configureYAxis(_chart, _labels, datasets) {
+      yAxisDatasetCount = datasets.length;
+    },
+    currentPayload() {
+      return {};
+    },
+    dashboardData() {
+      return { getRepos: () => [] };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      return String(value);
+    },
+    getCurrentWindowData() {
+      return {
+        daily: {
+          dates: ['2026-05-14', '2026-05-15'],
+          views: [3, 4],
+          clones: [1, 5],
+          forks_delta: [0, 2],
+        },
+        totals: {},
+      };
+    },
+    getRepoByName() {
+      return null;
+    },
+    getRepoColor() {
+      return '#56b4e9';
+    },
+    getRepoDash() {
+      return [];
+    },
+    getShortName(name) {
+      return name;
+    },
+    getThemeColor(_name, fallback) {
+      return fallback;
+    },
+    getVisibleRepos() {
+      return [];
+    },
+    hexAlpha(color) {
+      return color;
+    },
+    isComparing() {
+      return false;
+    },
+    metricInfo(metric) {
+      return {
+        views: { key: 'views', label: 'Views', color: '#6bb8ff' },
+        clones: { key: 'clones', label: 'Clones', color: '#d97eb7' },
+        forks: { key: 'forks_delta', label: 'Fork Growth', color: '#4fc8a5' },
+      }[metric];
+    },
+    palette: [],
+    renderDelta() {},
+    renderSparkline() {},
+    selectedDailyMetricIds() {
+      return ['views', 'clones', 'forks'];
+    },
+    seriesValueAt(series, key, idx) {
+      return series[key][idx];
+    },
+    setText() {},
+    splitWindow() {
+      return {};
+    },
+    state: {
+      metric: 'views',
+      dailyMetrics: ['views', 'clones', 'forks'],
+      compareRepos: [],
+      selectedRepo: null,
+    },
+    charts: { dailyChart: chart },
+  });
+
+  helpers.updateDailyChart();
+
+  assert.equal(title.textContent, 'Metric overlays over time');
+  assert.deepEqual(chart.data.labels, ['2026-05-14', '2026-05-15']);
+  assert.deepEqual(chart.data.datasets.map((dataset) => dataset.label), ['Views', 'Clones', 'Fork Growth']);
+  assert.deepEqual(chart.data.datasets.map((dataset) => dataset.metricKey), ['views', 'clones', 'forks_delta']);
+  assert.equal(yAxisDatasetCount, 3);
+  assert.equal(chart.updateCount, 1);
+});
+
+test('next move queue focuses repos without scrolling the page', () => {
+  const created = [];
+  const insightsContainer = {
+    innerHTML: '',
+    children: [],
+    appendChild(child) {
+      this.children.push(child);
+    },
+  };
+  function element(tagName = 'div') {
+    return {
+      tagName,
+      children: [],
+      dataset: {},
+      style: {},
+      className: '',
+      tabIndex: -1,
+      innerHTML: '',
+      addEventListener(type, handler) {
+        this[`on${type}`] = handler;
+      },
+      appendChild(child) {
+        this.children.push(child);
+      },
+      setAttribute(name, value) {
+        this[name] = value;
+      },
+    };
+  }
+  let selectedRepo = '';
+  let scrollCount = 0;
+  const helpers = installTables({
+    document: {
+      createElement(tagName) {
+        const node = element(tagName);
+        created.push(node);
+        return node;
+      },
+      getElementById(id) {
+        return id === 'insights-list' ? insightsContainer : null;
+      },
+    },
+    window: {
+      scrollTo() {
+        scrollCount += 1;
+      },
+    },
+    buildSparklinePath() {
+      return { line: '', area: '' };
+    },
+    currentPayload() {
+      return {
+        insights_v2: [
+          {
+            kind: 'growth',
+            repo: 'owner/app',
+            text: '`owner/app` gained attention',
+            traffic: 12,
+            downstream_delta: 3,
+          },
+        ],
+      };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number >= 0 ? '+' : ''}${number}`;
+    },
+    getShortName(name) {
+      return String(name || '').split('/').pop();
+    },
+    renderRepoTable() {},
+    selectRepo(repo) {
+      selectedRepo = repo;
+    },
+    state: {
+      storyIndex: 0,
+    },
+    updateDashboard() {},
+  });
+
+  helpers.renderInsights();
+  const item = created.find((node) => node.tagName === 'li');
+
+  assert.equal(typeof item.onclick, 'function');
+  item.onclick();
+  assert.equal(selectedRepo, 'owner/app');
+  assert.equal(scrollCount, 0);
+});
+
 test('series helpers preserve selected-window and growth aggregation contracts', () => {
   const context = {
     MAX_DISPLAY_REPOS: 8,
@@ -247,7 +550,6 @@ test('series helpers preserve selected-window and growth aggregation contracts',
     },
     state: {
       compareRepos: [],
-      minActivity: 1,
       selectedRepo: null,
     },
   };
@@ -377,7 +679,6 @@ test('series helpers preserve published repository order by default', () => {
     },
     state: {
       compareRepos: [],
-      minActivity: 0,
       selectedRepo: null,
     },
   };
@@ -430,6 +731,128 @@ test('opportunity map projects repos into attention-growth quadrants', () => {
   assert.equal(byRepo.get('owner/high-high'), 'amplify');
   assert.equal(byRepo.get('owner/low-high'), 'protect niche pull');
   assert.equal(byRepo.get('owner/low-low'), 'seed discovery');
+});
+
+test('trust playbook exposes higher-bar learning tracks and no-signup diagnostics', () => {
+  const helpers = installTrustPlaybook({
+    document: fakeDocument(),
+    currentPayload() {
+      return { portfolio_profile: { label: 'Maintainer portfolio' } };
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    getSelectedWindow() {
+      return '14';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [
+        {
+          name: 'owner/app',
+          clones: 8,
+          clone_uniques: 4,
+          stars_delta: 2,
+          subscribers_delta: 0,
+          forks_delta: 1,
+          community: {
+            health_percentage: 70,
+            has_readme: true,
+            has_license: false,
+            has_contributing: false,
+            has_issue_template: true,
+            has_pull_request_template: false,
+            has_code_of_conduct: true,
+          },
+        },
+      ];
+    },
+  });
+
+  const items = helpers.buildTrustPlaybookItems([
+    {
+      name: 'owner/app',
+      clones: 8,
+      clone_uniques: 4,
+      stars_delta: 2,
+      subscribers_delta: 0,
+      forks_delta: 1,
+      community: {
+        health_percentage: 70,
+        has_readme: true,
+        has_license: false,
+        has_contributing: false,
+        has_issue_template: true,
+        has_pull_request_template: false,
+        has_code_of_conduct: true,
+      },
+    },
+  ], { portfolio_profile: { label: 'Maintainer portfolio' } });
+
+  assert.deepEqual(items.map((item) => item.level), ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Track']);
+  assert.equal(items[1].command, 'scorecard --repo=github.com/owner/app --show-details');
+  assert.match(items[2].command, /osv-scanner scan -r \./);
+  assert.match(items[2].command, /zizmor \./);
+  assert.equal(items[3].links.some(([label]) => label === 'SLSA levels'), true);
+  assert.equal(items[4].links.some(([label]) => label === 'SOC overview'), true);
+});
+
+test('opportunity map keeps focusable repo points visible to assistive tech', () => {
+  const mapElement = fakeElement();
+  const cardElement = { ...fakeElement(), closest() { return null; } };
+  const notesElement = fakeElement();
+  const elements = new Map([
+    ['opportunity-map', mapElement],
+    ['opportunity-card', cardElement],
+    ['opportunity-notes', notesElement],
+  ]);
+  const helpers = installOpportunityMap({
+    document: {
+      getElementById(id) {
+        return elements.get(id) || null;
+      },
+    },
+    activateRepo() {},
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+    formatSigned(value) {
+      const number = Number(value || 0);
+      return `${number >= 0 ? '+' : ''}${number}`;
+    },
+    getRepoColor() {
+      return '#6bb8ff';
+    },
+    getShortName(name) {
+      return name.split('/').pop();
+    },
+    getVisibleRepos() {
+      return [
+        { name: 'owner/app', views: 120, uniques: 45, clones: 6, clone_uniques: 3, stars_delta: 1, subscribers_delta: 0, forks_delta: 0 },
+      ];
+    },
+  });
+
+  helpers.renderOpportunityMap();
+
+  assert.match(mapElement.innerHTML, /<svg[^>]*role="group"/);
+  assert.doesNotMatch(mapElement.innerHTML, /aria-hidden="true"/);
+  assert.match(mapElement.innerHTML, /tabindex="0" role="button"/);
+});
+
+test('guide asset containment rejects sibling directories with shared prefixes', () => {
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide/index.html'), true);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide'), true);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/reponomics-guide-secret/index.html'), false);
+  assert.equal(isPathInsideRoot('/tmp/reponomics-guide', '/tmp/other-guide/index.html'), false);
 });
 
 test('event graph filters retained code events to the selected window', () => {
@@ -550,12 +973,47 @@ test('readiness queue ranks visible repo setup gaps', () => {
 
   assert.equal(rows[0].missing.length, 2);
   assert.equal(rows[0].missing[0].label, 'License');
+  assert.match(rows[0].missing[0].href, /^https:\/\/docs\.github\.com\//);
   assert.equal(rows[1].missing.length, 0);
   assert.equal(summary.present, 10);
   assert.equal(summary.known, 12);
   assert.equal(summary.missingRepos, 1);
   assert.equal(summary.avgHealth, 83);
   assert.ok(rows[0].priority > rows[1].priority);
+});
+
+test('portfolio guide summarizes dashboard profile signals', () => {
+  const helpers = installPortfolioGuide({
+    document: fakeDocument(),
+    currentPayload() {
+      return {};
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    formatNumber(value) {
+      return String(value);
+    },
+  });
+  const rows = helpers.signalRows({
+    repo_count: 2,
+    signals: {
+      active_repos: 1,
+      quiet_repos: 1,
+      recent_event_count: 3,
+      readiness_gap_repos: 1,
+      maintenance_items: 0,
+    },
+  });
+
+  assert.deepEqual(rows.map((row) => row[0]), [
+    'Published',
+    'Active',
+    'Quiet',
+    'Events',
+    'Readiness',
+    'Maint.',
+  ]);
 });
 
 test('secure core validates encrypted dashboard and export metadata contracts', () => {
@@ -626,7 +1084,7 @@ test('data provider loads lazy plaintext chunks once and exposes loaded rows', a
   const helpers = installDataProvider(context);
   const provider = helpers.createDashboardDataProvider({
     summary: {
-      meta: { default_min_activity: 2 },
+      meta: { default_window: '14' },
       repos: [{ name: 'owner/repo-a' }],
       repo_chunks: { 'owner/repo-a': 'c0001' },
     },

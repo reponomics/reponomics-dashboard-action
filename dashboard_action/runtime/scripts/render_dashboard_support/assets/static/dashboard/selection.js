@@ -33,8 +33,7 @@ export function installSelection(context) {
       if (!repoName || !dashboardData()?.getRepoSummary(repoName)?.name) {
         return null;
       }
-      const repo = buildRepoMetrics(repoName);
-      return repo.activity >= state.minActivity ? repo : null;
+      return buildRepoMetrics(repoName);
     }
 
     function getRepoColor(repoName) {

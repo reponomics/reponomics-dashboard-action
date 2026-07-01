@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import http from 'node:http';
-import { delimiter, extname, join, resolve } from 'node:path';
+import { delimiter, extname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
 const DEFAULT_DASHBOARD_DIR = join(ROOT, 'dist/demo/docs');
@@ -62,14 +63,29 @@ function contentType(path) {
   }[extname(path)] || 'application/octet-stream';
 }
 
-async function startServer(root, host, port) {
+export function isPathInsideRoot(root, file) {
+  const rootPath = resolve(root);
+  const filePath = resolve(file);
+  const rootRelativePath = relativePath(rootPath, filePath);
+  return (
+    rootRelativePath === ''
+    || (
+      rootRelativePath !== '..'
+      && !rootRelativePath.startsWith(`..${sep}`)
+      && !isAbsolute(rootRelativePath)
+    )
+  );
+}
+
+export async function startServer(root, host, port) {
+  const rootPath = resolve(root);
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || '/', `http://${host}`);
       const pathname = decodeURIComponent(url.pathname);
-      const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
-      const file = resolve(root, relative);
-      if (!file.startsWith(resolve(root))) {
+      const requestPath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+      const file = resolve(rootPath, requestPath);
+      if (!isPathInsideRoot(rootPath, file)) {
         res.writeHead(403);
         res.end('Forbidden');
         return;
@@ -198,7 +214,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });
+}

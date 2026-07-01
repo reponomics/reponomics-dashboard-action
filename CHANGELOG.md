@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.30.1...v0.31.0) (2026-06-30)
+
+
+### Features
+
+* new dashboard features ([#195](https://github.com/reponomics/reponomics-dashboard-action/issues/195)) ([af3cabe](https://github.com/reponomics/reponomics-dashboard-action/commit/af3cabe2c53d0a0e75856d51659a99d75cfdbace))
+
 ## [0.30.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.30.0...v0.30.1) (2026-06-29)
 
 

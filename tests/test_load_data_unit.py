@@ -370,6 +370,346 @@ def test_narrative_insights_surface_next_moves_for_flat_attention() -> None:
     }
 
 
+def test_release_adoption_lift_ignores_release_after_latest_traffic_day() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 1, 1, 1, 1)
+        for offset in range(14)
+    ]
+    metric_rows = [
+        _metric_row("demo/app", "2026-06-14", 10, 2, 1),
+        _metric_row("demo/app", "2026-06-14", 10, 2, 2, captured_at="2026-06-14T12:00:00Z"),
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-18",
+                "event_type": "release",
+                "classification": "release",
+                "title": "v2.0.0",
+                "release_id": "future-release",
+            }
+        ],
+        release_asset_rows=[
+            {
+                "repo": "demo/app",
+                "release_id": "future-release",
+                "download_count": "9",
+                "captured_at": "2026-06-18T12:00:00Z",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert {item["subtype"] for item in insights} >= {"solo_launch_positioning"}
+    assert "release_adoption_lift" not in {item["subtype"] for item in insights}
+
+
+def test_release_asset_downloads_use_latest_snapshot_not_retained_sum() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 1, 1)
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-10",
+                "event_type": "release",
+                "classification": "release",
+                "title": "v1.0.0",
+                "release_id": "release-1",
+            }
+        ],
+        release_asset_rows=[
+            {
+                "repo": "demo/app",
+                "release_id": "release-1",
+                "asset_id": "wheel",
+                "download_count": "5",
+                "captured_at": "2026-06-11T12:00:00Z",
+            },
+            {
+                "repo": "demo/app",
+                "release_id": "release-1",
+                "asset_id": "wheel",
+                "download_count": "7",
+                "captured_at": "2026-06-14T12:00:00Z",
+            },
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    release_card = next(
+        item for item in insights if item["subtype"] == "release_adoption_lift"
+    )
+    asset_evidence = next(
+        row for row in release_card["evidence"] if row["label"] == "Asset downloads"
+    )
+    assert asset_evidence["value"] == "7"
+
+
+def test_code_churn_context_ignores_weeks_after_latest_traffic_day() -> None:
+    start = date(2026, 5, 18)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 20, 5)
+        for offset in range(14)
+    ] + [
+        _daily_row("demo/app", (start + timedelta(days=14 + offset)).isoformat(), 2, 1)
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        code_frequency_rows=[
+            {
+                "repo": "demo/app",
+                "week_start": "2026-06-22",
+                "additions": "600",
+                "deletions": "200",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert "code_churn_context" not in {item["subtype"] for item in insights}
+
+
+def test_docs_found_audience_ignores_docs_event_after_latest_traffic_day() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 6, 3)
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-18",
+                "event_type": "commit",
+                "classification": "docs",
+                "title": "Document tutorial",
+            }
+        ],
+        path_rows=[
+            {
+                "repo": "demo/app",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "path": "/demo/app/blob/main/docs/tutorial.md",
+                "title": "Tutorial docs",
+                "count": "18",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert "docs_found_audience" not in {item["subtype"] for item in insights}
+
+
+def test_event_aligned_attention_ignores_event_after_latest_traffic_day() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row("demo/app", (start + timedelta(days=offset)).isoformat(), 2, 1)
+        for offset in range(14)
+    ]
+    daily_rows[-1] = _daily_row("demo/app", "2026-06-14", 40, 16)
+    metric_rows = [_metric_row("demo/app", "2026-06-14", 10, 2, 1)]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        event_rows=[
+            {
+                "repo": "demo/app",
+                "event_date": "2026-06-16",
+                "event_type": "commit",
+                "classification": "feature",
+                "title": "Ship future feature",
+                "magnitude": "8",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert "event_aligned_attention" not in {item["subtype"] for item in insights}
+
+
+def test_portfolio_profile_recent_event_count_ignores_future_events() -> None:
+    start = date(2026, 6, 1)
+    repos = [f"demo/repo-{idx}" for idx in range(3)]
+    daily_rows = [
+        _daily_row(repo, (start + timedelta(days=offset)).isoformat(), 3, 1)
+        for repo in repos
+        for offset in range(14)
+    ]
+    metric_rows = [_metric_row(repo, "2026-06-14", 10, 2, 1) for repo in repos]
+    event_rows = [
+        {
+            "repo": repo,
+            "event_date": "2026-06-18",
+            "event_type": "commit",
+            "classification": "feature",
+            "title": f"Future event {idx}",
+        }
+        for repo in repos
+        for idx in range(3)
+    ]
+
+    profile = load_data.build_portfolio_profile(
+        daily_rows,
+        metric_rows,
+        event_rows=event_rows,
+    )
+
+    assert profile["signals"]["recent_event_count"] == 0
+    assert profile["id"] != "maintainer_portfolio"
+
+
+def test_portfolio_profile_classifies_single_repo_launch() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row(
+            "demo/launch",
+            (start + timedelta(days=offset)).isoformat(),
+            5 if offset in {1, 6, 11} else 0,
+            2 if offset in {1, 6, 11} else 0,
+            1 if offset == 11 else 0,
+        )
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/launch", "2026-06-14", 3, 1, 0),
+            "created_at": "2026-05-01T00:00:00Z",
+            "community_health_percentage": "60",
+            "community_has_readme": "true",
+            "community_has_license": "false",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "false",
+        }
+    ]
+
+    profile = load_data.build_portfolio_profile(daily_rows, metric_rows)
+
+    assert profile["id"] == "first_app_launch"
+    assert profile["bucket"] == "solo"
+    assert profile["signals"]["quiet_repos"] == 1
+    assert "solo_launch_positioning" in profile["recipe_emphasis"]
+    assert profile["data_gaps"][0]["candidate_table"] == "repo-readme-snapshots.csv"
+
+
+def test_narrative_insights_tune_for_single_repo_launch_quiet_days() -> None:
+    start = date(2026, 6, 1)
+    daily_rows = [
+        _daily_row(
+            "demo/launch",
+            (start + timedelta(days=offset)).isoformat(),
+            6 if offset in {1, 5, 12} else 0,
+            3 if offset in {1, 5, 12} else 0,
+            1 if offset == 12 else 0,
+        )
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row("demo/launch", "2026-06-14", 3, 1, 0),
+            "created_at": "2026-05-01T00:00:00Z",
+            "community_health_percentage": "60",
+            "community_has_readme": "true",
+            "community_has_license": "false",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "false",
+        }
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        path_rows=[
+            {
+                "repo": "demo/launch",
+                "captured_at": "2026-06-14T12:00:00Z",
+                "path": "/demo/launch/blob/main/README.md",
+                "title": "README",
+                "count": "10",
+            }
+        ],
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    subtypes = {item["subtype"] for item in insights}
+    assert "solo_launch_positioning" in subtypes
+    assert "quiet_day_reactivation" in subtypes
+    assert all("causal" not in item["summary"].lower() for item in insights)
+
+
+def test_narrative_insights_add_maintainer_portfolio_triage() -> None:
+    start = date(2026, 6, 1)
+    repos = [f"demo/repo-{idx}" for idx in range(6)]
+    daily_rows = [
+        _daily_row(repo, (start + timedelta(days=offset)).isoformat(), 3, 1)
+        for repo in repos
+        for offset in range(14)
+    ]
+    metric_rows = [
+        {
+            **_metric_row(repo, "2026-06-14", 20, 4, 2),
+            "community_health_percentage": "70",
+            "community_has_readme": "true",
+            "community_has_license": "true",
+            "community_has_contributing": "false",
+            "community_has_issue_template": "false",
+            "community_has_pull_request_template": "false",
+            "community_has_code_of_conduct": "true",
+        }
+        for repo in repos
+    ]
+    issue_rows = [
+        {
+            "repo": repo,
+            "captured_at": "2026-06-14T12:00:00Z",
+            "open_issues_count": "3",
+            "open_prs_count": "2",
+        }
+        for repo in repos
+    ]
+
+    insights = load_data.narrative_insights_structured(
+        daily_rows,
+        metric_rows,
+        issue_pr_rows=issue_rows,
+        growth=load_data.growth_analytics(daily_rows, metric_rows),
+        limit=5,
+    )
+
+    assert any(item["subtype"] == "maintainer_triage_sweep" for item in insights)
+
+
 def test_load_daily_uses_default_data_dir_when_not_supplied(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

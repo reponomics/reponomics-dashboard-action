@@ -7,11 +7,13 @@ import { installSelection } from './selection.js';
 import { installQualityCalendar } from './quality-calendar.js';
 import { installSeries } from './series.js';
 import { installMomentum } from './momentum.js';
+import { installTrustPlaybook } from './trust-playbook.js';
 import { installChartOptions } from './chart-options.js';
 import { installControls } from './controls.js';
 import { installCharts } from './charts.js';
 import { installOpportunityMap } from './opportunity-map.js';
 import { installEventGraph } from './event-graph.js';
+import { installPortfolioGuide } from './portfolio-guide.js';
 import { installReadinessQueue } from './readiness-queue.js';
 import { installTables } from './tables.js';
 import { installController } from './controller.js';
@@ -25,11 +27,13 @@ const installers = [
   installQualityCalendar,
   installSeries,
   installMomentum,
+  installTrustPlaybook,
   installChartOptions,
   installControls,
   installEventGraph,
   installCharts,
   installOpportunityMap,
+  installPortfolioGuide,
   installReadinessQueue,
   installTables,
   installController,

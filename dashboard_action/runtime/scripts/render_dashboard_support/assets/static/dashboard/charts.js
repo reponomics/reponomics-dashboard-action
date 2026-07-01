@@ -26,6 +26,7 @@ export function installCharts(context) {
   const palette = context.palette;
   const renderDelta = (...args) => context.renderDelta(...args);
   const renderSparkline = (...args) => context.renderSparkline(...args);
+  const selectedDailyMetricIds = (...args) => context.selectedDailyMetricIds ? context.selectedDailyMetricIds(...args) : [state.metric || 'views'];
   const seriesValueAt = (...args) => context.seriesValueAt(...args);
   const setText = (...args) => context.setText(...args);
   const splitWindow = (...args) => context.splitWindow(...args);
@@ -514,14 +515,27 @@ export function installCharts(context) {
       };
     }
 
+    function metricLabelList(metricIds) {
+      return metricIds.map((metricId) => metricInfo(metricId).label).join(' + ');
+    }
+
+    function metricDataset(metricId, label, data, options) {
+      const metric = metricInfo(metricId);
+      const dataset = makeAreaDataset(label || metric.label, data || [], metric.color, options);
+      dataset.metricKey = metric.key;
+      return dataset;
+    }
+
     function updateDailyChart() {
       const windowData = getCurrentWindowData();
       const title = document.getElementById('dailyChartTitle');
       const metric = metricInfo(state.metric);
+      const dailyMetricIds = selectedDailyMetricIds();
+      const hasMetricOverlay = dailyMetricIds.length > 1;
       const datasets = [];
 
       if (isComparing()) {
-        title.textContent = metric.label + ' across compared repos';
+        title.textContent = hasMetricOverlay ? metricLabelList(dailyMetricIds) + ' across compared repos' : metric.label + ' across compared repos';
         const compareDates = [...new Set(
           state.compareRepos.flatMap((repoName) => (getRepoByName(repoName)?.series?.dates || []))
         )].sort();
@@ -529,34 +543,45 @@ export function installCharts(context) {
         state.compareRepos.forEach((repoName) => {
           const series = getRepoByName(repoName)?.series;
           if (!series) return;
-          const dateMap = {};
-          (series.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, metric.key, idx); });
-          const ds = makeAreaDataset(
-            getShortName(repoName),
-            compareDates.map((date) => date in dateMap ? dateMap[date] : null),
-            getRepoColor(repoName),
-            { fill: false }
-          );
-          ds.borderDash = getRepoDash(repoName);
-          datasets.push(ds);
+          dailyMetricIds.forEach((metricId) => {
+            const info = metricInfo(metricId);
+            const dateMap = {};
+            (series.dates || []).forEach((date, idx) => { dateMap[date] = seriesValueAt(series, info.key, idx); });
+            const ds = metricDataset(
+              metricId,
+              hasMetricOverlay ? `${getShortName(repoName)} - ${info.label}` : getShortName(repoName),
+              compareDates.map((date) => date in dateMap ? dateMap[date] : null),
+              { fill: false }
+            );
+            ds.borderDash = getRepoDash(repoName);
+            datasets.push(ds);
+          });
         });
       } else if (state.selectedRepo) {
         const series = getRepoByName(state.selectedRepo)?.series;
-        title.textContent = metric.label + ': ' + getShortName(state.selectedRepo);
+        title.textContent = hasMetricOverlay ? 'Metric overlays: ' + getShortName(state.selectedRepo) : metric.label + ': ' + getShortName(state.selectedRepo);
         context.charts.dailyChart.data.labels = series ? series.dates : [];
-        datasets.push(makeAreaDataset(
-          metric.label,
-          series ? (series[metric.key] || []) : [],
-          metric.color
-        ));
+        dailyMetricIds.forEach((metricId) => {
+          const info = metricInfo(metricId);
+          datasets.push(metricDataset(
+            metricId,
+            info.label,
+            series ? (series[info.key] || []) : [],
+            { fill: !hasMetricOverlay }
+          ));
+        });
       } else {
-        title.textContent = metric.label + ' over time';
+        title.textContent = hasMetricOverlay ? 'Metric overlays over time' : metric.label + ' over time';
         context.charts.dailyChart.data.labels = windowData.daily.dates || [];
-        datasets.push(makeAreaDataset(
-          metric.label,
-          windowData.daily[metric.key] || [],
-          metric.color
-        ));
+        dailyMetricIds.forEach((metricId) => {
+          const info = metricInfo(metricId);
+          datasets.push(metricDataset(
+            metricId,
+            info.label,
+            windowData.daily[info.key] || [],
+            { fill: !hasMetricOverlay }
+          ));
+        });
       }
 
       context.charts.dailyChart.data.datasets = datasets;

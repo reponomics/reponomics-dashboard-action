@@ -218,37 +218,39 @@ lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
 
 validate-runtime-lock: install ## Verify runtime lock matches constraints without upgrades and is hash-installable
+	set -e; \
 	tmp_lock=$$(mktemp); \
+	trap 'rm -f "$$tmp_lock"' EXIT; \
 	cp "$(RUNTIME_LOCK)" "$$tmp_lock"; \
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file "$$tmp_lock" pyproject.toml; \
 	if ! cmp -s "$(RUNTIME_LOCK)" "$$tmp_lock"; then \
 		echo "$(RUNTIME_LOCK) is stale; run make lock-runtime"; \
 		diff -u "$(RUNTIME_LOCK)" "$$tmp_lock" || true; \
-		rm -f "$$tmp_lock"; \
 		exit 1; \
-	fi; \
-	rm -f "$$tmp_lock"
+	fi
+	set -e; \
 	tmp_site=$$(mktemp -d); \
-	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(RUNTIME_LOCK); \
-	rm -rf "$$tmp_site"
+	trap 'rm -rf "$$tmp_site"' EXIT; \
+	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(RUNTIME_LOCK)
 
 lock-guide-tooling: install ## Regenerate hash-pinned promotional guide workflow tooling lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(GUIDE_TOOLING_LOCK) $(GUIDE_TOOLING_IN)
 
 validate-guide-tooling-lock: install ## Verify promotional guide workflow tooling lock is hash-installable
+	set -e; \
 	tmp_lock=$$(mktemp); \
+	trap 'rm -f "$$tmp_lock"' EXIT; \
 	cp "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock"; \
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file "$$tmp_lock" $(GUIDE_TOOLING_IN); \
 	if ! cmp -s "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock"; then \
 		echo "$(GUIDE_TOOLING_LOCK) is stale; run make lock-guide-tooling"; \
 		diff -u "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock" || true; \
-		rm -f "$$tmp_lock"; \
 		exit 1; \
-	fi; \
-	rm -f "$$tmp_lock"
+	fi
+	set -e; \
 	tmp_site=$$(mktemp -d); \
-	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(GUIDE_TOOLING_LOCK); \
-	rm -rf "$$tmp_site"
+	trap 'rm -rf "$$tmp_site"' EXIT; \
+	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(GUIDE_TOOLING_LOCK)
 
 lint: install ## Run lint checks
 	$(PYTHON) -m ruff check dashboard_action tests scripts

@@ -6,7 +6,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`ci.yml`](ci.yml) is the aggregate pull request and main-branch quality gate. It calls the reusable validation workflows, runs dashboard JavaScript tests, built-in Node coverage reporting, JavaScript runtime smoke checks, linting, type checking, action/workflow parsing, tests across supported Python versions, and uploads Python coverage as a short-lived artifact.
 
-- [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment and the hash-pinned runtime dependency lock. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
+- [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment and the hash-pinned runtime dependency lock, then verifies the hash-pinned promotional guide tooling lock. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
 
 - [`osv-scanner.yml`](osv-scanner.yml) runs OSV-Scanner recursively and uploads SARIF to GitHub code scanning. The workflow inlines the scanner, reporter, artifact upload, and SARIF upload steps so this repository's full-SHA action-pinning policy applies to every imported action.
 
@@ -22,7 +22,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`publish-demo.yml`](publish-demo.yml) builds the generated public demo repository and publishes it to `reponomics-dashboard-demo`. It supports manual publication and scheduled daily refresh. Scheduled refresh uses an approved source ref, imports the encrypted synthetic data seed into the demo repository's Actions artifact storage, and deploys the committed Pages dashboard shell without requiring daily human approval.
 
-- [`promotional-dashboard-guide.yml`](promotional-dashboard-guide.yml) is a manual skeleton for refreshing the promotional HTML/PDF dashboard guide. It runs the same `make dashboard-guide-refresh` path used locally, with ephemeral `npx`/`pipx` guide tooling, and intentionally does not publish or commit artifacts by default.
+- [`promotional-dashboard-guide.yml`](promotional-dashboard-guide.yml) is a manual skeleton for refreshing the promotional HTML/PDF dashboard guide. It runs the same `make dashboard-guide-refresh` path used locally, with ephemeral `npx` guide tooling and hash-pinned Python guide dependencies, and intentionally does not publish or commit artifacts by default.
 
 - [`pre-release-validation.yml`](pre-release-validation.yml) is a manual, non-publishing validation pass for candidate refs. It builds the template from the candidate source, runs template smoke checks, runs generated-template consumer e2e against the same candidate action runtime, dry-runs template publication, and uploads the generated template for inspection.
 

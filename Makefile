@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
-.PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock update-vendored-assets
+.PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template publish-template-staging-dry-run publish-template-staging build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
@@ -25,6 +25,8 @@ PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
+GUIDE_TOOLING_IN := requirements-guide-tooling.in
+GUIDE_TOOLING_LOCK := requirements-guide-tooling.txt
 PIP_INSTALL_FLAGS := --upgrade --upgrade-strategy eager
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
@@ -210,7 +212,7 @@ security-audit: install ## Audit Python dependencies for known vulnerabilities
 audit-runtime-lock: install ## Audit hash-pinned runtime dependency lock
 	$(PIP_AUDIT) --requirement $(RUNTIME_LOCK) --no-deps --progress-spinner off
 
-security: security-audit audit-runtime-lock validate-runtime-lock validate-vendored-assets ## Run open-source security checks
+security: security-audit audit-runtime-lock validate-runtime-lock validate-guide-tooling-lock validate-vendored-assets ## Run open-source security checks
 
 lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
@@ -228,6 +230,24 @@ validate-runtime-lock: install ## Verify runtime lock matches constraints withou
 	rm -f "$$tmp_lock"
 	tmp_site=$$(mktemp -d); \
 	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(RUNTIME_LOCK); \
+	rm -rf "$$tmp_site"
+
+lock-guide-tooling: install ## Regenerate hash-pinned promotional guide workflow tooling lock
+	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(GUIDE_TOOLING_LOCK) $(GUIDE_TOOLING_IN)
+
+validate-guide-tooling-lock: install ## Verify promotional guide workflow tooling lock is hash-installable
+	tmp_lock=$$(mktemp); \
+	cp "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock"; \
+	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_FLAGS) --output-file "$$tmp_lock" $(GUIDE_TOOLING_IN); \
+	if ! cmp -s "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock"; then \
+		echo "$(GUIDE_TOOLING_LOCK) is stale; run make lock-guide-tooling"; \
+		diff -u "$(GUIDE_TOOLING_LOCK)" "$$tmp_lock" || true; \
+		rm -f "$$tmp_lock"; \
+		exit 1; \
+	fi; \
+	rm -f "$$tmp_lock"
+	tmp_site=$$(mktemp -d); \
+	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(GUIDE_TOOLING_LOCK); \
 	rm -rf "$$tmp_site"
 
 lint: install ## Run lint checks

@@ -32,9 +32,14 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             requirements-runtime.txt
+            requirements-guide-tooling.in
+            requirements-guide-tooling.txt
 
       - name: Audit installed Python dependencies
         run: make security-audit
 
       - name: Audit runtime dependency lock
         run: make audit-runtime-lock
+
+      - name: Validate guide tooling dependency lock
+        run: make validate-guide-tooling-lock

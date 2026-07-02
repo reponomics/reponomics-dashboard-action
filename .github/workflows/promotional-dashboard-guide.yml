@@ -30,12 +30,11 @@ jobs:
 
       - name: Prepare ephemeral guide tooling
         run: |
-          python -m pip install --user pipx
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          python -m pip install --user --require-hashes -r requirements-guide-tooling.txt
           npx --yes --package playwright -- playwright install --with-deps chromium
 
       - name: Build promotional guide
-        run: make dashboard-guide-refresh
+        run: make dashboard-guide-refresh GUIDE_PYTHON=python
 
       # Skeleton integration point:
       # Upload docs/promotional/dashboard-guide/ and docs/promotional/pdf/reponomics-dashboard-map.pdf

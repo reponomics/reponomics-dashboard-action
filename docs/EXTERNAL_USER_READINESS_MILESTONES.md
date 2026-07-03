@@ -21,7 +21,7 @@ Recommended launch posture: invite only a narrow beta cohort after all P0 milest
 - Action version: `0.31.0` in `pyproject.toml` and `dashboard_action/run_modules/core.py`.
 - Template version: `0.18.0` in `template-contract.yml`.
 - Generated template action channel: `v0`, with accepted action `v0.31.0` at `7003fa1a04084448214f5097400788ab60d73622`.
-- Repo-audit branch profile: `delivery`, because the goal is implementation readiness for outside users. Top active branch candidates included `dashboard-design-polish`, `insights-methodology`, `codex/fix-unpinne-pip`, and `codex/expand-data-collection`.
+- Repo-audit branch profile: `delivery`, because the goal is implementation readiness for outside users. The original branch scan surfaced several active candidates, but follow-up reconciliation found that the named implementation/design candidates were already squash-merged, superseded, or not launch contenders. `revise-docs` remains normal in-progress documentation work, not a separate launch-candidate branch decision.
 
 ## Validation Results
 
@@ -41,27 +41,29 @@ Important gap: the staging smoke test group is intentionally skipped because cop
 
 ## P0 Milestones
 
-### 1. Decide And Align The Public Release Channel
+### 1. Make The Beta Channel Unmistakable
 
-Problem: public documentation teaches `@v1` usage and upgrade semantics, while the template contract and generated wrapper still use `v0`.
+Problem: the external beta line is `v0`, but a root README versioning example can be read as current setup guidance if it appears in first-contact onboarding without enough context. `v1` should be presented as the future full public release line, not the beta install target.
 
 Evidence:
 
-- `README.md` describes `reponomics/reponomics-dashboard-action@v1` and `@v1.2.3`.
+- `README.md` describes `reponomics/reponomics-dashboard-action@v1` and `@v1.2.3` as versioning examples.
 - `template/.github/actions/reponomics/action.yml` uses `reponomics/reponomics-dashboard-action@v0`.
 - `template-contract.yml` records `compatible_action_major: 0`, `default_action_ref: v0`, and accepted action `0.31.0`.
 - `docs/VERSIONING_AND_RELEASE.md` says the project is still on the `v0` compatibility line.
 
 Required outcomes:
 
-- Choose one beta channel: either keep external beta on `v0`, or promote action/template/docs to `v1` together.
-- Make `README.md`, `template-contract.yml`, generated wrapper docs, managed docs, release notes, demo docs, and Marketplace-facing copy agree.
-- If beta remains on `v0`, say plainly what compatibility is promised after external users exist.
-- If beta moves to `v1`, run the major-line transition through the release protocol and document migration/reset semantics.
+- State plainly that external beta uses the `v0` action line.
+- Keep first-contact beta onboarding examples on `@v0` or an explicit `@v0.x.y` release.
+- Move `v1` examples into versioning/release documentation, or label them as future stable-release examples rather than current setup instructions.
+- Make the authoritative onboarding surfaces agree: root README quickstart/install examples, generated template README, managed getting-started docs, generated wrapper docs/comments, setup output or first-run instructions, beta invite/release notes, demo/promotional guide, and Marketplace-facing copy if used.
+- Say plainly what compatibility is promised for external beta users before `v1`.
 
 Done when:
 
-- A new user never sees both `v0` and `v1` as the recommended default channel in authoritative onboarding surfaces.
+- A new user sees `v0` as the beta setup channel across authoritative onboarding surfaces.
+- Any `v1` examples are clearly labeled as future stable-release examples, not current beta installation guidance.
 - Release notes explicitly state whether external beta users are on a compatibility commitment or a pre-commitment hardening line.
 
 ### 2. Rewrite The External Onboarding Path
@@ -89,6 +91,8 @@ Required outcomes:
 - Add a short "who should join the beta" section: GitHub Actions-fluent maintainers, one GitHub owner or organization to start, encrypted mode preferred, roughly 1-30 repositories, at most 8 published repositories, and willingness to share diagnostic artifacts.
 - Replace broken references and empty docs before generated template publication.
 
+[OWNER: Agree with the recommended required outcomes. Disagre that the current state is incoherent - I'm working through the docs as I go, and telling users not to basically disregard them.]
+
 Done when:
 
 - A new external user can get from a copied template to a first dashboard without inferring any missing workflow step.
@@ -103,6 +107,8 @@ Evidence:
 - `dashboard_action/runtime/managed_docs/support.md` says it does not define a support policy, availability promise, response timeline, maintenance commitment, or public-use readiness statement.
 - `dashboard_action/runtime/managed_docs/security.md` says it is not a reporting channel.
 - `template/SECURITY.template.md` is a placeholder.
+
+[OWNER: This is the correct posture for post-beta. We do not offer a service, we mostly cannot help users with specific problems (we can address bugs and so forth), and even if the application made it possible we don't have the resources currently. This is correct though that I plan to offer different language to the beta group.]
 
 Required outcomes:
 
@@ -266,37 +272,17 @@ Done when:
 - The demo cannot accidentally showcase unreleased or unvalidated behavior to external users.
 - The promotional path helps users decide whether they are in the intended beta cohort.
 
-### 10. Consolidate Launch Candidate Branches
-
-Problem: branch maturity analysis shows several active branches with meaningful divergence. A beta invite should be cut from a deliberate launch candidate, not from branch sprawl.
-
-Evidence:
-
-- `delivery` branch ranking surfaced active candidates including `dashboard-design-polish`, `insights-methodology`, `codex/fix-unpinne-pip`, `codex/expand-data-collection`, `codex/adr-explicit-repo-lists`, and `revise-docs`.
-- Some candidates are ahead of and behind `origin/main`; at least one was marked diverged risk.
-
-Required outcomes:
-
-- Decide which active branches are needed for the external-user candidate.
-- Merge, close, or explicitly defer each active branch.
-- Run prebeta/release checks on the final candidate branch and on `main` after merge.
-
-Done when:
-
-- There is one named launch candidate source ref.
-- The milestone document or release issue records which active branches were included or deferred.
-
 ## P2 Milestones
 
-### 11. Reduce Runtime Coupling And Import Global State
+### 10. Reduce Runtime Coupling And Import Global State
 
 The runtime still relies on bundled scripts inserted into `sys.path`, mutable module globals, and facade helpers for test patching. This is not an immediate launch blocker, but it increases the cost of future maintenance. Move gradually toward package imports and explicit context objects when touching these areas for other reasons.
 
-### 12. Improve Browser-Side Coverage Where It Matters
+### 11. Improve Browser-Side Coverage Where It Matters
 
 JS module tests and smoke passed, but JS coverage is low and much of the browser confidence comes from generated snapshots. Before wider release, add focused tests for unlock/export failure modes, chunked data loading, dashboard controls, and mobile layout. Keep copied-repository browser smoke as the higher-value gate.
 
-### 13. Clarify Python Package Intent
+### 12. Clarify Python Package Intent
 
 The Python package metadata is adequate for action development, but if the runtime is ever meant to be consumed outside the GitHub Action source archive, package metadata, entry points, and distribution posture need a separate pass. This is not required for a template/action beta.
 

@@ -121,6 +121,12 @@ Publication refuses targets other than `reponomics/reponomics-dashboard-demo` un
 
 Manual publication and scheduled daily refresh use the same demo-only publication app. The scheduled source ref defaults to `main`; set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` or an allowed release tag if the demo should follow a promoted ref instead of main.
 
+## External Beta Promotion Posture
+
+For the external beta, the public demo should be treated as beta-facing only after copied-repository staging smoke has current evidence. At that point, set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` so scheduled refresh follows a promoted source ref rather than whatever is currently on `main`.
+
+Before that staging evidence exists, the demo may still be built and verified locally with `make verify-demo` and `make publish-demo-dry-run`, but invitations should not depend on the live demo as proof of the beta setup path. If a release tag is used instead of `demo-stable`, update the promotional guide and beta invitation copy to name that tag as the demo source.
+
 The publication app is a dedicated demo-only GitHub App installed only on `reponomics-dashboard-demo`. It needs `contents: write`, `workflows: write`, and `actions: write` on the demo repository so it can force-push the generated tree and dispatch the target seed workflow. Configure `vars.DEMO_PUBLISH_APP_CLIENT_ID` and `secrets.DEMO_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository.
 
 ## Future Enhancement: Artifact History

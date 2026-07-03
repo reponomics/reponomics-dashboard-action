@@ -273,6 +273,8 @@ Done when:
 
 ### 9. Promote Demo And Promotional Assets To Beta-Grade
 
+Status: partially completed in this branch. The promotional dashboard guide now links to the live demo, copy-template path, setup checklist, and support repository, and it names the `v0` beta audience and synthetic-demo boundary. `docs/DEMO_REPOSITORY.md` now records the beta promotion posture: use `demo-stable` as the beta-facing scheduled source only after copied-repository staging smoke has current evidence; until then, do not use the live demo as proof of the beta setup path.
+
 Problem: demo generation works, but the public showcase and promotional guide are not yet a complete onboarding bridge.
 
 Evidence:

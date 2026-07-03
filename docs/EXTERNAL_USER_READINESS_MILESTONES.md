@@ -43,11 +43,13 @@ Important gap: the staging smoke test group is intentionally skipped because cop
 
 ### 1. Make The Beta Channel Unmistakable
 
+Status: completed in this branch for root README, generated template README, and managed upgrade docs. Remaining release-note wording belongs to the actual beta invite/release step.
+
 Problem: the external beta line is `v0`, but a root README versioning example can be read as current setup guidance if it appears in first-contact onboarding without enough context. `v1` should be presented as the future full public release line, not the beta install target.
 
-Evidence:
+Original evidence:
 
-- `README.md` describes `reponomics/reponomics-dashboard-action@v1` and `@v1.2.3` as versioning examples.
+- `README.md` described `reponomics/reponomics-dashboard-action@v1` and `@v1.2.3` as versioning examples.
 - `template/.github/actions/reponomics/action.yml` uses `reponomics/reponomics-dashboard-action@v0`.
 - `template-contract.yml` records `compatible_action_major: 0`, `default_action_ref: v0`, and accepted action `0.31.0`.
 - `docs/VERSIONING_AND_RELEASE.md` says the project is still on the `v0` compatibility line.
@@ -68,14 +70,16 @@ Done when:
 
 ### 2. Rewrite The External Onboarding Path
 
+Status: partially completed in this branch. The generated template README now states the user-owned/no-hosted-service model, points to Dashboard Essentials, and tells users to run Collect and Publish manually for the first dashboard. `dashboard-essentials.md` now contains the one-minute setup and failure-avoidance guide. Further copy polish can continue, but the broken references and empty essentials page are fixed.
+
 Problem: the README markets a near-frictionless setup, but generated docs say the template is not intended for public use and the first-run path stops before a first dashboard is produced.
 
-Evidence:
+Original evidence:
 
-- `README.md` says the project is "easy to set up in five minutes" while also warning that it is not promoted for general use.
-- `template/README.template.md` says setup does not collect immediately and waits for schedule.
-- `template/.github/workflows/collect-and-publish.yml` supports manual dispatch, but the setup README does not clearly tell users to run the first collect-and-publish workflow after setup.
-- `dashboard_action/runtime/managed_docs/config.example.yaml` references `DASHBOARD_ESSENTIALS.md` and misspelled `DASHBOARD_ESSENTIAILS.md`, while `dashboard-essentials.md` is effectively empty.
+- `README.md` said the project was "easy to set up in five minutes" while also warning that it was not promoted for general use.
+- `template/README.template.md` said setup does not collect immediately and waits for schedule.
+- `template/.github/workflows/collect-and-publish.yml` supports manual dispatch, but the setup README did not clearly tell users to run the first collect-and-publish workflow after setup.
+- `dashboard_action/runtime/managed_docs/config.example.yaml` referenced `DASHBOARD_ESSENTIALS.md` and misspelled `DASHBOARD_ESSENTIAILS.md`, while `dashboard-essentials.md` was effectively empty.
 
 Required outcomes:
 
@@ -91,8 +95,6 @@ Required outcomes:
 - Add a short "who should join the beta" section: GitHub Actions-fluent maintainers, one GitHub owner or organization to start, encrypted mode preferred, roughly 1-30 repositories, at most 8 published repositories, and willingness to share diagnostic artifacts.
 - Replace broken references and empty docs before generated template publication.
 
-[OWNER: Agree with the recommended required outcomes. Disagre that the current state is incoherent - I'm working through the docs as I go, and telling users not to basically disregard them.]
-
 Done when:
 
 - A new external user can get from a copied template to a first dashboard without inferring any missing workflow step.
@@ -100,15 +102,15 @@ Done when:
 
 ### 3. Publish Real Support And Security Policies
 
+Status: completed for beta posture in this branch. Managed support/security docs now describe beta support scope, reporting channels, Doctor/report evidence, private vulnerability reporting, and data-loss boundaries. Template root `SECURITY.md` remains owner-owned after copy rather than becoming a Reponomics policy document.
+
 Problem: external users need to know what is supported, where to report security problems, and what risks Reponomics does not assume. Current generated support/security documents are placeholders.
 
-Evidence:
+Original evidence:
 
-- `dashboard_action/runtime/managed_docs/support.md` says it does not define a support policy, availability promise, response timeline, maintenance commitment, or public-use readiness statement.
-- `dashboard_action/runtime/managed_docs/security.md` says it is not a reporting channel.
-- `template/SECURITY.template.md` is a placeholder.
-
-[OWNER: This is the correct posture for post-beta. We do not offer a service, we mostly cannot help users with specific problems (we can address bugs and so forth), and even if the application made it possible we don't have the resources currently. This is correct though that I plan to offer different language to the beta group.]
+- `dashboard_action/runtime/managed_docs/support.md` said it did not define a support policy, availability promise, response timeline, maintenance commitment, or public-use readiness statement.
+- `dashboard_action/runtime/managed_docs/security.md` said it was not a reporting channel.
+- `template/SECURITY.template.md` called itself a placeholder.
 
 Required outcomes:
 
@@ -124,9 +126,11 @@ Done when:
 
 ### 4. Restore A Lightweight Copied-Repository Staging Gate
 
+Status: intentionally skipped in this pass.
+
 Problem: local and release gates prove a lot, but they do not fully simulate a real copied dashboard repository with secrets, Pages settings, workflow artifacts, first-run setup, retention, rotation, and browser behavior. The repo already recognizes this gap, but the staging protocol is paused and its tests are skipped.
 
-Evidence:
+Original evidence:
 
 - `docs/STAGING_SMOKE.md` says the staging smoke effort is paused and not a live release gate.
 - `docs/VERSIONING_AND_RELEASE.md` repeats that copied-repository smoke work is paused.
@@ -150,15 +154,17 @@ Done when:
 
 ### 5. Harden Retained-State Race And Artifact Boundaries
 
+Status: partially completed in this branch. Collect/publish, rotate-key, and incident-reset now share a retained-state concurrency group. Artifact restore now uses a Python extractor that rejects unsafe zip members, and encrypted artifact packing/extraction is restricted to registered retained-data files. Remaining work: lineage recheck before upload and conversion of collector `sys.exit` paths to typed exceptions.
+
 Problem: multiple workflows can write the same retained `dashboard-data` surface, and artifact restore/extraction accepts broad artifact contents. These are pre-user hardening items because they affect user data continuity.
 
-Evidence:
+Original evidence:
 
 - `template/.github/workflows/collect-and-publish.yml` has a concurrency group.
-- `template/.github/workflows/rotate-key.yml` and `template/.github/workflows/incident-reset.yml` do not have matching state concurrency.
+- `template/.github/workflows/rotate-key.yml` and `template/.github/workflows/incident-reset.yml` did not have matching state concurrency.
 - `action.yml` uploads `dashboard-data` for collect, rotate-key, and incident-reset modes.
-- `dashboard_action/runtime/scripts/restore_artifact.sh` unzips the restored artifact directly into `DATA_DIR`.
-- `dashboard_action/runtime/scripts/crypto_artifact.py` encrypts all non-`.enc` files found under `data_dir`, not only registered retained-data files.
+- `dashboard_action/runtime/scripts/restore_artifact.sh` unzipped the restored artifact directly into `DATA_DIR`.
+- `dashboard_action/runtime/scripts/crypto_artifact.py` encrypted all non-`.enc` files found under `data_dir`, not only registered retained-data files.
 - Collector modules still call `sys.exit(1)` from several submodules.
 
 Required outcomes:
@@ -179,13 +185,15 @@ Done when:
 
 ### 6. Sync The Public Action Contract Across Metadata And Docs
 
+Status: partially completed in this branch. The README now documents the missing action inputs/outputs, and a test fails if action input/output names are missing from the README. A managed troubleshooting guide now covers the primary Doctor-first support path. Remaining work: richer generated documentation for every permission, artifact, and failure class.
+
 Problem: `action.yml`, root README, generated wrapper, workflows, and managed docs do not expose the same public contract.
 
-Evidence:
+Original evidence:
 
 - `action.yml` exposes `comparison-secret`, `incident-confirm-next-secret`, and `doctor-report-path`.
-- The README input/output tables omit at least some of those fields.
-- Doctor emits a detailed report and upload path, but managed docs do not yet provide a practical failure-mode playbook.
+- The README input/output tables omitted at least some of those fields.
+- Doctor emitted a detailed report and upload path, but managed docs did not yet provide a practical failure-mode playbook.
 
 Required outcomes:
 
@@ -207,6 +215,8 @@ Done when:
 - A beta support request can be routed to a documented doctor/troubleshooting step first.
 
 ### 7. Align Local, PR, Release, And Policy Gates
+
+Status: partially completed in this branch. `make prebeta-check` now aggregates the non-staging local beta readiness checks. Remaining work: policy preflight and any decision about adding compatibility e2e to required PR/main validation.
 
 Problem: local `make ci` is healthy, but it is not the full GitHub CI/release surface. The project does have deeper gates, but they are spread across workflows and manual pre-release validation.
 
@@ -231,6 +241,8 @@ Done when:
 
 ### 8. Define The Generated-Repository SHA-Pinning Story
 
+Status: completed for beta docs in this branch. Template README, managed upgrade notes, and managed provenance docs now describe full-SHA pinning as an optional owner/org policy choice and explain the tradeoff without making it sound like the default path is unsafe.
+
 Problem: generated user workflows intentionally use floating/tag refs so users get compatible fixes. That is defensible, but external organizations with full-SHA policy need an official path.
 
 Evidence:
@@ -238,7 +250,7 @@ Evidence:
 - Source repository workflows and root `action.yml` use full-SHA-pinned third-party actions.
 - Generated template workflows use refs such as `actions/checkout@v7`.
 - Generated wrapper uses `reponomics/reponomics-dashboard-action@v0`.
-- `docs/SECURITY_CHECKS.md` and `docs/DEPENDENCY_MANAGEMENT.md` explain this distinction for maintainers, but external-user guidance is not yet complete.
+- `docs/SECURITY_CHECKS.md` and `docs/DEPENDENCY_MANAGEMENT.md` explained this distinction for maintainers, but external-user guidance was not yet complete.
 
 Required outcomes:
 

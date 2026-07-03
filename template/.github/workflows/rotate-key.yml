@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: reponomics-retained-state-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   rotate:
     if: github.ref == 'refs/heads/main'

@@ -22,6 +22,8 @@ ARTIFACT_NAME="${ARTIFACT_NAME:-dashboard-data}"
 DATA_DIR="${DATA_DIR:-data}"
 ARTIFACT_RUN_ID="${ARTIFACT_RUN_ID:-}"
 ARTIFACT_REQUIRED="${ARTIFACT_REQUIRED:-false}"
+PYTHON="${PYTHON:-python3}"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 if [ -n "$ARTIFACT_RUN_ID" ]; then
   echo "Looking for artifact: ${ARTIFACT_NAME} from workflow run ${ARTIFACT_RUN_ID}..."
@@ -82,7 +84,7 @@ fi
 # Extract into the data directory
 mkdir -p "$DATA_DIR"
 echo "Extracting artifact to ${DATA_DIR}/..."
-if ! unzip -o "$TMPZIP" -d "$DATA_DIR" > /dev/null 2>&1; then
+if ! "$PYTHON" "$SCRIPT_DIR/safe_extract_artifact.py" "$TMPZIP" --data-dir "$DATA_DIR"; then
   echo "Error: failed to extract artifact zip."
   exit 1
 fi

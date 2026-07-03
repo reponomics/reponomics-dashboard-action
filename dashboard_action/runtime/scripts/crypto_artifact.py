@@ -12,17 +12,20 @@ import json
 import os
 import tarfile
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+import storage
 
 
 VERSION = 1
 KDF_ITERATIONS = 600_000
 SALT_BYTES = 16
 IV_BYTES = 12
+ALLOWED_MEMBERS = set(storage.ARTIFACT_FILES)
 
 
 def _b64encode(data: bytes) -> str:
@@ -54,21 +57,41 @@ def _derive_key(secret: bytes, salt: bytes) -> bytes:
 def _pack_data_dir(data_dir: Path) -> bytes:
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        for path in sorted(data_dir.rglob("*")):
-            if not path.is_file() or path.suffix == ".enc":
+        for filename in storage.ARTIFACT_FILES:
+            path = data_dir / filename
+            if not path.is_file():
                 continue
-            archive.add(path, arcname=path.relative_to(data_dir))
+            archive.add(path, arcname=filename)
     return buffer.getvalue()
+
+
+def _validate_member(member: tarfile.TarInfo) -> str:
+    name = PurePosixPath(member.name)
+    if not member.name or name.is_absolute():
+        raise ValueError(f"Refusing unsafe artifact path: {member.name!r}")
+    if any(part in {"", ".", ".."} for part in name.parts):
+        raise ValueError(f"Refusing unsafe artifact path: {member.name!r}")
+    if len(name.parts) != 1:
+        raise ValueError(f"Refusing nested artifact path: {member.name!r}")
+    member_name = name.as_posix()
+    if member_name not in ALLOWED_MEMBERS:
+        raise ValueError(f"Refusing unexpected artifact member: {member_name}")
+    if not member.isfile():
+        raise ValueError(f"Refusing non-regular artifact member: {member_name}")
+    return member_name
 
 
 def _safe_extract(archive_bytes: bytes, data_dir: Path) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
         for member in archive.getmembers():
-            target = data_dir / member.name
-            if not target.resolve().is_relative_to(data_dir.resolve()):
-                raise ValueError(f"Refusing unsafe artifact path: {member.name}")
-        archive.extractall(data_dir)
+            member_name = _validate_member(member)
+            target = data_dir / member_name
+            source = archive.extractfile(member)
+            if source is None:
+                raise ValueError(f"Could not read artifact member: {member_name}")
+            with source, target.open("wb") as destination:
+                destination.write(source.read())
 
 
 def encrypt(data_dir: Path, output: Path, secret_env: str) -> None:

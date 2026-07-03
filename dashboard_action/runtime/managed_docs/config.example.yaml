@@ -6,7 +6,7 @@
 i_have_read_the_readme: # true/false                                          #
 #                                                                             #
 # If you select `encrypted`, your data will be encrypted with the repository  #
-# secret that *you* have generated - please read DASHBOARD_ESSENTIALS.md      #
+# secret that *you* have generated - please read dashboard-essentials.md      #
 # so that you can make an informed decision.                                  #
 # If you select `plaintext`, your data will be stored in unencrypted form.    #
 # In order to prevent "Compromise through Configuration",                     #
@@ -16,7 +16,7 @@ data_mode: # encrypted/plaintext                                              #
 #                                                                             #
 # Set to `true` if you want to publish an HTML dashboard to the repo's        #
 # GitHub Pages site. You must also manually enable GitHub Pages in            #
-# the repository settings. See DASHBOARD_ESSENTIAILS.md for more info.        #
+# the repository settings. See dashboard-essentials.md for more info.         #
 # This option is only available in combination with encrypted data-mode.      #
 publish_pages_dashboard: # true/false                                         #
 #                                                                             #
@@ -31,7 +31,7 @@ publish_readme_dashboard: # true/false                                        #
 # GitHub artifact storage before it is deleted - this pertains to how long
 # backup data will be saved if there is a long-term dashboard outage.
 # Must be between 14 and 90 days.
-# See DASHBOARD_ESSENTIALS.md for more details.
+# See dashboard-essentials.md for more details.
 artifact_retention_days: 90
 #
 # Set to `true` if you prefer to use a GitHub App installation token

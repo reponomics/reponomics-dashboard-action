@@ -14,7 +14,7 @@ After stable release, this policy will be updated with the supported major versi
 
 Please do not open a public issue for a suspected vulnerability.
 
-Use GitHub [private vulnerability reporting](https://github.com/reponomics/reponomics-dashboard-action/security/advisories/new) for this repository. You will receive a response with 48 hours and we will determine the appropriate method and timeline for a resolution if a problem is identified.
+Use GitHub [private vulnerability reporting](https://github.com/reponomics/reponomics-dashboard-action/security/advisories/new) for this repository. You will receive a response within 48 hours and we will determine the appropriate method and timeline for a resolution if a problem is identified.
 
 Useful reports include:
 

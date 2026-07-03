@@ -100,6 +100,25 @@ def test_action_descriptions_do_not_contain_actions_expressions() -> None:
     assert offenders == []
 
 
+def test_readme_documents_action_inputs_and_outputs() -> None:
+    action = _action()
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    missing_inputs = [
+        name
+        for name in action["inputs"]
+        if f"`{name}`" not in readme
+    ]
+    missing_outputs = [
+        name
+        for name in action["outputs"]
+        if f"`{name}`" not in readme
+    ]
+
+    assert missing_inputs == []
+    assert missing_outputs == []
+
+
 def test_runtime_version_matches_release_metadata() -> None:
     project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     release_manifest = yaml.safe_load(

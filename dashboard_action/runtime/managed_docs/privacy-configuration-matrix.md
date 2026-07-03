@@ -1,7 +1,6 @@
 # Reponomics Data Mode Matrix
 
-> [!WARNING]
-> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 Status: see `docs/reponomics/.manifest.json` for the action version associated with this snapshot.
 
@@ -9,10 +8,10 @@ Repository visibility and Reponomics data mode are separate concepts. Repository
 
 ## Current Modes
 
-| Mode | Repository visibility | Retained artifact | Hosted Pages dashboard | Downloadable dashboard artifact | README output | Secret policy |
-| --- | --- | --- | --- | --- | --- | --- |
-| `encrypted` | public or private | encrypted `dashboard-data.enc` | optional encrypted Pages deployment when `publish_pages_dashboard: true` | encrypted dashboard artifact when hosted publication is disabled | setup commits a static README; private repos may commit a markdown dashboard to the README when `publish_readme_dashboard: true`; public repos do not commit README dashboards | non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` required |
-| `plaintext` | private only | plaintext retained CSV files | disabled | plaintext HTML artifact | setup commits a static README; private repos may commit README dashboards when `publish_readme_dashboard: true` | no dashboard secret |
+| Mode        | Repository visibility | Retained artifact              | Hosted Pages dashboard                                                   | Downloadable dashboard artifact                                  | README output                                                                                                                                                                  | Secret policy                                        |
+| ----------- | --------------------- | ------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `encrypted` | public or private     | encrypted `dashboard-data.enc` | optional encrypted Pages deployment when `publish_pages_dashboard: true` | encrypted dashboard artifact when hosted publication is disabled | setup commits a static README; private repos may commit a markdown dashboard to the README when `publish_readme_dashboard: true`; public repos do not commit README dashboards | non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` required |
+| `plaintext` | private only          | plaintext retained CSV files   | disabled                                                                 | plaintext HTML artifact                                          | setup commits a static README; private repos may commit README dashboards when `publish_readme_dashboard: true`                                                                | no dashboard secret                                  |
 
 ## Encrypted
 

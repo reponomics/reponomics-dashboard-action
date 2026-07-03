@@ -1,10 +1,8 @@
 # Reponomics Managed Docs
 
-> [!WARNING]
-> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
-> [!WARNING]
-> This directory is the default location for Reponomics managed documentation. Local edits in `docs/reponomics/` may be overwritten when the generated `update-docs` workflow runs. Disable or delete `.github/workflows/update-docs.yml` before editing if you want to own this directory manually.
+> [!WARNING] This directory is the default location for Reponomics managed documentation. Local edits in `docs/reponomics/` may be overwritten when the generated `update-docs` workflow runs. Disable or delete `.github/workflows/update-docs.yml` before editing if you want to own this directory manually.
 
 The manifest at `docs/reponomics/.manifest.json` records the action version for this managed-docs snapshot.
 
@@ -12,6 +10,8 @@ The manifest at `docs/reponomics/.manifest.json` records the action version for 
 
 Start here:
 
+- [Dashboard essentials](dashboard-essentials.md)
+- [Troubleshooting](troubleshooting.md)
 - [Dashboard repository guide](repository-guide.md)
 - [Configuration example](config.example.yaml)
 - [Upgrade notes](upgrade.md)

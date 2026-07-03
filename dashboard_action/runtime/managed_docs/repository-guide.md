@@ -1,7 +1,6 @@
 # Reponomics Dashboard Documentation
 
-> [!WARNING]
-> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this managed-docs bundle should not be considered authoritative.
+> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 The Reponomics Dashboard is a GitHub-native repository traffic and growth dashboard. It collects views, clones, top referrers, popular paths, and repository growth counters, then renders static dashboard output during the `publish` workflow.
 
@@ -55,15 +54,14 @@ The generated `update-docs` workflow updates Reponomics-managed local documentat
 
 `data_mode` is the disclosure control passed to the action.
 
-| Mode | Retained artifact | Hosted dashboard | Downloadable dashboard artifact | Secret requirement | Intended use |
-| --- | --- | --- | --- | --- | --- |
-| `encrypted` | encrypted `dashboard-data.enc` | optional encrypted Pages artifact | encrypted when hosted publication is disabled | non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` | default; required for public repositories and hosted Pages dashboards |
-| `plaintext` | plaintext retained CSV files | disabled | plaintext, private repositories only | none | private repositories that use GitHub repo/artifact access as the boundary |
+| Mode        | Retained artifact              | Hosted dashboard                  | Downloadable dashboard artifact               | Secret requirement                          | Intended use                                                              |
+| ----------- | ------------------------------ | --------------------------------- | --------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------- |
+| `encrypted` | encrypted `dashboard-data.enc` | optional encrypted Pages artifact | encrypted when hosted publication is disabled | non-empty `DASHBOARD_SECRET_DO_NOT_REPLACE` | default; required for public repositories and hosted Pages dashboards     |
+| `plaintext` | plaintext retained CSV files   | disabled                          | plaintext, private repositories only          | none                                        | private repositories that use GitHub repo/artifact access as the boundary |
 
 `plaintext` is rejected in public repositories. README dashboard generation is rejected in public repositories so repository metrics are not committed to public git history.
 
-> [!NOTE]
-> We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` precisely because there is no other way in the Action > Secrets UI to convey the message to the user that if they want to rotate the key, they should not do so by simply replacing that value, which seems like a tempting mistake.
+> [!NOTE] We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` precisely because there is no other way in the Action > Secrets UI to convey the message to the user that if they want to rotate the key, they should not do so by simply replacing that value, which seems like a tempting mistake.
 
 ## Storage
 
@@ -120,5 +118,4 @@ Normal collection refuses to run while `DASHBOARD_NEXT_SECRET` is set, so rotati
 
 For a hosted encrypted dashboard, manually configure this repository's **Settings -> Pages** page so **Build and deployment -> Source** is **GitHub Actions**. The Reponomics publish workflow renders the dashboard shell and uploads it as a GitHub Pages artifact only when hosted publication is enabled; retained dashboard data remains in the `dashboard-data` Actions artifact. The action verifies the existing Pages setting during deployment, but it does not enable Pages or change the publishing source. If GitHub suggests workflow templates while you are changing the setting, skip them.
 
-> [!WARNING]
-> Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `data_mode: encrypted` when the hosted dashboard must not disclose metrics to people without the dashboard key.
+> [!WARNING] Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Use `data_mode: encrypted` when the hosted dashboard must not disclose metrics to people without the dashboard key.

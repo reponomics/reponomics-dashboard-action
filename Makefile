@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install pre-commit-install pre-commit-run ci staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
+.PHONY: help install pre-commit-install pre-commit-run ci prebeta-check staging-smoke-instructions staging-smoke-live-order staging-smoke-provision-plan staging-smoke-provision staging-smoke-plan staging-smoke-preflight staging-smoke-reset-fresh-plan staging-smoke-reset-fresh staging-smoke-seed-plain-history-plan staging-smoke-seed-plain-history staging-smoke-browser-checklist staging-smoke-evidence staging-smoke-run
 .PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
@@ -363,6 +363,8 @@ publish-demo: build-demo ## Publish dist/demo/ to the public demo repository mai
 	$(PYTHON) scripts/publish_demo_repo.py --output dist/demo --remote $(DEMO_REMOTE) --branch main --expected-repo $(DEMO_EXPECTED_REPO) --message "$(DEMO_PUBLISH_MESSAGE)" --push
 
 ci: lint type-check validate test coverage ## Run CI checks
+
+prebeta-check: ci security template-release-gates template-compat-e2e js-coverage js-smoke verify-demo publish-demo-dry-run ## Run non-staging external beta readiness checks
 
 fixtures: fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard ## Run fixture checks
 

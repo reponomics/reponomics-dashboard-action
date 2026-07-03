@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: reponomics-collect-publish-${{ github.ref }}
+  group: reponomics-retained-state-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

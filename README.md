@@ -1,30 +1,16 @@
 # Reponomics Dashboard Action
 
+![GitHub License](https://img.shields.io/github/license/reponomics/reponomics-dashboard-action) ![GitHub Release](https://img.shields.io/github/v/release/reponomics/reponomics-dashboard-action) ![GitHub Release Date](https://img.shields.io/github/release-date/reponomics/reponomics-dashboard-action) ![GitHub commits since latest release](https://img.shields.io/github/commits-since/reponomics/reponomics-dashboard-action/latest)
 
-![GitHub License](https://img.shields.io/github/license/reponomics/reponomics-dashboard-action)
-![GitHub Release](https://img.shields.io/github/v/release/reponomics/reponomics-dashboard-action)
-![GitHub Release Date](https://img.shields.io/github/release-date/reponomics/reponomics-dashboard-action)
-![GitHub commits since latest release](https://img.shields.io/github/commits-since/reponomics/reponomics-dashboard-action/latest)
+[![CI](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml) [![Vendored assets](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml) [![Runtime lock](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml) [![Scorecard supply-chain security](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml) [![SHA pinning](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/sha-pinning-required.svg)](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/sha-pinning-required/proof.json) [![Immutable releases](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/immutable-releases.svg)](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/immutable-releases/proof.json) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12954/badge)](https://www.bestpractices.dev/projects/12954)
 
-[![CI](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/ci.yml)
-[![Vendored assets](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-vendored-assets.yml)
-[![Runtime lock](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml/badge.svg?branch=main)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/validate-runtime-lock.yml)
-[![Scorecard supply-chain security](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/scorecard.yml)
-[![SHA pinning](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/sha-pinning-required.svg)](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/sha-pinning-required/proof.json)
-[![Immutable releases](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/immutable-releases.svg)](https://policychecks.reponomics.org/github/reponomics/reponomics-dashboard-action/immutable-releases/proof.json)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12954/badge)](https://www.bestpractices.dev/projects/12954)
-
-[![CodeQL](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql)
-[![Dependabot Updates](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates)
-[![Dependency Graph](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph)
-[![OSV SARIF scan](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/osv-scanner.yml)
+[![CodeQL](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/github-code-scanning/codeql) [![Dependabot Updates](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/dependabot-updates) [![Dependency Graph](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/dependabot/update-graph) [![OSV SARIF scan](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/reponomics/reponomics-dashboard-action/actions/workflows/osv-scanner.yml)
 
 GitHub Action for the [Reponomics Dashboard template repository](https://github.com/reponomics/reponomics-dashboard). A composite action that handles data collection through the GitHub API, artifact storage in CSV format, data encryption, and rendering of the README and HTML dashboard for the Reponomics Dashboard. You're welcome to use it in any way you like (and if you do, we'd love to hear about what you built!). But for the purposes of explanation, we will mostly assume that it is being used in the workflows provided by our template repo.
 
-The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub Pages site. To use this action, all you need to do is copy our template repository, which has everything you need to start collecting your own data and hosting your own repo analytics dashboard straight from GitHub - no strings attached. Easy to set up in five minutes, no subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
+The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub Pages site. To use this action, copy our template repository, configure your repository list and secrets, then run the generated setup and collect workflows. The workflows run in your repository with credentials you provide; Reponomics does not receive your dashboard data. No subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
 
-> [!WARNING]
-> Public pre-release: this repository is visible for review and hardening, but it is not yet promoted for general use. Do not expect stable behavior or seamless upgrades before `v1`.
+> [!NOTE] External beta uses the `v0` action line. If the beta proves out, `v1` will be the stable public release line.
 
 ## Action Modes
 
@@ -40,10 +26,11 @@ This is a composite action that does a lot of different things for the Reponomic
 
 ## Upgrade Model
 
-Use normal GitHub Action refs to choose the upgrade cadence:
+Use normal GitHub Action refs to choose the upgrade cadence. During the external beta, generated dashboard repositories use the `v0` line:
 
-- `reponomics/reponomics-dashboard-action@v1` receives compatible fixes and feature additions published on the `v1` major line.
-- `reponomics/reponomics-dashboard-action@v1.2.3` is pinned. Pinned workflows are not automatically upgraded; during `publish` runs the generated dashboard can show compact action version status with a link to the latest stable release.
+- `reponomics/reponomics-dashboard-action@v0` receives beta-compatible fixes and feature additions published on the `v0` line.
+- `reponomics/reponomics-dashboard-action@v0.31.0` is pinned to an exact beta release. Pinned workflows are not automatically upgraded; during `publish` runs the generated dashboard can show compact action version status with a link to the latest release.
+- Future `v1` examples describe the stable public release model, not the current beta setup target.
 
 Retained dashboard data artifacts are migrated by the runtime during `collect`, `publish`, `rotate-key`, and `incident-reset`. These schema migrations are internal compatible runtime behavior, not a public action mode, and they do not rewrite the caller-owned `config.yaml`. Publication does not need to know which action version collected the retained packet; it restores the requested or latest `dashboard-data` artifact, migrates that packet forward when needed, and renders from the runtime's current canonical schema.
 
@@ -57,7 +44,7 @@ Caller workflows are responsible for checkout, scheduling, permissions, secrets,
 steps:
   - uses: actions/checkout@v6
 
-  - uses: reponomics/reponomics-dashboard-action@v1
+  - uses: reponomics/reponomics-dashboard-action@v0
     with:
       mode: collect
       collection-token: ${{ secrets.COLLECTION_TOKEN }}
@@ -68,8 +55,7 @@ steps:
 
 ## Inputs
 
-> [!NOTE]
-> Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
+> [!NOTE] Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
 
 For `collection-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories listed under `collect.repositories`. Keep `collect.repositories` within that token's repository access, and use `publish.repositories` to choose the subset rendered in the README and Pages dashboards. It does not need Pages or Administration write permissions.
 
@@ -77,27 +63,29 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 
 Advanced users may use a user-owned GitHub App installation token instead of a PAT for `collect` mode. Reponomics does not provide or operate a shared app for user dashboards; you create and control your own GitHub App installation. In that path, mint a short-lived installation token in the workflow, pass it as `collection-token`, and set `use-github-app: true`.
 
-> [!NOTE]
-> We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
+> [!NOTE] We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
 
-| Input | Description | Default |
-|---|---|---|
-| `mode` | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`, `update-docs`, `doctor`. | `collect` |
-| `collection-token` | Token for GitHub repository data collection APIs. Usually a fine-grained PAT; advanced option: user-owned GitHub App installation token minted in-workflow. | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow. |
-| `use-github-app` | Advanced collect-mode toggle. Set `true` when `collection-token` is a GitHub App installation token (user-owned app), so discovery/validation uses app-installation endpoints. | `false` |
-| `github-token` | Token for artifact/repository workflow operations. Required for `collect` artifact cleanup and `incident-reset` history purge. | Value of `${{ github.token }}` in the consuming repository workflow/job. |
-| `dashboard-secret` | Current dashboard/artifact encryption key. Required and only checked for non-empty value when `data-mode: encrypted`. | Value of `${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}` in the consuming repository workflow. |
-| `dashboard-next-secret` | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset`. Required and only checked for non-empty value in encrypted rotation/reset runs. | Value of `${{ secrets.DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow. |
-| `incident-confirm-mode` | Destructive `incident-reset` confirmation; must be `INCIDENT_RESET_CONFIRMED` when `mode: incident-reset`. | `""` |
-| `incident-confirm-purge` | Destructive `incident-reset` confirmation; must be `PURGE_OLD_HISTORY_CONFIRMED` when `mode: incident-reset`. | `""` |
-| `incident-confirm-irreversible` | Destructive `incident-reset` confirmation; must be `IRREVERSIBLE_ACTION_CONFIRMED` when `mode: incident-reset`. | `""` |
-| `data-mode` | Data storage model. Allowed values: `encrypted`, `plaintext`. Public repositories must use `encrypted`; `plaintext` is private-repository only. | `encrypted` |
-| `config-path` | Repository selection config path in the caller repository. | `config.yaml` |
-| `retention-days` | GitHub Actions artifact retention period (14-90 days). | `90` |
-| `publish-pages` | Set `false` to keep rendered dashboards as downloadable workflow artifacts instead of deploying GitHub Pages. Plaintext mode always disables Pages deployment. | `true` |
-| `artifact-run-id` | Optional workflow run ID whose `dashboard-data` artifact should be restored. Use this when a downstream publish run must render the artifact produced by a specific collect run. If set, a missing or unreadable artifact fails the run. | Latest available `dashboard-data` artifact. |
-| `generate-readme` | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.) | `false` |
-| `readme-path` | README output path. | `README.md` |
+| Input                           | Description                                                                                                                                                                                                                              | Default                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `mode`                          | Runtime mode. Allowed values: `collect`, `publish`, `rotate-key`, `incident-reset`, `update-docs`, `doctor`.                                                                                                                             | `collect`                                                                                       |
+| `collection-token`              | Token for GitHub repository data collection APIs. Usually a fine-grained PAT; advanced option: user-owned GitHub App installation token minted in-workflow.                                                                              | Value of `${{ secrets.COLLECTION_TOKEN }}` in the consuming repository workflow.                |
+| `use-github-app`                | Advanced collect-mode toggle. Set `true` when `collection-token` is a GitHub App installation token (user-owned app), so discovery/validation uses app-installation endpoints.                                                           | `false`                                                                                         |
+| `github-token`                  | Token for artifact/repository workflow operations. Required for `collect` artifact cleanup and `incident-reset` history purge.                                                                                                           | Value of `${{ github.token }}` in the consuming repository workflow/job.                        |
+| `dashboard-secret`              | Current dashboard/artifact encryption key. Required and only checked for non-empty value when `data-mode: encrypted`.                                                                                                                    | Value of `${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}` in the consuming repository workflow. |
+| `dashboard-next-secret`         | Next dashboard/artifact encryption key for `rotate-key` and `incident-reset`. Required and only checked for non-empty value in encrypted rotation/reset runs.                                                                            | Value of `${{ secrets.DASHBOARD_NEXT_SECRET }}` in the consuming repository workflow.           |
+| `comparison-secret`             | Optional second dashboard key for `doctor` mode. Used to test a user-held key without replacing the main dashboard secret.                                                                                                               | `""`                                                                                            |
+| `incident-confirm-mode`         | Destructive `incident-reset` confirmation; must be `INCIDENT_RESET_CONFIRMED` when `mode: incident-reset`.                                                                                                                               | `""`                                                                                            |
+| `incident-confirm-purge`        | Destructive `incident-reset` confirmation; must be `PURGE_OLD_HISTORY_CONFIRMED` when `mode: incident-reset`.                                                                                                                            | `""`                                                                                            |
+| `incident-confirm-next-secret`  | Destructive `incident-reset` confirmation; must be `NEXT_SECRET_CONFIRMED` when `mode: incident-reset`.                                                                                                                                  | `""`                                                                                            |
+| `incident-confirm-irreversible` | Destructive `incident-reset` confirmation; must be `IRREVERSIBLE_ACTION_CONFIRMED` when `mode: incident-reset`.                                                                                                                          | `""`                                                                                            |
+| `data-mode`                     | Data storage model. Allowed values: `encrypted`, `plaintext`. Public repositories must use `encrypted`; `plaintext` is private-repository only.                                                                                          | `encrypted`                                                                                     |
+| `config-path`                   | Repository selection config path in the caller repository.                                                                                                                                                                               | `config.yaml`                                                                                   |
+| `retention-days`                | GitHub Actions artifact retention period (14-90 days).                                                                                                                                                                                   | `90`                                                                                            |
+| `publish-pages`                 | Set `false` to keep rendered dashboards as downloadable workflow artifacts instead of deploying GitHub Pages. Plaintext mode always disables Pages deployment.                                                                           | `true`                                                                                          |
+| `artifact-run-id`               | Optional workflow run ID whose `dashboard-data` artifact should be restored. Use this when a downstream publish run must render the artifact produced by a specific collect run. If set, a missing or unreadable artifact fails the run. | Latest available `dashboard-data` artifact.                                                     |
+| `require-collect-provenance`    | Deprecated compatibility input for older generated templates. The runtime ignores it.                                                                                                                                                    | `false`                                                                                         |
+| `generate-readme`               | Generate README dashboard output and commit it back to the caller repository. When `false`, README rendering is skipped. (NOTE: README dashboards may only be enabled in private repositories.)                                          | `false`                                                                                         |
+| `readme-path`                   | README output path.                                                                                                                                                                                                                      | `README.md`                                                                                     |
 
 ## Outputs
 
@@ -113,9 +101,11 @@ The action emits metadata for workflow summaries and later automation:
 - `dashboard-updated`
 - `schema-version`
 - `runtime-version`
+- `retention-days`
 - `update-docs-state`
 - `docs-action-version`
 - `docs-updated-at`
+- `doctor-report-path`: machine-readable Doctor report path when `mode: doctor` emits one
 
 `collect` updates only the retained `dashboard-data` artifact. Before upload, it writes lineage metadata over the decrypted/plaintext canonical CSV payload and verifies that the new payload preserves parent rows. After upload succeeds, it lists prior `dashboard-data` artifacts, keeps the newest two prior artifacts as rollback points, and deletes only the next older artifact. `retention-days` controls artifact expiry if successor uploads stop; it is not the CSV history length. `publish` restores that artifact and always renders dashboard output from retained data. When `artifact-run-id` is set, publish restores the `dashboard-data` artifact from that workflow run instead of the latest artifact. In encrypted mode, `publish-pages: true` deploys an encrypted Pages dashboard and `publish-pages: false` uploads an encrypted dashboard artifact (`html-dashboard-encrypted`). In private plaintext mode, publish uploads a non-Pages plaintext dashboard artifact (`html-dashboard-plaintext`) for download. When `generate-readme` is `true`, publish also renders and commits the README summary. `update-docs` updates the Reponomics-managed local documentation namespace at `docs/reponomics/`. The retained CSV data is not committed to the repository. `rotate-key` re-encrypts encrypted retained state and encrypted dashboard output after writing and verifying lineage over the retained payload; with `publish-pages: false` it uploads `html-dashboard-encrypted` instead of deploying Pages. `incident-reset` writes and verifies lineage, re-encrypts retained state with `dashboard-next-secret`, uploads the new retained artifact, then finds prior `dashboard-data` artifacts and deletes their associated workflow runs. If GitHub reports an old artifact without an associated run id, the action deletes that artifact directly as a fallback.
 

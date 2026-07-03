@@ -1,11 +1,12 @@
 # Reponomics Dashboard
 
-> [!WARNING]
-> The Reponomics Dashboard template is currently in a pre-release public hardening phase. It is not intended for public use, and documentation in this repository should not be considered authoritative.
+> [!NOTE] This template is on the `v0` external beta line. These instructions describe the official generated workflows; after copying the template, the repository owner may modify them.
 
-This is the setup README for your Reponomics dashboard repository. It helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
+This is the setup README for your Reponomics dashboard repository. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without sending the data to a Reponomics-hosted service.
 
-The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs update are owned by the versioned action referenced by the local wrapper at `.github/actions/reponomics/action.yml`.
+After you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action version pinned by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
+
+The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs update are owned by the versioned action referenced by the local wrapper.
 
 ```yaml
 uses: ./.github/actions/reponomics
@@ -21,8 +22,9 @@ If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.man
 4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Secure Dashboard Key Generation](docs/reponomics/secure-dashboard-key.md) for the security tradeoffs.
 5. Run **Actions -> Setup -> Run workflow**.
 6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
+7. Run **Actions -> Collect and Publish -> Run workflow** once to create the first dashboard immediately.
 
-Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact.
+Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact; run **Collect and Publish** manually after setup when you want the first dashboard without waiting for the schedule.
 
 The `.reponomics/setup-complete` marker is an empty, non-secret file and does not contain dashboard data. It is a git-tracked switch that tells the generated workflows the repository has completed initial setup. If it is deleted, collect, publish, rotate-key, doctor, incident-reset, update-docs, and keepalive workflows will treat setup as incomplete and skip their normal work until setup writes the marker again. If you intentionally complete `config.yaml` and choose to manage setup manually, recreating the empty marker is acceptable; normal setup writes it for you.
 
@@ -76,9 +78,9 @@ The canonical store is the `dashboard-data` Actions artifact.
 - Hosted encrypted dashboard publication is optional and requires GitHub Pages to use GitHub Actions as the deployment source.
 - Plain-mode HTML dashboards are private-repository downloadable artifacts only and are not published to Pages.
 - Metric README dashboard generation is only available in private repositories.
-- `artifact_retention_days` configures the retention period for dashboard data workflow artifacts, in the event that there is an interruption in the collection routine. Normally, only a small number of data artifacts are stored in the repository's artifact storage, and each time collection runs, the oldest artifact is deleted. `artifact_retention_days` can be thought of as the number of days GitHub should save your backup artifacts if the repository workflows stop functioning, credentials expire, etc. 
+- `artifact_retention_days` configures the retention period for dashboard data workflow artifacts, in the event that there is an interruption in the collection routine. Normally, only a small number of data artifacts are stored in the repository's artifact storage, and each time collection runs, the oldest artifact is deleted. `artifact_retention_days` can be thought of as the number of days GitHub should save your backup artifacts if the repository workflows stop functioning, credentials expire, etc.
 
-For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics/privacy-configuration-matrix.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
+For the one-minute setup checklist, see [Dashboard Essentials](docs/reponomics/dashboard-essentials.md). If a workflow fails, start with [Troubleshooting](docs/reponomics/troubleshooting.md). For the full mode comparison, see [Privacy Configuration Matrix](docs/reponomics/privacy-configuration-matrix.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
 
 ## Managed Docs
 

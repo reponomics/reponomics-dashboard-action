@@ -7,6 +7,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from .config import _env
@@ -49,6 +50,7 @@ def _restore_artifact(
     env = os.environ.copy()
     env["ARTIFACT_NAME"] = artifact_name
     env["DATA_DIR"] = (data_dir or config.data_dir).as_posix()
+    env["PYTHON"] = sys.executable
     restore_run_id = config.artifact_run_id if artifact_run_id is None else artifact_run_id
     if restore_run_id:
         env["ARTIFACT_RUN_ID"] = restore_run_id

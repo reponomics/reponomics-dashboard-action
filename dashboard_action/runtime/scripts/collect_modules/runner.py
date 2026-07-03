@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +11,7 @@ from typing import Any, TypeAlias
 import requests
 
 from collect_modules.context_endpoints import RepositoryStatisticsStatus
+from collect_modules.errors import CollectionAbort
 from collect_modules.http import RepoUnavailableError, SecondaryRateLimitError
 from collect_modules.types import Headers, RepoMetadata
 from storage import (
@@ -590,7 +590,7 @@ def _handle_secondary_limit(
         skipped_repos=run.skipped_repos,
         status_rows=run.status_rows,
     )
-    sys.exit(1)
+    raise CollectionAbort(f"secondary rate limit while collecting {repo}: {exc}")
 
 
 def _handle_unavailable_repo(
@@ -652,7 +652,7 @@ def _finish_run(run: CollectionRun, deps: CollectionDependencies) -> None:
             status_rows=run.status_rows,
         )
         print(f"\nCollection finished with errors for: {', '.join(run.errors)}")
-        sys.exit(1)
+        raise CollectionAbort(f"collection finished with errors for: {', '.join(run.errors)}")
 
     if run.skipped_repos:
         deps.write_step_summary(

@@ -4,6 +4,8 @@
 
 Start with **Actions -> Doctor -> Run workflow**. Doctor writes a workflow summary and, when available, uploads a machine-readable report artifact named `reponomics-doctor-report`.
 
+For the expected workflow modes, permissions, secrets, artifacts, and failure classes, see [Generated Workflow Contract](workflow-contract.md).
+
 ## Setup Fails
 
 Check:

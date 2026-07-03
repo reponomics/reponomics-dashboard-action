@@ -216,6 +216,29 @@ runs:
         retention-days: ${{ steps.runtime.outputs.retention-days }}
         overwrite: true
 
+    - name: Verify dashboard data artifact before upload
+      if: ${{ inputs.mode == 'collect' || inputs.mode == 'rotate-key' || inputs.mode == 'incident-reset' }}
+      shell: bash
+      env:
+        REPONOMICS_MODE: ${{ inputs.mode }}
+        REPONOMICS_COLLECTION_TOKEN: ${{ inputs.collection-token }}
+        REPONOMICS_USE_GITHUB_APP: ${{ inputs.use-github-app }}
+        REPONOMICS_GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPONOMICS_DASHBOARD_SECRET: ${{ inputs.dashboard-secret }}
+        REPONOMICS_DASHBOARD_NEXT_SECRET: ${{ inputs.dashboard-next-secret }}
+        REPONOMICS_DATA_MODE: ${{ inputs.data-mode }}
+        REPONOMICS_CONFIG_PATH: ${{ inputs.config-path }}
+        REPONOMICS_RETENTION_DAYS: ${{ inputs.retention-days }}
+        REPONOMICS_PUBLISH_PAGES: ${{ inputs.publish-pages }}
+        REPONOMICS_GENERATE_README: ${{ inputs.generate-readme }}
+        REPONOMICS_README_PATH: ${{ inputs.readme-path }}
+        REPONOMICS_INCIDENT_CONFIRM_MODE: ${{ inputs.incident-confirm-mode }}
+        REPONOMICS_INCIDENT_CONFIRM_PURGE: ${{ inputs.incident-confirm-purge }}
+        REPONOMICS_INCIDENT_CONFIRM_NEXT_SECRET: ${{ inputs.incident-confirm-next-secret }}
+        REPONOMICS_INCIDENT_CONFIRM_IRREVERSIBLE: ${{ inputs.incident-confirm-irreversible }}
+        REPONOMICS_VERIFY_RETAINED_UPLOAD_ONLY: "true"
+      run: PYTHONPATH="$GITHUB_ACTION_PATH" python -m dashboard_action.run
+
     - name: Upload encrypted dashboard data artifact
       if: ${{ steps.runtime.outputs.data-mode == 'encrypted' && (inputs.mode == 'collect' || inputs.mode == 'rotate-key' || inputs.mode == 'incident-reset') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-import sys
 from collections.abc import Callable
 from typing import Any
 
 from collect_modules.constants import CURRENT_REPOSITORY_ENV_KEYS
+from collect_modules.errors import CollectionAbort
 from collect_modules.types import Headers, RepoMetadata
 
 
@@ -60,7 +60,7 @@ def resolve_repositories(
     resolved = [repo["full_name"] for repo in resolved_repos]
     if not resolved:
         print("Error: no collect.repositories entries resolved to eligible repositories.")
-        sys.exit(1)
+        raise CollectionAbort("no collect.repositories entries resolved to eligible repositories.")
     _print_selection_summary(discovered, eligible, resolved)
     return resolved, manifest, metadata_for_resolved(resolved, eligible)
 

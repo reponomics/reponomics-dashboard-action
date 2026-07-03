@@ -54,6 +54,7 @@ from collect_modules.endpoints import (
     fallback_repo_community_warning as _endpoints_fallback_repo_community_warning,
     fallback_repo_detail_warning as _endpoints_fallback_repo_detail_warning,
 )
+from collect_modules.errors import CollectionAbort
 from collect_modules.http import (
     RepoUnavailableError as RepoUnavailableError,
     SecondaryRateLimitError,
@@ -484,4 +485,7 @@ def _collection_dependencies() -> CollectionDependencies:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except CollectionAbort as exc:
+        raise SystemExit(exc.exit_code) from exc

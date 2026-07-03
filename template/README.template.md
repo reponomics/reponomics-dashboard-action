@@ -14,6 +14,12 @@ uses: ./.github/actions/reponomics
 
 If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates.
 
+## Is This Beta For You?
+
+The `v0` beta is intended for maintainers who are comfortable with GitHub Actions, repository secrets, and workflow artifacts. Start with one GitHub owner or organization when possible, collect roughly 1-30 repositories, publish at most 8 repositories in the dashboard, and use encrypted mode unless the dashboard repository is private and plaintext artifacts are a deliberate choice.
+
+The beta works best when you are willing to run Doctor and share selected diagnostic output if something fails. It is probably not the right fit yet if you need a hosted service, formal support coverage, a stable `v1` compatibility promise, or a dashboard that spans many unrelated owners immediately.
+
 ## Get Started
 
 1. Fill in the required setup fields at the top of `config.yaml`, commit that change, and decide which repositories this dashboard should track.

@@ -13,6 +13,7 @@ Start here:
 - [Dashboard essentials](dashboard-essentials.md)
 - [Troubleshooting](troubleshooting.md)
 - [Dashboard repository guide](repository-guide.md)
+- [Generated workflow contract](workflow-contract.md)
 - [Configuration example](config.example.yaml)
 - [Upgrade notes](upgrade.md)
 - [Configuration reference](configuration.md)

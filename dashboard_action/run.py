@@ -8,6 +8,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Callable
@@ -268,6 +269,38 @@ def _validate_parent_lineage(parent: lineage.PayloadSnapshot) -> None:
         raise ActionError(str(exc)) from exc
 
 
+def run_verify_retained_upload(config: RuntimeConfig) -> None:
+    """Validate the retained dashboard-data packet immediately before upload."""
+    _patch_runtime_paths(config)
+    _set_runtime_env(config, next_key=config.mode in {"rotate-key", "incident-reset"})
+    if config.resolved_data_mode == "encrypted":
+        source = Path(".dashboard-data-artifact") / "dashboard-data.enc"
+        if not source.is_file():
+            raise ActionError(f"Encrypted retained artifact is missing at {source}.")
+        with tempfile.TemporaryDirectory(prefix="reponomics-upload-check-") as tmp:
+            copied = Path(tmp) / "dashboard-data.enc"
+            shutil.copy2(source, copied)
+            extracted = Path(tmp) / "data"
+            secret_env = (
+                "DASHBOARD_NEXT_SECRET"
+                if config.mode in {"rotate-key", "incident-reset"}
+                else "DASHBOARD_SECRET_DO_NOT_REPLACE"
+            )
+            try:
+                crypto_artifact.decrypt(copied, extracted, secret_env)
+            except Exception as exc:
+                raise ActionError(f"Retained encrypted artifact failed upload validation: {exc}") from exc
+            snapshot = lineage.snapshot_payload(extracted)
+    else:
+        snapshot = lineage.snapshot_payload(config.data_dir)
+
+    _validate_parent_lineage(snapshot)
+    print(
+        "Verified dashboard-data upload packet; payload digest "
+        + f"{snapshot.payload_digest[:12]}, semantic root {snapshot.semantic_root_digest[:12]}."
+    )
+
+
 def run_collect(
     config: RuntimeConfig,
     *,
@@ -285,7 +318,10 @@ def run_collect(
     _prepare_data_schema(config)
     parent = lineage.snapshot_payload(config.data_dir)
     if execute_collect:
-        collect_mod.main()
+        try:
+            collect_mod.main()
+        except collect_mod.CollectionAbort as exc:
+            raise ActionError(str(exc)) from exc
     merge.main()
     _write_verified_lineage(config, parent, operation="collect")
     _encrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
@@ -717,6 +753,12 @@ def main(loader: Callable[[], RuntimeConfig] = load_config_from_env) -> None:
             run_collect_retention_cleanup(config)
             return
         validate_config(config)
+        if _parse_bool(
+            _env("REPONOMICS_VERIFY_RETAINED_UPLOAD_ONLY", "false"),
+            name="verify-retained-upload-only",
+        ):
+            run_verify_retained_upload(config)
+            return
         _dispatch(config)
     except ActionError as exc:
         print(f"Reponomics action error: {exc}", file=sys.stderr)

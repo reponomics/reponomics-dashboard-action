@@ -70,7 +70,7 @@ Done when:
 
 ### 2. Rewrite The External Onboarding Path
 
-Status: partially completed in this branch. The generated template README now states the user-owned/no-hosted-service model, points to Dashboard Essentials, and tells users to run Collect and Publish manually for the first dashboard. `dashboard-essentials.md` now contains the one-minute setup and failure-avoidance guide. Further copy polish can continue, but the broken references and empty essentials page are fixed.
+Status: completed for beta onboarding in this branch. The generated template README now states the user-owned/no-hosted-service model, describes the intended beta cohort before secrets are created, points to Dashboard Essentials, and tells users to run Collect and Publish manually for the first dashboard. `dashboard-essentials.md` now contains the one-minute setup and failure-avoidance guide. The broken references and empty essentials page are fixed.
 
 Problem: the README markets a near-frictionless setup, but generated docs say the template is not intended for public use and the first-run path stops before a first dashboard is produced.
 
@@ -154,7 +154,7 @@ Done when:
 
 ### 5. Harden Retained-State Race And Artifact Boundaries
 
-Status: partially completed in this branch. Collect/publish, rotate-key, and incident-reset now share a retained-state concurrency group. Artifact restore now uses a Python extractor that rejects unsafe zip members, and encrypted artifact packing/extraction is restricted to registered retained-data files. Remaining work: lineage recheck before upload and conversion of collector `sys.exit` paths to typed exceptions.
+Status: completed for local pre-beta hardening in this branch. Collect/publish, rotate-key, and incident-reset now share a retained-state concurrency group. Artifact restore uses a Python extractor that rejects unsafe zip members. Encrypted artifact packing/extraction is restricted to registered retained-data files. The composite action verifies the exact retained upload packet before `upload-artifact`, and collector abort paths now use typed exceptions handled by the action dispatcher.
 
 Problem: multiple workflows can write the same retained `dashboard-data` surface, and artifact restore/extraction accepts broad artifact contents. These are pre-user hardening items because they affect user data continuity.
 
@@ -166,6 +166,14 @@ Original evidence:
 - `dashboard_action/runtime/scripts/restore_artifact.sh` unzipped the restored artifact directly into `DATA_DIR`.
 - `dashboard_action/runtime/scripts/crypto_artifact.py` encrypted all non-`.enc` files found under `data_dir`, not only registered retained-data files.
 - Collector modules still call `sys.exit(1)` from several submodules.
+
+Implemented evidence:
+
+- `template/.github/workflows/collect-and-publish.yml`, `template/.github/workflows/rotate-key.yml`, and `template/.github/workflows/incident-reset.yml` use the same retained-state concurrency group.
+- `dashboard_action/runtime/scripts/safe_extract_artifact.py` rejects unsafe, nested, non-regular, and unexpected `dashboard-data` zip members before restore.
+- `dashboard_action/runtime/scripts/crypto_artifact.py` packs and extracts only registered retained artifact files.
+- `action.yml` runs `REPONOMICS_VERIFY_RETAINED_UPLOAD_ONLY` before retained `dashboard-data` upload, and `dashboard_action/run.py` validates plaintext lineage or decrypts a copied encrypted packet and validates its lineage.
+- `dashboard_action/runtime/scripts/collect_modules/errors.py` defines `CollectionAbort`, and collector submodules no longer call `sys.exit(1)`.
 
 Required outcomes:
 
@@ -185,7 +193,7 @@ Done when:
 
 ### 6. Sync The Public Action Contract Across Metadata And Docs
 
-Status: partially completed in this branch. The README now documents the missing action inputs/outputs, and a test fails if action input/output names are missing from the README. A managed troubleshooting guide now covers the primary Doctor-first support path. Remaining work: richer generated documentation for every permission, artifact, and failure class.
+Status: completed for beta documentation in this branch. The README now documents the missing action inputs/outputs, and a test fails if action input/output names are missing from the README. Managed docs now include a troubleshooting guide and a generated workflow contract covering modes, secrets, permissions, artifacts, action outputs used by generated workflows, and expected failure classes.
 
 Problem: `action.yml`, root README, generated wrapper, workflows, and managed docs do not expose the same public contract.
 

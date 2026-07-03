@@ -569,7 +569,7 @@ def test_resolve_repositories_exits_when_no_repos_are_eligible(
 
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda _headers: [])
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.resolve_repositories({}, config, {})
 
     assert "no collect.repositories entries resolved" in capsys.readouterr().out

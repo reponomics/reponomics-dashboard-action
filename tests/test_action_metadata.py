@@ -664,6 +664,28 @@ def test_doctor_mode_metadata_contract() -> None:
     assert "inputs.mode == 'collect'" in plaintext_data_upload["if"]
 
 
+def test_retained_data_uploads_are_verified_before_upload() -> None:
+    verifier = _step_by_name("Verify dashboard data artifact before upload")
+
+    for mode_expr in DATA_PRODUCER_MODES:
+        assert mode_expr in verifier["if"]
+    assert verifier["env"]["REPONOMICS_VERIFY_RETAINED_UPLOAD_ONLY"] == "true"
+    assert verifier["env"]["REPONOMICS_DASHBOARD_SECRET"] == "${{ inputs.dashboard-secret }}"
+    assert (
+        verifier["env"]["REPONOMICS_DASHBOARD_NEXT_SECRET"]
+        == "${{ inputs.dashboard-next-secret }}"
+    )
+    assert _step_index("Run Reponomics runtime") < _step_index(
+        "Verify dashboard data artifact before upload"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Upload encrypted dashboard data artifact"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Upload dashboard data artifact"
+    )
+
+
 def test_incident_reset_purge_runs_after_data_upload() -> None:
     action = _action()
     inputs = action["inputs"]

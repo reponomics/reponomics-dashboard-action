@@ -34,7 +34,7 @@ def test_validate_token_401_points_to_fine_grained_token(
 
     monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.validate_token({})
 
     output = capsys.readouterr().out
@@ -59,7 +59,7 @@ def test_validate_token_403_names_required_permission(
 
     monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.validate_token({})
 
     output = capsys.readouterr().out
@@ -111,7 +111,7 @@ def test_validate_token_reports_network_failures(
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", summary_path.as_posix())
     monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.validate_token({})
 
     output = capsys.readouterr().out
@@ -149,7 +149,7 @@ def test_validate_token_github_app_rejects_invalid_validation_responses(
 
     monkeypatch.setattr(run.collect_mod, "_perform_get", fake_get)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.validate_token({}, use_github_app=True)
 
     assert expected in capsys.readouterr().out
@@ -162,7 +162,7 @@ def test_get_headers_reports_missing_token_for_github_app(
     monkeypatch.delenv("GH_TOKEN", raising=False)
     monkeypatch.setenv("REPONOMICS_USE_GITHUB_APP", "true")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.collect_mod.CollectionAbort):
         run.collect_mod.get_headers()
 
     output = capsys.readouterr().out

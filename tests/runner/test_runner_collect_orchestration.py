@@ -739,7 +739,7 @@ def test_collect_secondary_rate_limit_aborts_with_status_and_summary(
     monkeypatch.setattr(run.collect_mod, "discover_repositories", lambda headers: discovered)
     monkeypatch.setattr(run.collect_mod, "collect_repo_detail", raise_secondary)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.ActionError):
         run.run_collect(config, restore_artifact=False, execute_collect=True)
 
     with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:
@@ -802,7 +802,7 @@ def test_collect_records_generic_collection_errors_and_exits(
     monkeypatch.setattr(run.collect_mod, "collect_repo_community_profile", lambda *args: {})
     monkeypatch.setattr(run.collect_mod, "collect_views_clones", raise_collection_error)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(run.ActionError):
         run.run_collect(config, restore_artifact=False, execute_collect=True)
 
     with (config.data_dir / "collection-status.csv").open(newline="", encoding="utf-8") as handle:

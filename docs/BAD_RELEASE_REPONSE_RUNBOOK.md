@@ -287,4 +287,4 @@ For each scenario, record:
 - which exact tags/releases must not be moved or edited;
 - any missing runbook step, permission, artifact, or provenance evidence.
 
-Prefer tabletop review first. Use staging drills when the exercise needs to prove app permissions, generated publication, or copied-template smoke behavior. Do not create artificial production breakage for practice.
+Prefer tabletop review first. Use practice drills when the exercise needs to prove app permissions, generated publication, or copied-template smoke behavior. Do not create artificial production breakage for practice.

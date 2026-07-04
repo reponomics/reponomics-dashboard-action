@@ -42,7 +42,7 @@ When changing the action input schema, update the full boundary, not just `actio
 
 ## Staging Before Release
 
-Merging to `main` does not require cutting an action release immediately. `main` may serve as a short staging line where maintainers run CI, candidate validation, local smoke tests, demo checks, and private template staging publication if the staging protocol is later resumed.
+Merging to `main` does not require cutting an action release immediately. `main` may serve as a short staging line where maintainers run CI, candidate validation, local smoke tests, and demo checks.
 
 Use this staging period when a change has meaningful surface area, such as dashboard rendering, artifact format, generated workflows, setup behavior, managed docs, release tooling, or demo publication behavior.
 
@@ -52,35 +52,20 @@ Recommended staging flow:
 2. Let scheduled and push CI run on `main`.
 3. Run `.github/workflows/pre-release-validation.yml` against `main`.
 4. Run local or manual smoke checks against a copied generated template when the change is user-visible.
-5. If the paused staging protocol has been resumed, publish `main` to `reponomics-dashboard-staging` with `.github/workflows/publish-template-staging.yml` when the generated template should be exercised as a persistent private surface.
-6. Refresh the demo from `main` if the public demo is intentionally allowed to show staging behavior.
-7. Cut the action release only after the soak period has not exposed release-blocking regressions.
+5. Refresh the demo from `main` if the public demo is intentionally allowed to show staging behavior.
+6. Cut the action release only after the soak period has not exposed release-blocking regressions.
 
 There is one hard boundary: do not publish an official generated template that requires unreleased action behavior through `default_action_ref: v0`. If a candidate template needs newer action behavior, test it with candidate-source bridge tests or temporary testing repositories until the action release has moved `v0`. After that, publish the template against the current released compatible action channel.
 
 The public demo can either follow staging `main` or follow a promoted stable ref. During pre-release, following `main` is acceptable if the demo is deliberately acting as a public smoke surface. At beta or wider public release, prefer setting `vars.DEMO_DAILY_SOURCE_REF` to a promoted ref such as `demo-stable` or a release tag, then move that ref only after staging checks pass.
 
-## Template Staging Repository
+## Staging Smoke Reset
 
-Status: staging publication and copied-repository smoke work is paused and is not a live release gate. The effort was started to provide realistic generated-template staging coverage, then paused because the protocol became complex while more urgent release hardening work took priority. The helper scripts, Make targets, and workflow remain in the repository, but staging smoke tests are skipped until the protocol is revisited with a lighter contract model.
+Status: placeholder only. The abandoned staging repository implementation has been removed from the active workflow, Makefile, script, and test surfaces. `docs/STAGING_SMOKE.md` records the intended replacement shape, but it is not an executable runbook and not a release gate.
 
-When resumed, `reponomics-dashboard-staging` should be provisioned as a private generated-output repository. It should mirror the production generated-template repository closely enough to support realistic copy/smoke testing, but it is not the canonical user template and should not be advertised.
+The next staging smoke should start with one minimal public encrypted copied-repository scenario. It should use real but non-sensitive public GitHub data, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: false`, and a dedicated low-scope `COLLECTION_TOKEN`.
 
-Staging publication is handled by `.github/workflows/publish-template-staging.yml`. It is manual, restricted to `main` or release tags, runs the generated-template gates, dry-runs the staging target, then publishes `dist/template` to `reponomics-dashboard-staging`.
-
-Use a dedicated staging publication GitHub App installed only on `reponomics-dashboard-staging`. Configure `vars.TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID` and `secrets.TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY` at repository or organization scope in this source repository. The app needs `contents: write` and `workflows: write` on the staging repository.
-
-Staging setup checklist:
-
-1. Create `reponomics/reponomics-dashboard-staging` as a private repository.
-2. Keep it generated-output only; do not hand-maintain source files there.
-3. Optionally enable GitHub's template-repository setting if maintainers should click-copy it for smoke tests.
-4. Install the staging publication app only on `reponomics-dashboard-staging`.
-5. Configure `TEMPLATE_STAGING_PUBLISH_APP_CLIENT_ID` and `TEMPLATE_STAGING_PUBLISH_APP_PRIVATE_KEY` in this source repository.
-6. Run `.github/workflows/publish-template-staging.yml` from `main` with confirmation enabled.
-7. Run the private consumer staging smoke protocol in `docs/STAGING_SMOKE.md` when the change warrants it.
-
-Normal public template releases use `.github/workflows/template-release.yml`; routine private staging should use `publish-template-staging.yml`. There is no manual production template publication workflow.
+Normal public template releases use `.github/workflows/template-release.yml`. There is no manual production template publication workflow, and there is currently no separate template staging publication workflow.
 
 ## When To Release The Action
 
@@ -157,7 +142,7 @@ For a coupled action/template release where the template requires new action beh
 5. Let `.github/workflows/template-release.yml` pass the release gates, request `template-publication` approval, create the source tag, publish the generated template, and create the matching `reponomics-dashboard-vX.Y.Z` release in `reponomics/reponomics-dashboard` from the merged acceptance commit.
 6. Refresh the demo from the released template ref if the public showcase should reflect the new release before the next scheduled daily refresh.
 
-Routine private staging should use `publish-template-staging.yml`, and normal public template releases should use `.github/workflows/template-release.yml`. Production generated-template publication has no manual workflow-dispatch mutator; operator repair should be handled explicitly for the incident at hand.
+Normal public template releases should use `.github/workflows/template-release.yml`. Production generated-template publication has no manual workflow-dispatch mutator; operator repair should be handled explicitly for the incident at hand.
 
 ## Local Release Gates
 

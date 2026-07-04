@@ -220,7 +220,7 @@ Run the configured commit hooks across the full tree with:
 make pre-commit-run
 ```
 
-Fixture checks stop before any live GitHub staging validation:
+Fixture checks stop before any live GitHub validation:
 
 ```bash
 make fixture-collect

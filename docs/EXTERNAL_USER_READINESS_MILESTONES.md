@@ -29,7 +29,7 @@ These checks passed locally during the audit:
 
 | Check                         | Result | Notes                                                                                                                                                                                                         |
 | ----------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make ci`                     | Passed | 462 Python tests passed, 16 staging-smoke tests skipped, total Python coverage 90.69%.                                                                                                                        |
+| `make ci`                     | Passed | 462 Python tests passed, 16 obsolete staging tests skipped, total Python coverage 90.69% at audit time. The obsolete skipped staging group has since been removed with the old staging implementation.     |
 | `make security`               | Passed | No known Python vulnerabilities from local env or runtime lock; runtime and guide locks hash-installable; vendored assets validated.                                                                          |
 | `make template-release-gates` | Passed | Workflow classification, template build, public action ref validation, accepted action release validation, template smoke, accepted-action e2e, publication dry-run, and template release package all passed. |
 | `make js-coverage`            | Passed | 18 JS tests passed; JS line coverage reported 37.44%, so browser confidence still depends on smoke/snapshot/staging evidence.                                                                                 |
@@ -37,7 +37,7 @@ These checks passed locally during the audit:
 | `make verify-demo`            | Passed | Generated demo repository verified; synthetic encrypted seed built.                                                                                                                                           |
 | `make publish-demo-dry-run`   | Passed | Demo publication target and expected repo guard passed in dry-run mode.                                                                                                                                       |
 
-Important gap: the staging smoke test group is intentionally skipped because copied-repository staging is paused. This is recorded in `docs/STAGING_SMOKE.md`, `docs/VERSIONING_AND_RELEASE.md`, and `tests/test_generated_repos.py`.
+Important gap: copied-repository staging is still not implemented. The old skipped staging tests and helper implementation were removed; `docs/STAGING_SMOKE.md` is now only a placeholder for the replacement public encrypted smoke design.
 
 ## P0 Milestones
 
@@ -126,23 +126,22 @@ Done when:
 
 ### 4. Restore A Lightweight Copied-Repository Staging Gate
 
-Status: intentionally skipped in this pass.
+Status: pending after clean reset. The old private staging fleet implementation has been removed rather than refactored.
 
-Problem: local and release gates prove a lot, but they do not fully simulate a real copied dashboard repository with secrets, Pages settings, workflow artifacts, first-run setup, retention, rotation, and browser behavior. The repo already recognizes this gap, but the staging protocol is paused and its tests are skipped.
+Problem: local and release gates prove a lot, but they do not fully simulate a real copied dashboard repository with secrets, Pages settings, workflow artifacts, first-run setup, retention, rotation, and browser behavior. The repo already recognizes this gap, but the previous staging implementation was too complex to keep as a useful foundation.
 
 Original evidence:
 
-- `docs/STAGING_SMOKE.md` says the staging smoke effort is paused and not a live release gate.
-- `docs/VERSIONING_AND_RELEASE.md` repeats that copied-repository smoke work is paused.
-- `tests/test_generated_repos.py` skips staging-smoke assertions with `STAGING_SMOKE_PAUSED_REASON`.
+- `docs/STAGING_SMOKE.md` is now explicitly marked as a placeholder, not an executable runbook or release gate.
+- `docs/VERSIONING_AND_RELEASE.md` records that the old staging workflow/helper/test surface was removed.
+- The old skipped staging assertions and helper modules have been deleted from the active test and script surfaces.
 
 Required outcomes:
 
-- Resume a smaller staging protocol with the minimum useful fleet:
-  - private encrypted fresh repo;
-  - private plaintext history repo;
-  - at least one public encrypted dashboard path before public encrypted dashboards are recommended broadly.
-- Exercise setup, first collect, publish, Pages, README generation, artifact restore, key rotation, doctor, update-docs, and incident-reset preparation or a bounded non-destructive substitute.
+- Build a smaller staging protocol around one public encrypted copied repository.
+- Use `data_mode: encrypted`, `publish_pages_dashboard: true`, and `publish_readme_dashboard: false`.
+- Collect real but non-sensitive public GitHub API data through a dedicated low-scope `COLLECTION_TOKEN`.
+- Exercise setup, first collect, publish, Pages, artifact restore, key rotation, doctor, update-docs, and incident-reset preparation or a bounded non-destructive substitute.
 - Include browser checks for unlock, chart load, export, lazy data chunks, and no obvious broken layout.
 - Store a dated evidence report under an untracked or artifact path, then summarize the result in the release checklist.
 
@@ -224,7 +223,7 @@ Done when:
 
 ### 7. Align Local, PR, Release, And Policy Gates
 
-Status: partially completed in this branch. `make prebeta-check` now aggregates the non-staging local beta readiness checks. Remaining work: policy preflight and any decision about adding compatibility e2e to required PR/main validation.
+Status: partially completed in this branch. `make prebeta-check` now aggregates the local beta readiness checks. Remaining work: policy preflight and any decision about adding compatibility e2e to required PR/main validation.
 
 Problem: local `make ci` is healthy, but it is not the full GitHub CI/release surface. The project does have deeper gates, but they are spread across workflows and manual pre-release validation.
 
@@ -273,7 +272,7 @@ Done when:
 
 ### 9. Promote Demo And Promotional Assets To Beta-Grade
 
-Status: partially completed in this branch. The promotional dashboard guide now links to the live demo, copy-template path, setup checklist, and support repository, and it names the `v0` beta audience and synthetic-demo boundary. `docs/DEMO_REPOSITORY.md` now records the beta promotion posture: use `demo-stable` as the beta-facing scheduled source only after copied-repository staging smoke has current evidence; until then, do not use the live demo as proof of the beta setup path.
+Status: partially completed in this branch. The promotional dashboard guide now links to the live demo, copy-template path, setup checklist, and support repository, and it names the `v0` beta audience and synthetic-demo boundary. `docs/DEMO_REPOSITORY.md` now records the beta promotion posture: use `demo-stable` as the beta-facing scheduled source only after the replacement copied-repository staging smoke has current evidence; until then, do not use the live demo as proof of the beta setup path.
 
 Problem: demo generation works, but the public showcase and promotional guide are not yet a complete onboarding bridge.
 

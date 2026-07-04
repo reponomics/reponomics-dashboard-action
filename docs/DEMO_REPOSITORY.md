@@ -123,7 +123,7 @@ Manual publication and scheduled daily refresh use the same demo-only publicatio
 
 ## External Beta Promotion Posture
 
-For the external beta, the public demo should be treated as beta-facing only after copied-repository staging smoke has current evidence. At that point, set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` so scheduled refresh follows a promoted source ref rather than whatever is currently on `main`.
+For the external beta, the public demo should be treated as beta-facing only after the replacement copied-repository staging smoke has current evidence. At that point, set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` so scheduled refresh follows a promoted source ref rather than whatever is currently on `main`.
 
 Before that staging evidence exists, the demo may still be built and verified locally with `make verify-demo` and `make publish-demo-dry-run`, but invitations should not depend on the live demo as proof of the beta setup path. If a release tag is used instead of `demo-stable`, update the promotional guide and beta invitation copy to name that tag as the demo source.
 

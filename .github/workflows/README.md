@@ -18,8 +18,6 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - There is no manual production `publish-template.yml` workflow. Production generated-template publication is intentionally centralized in [`template-release.yml`](template-release.yml); operator repair should be explicit and separate from routine release automation.
 
-- [`publish-template-staging.yml`](publish-template-staging.yml) builds the generated dashboard template from this repository and publishes it to the private `reponomics-dashboard-staging` repository. This staging effort is currently paused and is not a live release gate; the workflow, helper scripts, and skipped smoke tests remain as orphaned work until the protocol is revisited with a lighter contract model. The paused consumer-repository smoke protocol is documented in [`../../docs/STAGING_SMOKE.md`](../../docs/STAGING_SMOKE.md).
-
 - [`publish-demo.yml`](publish-demo.yml) builds the generated public demo repository and publishes it to `reponomics-dashboard-demo`. It supports manual publication and scheduled daily refresh. Scheduled refresh uses an approved source ref, imports the encrypted synthetic data seed into the demo repository's Actions artifact storage, and deploys the committed Pages dashboard shell without requiring daily human approval.
 
 - [`promotional-dashboard-guide.yml`](promotional-dashboard-guide.yml) is a manual skeleton for refreshing the promotional HTML/PDF dashboard guide. It runs the same `make dashboard-guide-refresh` path used locally, with ephemeral `npx` guide tooling and hash-pinned Python guide dependencies, and intentionally does not publish or commit artifacts by default.

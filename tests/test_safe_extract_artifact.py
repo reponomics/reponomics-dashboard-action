@@ -76,6 +76,22 @@ def test_safe_extract_artifact_rejects_symlink_members(tmp_path: Path) -> None:
         safe_extract_artifact.extract(archive_path, tmp_path / "data")
 
 
+def test_safe_extract_artifact_rejects_preexisting_symlink_target(tmp_path: Path) -> None:
+    archive_path = tmp_path / "artifact.zip"
+    _write_zip(archive_path, {"manifest.json": "safe"})
+    data_dir = tmp_path / "data"
+    outside_dir = tmp_path / "outside"
+    data_dir.mkdir()
+    outside_dir.mkdir()
+    (data_dir / "manifest.json").symlink_to(outside_dir / "escaped")
+
+    with pytest.raises(safe_extract_artifact.ArtifactExtractionError, match="symlink"):
+        safe_extract_artifact.extract(archive_path, data_dir)
+
+    assert (data_dir / "manifest.json").is_symlink()
+    assert not (outside_dir / "escaped").exists()
+
+
 def test_safe_extract_artifact_rejects_oversized_member(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -136,3 +152,25 @@ def test_crypto_artifact_safe_extract_rejects_unexpected_member(tmp_path: Path) 
 
     with pytest.raises(ValueError, match="unexpected artifact member"):
         crypto_artifact._safe_extract(buffer.getvalue(), tmp_path / "data")
+
+
+def test_crypto_artifact_safe_extract_rejects_preexisting_symlink_target(
+    tmp_path: Path,
+) -> None:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        payload = b"safe"
+        info = tarfile.TarInfo("manifest.json")
+        info.size = len(payload)
+        archive.addfile(info, io.BytesIO(payload))
+    data_dir = tmp_path / "data"
+    outside_dir = tmp_path / "outside"
+    data_dir.mkdir()
+    outside_dir.mkdir()
+    (data_dir / "manifest.json").symlink_to(outside_dir / "escaped")
+
+    with pytest.raises(ValueError, match="symlink"):
+        crypto_artifact._safe_extract(buffer.getvalue(), data_dir)
+
+    assert (data_dir / "manifest.json").is_symlink()
+    assert not (outside_dir / "escaped").exists()

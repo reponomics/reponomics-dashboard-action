@@ -10,6 +10,7 @@ import base64
 import io
 import json
 import os
+import stat
 import tarfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -81,16 +82,37 @@ def _validate_member(member: tarfile.TarInfo) -> str:
     return member_name
 
 
+def _open_destination(data_dir: Path, member_name: str):
+    target = data_dir / member_name
+    try:
+        target_stat = target.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        if stat.S_ISLNK(target_stat.st_mode):
+            raise ValueError(f"Refusing to overwrite symlink artifact target: {member_name}")
+        if not stat.S_ISREG(target_stat.st_mode):
+            raise ValueError(f"Refusing to overwrite non-regular artifact target: {member_name}")
+
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(target, flags, 0o600)
+    except OSError as exc:
+        raise ValueError(f"Could not open artifact target safely: {member_name}") from exc
+    return os.fdopen(fd, "wb")
+
+
 def _safe_extract(archive_bytes: bytes, data_dir: Path) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
         for member in archive.getmembers():
             member_name = _validate_member(member)
-            target = data_dir / member_name
             source = archive.extractfile(member)
             if source is None:
                 raise ValueError(f"Could not read artifact member: {member_name}")
-            with source, target.open("wb") as destination:
+            with source, _open_destination(data_dir, member_name) as destination:
                 destination.write(source.read())
 
 

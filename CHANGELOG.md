@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.31.0...v0.31.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* clean up staging ([#199](https://github.com/reponomics/reponomics-dashboard-action/issues/199)) ([deaec69](https://github.com/reponomics/reponomics-dashboard-action/commit/deaec694bd00c3521473be3b713ee3c08a658d9d))
+
 ## [0.31.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.30.1...v0.31.0) (2026-06-30)
 
 

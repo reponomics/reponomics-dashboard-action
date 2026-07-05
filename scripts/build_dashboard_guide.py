@@ -449,11 +449,6 @@ def build_html() -> None:
       </nav>
     </header>
 
-    <section class="beta-panel" aria-label="Beta note">
-      <strong>External beta:</strong>
-      Reponomics is on the <code>v0</code> beta line. It is best suited to maintainers comfortable with GitHub Actions, repository secrets, and a bounded repository set. The demo uses synthetic data and a public demo key; real dashboards keep retained data in the owner repository's workflow artifacts. For help, start with Doctor and then open an issue or discussion in <a href="https://github.com/reponomics/reponomics-dashboard-action">reponomics-dashboard-action</a>.
-    </section>
-
     <section class="map-grid" aria-labelledby="overview-title">
       <figure class="screen-card">
         <img src="assets/full-page.png" alt="Full dashboard screenshot">

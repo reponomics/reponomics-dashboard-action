@@ -1,7 +1,5 @@
 # Reponomics Dashboard
 
-> [!NOTE] This template is on the `v0` external beta line. These instructions describe the official generated workflows; after copying the template, the repository owner may modify them.
-
 This is the setup README for your Reponomics dashboard repository. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without sending the data to a Reponomics-hosted service.
 
 After you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action version pinned by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
@@ -13,12 +11,6 @@ uses: ./.github/actions/reponomics
 ```
 
 If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates.
-
-## Is This Beta For You?
-
-The `v0` beta is intended for maintainers who are comfortable with GitHub Actions, repository secrets, and workflow artifacts. Start with one GitHub owner or organization when possible, collect roughly 1-30 repositories, publish at most 8 repositories in the dashboard, and use encrypted mode unless the dashboard repository is private and plaintext artifacts are a deliberate choice.
-
-The beta works best when you are willing to run Doctor and share selected diagnostic output if something fails. It is probably not the right fit yet if you need a hosted service, formal support coverage, a stable `v1` compatibility promise, or a dashboard that spans many unrelated owners immediately.
 
 ## Get Started
 

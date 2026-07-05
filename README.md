@@ -10,8 +10,6 @@ GitHub Action for the [Reponomics Dashboard template repository](https://github.
 
 The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub Pages site. To use this action, copy our template repository, configure your repository list and secrets, then run the generated setup and collect workflows. The workflows run in your repository with credentials you provide; Reponomics does not receive your dashboard data. No subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
 
-> [!NOTE] External beta uses the `v0` action line. If the beta proves out, `v1` will be the stable public release line.
-
 ## Action Modes
 
 This is a composite action that does a lot of different things for the Reponomics Dashboard. These are the primary "modes" in which it is used:

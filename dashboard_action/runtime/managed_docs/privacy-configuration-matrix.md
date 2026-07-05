@@ -1,6 +1,7 @@
 # Reponomics Data Mode Matrix
 
-> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+> [!NOTE]
+> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 Status: see `docs/reponomics/.manifest.json` for the action version associated with this snapshot.
 

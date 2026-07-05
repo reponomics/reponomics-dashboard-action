@@ -107,6 +107,32 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
     )
 
 
+def test_markdown_alert_markers_use_github_blockquote_syntax():
+    paths = [
+        Path("README.md"),
+        Path("template/README.template.md"),
+        *Path("dashboard_action/runtime/managed_docs").glob("*.md"),
+    ]
+    malformed: list[str] = []
+    marker = re.compile(r"^> \[!(?:NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]$")
+
+    for path in paths:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if re.match(r"^\s+> \[!(?:NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]", line):
+                malformed.append(f"{path}:{index + 1}: alert marker is indented")
+            if re.match(r"^> ?\[!(?:NOTE|WARNING|TIP|IMPORTANT|CAUTION)\] .+", line):
+                malformed.append(f"{path}:{index + 1}: alert marker shares a line with body")
+            if re.match(r"^>\[!(?:NOTE|WARNING|TIP|IMPORTANT|CAUTION)\]$", line):
+                malformed.append(f"{path}:{index + 1}: alert marker is missing a space")
+            if marker.match(line) and (
+                index + 1 >= len(lines) or not lines[index + 1].startswith("> ")
+            ):
+                malformed.append(f"{path}:{index + 1}: alert marker has no quoted body")
+
+    assert malformed == []
+
+
 def test_template_manifest_strips_template_prefix_by_default():
     manifest = {
         "include": [

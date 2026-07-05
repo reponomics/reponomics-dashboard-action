@@ -1,6 +1,7 @@
 # Troubleshooting
 
-> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+> [!NOTE]
+> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 Start with **Actions -> Doctor -> Run workflow**. Doctor writes a workflow summary and, when available, uploads a machine-readable report artifact named `reponomics-doctor-report`.
 

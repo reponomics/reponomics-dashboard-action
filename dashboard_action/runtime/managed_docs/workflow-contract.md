@@ -1,6 +1,7 @@
 # Generated Workflow Contract
 
-> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+> [!NOTE]
+> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 This page summarizes the public contract of the generated dashboard workflows. It is written for copied dashboard repositories, not for people embedding the composite action directly in unrelated workflows.
 

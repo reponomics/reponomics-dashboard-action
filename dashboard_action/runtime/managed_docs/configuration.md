@@ -1,8 +1,10 @@
 # Configuration Reference
 
-> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+> [!NOTE]
+> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
-> [!NOTE] These docs describe how the official generated workflows and action runtime behave. When a configuration is described as rejected or unsupported, that means the generated workflow or action fails, skips publication, or stops setup for that state.
+> [!NOTE]
+> These docs describe how the official generated workflows and action runtime behave. When a configuration is described as rejected or unsupported, that means the generated workflow or action fails, skips publication, or stops setup for that state.
 
 ## About
 

@@ -10,6 +10,9 @@ GitHub Action for the [Reponomics Dashboard template repository](https://github.
 
 The Reponomics Dashboard provides a simple, free, and private way to collect, aggregate, store, and analyze traffic and growth data for all of your GitHub repositories in one place, as well as a rich analytics dashboard that can be hosted privately, via strong encryption, on your public GitHub Pages site. To use this action, copy our template repository, configure your repository list and secrets, then run the generated setup and collect workflows. The workflows run in your repository with credentials you provide; Reponomics does not receive your dashboard data. No subscription, no third-party services, no ads or trackers, and no fees. Just making the most out of the data and resources that GitHub already provides to every maintainer, whether you're on a paid plan or the free tier.
 
+> [!NOTE]
+> External beta uses the `v0` action line. If the beta proves out, `v1` will be the stable public release line.
+
 ## Action Modes
 
 This is a composite action that does a lot of different things for the Reponomics Dashboard. These are the primary "modes" in which it is used:
@@ -53,7 +56,8 @@ steps:
 
 ## Inputs
 
-> [!NOTE] Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
+> [!NOTE]
+> Default sources below assume the consuming workflow follows the Reponomics Dashboard template repository wiring for tokens and secrets. If you decide to use this action outside of that template, pass explicit `with:` input values.
 
 For `collection-token`, use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&expires_in=366&administration=read) with repository `Administration: read` for the owner/repositories listed under `collect.repositories`. Keep `collect.repositories` within that token's repository access, and use `publish.repositories` to choose the subset rendered in the README and Pages dashboards. It does not need Pages or Administration write permissions.
 
@@ -61,7 +65,8 @@ This action accepts one `collection-token`. Fine-grained personal access tokens 
 
 Advanced users may use a user-owned GitHub App installation token instead of a PAT for `collect` mode. Reponomics does not provide or operate a shared app for user dashboards; you create and control your own GitHub App installation. In that path, mint a short-lived installation token in the workflow, pass it as `collection-token`, and set `use-github-app: true`.
 
-> [!NOTE] We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
+> [!NOTE]
+> We chose the deliberately outlandish name `DASHBOARD_SECRET_DO_NOT_REPLACE` because the Actions > Secrets UI does not provide another affordance where we can warn users that if they want to rotate their secret, simply overwriting the existing secret is not the correct way to do so, and will in fact result in permanent data loss if the previous secret was not retained by the user.
 
 | Input                           | Description                                                                                                                                                                                                                              | Default                                                                                         |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |

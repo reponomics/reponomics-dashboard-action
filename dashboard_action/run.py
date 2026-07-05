@@ -269,6 +269,27 @@ def _validate_parent_lineage(parent: lineage.PayloadSnapshot) -> None:
         raise ActionError(str(exc)) from exc
 
 
+def _validate_plaintext_upload_payload(data_dir: Path) -> None:
+    allowed = set(storage.ARTIFACT_FILES)
+    unexpected: list[str] = []
+    for path in sorted(data_dir.rglob("*")):
+        relative = path.relative_to(data_dir)
+        relative_name = relative.as_posix()
+        if (
+            len(relative.parts) != 1
+            or relative_name not in allowed
+            or path.is_symlink()
+            or not path.is_file()
+        ):
+            unexpected.append(relative_name)
+    if unexpected:
+        raise ActionError(
+            "Plaintext retained artifact upload contains unexpected data members: "
+            + ", ".join(unexpected)
+            + ". Only registered retained artifact files may be uploaded."
+        )
+
+
 def run_verify_retained_upload(config: RuntimeConfig) -> None:
     """Validate the retained dashboard-data packet immediately before upload."""
     _patch_runtime_paths(config)
@@ -292,6 +313,7 @@ def run_verify_retained_upload(config: RuntimeConfig) -> None:
                 raise ActionError(f"Retained encrypted artifact failed upload validation: {exc}") from exc
             snapshot = lineage.snapshot_payload(extracted)
     else:
+        _validate_plaintext_upload_payload(config.data_dir)
         snapshot = lineage.snapshot_payload(config.data_dir)
 
     _validate_parent_lineage(snapshot)

@@ -76,6 +76,37 @@ def test_safe_extract_artifact_rejects_symlink_members(tmp_path: Path) -> None:
         safe_extract_artifact.extract(archive_path, tmp_path / "data")
 
 
+def test_safe_extract_artifact_rejects_oversized_member(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive_path = tmp_path / "artifact.zip"
+    _write_zip(archive_path, {"manifest.json": "123456"})
+    monkeypatch.setattr(safe_extract_artifact, "MAX_MEMBER_BYTES", 5)
+
+    with pytest.raises(safe_extract_artifact.ArtifactExtractionError, match="oversized"):
+        safe_extract_artifact.extract(archive_path, tmp_path / "data")
+
+
+def test_safe_extract_artifact_rejects_oversized_archive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive_path = tmp_path / "artifact.zip"
+    _write_zip(
+        archive_path,
+        {
+            "manifest.json": "12345",
+            "traffic-daily.csv": "123456",
+        },
+    )
+    monkeypatch.setattr(safe_extract_artifact, "MAX_MEMBER_BYTES", 10)
+    monkeypatch.setattr(safe_extract_artifact, "MAX_TOTAL_BYTES", 10)
+
+    with pytest.raises(safe_extract_artifact.ArtifactExtractionError, match="archive"):
+        safe_extract_artifact.extract(archive_path, tmp_path / "data")
+
+
 def test_crypto_artifact_encrypt_packs_only_registered_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -11,6 +11,9 @@ import storage
 
 
 ALLOWED_MEMBERS = set(storage.ARTIFACT_FILES) | {"dashboard-data.enc"}
+MAX_MEMBER_BYTES = 256 * 1024 * 1024
+MAX_TOTAL_BYTES = 1024 * 1024 * 1024
+COPY_CHUNK_BYTES = 1024 * 1024
 
 
 class ArtifactExtractionError(ValueError):
@@ -43,16 +46,53 @@ def _validate_member(info: zipfile.ZipInfo) -> str | None:
     return member_name
 
 
+def _validate_member_size(info: zipfile.ZipInfo, total_size: int, member_name: str) -> int:
+    if info.file_size > MAX_MEMBER_BYTES:
+        raise ArtifactExtractionError(
+            f"Refusing oversized artifact member {member_name!r}: "
+            + f"{info.file_size} bytes exceeds {MAX_MEMBER_BYTES}."
+        )
+    next_total = total_size + info.file_size
+    if next_total > MAX_TOTAL_BYTES:
+        raise ArtifactExtractionError(
+            "Refusing oversized artifact archive: "
+            + f"{next_total} bytes exceeds {MAX_TOTAL_BYTES}."
+        )
+    return next_total
+
+
+def _copy_member(
+    source,
+    destination,
+    *,
+    member_name: str,
+) -> None:
+    copied = 0
+    while True:
+        chunk = source.read(COPY_CHUNK_BYTES)
+        if not chunk:
+            return
+        copied += len(chunk)
+        if copied > MAX_MEMBER_BYTES:
+            raise ArtifactExtractionError(
+                f"Refusing oversized artifact member {member_name!r}: "
+                + f"streamed size exceeds {MAX_MEMBER_BYTES}."
+            )
+        destination.write(chunk)
+
+
 def extract(zip_path: Path, data_dir: Path) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path) as archive:
+        total_size = 0
         for info in archive.infolist():
             member_name = _validate_member(info)
             if member_name is None:
                 continue
+            total_size = _validate_member_size(info, total_size, member_name)
             target = data_dir / member_name
             with archive.open(info) as source, target.open("wb") as destination:
-                destination.write(source.read())
+                _copy_member(source, destination, member_name=member_name)
 
 
 def main() -> None:

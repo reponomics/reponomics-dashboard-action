@@ -626,6 +626,21 @@ def test_retained_data_uploads_are_verified_before_upload() -> None:
         "Verify dashboard data artifact before upload"
     )
     assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Verify GitHub Pages configuration"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Upload GitHub Pages artifact"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Deploy GitHub Pages"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Upload plaintext dashboard artifact"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
+        "Upload encrypted dashboard artifact"
+    )
+    assert _step_index("Verify dashboard data artifact before upload") < _step_index(
         "Upload encrypted dashboard data artifact"
     )
     assert _step_index("Verify dashboard data artifact before upload") < _step_index(

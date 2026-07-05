@@ -1,6 +1,7 @@
 # Repository Access And Trust Boundary
 
-> [!NOTE] These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+> [!NOTE]
+> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
 
 Reponomics stores its long-lived dashboard state in GitHub Actions artifacts and controls encrypted dashboard access through repository secrets and workflows. That means repository access is part of the dashboard security model, not just a source-code collaboration setting.
 

@@ -1,0 +1,209 @@
+name: Staging Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/staging-smoke.yml"
+      - "Makefile"
+      - "docs/STAGING_SMOKE.md"
+      - "docs/VERSIONING_AND_RELEASE.md"
+      - "scripts/staging_smoke.py"
+      - "tests/test_staging_smoke.py"
+      - "template/**"
+      - "template-contract.yml"
+      - "template-manifest.yml"
+      - "dashboard_action/runtime/managed_docs/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/staging-smoke.yml"
+      - "Makefile"
+      - "docs/STAGING_SMOKE.md"
+      - "docs/VERSIONING_AND_RELEASE.md"
+      - "scripts/staging_smoke.py"
+      - "tests/test_staging_smoke.py"
+      - "template/**"
+      - "template-contract.yml"
+      - "template-manifest.yml"
+      - "dashboard_action/runtime/managed_docs/**"
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git ref to build the staging smoke tree from"
+        required: true
+        type: string
+        default: main
+      repositories:
+        description: "Space- or comma-separated public repos for collect.repositories"
+        required: true
+        type: string
+        default: reponomics/reponomics-dashboard-action
+      publish_repositories:
+        description: "Optional space- or comma-separated publish.repositories subset"
+        required: false
+        type: string
+        default: ""
+      publish:
+        description: "Replace the copied staging repository branch"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-smoke-${{ github.event.inputs.source_ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  STAGING_SMOKE_EXPECTED_REPO: reponomics/reponomics-dashboard-staging
+  STAGING_SMOKE_BRANCH: main
+  STAGING_SMOKE_OUTPUT: dist/staging-smoke
+  STAGING_SMOKE_EVIDENCE: dist/staging-smoke-evidence.md
+  STAGING_SMOKE_MESSAGE: "chore: publish staging smoke dashboard"
+
+jobs:
+  validate-staging-smoke:
+    name: Validate staging smoke tree
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.publish }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      STAGING_SMOKE_REPOSITORIES: ${{ inputs.repositories || 'reponomics/reponomics-dashboard-action' }}
+      STAGING_SMOKE_PUBLISH_REPOSITORIES: ${{ inputs.publish_repositories || '' }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Build staging smoke tree
+        run: |
+          set -euo pipefail
+          make staging-smoke
+
+      - name: Test staging smoke harness
+        run: |
+          set -euo pipefail
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 venv/bin/python -m pytest tests/test_staging_smoke.py -v
+
+      - name: Upload staging smoke evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-smoke-evidence-${{ github.run_id }}
+          path: |
+            dist/staging-smoke-evidence.md
+            dist/staging-smoke/.reponomics/staging-smoke.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish-staging-smoke:
+    name: Publish staging smoke repository
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+    runs-on: ubuntu-24.04
+    environment: staging-smoke-publication
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve publication source
+        id: source-ref
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$SOURCE_REF" ]]; then
+            echo "Staging smoke source ref is empty." >&2
+            exit 1
+          fi
+
+          case "$SOURCE_REF" in
+            main|refs/heads/main|reponomics-dashboard-v*|refs/tags/reponomics-dashboard-v*|v*|refs/tags/v*) ;;
+            *)
+              echo "Staging smoke publication is restricted to main or release tags; got $SOURCE_REF." >&2
+              exit 1
+              ;;
+          esac
+
+          echo "source_ref=$SOURCE_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.source-ref.outputs.source_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Create staging publication app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.STAGING_SMOKE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.STAGING_SMOKE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: reponomics-dashboard-staging
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Publish staging smoke tree
+        shell: bash
+        env:
+          STAGING_TOKEN: ${{ steps.app-token.outputs.token }}
+          STAGING_SMOKE_REPOSITORIES: ${{ inputs.repositories }}
+          STAGING_SMOKE_PUBLISH_REPOSITORIES: ${{ inputs.publish_repositories }}
+        run: |
+          set -euo pipefail
+
+          make install
+          remote="https://x-access-token:${STAGING_TOKEN}@github.com/${STAGING_SMOKE_EXPECTED_REPO}.git"
+          args=(
+            --output "$STAGING_SMOKE_OUTPUT"
+            --remote "$remote"
+            --expected-repo "$STAGING_SMOKE_EXPECTED_REPO"
+            --branch "$STAGING_SMOKE_BRANCH"
+            --message "$STAGING_SMOKE_MESSAGE"
+            --evidence "$STAGING_SMOKE_EVIDENCE"
+            --repository "$STAGING_SMOKE_REPOSITORIES"
+            --push
+          )
+          if [[ -n "$STAGING_SMOKE_PUBLISH_REPOSITORIES" ]]; then
+            args+=(--publish-repository "$STAGING_SMOKE_PUBLISH_REPOSITORIES")
+          fi
+
+          venv/bin/python scripts/staging_smoke.py "${args[@]}"
+
+      - name: Add staging smoke evidence to summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -f "$STAGING_SMOKE_EVIDENCE" ]]; then
+            cat "$STAGING_SMOKE_EVIDENCE" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload staging smoke evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: staging-smoke-published-${{ github.run_id }}
+          path: |
+            dist/staging-smoke-evidence.md
+            dist/staging-smoke/.reponomics/staging-smoke.json
+          if-no-files-found: error
+          retention-days: 14

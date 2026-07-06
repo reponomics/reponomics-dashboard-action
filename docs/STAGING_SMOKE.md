@@ -50,6 +50,32 @@ This writes:
 The default target is `reponomics/reponomics-dashboard-staging` on `main`. The
 script defaults to dry-run mode and will not push unless `--push` is passed.
 
+## CI/CD Workflow
+
+The source repository workflow
+`.github/workflows/staging-smoke.yml` wires this harness into CI/CD:
+
+- pull requests and pushes that touch the staging harness, generated template
+  surface, managed docs snapshot, or this runbook run `make staging-smoke` in
+  dry-run mode and upload the evidence files;
+- manual dispatch with `publish: false` runs the same dry-run against a selected
+  source ref;
+- manual dispatch with `publish: true` publishes the copied staging repository
+  after the `staging-smoke-publication` environment allows the job to proceed.
+
+The publication job uses a scoped GitHub App token. Configure these source
+repository settings before manual publication:
+
+- repository variable `STAGING_SMOKE_APP_CLIENT_ID`;
+- repository secret `STAGING_SMOKE_APP_PRIVATE_KEY`;
+- environment `staging-smoke-publication` with the desired reviewer policy.
+
+The GitHub App installation needs write access only to
+`reponomics/reponomics-dashboard-staging`, including repository contents and
+workflow files. The source workflow does not receive or forward the copied
+staging repository's `COLLECTION_TOKEN` or
+`DASHBOARD_SECRET_DO_NOT_REPLACE`; those remain target repository secrets.
+
 ## Publish To Staging
 
 Before publishing, configure the staging repository out of band:

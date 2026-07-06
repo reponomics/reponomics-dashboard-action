@@ -49,6 +49,10 @@ DEMO_PAGES_WORKFLOW = DEMO_TARGET_WORKFLOW
 DEMO_SEED_ARTIFACT_NAME = "generated-demo-dashboard-data"
 DEMO_SEED_DASHBOARD_DATA_ARTIFACT_NAME = "dashboard-data"
 DEMO_SEED_ARTIFACT_PATH = Path("dashboard-data.enc")
+DEMO_SEED_RETAINED_ARTIFACT_FORMAT_PREFIX = "reponomics-encrypted-dashboard-data-v"
+DEMO_SEED_RETAINED_ARTIFACT_FORMAT = (
+    f"{DEMO_SEED_RETAINED_ARTIFACT_FORMAT_PREFIX}{crypto_artifact.VERSION}"
+)
 DEMO_EXCLUDED_PAYLOAD_PATHS = frozenset({DEMO_PROVENANCE_PATH.as_posix()})
 DEMO_README_NOTICE = """\
 > **Public synthetic demo.** This repository is generated as a Reponomics showcase. The dashboard data is synthetic, the committed README dashboard is demo-only, and the Pages dashboard key is intentionally public.
@@ -511,9 +515,9 @@ jobs:
           if missing:
               raise SystemExit(f"encrypted seed is missing keys: {missing}")
           if (
-              payload["version"] != 2
+              payload["version"] != __RETAINED_ARTIFACT_VERSION_JSON__
               or payload["algorithm"] != "AES-256-GCM"
-              or payload["aad"] != "reponomics:retained-artifact:v2:dashboard-data"
+              or payload["aad"] != __RETAINED_ARTIFACT_AAD_JSON__
           ):
               raise SystemExit("encrypted seed uses an unsupported format")
           PY
@@ -541,7 +545,16 @@ jobs:
           retention-days: "90"
           publish-pages: "true"
           generate-readme: "false"
-""".replace("__DEMO_DASHBOARD_KEY_JSON__", json.dumps(demo_key))
+"""
+    workflow = workflow.replace("__DEMO_DASHBOARD_KEY_JSON__", json.dumps(demo_key))
+    workflow = workflow.replace(
+        "__RETAINED_ARTIFACT_VERSION_JSON__",
+        json.dumps(crypto_artifact.VERSION),
+    )
+    workflow = workflow.replace(
+        "__RETAINED_ARTIFACT_AAD_JSON__",
+        json.dumps(crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2),
+    )
     path = output_dir / DEMO_TARGET_WORKFLOW
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(workflow, encoding="utf-8")
@@ -679,7 +692,9 @@ def _write_demo_provenance(
             "path": DEMO_SEED_ARTIFACT_PATH.as_posix(),
             "sha256": _sha256_file(seed_artifact_path),
             "byte_count": seed_artifact_path.stat().st_size,
-            "format": "reponomics-encrypted-dashboard-data-v1",
+            "format": DEMO_SEED_RETAINED_ARTIFACT_FORMAT,
+            "version": crypto_artifact.VERSION,
+            "aad": crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2,
         },
         "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     }
@@ -748,9 +763,9 @@ def _load_encrypted_seed(seed_path: Path) -> dict[str, Any]:
     if missing:
         raise DemoBuildError(f"Encrypted demo seed artifact is missing keys: {missing}")
     if (
-        payload.get("version") != 2
+        payload.get("version") != crypto_artifact.VERSION
         or payload.get("algorithm") != "AES-256-GCM"
-        or payload.get("aad") != "reponomics:retained-artifact:v2:dashboard-data"
+        or payload.get("aad") != crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2
     ):
         raise DemoBuildError("Encrypted demo seed artifact uses an unsupported format.")
     return payload
@@ -775,7 +790,7 @@ def verify_demo(
             raise DemoBuildError(f"Generated demo publish tree must not include {relative}/.")
     _assert_no_committed_html_dashboard_outputs(output_dir)
     seed_path = seed_output_dir / DEMO_SEED_ARTIFACT_PATH
-    _load_encrypted_seed(seed_path)
+    seed_payload = _load_encrypted_seed(seed_path)
     readme = (output_dir / "README.md").read_text(encoding="utf-8")
     config = yaml.safe_load((output_dir / "config.yaml").read_text(encoding="utf-8"))
     workflow = (output_dir / DEMO_TARGET_WORKFLOW).read_text(encoding="utf-8")
@@ -798,6 +813,13 @@ def verify_demo(
         raise DemoBuildError("Demo workflow must render Pages through the publish runtime.")
     if 'generate-readme: "false"' not in workflow:
         raise DemoBuildError("Demo workflow must not publish the README dashboard through runtime.")
+    if f'payload["version"] != {json.dumps(crypto_artifact.VERSION)}' not in workflow:
+        raise DemoBuildError("Demo workflow does not validate the retained seed version.")
+    expected_aad_check = (
+        f'payload["aad"] != {json.dumps(crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2)}'
+    )
+    if expected_aad_check not in workflow:
+        raise DemoBuildError("Demo workflow does not validate the retained seed AAD.")
     provenance = json.loads((output_dir / DEMO_PROVENANCE_PATH).read_text(encoding="utf-8"))
     if provenance.get("dataset_revision") != dataset.get("dataset_revision"):
         raise DemoBuildError("Demo provenance dataset_revision does not match dataset.yml.")
@@ -827,6 +849,12 @@ def verify_demo(
         raise DemoBuildError("Demo provenance retained_data_seed source artifact name is wrong.")
     if seed_evidence.get("target_artifact_name") != DEMO_SEED_DASHBOARD_DATA_ARTIFACT_NAME:
         raise DemoBuildError("Demo provenance retained_data_seed target artifact name is wrong.")
+    if seed_evidence.get("format") != DEMO_SEED_RETAINED_ARTIFACT_FORMAT:
+        raise DemoBuildError("Demo provenance retained_data_seed format is wrong.")
+    if seed_evidence.get("version") != seed_payload.get("version"):
+        raise DemoBuildError("Demo provenance retained_data_seed version is wrong.")
+    if seed_evidence.get("aad") != seed_payload.get("aad"):
+        raise DemoBuildError("Demo provenance retained_data_seed AAD is wrong.")
     if seed_evidence.get("sha256") != _sha256_file(seed_path):
         raise DemoBuildError(
             "Demo provenance retained_data_seed digest does not match seed artifact."

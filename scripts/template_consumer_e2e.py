@@ -30,6 +30,10 @@ DEFAULT_ACTION_REPO = ROOT
 DEFAULT_ACTION_PYTHON = DEFAULT_ACTION_REPO / "venv" / "bin" / "python"
 RUNTIME_STEP_NAME = "Run Reponomics runtime"
 RUNTIME_STEP_SHELL = "bash"
+PLAINTEXT_DASHBOARD_DATA_VERSION = 2
+ENCRYPTED_DASHBOARD_DATA_VERSION = 3
+DASHBOARD_SUMMARY_AAD_LABEL = "reponomics:dashboard:v3:summary"
+DASHBOARD_CHUNK_AAD_PREFIX = "reponomics:dashboard:v3:chunk:"
 REQUIRED_COMPOSITE_ENV = {
     "REPONOMICS_MODE": "${{ inputs.mode }}",
     "REPONOMICS_GITHUB_TOKEN": "${{ inputs.github-token }}",
@@ -444,18 +448,34 @@ def _read_dashboard_json_payload(consumer_dir: Path, asset_name: str) -> dict[st
     return payload
 
 
-def _assert_chunked_dashboard_payload(profile_name: str, payload: Mapping[str, object]) -> None:
+def _assert_chunked_dashboard_payload(
+    profile_name: str,
+    payload: Mapping[str, object],
+    *,
+    encrypted: bool,
+) -> None:
     chunks = payload.get("chunks")
     summary = payload.get("summary")
     chunk_count = payload.get("chunk_count")
+    expected_version = (
+        ENCRYPTED_DASHBOARD_DATA_VERSION if encrypted else PLAINTEXT_DASHBOARD_DATA_VERSION
+    )
     if (
-        payload.get("version") != 2
+        payload.get("version") != expected_version
         or not isinstance(summary, (dict, str))
         or not isinstance(chunks, dict)
         or not isinstance(chunk_count, int)
         or chunk_count != len(chunks)
     ):
         raise TemplateConsumerE2EError(f"{profile_name}: dashboard chunk object missing")
+    if not encrypted:
+        return
+    aad = payload.get("aad")
+    if not isinstance(aad, dict) or aad != {
+        "summary": DASHBOARD_SUMMARY_AAD_LABEL,
+        "chunk_prefix": DASHBOARD_CHUNK_AAD_PREFIX,
+    }:
+        raise TemplateConsumerE2EError(f"{profile_name}: encrypted dashboard AAD contract mismatch")
 
 
 def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> None:
@@ -480,7 +500,7 @@ def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> 
             consumer_dir,
             "encrypted-dashboard-data.json",
         )
-        _assert_chunked_dashboard_payload(profile.name, encrypted_payload)
+        _assert_chunked_dashboard_payload(profile.name, encrypted_payload, encrypted=True)
         if not list((consumer_dir / "docs" / "assets").glob("export-data-*.enc")):
             raise TemplateConsumerE2EError(f"{profile.name}: encrypted export asset missing")
     elif "encrypted-dashboard-data" in dashboard or "encrypted-payload" in dashboard:
@@ -492,7 +512,7 @@ def _assert_successful_profile(consumer_dir: Path, profile: ConsumerProfile) -> 
             consumer_dir,
             "dashboard-data.json",
         )
-        _assert_chunked_dashboard_payload(profile.name, plaintext_payload)
+        _assert_chunked_dashboard_payload(profile.name, plaintext_payload, encrypted=False)
 
     managed_manifest = consumer_dir / "docs" / "reponomics" / ".manifest.json"
     if not managed_manifest.is_file():

@@ -51,7 +51,8 @@ Recommended staging flow:
 1. Merge the candidate work to `main` after PR CI passes.
 2. Let scheduled and push CI run on `main`.
 3. Run `.github/workflows/pre-release-validation.yml` against `main`.
-4. Run local or manual smoke checks against a copied generated template when the change is user-visible.
+4. Run `.github/workflows/staging-smoke.yml` or local `make staging-smoke`
+   against a copied generated template when the change is user-visible.
 5. Refresh the demo from `main` if the public demo is intentionally allowed to show staging behavior.
 6. Cut the action release only after the soak period has not exposed release-blocking regressions.
 
@@ -59,11 +60,17 @@ There is one hard boundary: do not publish an official generated template that r
 
 The public demo can either follow staging `main` or follow a promoted stable ref. During pre-release, following `main` is acceptable if the demo is deliberately acting as a public smoke surface. At beta or wider public release, prefer setting `vars.DEMO_DAILY_SOURCE_REF` to a promoted ref such as `demo-stable` or a release tag, then move that ref only after staging checks pass.
 
-## Staging Smoke Reset
+## Staging Smoke
 
-Status: placeholder only. The abandoned staging repository implementation has been removed from the active workflow, Makefile, script, and test surfaces. `docs/STAGING_SMOKE.md` records the intended replacement shape, but it is not an executable runbook and not a release gate.
+Status: active maintainer-operated smoke check. It is still not a release gate.
+Use `.github/workflows/staging-smoke.yml`, local `make staging-smoke`, and
+`docs/STAGING_SMOKE.md` for the one minimal public encrypted copied-repository
+scenario.
 
-The next staging smoke should start with one minimal public encrypted copied-repository scenario. It should use real but non-sensitive public GitHub data, `data_mode: encrypted`, `publish_pages_dashboard: true`, `publish_readme_dashboard: false`, and a dedicated low-scope `COLLECTION_TOKEN`.
+The staging smoke uses real but non-sensitive public GitHub data,
+`data_mode: encrypted`, `publish_pages_dashboard: true`,
+`publish_readme_dashboard: false`, and a dedicated low-scope
+`COLLECTION_TOKEN`.
 
 Normal public template releases use `.github/workflows/template-release.yml`. There is no manual production template publication workflow, and there is currently no separate template staging publication workflow.
 

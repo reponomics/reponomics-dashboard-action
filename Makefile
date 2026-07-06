@@ -4,7 +4,7 @@
 .PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
-.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
+.PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template staging-smoke build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide-assets dashboard-guide dashboard-guide-refresh clean
 
 VENV := venv
@@ -42,6 +42,15 @@ TEMPLATE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard.git
 TEMPLATE_EXPECTED_REPO ?= reponomics/reponomics-dashboard
 TEMPLATE_PUBLISH_MESSAGE ?= chore: publish generated template
 TEMPLATE_RELEASE_ARTIFACTS_DIR ?= dist/template-release
+STAGING_SMOKE_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-staging.git
+STAGING_SMOKE_EXPECTED_REPO ?= reponomics/reponomics-dashboard-staging
+STAGING_SMOKE_BRANCH ?= main
+STAGING_SMOKE_OUTPUT ?= dist/staging-smoke
+STAGING_SMOKE_EVIDENCE ?= dist/staging-smoke-evidence.md
+STAGING_SMOKE_MESSAGE ?= chore: publish staging smoke dashboard
+STAGING_SMOKE_REPOSITORIES ?= reponomics/reponomics-dashboard-action
+STAGING_SMOKE_PUBLISH_REPOSITORIES ?=
+STAGING_SMOKE_PUSH ?=
 DEMO_REMOTE ?= https://github.com/reponomics/reponomics-dashboard-demo.git
 DEMO_EXPECTED_REPO ?= reponomics/reponomics-dashboard-demo
 DEMO_PUBLISH_MESSAGE ?= chore: publish generated demo
@@ -213,6 +222,18 @@ publish-template-dry-run: build-template ## Show the generated template publish 
 
 publish-template: build-template ## Publish dist/template/ to the template repository main branch
 	$(PYTHON) scripts/publish_generated_repo.py --output dist/template --remote $(TEMPLATE_REMOTE) --branch main --expected-repo $(TEMPLATE_EXPECTED_REPO) --message "$(TEMPLATE_PUBLISH_MESSAGE)" --push
+
+staging-smoke: install ## Prepare or publish the copied staging dashboard smoke tree
+	$(PYTHON) scripts/staging_smoke.py \
+		--output $(STAGING_SMOKE_OUTPUT) \
+		--remote $(STAGING_SMOKE_REMOTE) \
+		--expected-repo $(STAGING_SMOKE_EXPECTED_REPO) \
+		--branch $(STAGING_SMOKE_BRANCH) \
+		--message "$(STAGING_SMOKE_MESSAGE)" \
+		--evidence $(STAGING_SMOKE_EVIDENCE) \
+		$(foreach repository,$(STAGING_SMOKE_REPOSITORIES),--repository $(repository)) \
+		$(foreach repository,$(STAGING_SMOKE_PUBLISH_REPOSITORIES),--publish-repository $(repository)) \
+		$(STAGING_SMOKE_PUSH)
 
 build-demo: build-template ## Build the public demo repository tree in dist/demo/
 	$(PYTHON) scripts/build_demo_repo.py --output dist/demo

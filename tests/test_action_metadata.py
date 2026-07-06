@@ -236,6 +236,57 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
 
 
+def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
+    workflow_text = Path(".github/workflows/staging-smoke.yml").read_text(
+        encoding="utf-8"
+    )
+    workflow = yaml.safe_load(workflow_text)
+    trigger_paths = set(workflow[True]["pull_request"]["paths"])
+    validate_job = workflow["jobs"]["validate-staging-smoke"]
+    publish_job = workflow["jobs"]["publish-staging-smoke"]
+    validate_commands = "\n".join(
+        step["run"] for step in validate_job["steps"] if "run" in step
+    )
+    publish_commands = "\n".join(
+        step["run"] for step in publish_job["steps"] if "run" in step
+    )
+    app_token_step = next(
+        step
+        for step in publish_job["steps"]
+        if step["name"] == "Create staging publication app token"
+    )
+
+    assert workflow["name"] == "Staging Smoke"
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow[True]["workflow_dispatch"]["inputs"]["publish"]["type"] == "boolean"
+    assert workflow[True]["workflow_dispatch"]["inputs"]["publish"]["default"] is False
+    assert "scripts/staging_smoke.py" in trigger_paths
+    assert "docs/STAGING_SMOKE.md" in trigger_paths
+    assert "template/**" in trigger_paths
+    assert validate_job["if"] == "${{ github.event_name != 'workflow_dispatch' || !inputs.publish }}"
+    assert validate_job["permissions"] == {"contents": "read"}
+    assert "make staging-smoke" in validate_commands
+    assert "tests/test_staging_smoke.py" in validate_commands
+    assert "--push" not in validate_commands
+    assert publish_job["if"] == "${{ github.event_name == 'workflow_dispatch' && inputs.publish }}"
+    assert "environment" not in publish_job
+    assert publish_job["permissions"] == {"contents": "read"}
+    assert "Staging smoke publication is restricted to main or release tags" in publish_commands
+    assert "scripts/staging_smoke.py" in publish_commands
+    assert "--push" in publish_commands
+    assert "make staging-smoke" not in publish_commands
+    assert "COLLECTION_TOKEN" not in workflow_text
+    assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow_text
+    assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in workflow_text
+    assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow_text
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
+    assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in workflow_text
+    assert app_token_step["with"]["repositories"] == "reponomics-dashboard-staging"
+    assert app_token_step["with"]["permission-contents"] == "write"
+    assert app_token_step["with"]["permission-workflows"] == "write"
+    assert "permission-actions" not in app_token_step["with"]
+
+
 def test_runtime_steps_execute_dashboard_action_as_module() -> None:
     runtime_steps = [
         _step_by_name("Run Reponomics runtime"),

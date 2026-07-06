@@ -113,7 +113,6 @@ jobs:
     name: Publish staging smoke repository
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     runs-on: ubuntu-24.04
-    environment: staging-smoke-publication
     permissions:
       contents: read
     steps:

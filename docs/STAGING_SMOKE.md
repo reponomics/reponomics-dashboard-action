@@ -60,15 +60,13 @@ The source repository workflow
   dry-run mode and upload the evidence files;
 - manual dispatch with `publish: false` runs the same dry-run against a selected
   source ref;
-- manual dispatch with `publish: true` publishes the copied staging repository
-  after the `staging-smoke-publication` environment allows the job to proceed.
+- manual dispatch with `publish: true` publishes the copied staging repository.
 
 The publication job uses a scoped GitHub App token. Configure these source
 repository settings before manual publication:
 
 - repository variable `STAGING_SMOKE_APP_CLIENT_ID`;
-- repository secret `STAGING_SMOKE_APP_PRIVATE_KEY`;
-- environment `staging-smoke-publication` with the desired reviewer policy.
+- repository secret `STAGING_SMOKE_APP_PRIVATE_KEY`.
 
 The GitHub App installation needs write access only to
 `reponomics/reponomics-dashboard-staging`, including repository contents and
@@ -82,8 +80,8 @@ Before publishing, configure the staging repository out of band:
 
 - repository visibility is public;
 - Settings -> Pages -> Build and deployment -> Source is set to GitHub Actions;
-- repository secret `COLLECTION_TOKEN` exists and can read the selected public
-  repositories;
+- repository secret `COLLECTION_TOKEN` exists and can read
+  `reponomics/reponomics-dashboard-action`;
 - repository secret `DASHBOARD_SECRET_DO_NOT_REPLACE` exists and is retained
   across runs.
 

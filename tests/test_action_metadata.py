@@ -269,7 +269,7 @@ def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
     assert "tests/test_staging_smoke.py" in validate_commands
     assert "--push" not in validate_commands
     assert publish_job["if"] == "${{ github.event_name == 'workflow_dispatch' && inputs.publish }}"
-    assert publish_job["environment"] == "staging-smoke-publication"
+    assert "environment" not in publish_job
     assert publish_job["permissions"] == {"contents": "read"}
     assert "Staging smoke publication is restricted to main or release tags" in publish_commands
     assert "scripts/staging_smoke.py" in publish_commands

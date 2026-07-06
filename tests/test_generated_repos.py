@@ -1363,7 +1363,11 @@ def test_template_consumer_e2e_accepts_chunked_encrypted_dashboard_marker(tmp_pa
     (tmp_path / "docs" / "assets" / "encrypted-dashboard-data.json").write_text(
         json.dumps(
             {
-                "version": 2,
+                "version": template_consumer_e2e.ENCRYPTED_DASHBOARD_DATA_VERSION,
+                "aad": {
+                    "summary": template_consumer_e2e.DASHBOARD_SUMMARY_AAD_LABEL,
+                    "chunk_prefix": template_consumer_e2e.DASHBOARD_CHUNK_AAD_PREFIX,
+                },
                 "summary": "encrypted-summary",
                 "chunks": {"c0001": "encrypted-chunk"},
                 "chunk_count": 1,

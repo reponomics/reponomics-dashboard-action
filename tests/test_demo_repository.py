@@ -25,9 +25,13 @@ from scripts import publish_demo_repo  # noqa: E402
 def _encrypted_html(**kwargs) -> str:
     return build_encrypted_html(
         {
-            "version": 2,
+            "version": 3,
             "cipher": "AES-GCM",
             "kdf": {"name": "PBKDF2", "hash": "SHA-256", "iterations": 600000},
+            "aad": {
+                "summary": "reponomics:dashboard:v3:summary",
+                "chunk_prefix": "reponomics:dashboard:v3:chunk:",
+            },
             "salt": "AA==",
             "summary": "encrypted-summary",
             "chunks": {},

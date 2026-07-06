@@ -29,6 +29,10 @@ from doctor_support import (
 
 
 RETAINED_ENCRYPTED_ARTIFACT_NAME = "dashboard-data.enc"
+RETAINED_ARTIFACT_LEGACY_VERSION = 1
+RETAINED_ARTIFACT_VERSION = 2
+RETAINED_ARTIFACT_AAD_LABEL_V2 = "reponomics:retained-artifact:v2:dashboard-data"
+RETAINED_ARTIFACT_AAD_V2 = RETAINED_ARTIFACT_AAD_LABEL_V2.encode("utf-8")
 
 
 def _retained_encrypted_candidates(retained_data_dir: Path | None) -> list[Path]:
@@ -148,17 +152,36 @@ def _object_dict(value: Any) -> dict[str, Any]:
     return {}
 
 
-def _load_retained_encrypted_payload(path: Path) -> tuple[list[DoctorStage], dict[str, Any] | None]:
+def _load_retained_encrypted_payload(
+    path: Path,
+) -> tuple[list[DoctorStage], dict[str, Any] | None]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
-        return [_stage("retained_artifact_readable", "failed", f"encrypted artifact was not readable JSON: {exc}")], None
+        return [
+            _stage(
+                "retained_artifact_readable",
+                "failed",
+                f"encrypted artifact was not readable JSON: {exc}",
+            )
+        ], None
     if not isinstance(payload, dict):
-        return [_stage("retained_artifact_readable", "failed", "encrypted artifact payload was not a JSON object")], None
+        return [
+            _stage(
+                "retained_artifact_readable",
+                "failed",
+                "encrypted artifact payload was not a JSON object",
+            )
+        ], None
 
     errors: list[str] = []
-    if payload.get("version") != 1:
+    if payload.get("version") not in {RETAINED_ARTIFACT_LEGACY_VERSION, RETAINED_ARTIFACT_VERSION}:
         errors.append("unsupported encrypted artifact version")
+    if (
+        payload.get("version") == RETAINED_ARTIFACT_VERSION
+        and payload.get("aad") != RETAINED_ARTIFACT_AAD_LABEL_V2
+    ):
+        errors.append("unsupported AAD")
     if payload.get("kdf") != "PBKDF2-SHA256":
         errors.append("unsupported KDF")
     if payload.get("iterations") != EXPECTED_KDF_ITERATIONS:
@@ -171,6 +194,12 @@ def _load_retained_encrypted_payload(path: Path) -> tuple[list[DoctorStage], dic
     if errors:
         return [_stage("retained_artifact_readable", "failed", "; ".join(errors))], None
     return [_stage("retained_artifact_readable", "passed", "encrypted artifact payload is readable")], payload
+
+
+def _retained_artifact_aad(payload: dict[str, Any]) -> bytes | None:
+    if payload.get("version") == RETAINED_ARTIFACT_LEGACY_VERSION:
+        return None
+    return RETAINED_ARTIFACT_AAD_V2
 
 
 def _diagnose_encrypted_retained_artifact(
@@ -223,7 +252,7 @@ def _diagnose_encrypted_retained_artifact(
     for label, secret in accepted_secrets:
         key = _derive_key(secret, salt)
         try:
-            plaintext = AESGCM(key).decrypt(iv, ciphertext, None)
+            plaintext = AESGCM(key).decrypt(iv, ciphertext, _retained_artifact_aad(payload))
         except InvalidTag:
             stages.append(_stage("retained_artifact_decrypts", "failed", "AES-GCM authentication failed", label))
             continue

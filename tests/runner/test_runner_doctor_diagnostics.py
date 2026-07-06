@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import json
+import os
 import tarfile
 from pathlib import Path
 from typing import Any
@@ -66,7 +68,7 @@ def test_publish_fixture_renders_outputs_without_live_api(
     assert len(list((config.pages_index_path.parent / "assets").glob("export-data-*.enc"))) == 1
 
 
-def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
+def test_publish_fixture_writes_v3_encrypted_dashboard_data_chunks(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -84,12 +86,16 @@ def test_publish_fixture_writes_v2_encrypted_dashboard_data_chunks(
         "encrypted-dashboard-data",
         "encrypted-dashboard-data.json",
     )
-    assert encrypted_data["version"] == 2
+    assert encrypted_data["version"] == 3
     assert encrypted_data["cipher"] == "AES-GCM"
     assert encrypted_data["kdf"] == {
         "name": "PBKDF2",
         "hash": "SHA-256",
         "iterations": run.render_dashboard.PBKDF2_ITERATIONS,
+    }
+    assert encrypted_data["aad"] == {
+        "summary": run.render_dashboard.DASHBOARD_SUMMARY_AAD_LABEL,
+        "chunk_prefix": run.render_dashboard.DASHBOARD_CHUNK_AAD_PREFIX,
     }
     assert encrypted_data["encoding"] == "gzip+json"
     assert "encrypted-payload" not in dashboard
@@ -208,6 +214,160 @@ def test_doctor_dashboard_key_check_rejects_corrupt_chunk_ciphertext(
     assert compatibility_result.ok is False
     assert compatibility_result.stage == "decrypt"
     assert compatibility_result.detail == "AES-GCM authentication failed"
+
+
+def _encrypt_dashboard_json_token(payload: dict[str, Any], key: bytes, aad: bytes) -> str:
+    iv = os.urandom(run.render_dashboard.AES_GCM_IV_BYTES)
+    ciphertext = run.render_dashboard.AESGCM(key).encrypt(
+        iv,
+        run.render_dashboard._gzip_json(payload),
+        aad,
+    )
+    return (
+        f"{run.render_dashboard._b64url_encode(iv)}."
+        + run.render_dashboard._b64url_encode(ciphertext)
+    )
+
+
+def _write_retained_artifact_encrypted_with_aad(
+    data_dir: Path,
+    output_path: Path,
+    *,
+    secret: str,
+    aad: bytes,
+    declared_aad: str,
+) -> None:
+    salt = os.urandom(run.crypto_artifact.SALT_BYTES)
+    iv = os.urandom(run.crypto_artifact.IV_BYTES)
+    key = run.crypto_artifact._derive_key(secret.encode("utf-8"), salt)
+    ciphertext = run.crypto_artifact.AESGCM(key).encrypt(
+        iv,
+        run.crypto_artifact._pack_data_dir(data_dir),
+        aad,
+    )
+    payload = {
+        "version": run.crypto_artifact.VERSION,
+        "created_at": "2026-07-05T00:00:00+00:00",
+        "kdf": "PBKDF2-SHA256",
+        "iterations": run.crypto_artifact.KDF_ITERATIONS,
+        "algorithm": "AES-256-GCM",
+        "aad": declared_aad,
+        "salt": run.crypto_artifact._b64encode(salt),
+        "iv": run.crypto_artifact._b64encode(iv),
+        "ciphertext": run.crypto_artifact._b64encode(ciphertext),
+    }
+    output_path.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+
+
+def test_doctor_dashboard_key_check_rejects_summary_encrypted_with_wrong_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+    )
+    summary, _chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
+    key = run.render_dashboard._derive_key(OLD_KEY, base64.b64decode(encrypted_data["salt"]))
+    encrypted_data["summary"] = _encrypt_dashboard_json_token(
+        summary,
+        key,
+        b"reponomics:dashboard:v3:summary:wrong",
+    )
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+        encrypted_data,
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.browser_payload_contract_valid == "passed"
+    assert result.key_cryptographically_accepted == "failed"
+    assert result.ui_handoff_reached is False
+    assert (
+        _secret_result_stage(
+            result,
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
+            "summary_authenticates",
+        ).status
+        == "failed"
+    )
+
+    compatibility_result = run.doctor_mod.check_dashboard_key(config.pages_index_path, OLD_KEY)
+    assert compatibility_result.ok is False
+    assert compatibility_result.stage == "decrypt"
+    assert compatibility_result.detail == "AES-GCM authentication failed"
+
+
+def test_doctor_dashboard_key_check_rejects_chunk_encrypted_with_wrong_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    encrypted_data = _dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+    )
+    _summary, chunks = _decrypt_encrypted_dashboard_data(encrypted_data)
+    chunk_id = next(iter(chunks))
+    key = run.render_dashboard._derive_key(OLD_KEY, base64.b64decode(encrypted_data["salt"]))
+    encrypted_data["chunks"][chunk_id] = _encrypt_dashboard_json_token(
+        chunks[chunk_id],
+        key,
+        f"reponomics:dashboard:v3:chunk:{chunk_id}:wrong".encode("utf-8"),
+    )
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "encrypted-dashboard-data",
+        "encrypted-dashboard-data.json",
+        encrypted_data,
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.browser_payload_contract_valid == "passed"
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.repo_chunks_valid == "failed"
+    assert result.ui_handoff_reached is False
+    assert (
+        _secret_result_stage(
+            result,
+            "DASHBOARD_SECRET_DO_NOT_REPLACE",
+            "chunk_authenticates",
+        ).status
+        == "failed"
+    )
 
 
 def test_doctor_mode_fails_when_ui_handoff_boundary_fails(
@@ -583,8 +743,12 @@ def test_doctor_browser_contract_constants_match_renderer_and_secure_runtime() -
 
     assert (
         run.doctor_mod.EXPECTED_DASHBOARD_DATA_VERSION
-        == run.render_dashboard.DASHBOARD_DATA_VERSION
+        == run.render_dashboard.ENCRYPTED_DASHBOARD_DATA_VERSION
     )
+    assert run.doctor_mod.EXPECTED_EXPORT_MANIFEST_VERSION == run.render_dashboard.EXPORT_MANIFEST_VERSION
+    assert run.doctor_mod.DASHBOARD_SUMMARY_AAD_LABEL == run.render_dashboard.DASHBOARD_SUMMARY_AAD_LABEL
+    assert run.doctor_mod.DASHBOARD_CHUNK_AAD_PREFIX == run.render_dashboard.DASHBOARD_CHUNK_AAD_PREFIX
+    assert run.doctor_mod.EXPORT_AAD_LABEL == run.render_dashboard.EXPORT_AAD_LABEL
     assert run.doctor_mod.EXPECTED_KDF_NAME == "PBKDF2"
     assert run.doctor_mod.EXPECTED_KDF_HASH == "SHA-256"
     assert run.doctor_mod.EXPECTED_KDF_ITERATIONS == run.render_dashboard.PBKDF2_ITERATIONS
@@ -605,6 +769,15 @@ def test_doctor_browser_contract_constants_match_renderer_and_secure_runtime() -
     )
     assert f"const EXPECTED_SALT_BYTES = {run.doctor_mod.EXPECTED_SALT_BYTES};" in secure_runtime
     assert f"const EXPECTED_IV_BYTES = {run.doctor_mod.EXPECTED_IV_BYTES};" in secure_runtime
+    assert (
+        f"const DASHBOARD_SUMMARY_AAD = '{run.render_dashboard.DASHBOARD_SUMMARY_AAD_LABEL}';"
+        in secure_runtime
+    )
+    assert (
+        f"const DASHBOARD_CHUNK_AAD_PREFIX = '{run.render_dashboard.DASHBOARD_CHUNK_AAD_PREFIX}';"
+        in secure_runtime
+    )
+    assert f"const EXPORT_AAD = '{run.render_dashboard.EXPORT_AAD_LABEL}';" in secure_runtime
     assert r"/^c[0-9]{4,}$/.test(chunkId)" in secure_runtime
 
 
@@ -615,6 +788,7 @@ def test_doctor_browser_contract_constants_match_renderer_and_secure_runtime() -
         ("cipher", "browser_envelope_cipher_valid"),
         ("kdf", "browser_envelope_kdf_valid"),
         ("encoding", "browser_envelope_encoding_valid"),
+        ("aad", "browser_envelope_aad_valid"),
         ("salt", "browser_envelope_salt_valid"),
         ("summary_token", "browser_envelope_summary_token_valid"),
         ("chunks_object", "browser_envelope_chunks_object_valid"),
@@ -685,6 +859,11 @@ def _mutate_encrypted_dashboard_contract(data: dict[str, Any], mutation: str) ->
         data["kdf"] = {**data["kdf"], "iterations": run.doctor_mod.EXPECTED_KDF_ITERATIONS + 1}
     elif mutation == "encoding":
         data["encoding"] = "json"
+    elif mutation == "aad":
+        data["aad"] = {
+            **data["aad"],
+            "summary": "reponomics:dashboard:v3:summary:wrong",
+        }
     elif mutation == "salt":
         data["salt"] = base64.b64encode(b"too-short").decode("ascii")
     elif mutation == "summary_token":
@@ -829,6 +1008,99 @@ def test_doctor_export_diagnostics_detect_ciphertext_tampering(
     assert compatibility_result.ok is True
 
 
+def test_doctor_export_diagnostics_reject_changed_declared_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    export_manifest = _dashboard_json(
+        config.pages_index_path, dashboard, "export-manifest", "export-manifest.json"
+    )
+    export_manifest["aad"] = "reponomics:export:v2:wrong"
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "export-manifest",
+        "export-manifest.json",
+        export_manifest,
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.export_artifact_valid == "failed"
+    stage = _result_stage(result, "export_manifest_valid")
+    assert stage.status == "failed"
+    assert "unsupported AAD" in stage.detail
+
+
+def test_doctor_export_diagnostics_reject_asset_encrypted_with_wrong_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    dashboard = config.pages_index_path.read_text(encoding="utf-8")
+    export_manifest = _dashboard_json(
+        config.pages_index_path, dashboard, "export-manifest", "export-manifest.json"
+    )
+    asset_path = config.pages_index_path.parent / export_manifest["asset"]
+    ciphertext = asset_path.read_bytes()
+    salt = base64.b64decode(export_manifest["salt"])
+    iv = base64.b64decode(export_manifest["iv"])
+    key = run.render_dashboard._derive_key(OLD_KEY, salt)
+    plaintext = run.render_dashboard.AESGCM(key).decrypt(
+        iv,
+        ciphertext,
+        run.render_dashboard.EXPORT_AAD,
+    )
+
+    wrong_iv = os.urandom(run.render_dashboard.AES_GCM_IV_BYTES)
+    wrong_ciphertext = run.render_dashboard.AESGCM(key).encrypt(
+        wrong_iv,
+        plaintext,
+        b"reponomics:export:v2:csv-zip:wrong",
+    )
+    asset_path.write_bytes(wrong_ciphertext)
+    export_manifest["iv"] = base64.b64encode(wrong_iv).decode("ascii")
+    export_manifest["ciphertext_size"] = len(wrong_ciphertext)
+    export_manifest["ciphertext_sha256"] = hashlib.sha256(wrong_ciphertext).hexdigest()
+    _write_dashboard_json(
+        config.pages_index_path,
+        dashboard,
+        "export-manifest",
+        "export-manifest.json",
+        export_manifest,
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.export_artifact_valid == "failed"
+    assert _result_stage(result, "export_ciphertext_hash_valid").status == "passed"
+    stage = _result_stage(result, "export_decrypts")
+    assert stage.status == "failed"
+    assert stage.detail == "AES-GCM authentication failed"
+
+
 def test_doctor_export_diagnostics_detect_plaintext_hash_mismatch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -905,6 +1177,74 @@ def test_doctor_retained_artifact_decrypts_with_stored_key(
         stage.name == "retained_artifact_schema_valid" and stage.status == "passed"
         for stage in result.stages
     )
+
+
+def test_doctor_retained_artifact_rejects_changed_declared_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)
+    retained_path = config.data_dir / "dashboard-data.enc"
+    run.crypto_artifact.encrypt(
+        config.data_dir,
+        retained_path,
+        "DASHBOARD_SECRET_DO_NOT_REPLACE",
+    )
+    payload = json.loads(retained_path.read_text(encoding="utf-8"))
+    payload["aad"] = "reponomics:retained-artifact:v2:wrong"
+    retained_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+        retained_data_dir=config.data_dir,
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.retained_data_artifact_decryptable == "failed"
+    stage = _result_stage(result, "retained_artifact_readable")
+    assert stage.status == "failed"
+    assert "unsupported AAD" in stage.detail
+
+
+def test_doctor_retained_artifact_rejects_ciphertext_encrypted_with_wrong_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config = _config(tmp_path, mode="publish", generate_readme=False)
+    _seed_log(config.data_dir)
+    run.validate_config(config)
+    run.run_publish(config, restore_artifact=False)
+
+    retained_path = config.data_dir / "dashboard-data.enc"
+    _write_retained_artifact_encrypted_with_aad(
+        config.data_dir,
+        retained_path,
+        secret=OLD_KEY,
+        aad=b"reponomics:retained-artifact:v2:dashboard-data:wrong",
+        declared_aad=run.crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2,
+    )
+
+    result = run.doctor_mod.diagnose_dashboard_artifact(
+        config.pages_index_path,
+        configured_data_mode="encrypted",
+        secrets=[("DASHBOARD_SECRET_DO_NOT_REPLACE", OLD_KEY)],
+        retained_data_dir=config.data_dir,
+    )
+
+    assert result.key_cryptographically_accepted == "passed"
+    assert result.retained_data_artifact_decryptable == "failed"
+    stage = _result_stage(result, "retained_artifact_decrypts")
+    assert stage.status == "failed"
+    assert stage.detail == "AES-GCM authentication failed"
 
 
 def test_doctor_retained_artifact_reports_wrong_retained_key(

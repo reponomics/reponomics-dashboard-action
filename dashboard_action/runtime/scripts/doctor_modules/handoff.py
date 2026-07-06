@@ -116,6 +116,7 @@ def _ui_handoff_prerequisites(configured_mode: DoctorDataMode, repo_count: int) 
     if configured_mode == "encrypted":
         prerequisites.update(
             {
+                "browser_envelope_aad_valid",
                 "browser_envelope_cipher_valid",
                 "browser_envelope_kdf_valid",
                 "browser_envelope_salt_valid",

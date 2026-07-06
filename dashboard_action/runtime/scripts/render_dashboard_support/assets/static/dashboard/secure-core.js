@@ -1,10 +1,14 @@
-const EXPECTED_DASHBOARD_DATA_VERSION = 2;
+const EXPECTED_DASHBOARD_DATA_VERSION = 3;
+const EXPECTED_EXPORT_MANIFEST_VERSION = 2;
 const EXPECTED_CIPHER = 'AES-GCM';
 const EXPECTED_KDF_NAME = 'PBKDF2';
 const EXPECTED_KDF_HASH = 'SHA-256';
 const EXPECTED_KDF_ITERATIONS = __PBKDF2_ITERATIONS__;
 const EXPECTED_SALT_BYTES = 16;
 const EXPECTED_IV_BYTES = 12;
+const DASHBOARD_SUMMARY_AAD = 'reponomics:dashboard:v3:summary';
+const DASHBOARD_CHUNK_AAD_PREFIX = 'reponomics:dashboard:v3:chunk:';
+const EXPORT_AAD = 'reponomics:export:v2:csv-zip';
 const UNLOCK_ATTEMPT_STORAGE_PREFIX = 'reponomics-unlock-attempts:';
 const UNLOCK_DELAY_STARTS_AT = 3;
 const UNLOCK_DELAY_BASE_MS = 2000;
@@ -77,6 +81,22 @@ function bytesToHex(bytes) {
     .join('');
 }
 
+function aadBytes(label) {
+  return new TextEncoder().encode(label);
+}
+
+function dashboardSummaryAad() {
+  return aadBytes(DASHBOARD_SUMMARY_AAD);
+}
+
+function dashboardChunkAad(chunkId) {
+  return aadBytes(DASHBOARD_CHUNK_AAD_PREFIX + chunkId);
+}
+
+function exportAad() {
+  return aadBytes(EXPORT_AAD);
+}
+
 function buildExportFilename(prefix, now = new Date()) {
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
   const safePrefix = String(prefix || 'reponomics-export')
@@ -120,6 +140,13 @@ function validateEncryptedDashboardData(data) {
   if (data.encoding !== 'gzip+json') {
     throw new Error('Invalid encrypted dashboard data.');
   }
+  if (
+    !data.aad ||
+    data.aad.summary !== DASHBOARD_SUMMARY_AAD ||
+    data.aad.chunk_prefix !== DASHBOARD_CHUNK_AAD_PREFIX
+  ) {
+    throw new Error('Invalid encrypted dashboard data.');
+  }
   const salt = b64ToBytes(data.salt);
   if (salt.length !== EXPECTED_SALT_BYTES) {
     throw new Error('Invalid encrypted dashboard data.');
@@ -142,7 +169,7 @@ function validateEncryptedDashboardData(data) {
 }
 
 function validateEncryptedExportManifest(manifest) {
-  if (!manifest || manifest.version !== 1) {
+  if (!manifest || manifest.version !== EXPECTED_EXPORT_MANIFEST_VERSION) {
     throw new Error('Invalid encrypted export metadata.');
   }
   if (manifest.cipher !== EXPECTED_CIPHER) {
@@ -160,6 +187,9 @@ function validateEncryptedExportManifest(manifest) {
     throw new Error('Invalid encrypted export metadata.');
   }
   if (typeof manifest.filename !== 'string' || !manifest.filename) {
+    throw new Error('Invalid encrypted export metadata.');
+  }
+  if (manifest.aad !== EXPORT_AAD) {
     throw new Error('Invalid encrypted export metadata.');
   }
   if (!Number.isInteger(manifest.ciphertext_size) || manifest.ciphertext_size <= 0) {
@@ -211,9 +241,13 @@ async function deriveAesKey(dashboardKey, salt) {
   );
 }
 
-async function decryptBytes(key, iv, ciphertext) {
+async function decryptBytes(key, iv, ciphertext, aad) {
+  const algorithm = { name: EXPECTED_CIPHER, iv };
+  if (aad) {
+    algorithm.additionalData = aad;
+  }
   return crypto.subtle.decrypt(
-    { name: EXPECTED_CIPHER, iv },
+    algorithm,
     key,
     ciphertext,
   );
@@ -257,7 +291,7 @@ async function gunzipJson(bytes, context) {
   }
 }
 
-async function decryptDashboardBlob(key, token, context) {
+async function decryptDashboardBlob(key, token, aad, context) {
   const details = context || {};
   let blob;
   try {
@@ -275,7 +309,7 @@ async function decryptDashboardBlob(key, token, context) {
   }
   let compressed;
   try {
-    compressed = await decryptBytes(key, blob.iv, blob.ciphertext);
+    compressed = await decryptBytes(key, blob.iv, blob.ciphertext, aad);
   } catch (error) {
     throw dashboardDataError(
       'decrypt',
@@ -293,11 +327,16 @@ async function decryptDashboardBlob(key, token, context) {
 async function decryptDashboardData(dashboardKey, data) {
   const validatedData = validateEncryptedDashboardData(data);
   const displayKey = await deriveAesKey(dashboardKey, validatedData.salt);
-  const summary = await decryptDashboardBlob(displayKey, data.summary, {
-    mode: 'encrypted',
-    summaryDecrypted: false,
-    stageTarget: 'summary',
-  });
+  const summary = await decryptDashboardBlob(
+    displayKey,
+    data.summary,
+    dashboardSummaryAad(),
+    {
+      mode: 'encrypted',
+      summaryDecrypted: false,
+      stageTarget: 'summary',
+    },
+  );
   const repoChunks = summary.repo_chunks || {};
   return {
     summary,
@@ -312,13 +351,18 @@ async function decryptDashboardData(dashboardKey, data) {
           stageTarget: 'chunk',
         });
       }
-      const chunk = await decryptDashboardBlob(displayKey, data.chunks[chunkId], {
-        repoName,
-        chunkId,
-        mode: 'encrypted',
-        summaryDecrypted: true,
-        stageTarget: 'chunk',
-      });
+      const chunk = await decryptDashboardBlob(
+        displayKey,
+        data.chunks[chunkId],
+        dashboardChunkAad(chunkId),
+        {
+          repoName,
+          chunkId,
+          mode: 'encrypted',
+          summaryDecrypted: true,
+          stageTarget: 'chunk',
+        },
+      );
       if (!chunk.repo || chunk.repo !== repoName) {
         throw dashboardDataError(
           'schema',
@@ -345,15 +389,19 @@ async function sha256Hex(bytes) {
 export {
   EXPECTED_CIPHER,
   EXPECTED_DASHBOARD_DATA_VERSION,
+  EXPECTED_EXPORT_MANIFEST_VERSION,
   EXPECTED_KDF_HASH,
   EXPECTED_KDF_ITERATIONS,
   EXPECTED_KDF_NAME,
   b64urlToBytes,
   buildExportFilename,
   bytesToHex,
+  dashboardChunkAad,
+  dashboardSummaryAad,
   decryptBytes,
   decryptDashboardData,
   deriveAesKey,
+  exportAad,
   formatDelay,
   nextUnlockDelayMs,
   sha256Hex,

@@ -117,9 +117,14 @@ AES_GCM_IV_BYTES = 12
 WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 EXPORT_ASSET_PREFIX = "export-data-"
 EXPORT_ASSET_SUFFIX = ".enc"
-EXPORT_MANIFEST_VERSION = 1
+EXPORT_MANIFEST_VERSION = 2
 DASHBOARD_DATA_VERSION = 2
-ENCRYPTED_DASHBOARD_DATA_VERSION = DASHBOARD_DATA_VERSION
+ENCRYPTED_DASHBOARD_DATA_VERSION = 3
+DASHBOARD_SUMMARY_AAD_LABEL = "reponomics:dashboard:v3:summary"
+DASHBOARD_CHUNK_AAD_PREFIX = "reponomics:dashboard:v3:chunk:"
+EXPORT_AAD_LABEL = "reponomics:export:v2:csv-zip"
+DASHBOARD_SUMMARY_AAD = DASHBOARD_SUMMARY_AAD_LABEL.encode("utf-8")
+EXPORT_AAD = EXPORT_AAD_LABEL.encode("utf-8")
 EVENT_GRAPH_PER_REPO_LIMIT = 10
 EXPORT_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 
@@ -574,17 +579,25 @@ def _json_string(value: object) -> str:
     return json.dumps(value, separators=(",", ":"), sort_keys=True)
 
 
-def _encrypt_bytes(plaintext: bytes, dashboard_key: str) -> tuple[bytes, bytes, bytes]:
+def _dashboard_chunk_aad(chunk_id: str) -> bytes:
+    return f"{DASHBOARD_CHUNK_AAD_PREFIX}{chunk_id}".encode("utf-8")
+
+
+def _encrypt_bytes(
+    plaintext: bytes,
+    dashboard_key: str,
+    aad: bytes,
+) -> tuple[bytes, bytes, bytes]:
     salt = os.urandom(PBKDF2_SALT_BYTES)
     iv = os.urandom(AES_GCM_IV_BYTES)
     key = _derive_key(dashboard_key, salt)
-    ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
+    ciphertext = AESGCM(key).encrypt(iv, plaintext, aad)
     return salt, iv, ciphertext
 
 
-def _encrypt_dashboard_blob(key: bytes, plaintext: bytes) -> str:
+def _encrypt_dashboard_blob(key: bytes, plaintext: bytes, aad: bytes) -> str:
     iv = os.urandom(AES_GCM_IV_BYTES)
-    ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
+    ciphertext = AESGCM(key).encrypt(iv, plaintext, aad)
     return f"{_b64url_encode(iv)}.{_b64url_encode(ciphertext)}"
 
 
@@ -665,7 +678,7 @@ def _build_encrypted_export_manifest(
 ) -> dict[str, object]:
     plaintext_bundle = _build_export_bundle(storage.DATA_DIR)
     plaintext_sha256 = hashlib.sha256(plaintext_bundle).hexdigest()
-    salt, iv, ciphertext = _encrypt_bytes(plaintext_bundle, dashboard_key)
+    salt, iv, ciphertext = _encrypt_bytes(plaintext_bundle, dashboard_key, EXPORT_AAD)
     ciphertext_sha256 = hashlib.sha256(ciphertext).hexdigest()
     asset_name = f"{EXPORT_ASSET_PREFIX}{ciphertext_sha256[:16]}{EXPORT_ASSET_SUFFIX}"
     asset_relative_path = f"assets/{asset_name}"
@@ -676,6 +689,7 @@ def _build_encrypted_export_manifest(
         "version": EXPORT_MANIFEST_VERSION,
         "cipher": "AES-GCM",
         "kdf": _kdf_descriptor(),
+        "aad": EXPORT_AAD_LABEL,
         "salt": base64.b64encode(salt).decode("ascii"),
         "iv": base64.b64encode(iv).decode("ascii"),
         "ciphertext_sha256": ciphertext_sha256,
@@ -702,7 +716,7 @@ def _build_plaintext_dashboard_data(payload):
 
 
 def _build_encrypted_dashboard_data(payload, dashboard_key):
-    """Build the v2 encrypted summary plus per-repository chunk object."""
+    """Build the v3 encrypted summary plus per-repository chunk object."""
     salt = os.urandom(PBKDF2_SALT_BYTES)
     key = _derive_key(dashboard_key, salt)
     summary, chunks = _split_dashboard_payload(payload)
@@ -710,16 +724,22 @@ def _build_encrypted_dashboard_data(payload, dashboard_key):
 
     for chunk_id, chunk_payload in chunks.items():
         encrypted_chunks[chunk_id] = _encrypt_dashboard_blob(
-            key, _gzip_json(chunk_payload)
+            key,
+            _gzip_json(chunk_payload),
+            _dashboard_chunk_aad(chunk_id),
         )
 
     return {
         "version": ENCRYPTED_DASHBOARD_DATA_VERSION,
         "cipher": "AES-GCM",
         "kdf": _kdf_descriptor(),
+        "aad": {
+            "summary": DASHBOARD_SUMMARY_AAD_LABEL,
+            "chunk_prefix": DASHBOARD_CHUNK_AAD_PREFIX,
+        },
         "salt": base64.b64encode(salt).decode("ascii"),
         "encoding": "gzip+json",
-        "summary": _encrypt_dashboard_blob(key, _gzip_json(summary)),
+        "summary": _encrypt_dashboard_blob(key, _gzip_json(summary), DASHBOARD_SUMMARY_AAD),
         "chunks": encrypted_chunks,
         "chunk_count": len(encrypted_chunks),
     }

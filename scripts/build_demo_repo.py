@@ -506,11 +506,15 @@ jobs:
           from pathlib import Path
 
           payload = json.loads(Path(".dashboard-data-artifact/dashboard-data.enc").read_text())
-          required = {"version", "created_at", "kdf", "iterations", "algorithm", "salt", "iv", "ciphertext"}
+          required = {"version", "created_at", "kdf", "iterations", "algorithm", "aad", "salt", "iv", "ciphertext"}
           missing = sorted(required - set(payload))
           if missing:
               raise SystemExit(f"encrypted seed is missing keys: {missing}")
-          if payload["version"] != 1 or payload["algorithm"] != "AES-256-GCM":
+          if (
+              payload["version"] != 2
+              or payload["algorithm"] != "AES-256-GCM"
+              or payload["aad"] != "reponomics:retained-artifact:v2:dashboard-data"
+          ):
               raise SystemExit("encrypted seed uses an unsupported format")
           PY
 
@@ -735,6 +739,7 @@ def _load_encrypted_seed(seed_path: Path) -> dict[str, Any]:
         "kdf",
         "iterations",
         "algorithm",
+        "aad",
         "salt",
         "iv",
         "ciphertext",
@@ -742,7 +747,11 @@ def _load_encrypted_seed(seed_path: Path) -> dict[str, Any]:
     missing = sorted(required - set(payload))
     if missing:
         raise DemoBuildError(f"Encrypted demo seed artifact is missing keys: {missing}")
-    if payload.get("version") != 1 or payload.get("algorithm") != "AES-256-GCM":
+    if (
+        payload.get("version") != 2
+        or payload.get("algorithm") != "AES-256-GCM"
+        or payload.get("aad") != "reponomics:retained-artifact:v2:dashboard-data"
+    ):
         raise DemoBuildError("Encrypted demo seed artifact uses an unsupported format.")
     return payload
 

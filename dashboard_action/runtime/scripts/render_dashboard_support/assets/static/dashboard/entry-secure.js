@@ -1,6 +1,6 @@
 import { createDashboardApp } from './app.js';
 import { readJsonAsset } from './json-assets.js';
-import { buildExportFilename, decryptBytes, decryptDashboardData, deriveAesKey, formatDelay, nextUnlockDelayMs, sha256Hex, unlockAttemptStorageKey as buildUnlockAttemptStorageKey, validateEncryptedExportManifest } from './secure-core.js';
+import { buildExportFilename, decryptBytes, decryptDashboardData, deriveAesKey, exportAad, formatDelay, nextUnlockDelayMs, sha256Hex, unlockAttemptStorageKey as buildUnlockAttemptStorageKey, validateEncryptedExportManifest } from './secure-core.js';
 
 const app = createDashboardApp();
 const encryptedDashboardData = await readJsonAsset(
@@ -258,7 +258,8 @@ const exportManifestPayload = await readJsonAsset(
           const plaintext = await decryptBytes(
             unlockedExportKey,
             validatedManifest.iv,
-            ciphertext
+            ciphertext,
+            exportAad()
           );
           plaintextView = new Uint8Array(plaintext);
           const plaintextSha256 = await sha256Hex(plaintextView);

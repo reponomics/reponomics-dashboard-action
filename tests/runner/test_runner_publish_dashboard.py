@@ -357,13 +357,14 @@ def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
     export_manifest = _dashboard_json(
         config.pages_index_path, dashboard, "export-manifest", "export-manifest.json"
     )
-    assert export_manifest["version"] == 1
+    assert export_manifest["version"] == 2
     assert export_manifest["cipher"] == "AES-GCM"
     assert export_manifest["kdf"] == {
         "name": "PBKDF2",
         "hash": "SHA-256",
         "iterations": run.render_dashboard.PBKDF2_ITERATIONS,
     }
+    assert export_manifest["aad"] == run.render_dashboard.EXPORT_AAD_LABEL
     assert re.fullmatch(r"assets/export-data-[a-f0-9]{16}\.enc", export_manifest["asset"])
     assert re.fullmatch(r"[a-f0-9]{64}", export_manifest["plaintext_sha256"])
     assert "traffic-log.csv" not in dashboard
@@ -378,7 +379,9 @@ def test_publish_writes_encrypted_export_asset_with_canonical_bundle(
     salt = base64.b64decode(export_manifest["salt"])
     iv = base64.b64decode(export_manifest["iv"])
     key = run.render_dashboard._derive_key(OLD_KEY, salt)
-    plaintext_bundle = run.render_dashboard.AESGCM(key).decrypt(iv, ciphertext, None)
+    plaintext_bundle = run.render_dashboard.AESGCM(key).decrypt(
+        iv, ciphertext, run.render_dashboard.EXPORT_AAD
+    )
     assert hashlib.sha256(plaintext_bundle).hexdigest() == export_manifest["plaintext_sha256"]
 
     expected_files = [*run.storage.CSV_REGISTRY.keys(), "manifest.json"]

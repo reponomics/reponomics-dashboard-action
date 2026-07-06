@@ -6,16 +6,18 @@ from typing import Any
 
 from doctor_support import (
     CHUNK_ID_RE,
-    EXPECTED_DASHBOARD_DATA_VERSION,
+    EXPECTED_ENCRYPTED_DASHBOARD_DATA_VERSION,
     EXPECTED_KDF_HASH,
     EXPECTED_KDF_ITERATIONS,
     EXPECTED_KDF_NAME,
+    EXPECTED_PLAINTEXT_DASHBOARD_DATA_VERSION,
     EXPECTED_SALT_BYTES,
     DashboardDoctorError as _DashboardDoctorError,
     DetectedDashboardMode,
     DoctorDataMode,
     DoctorStage,
     _b64_decode,
+    _dashboard_aad_contract_valid,
     _object_dict,
     _stage,
     _validate_encrypted_blob_token,
@@ -208,7 +210,7 @@ def _encrypted_envelope_field_stages(data: dict[str, Any]) -> list[DoctorStage]:
     return [
         _value_stage(
             "browser_envelope_version_valid",
-            data.get("version") == EXPECTED_DASHBOARD_DATA_VERSION,
+            data.get("version") == EXPECTED_ENCRYPTED_DASHBOARD_DATA_VERSION,
             "dashboard data version is supported",
             "dashboard data version is unsupported",
         ),
@@ -225,6 +227,12 @@ def _encrypted_envelope_field_stages(data: dict[str, Any]) -> list[DoctorStage]:
             "encrypted dashboard encoding is unsupported",
         ),
         _value_stage(
+            "browser_envelope_aad_valid",
+            _dashboard_aad_contract_valid(data),
+            "AAD contract is supported",
+            "encrypted dashboard AAD contract is unsupported",
+        ),
+        _value_stage(
             "browser_envelope_kdf_valid",
             _kdf_contract_valid(data.get("kdf")),
             "KDF contract is supported",
@@ -238,7 +246,7 @@ def _plain_envelope_field_stages(data: dict[str, Any]) -> list[DoctorStage]:
     return [
         _value_stage(
             "browser_envelope_version_valid",
-            data.get("version") == EXPECTED_DASHBOARD_DATA_VERSION,
+            data.get("version") == EXPECTED_PLAINTEXT_DASHBOARD_DATA_VERSION,
             "dashboard data version is supported",
             "dashboard data version is unsupported",
         ),

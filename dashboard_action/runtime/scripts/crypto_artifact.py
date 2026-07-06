@@ -22,11 +22,14 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import storage
 
 
-VERSION = 1
+LEGACY_VERSION = 1
+VERSION = 2
 KDF_ITERATIONS = 600_000
 SALT_BYTES = 16
 IV_BYTES = 12
 ALLOWED_MEMBERS = set(storage.ARTIFACT_FILES)
+RETAINED_ARTIFACT_AAD_LABEL_V2 = "reponomics:retained-artifact:v2:dashboard-data"
+RETAINED_ARTIFACT_AAD_V2 = RETAINED_ARTIFACT_AAD_LABEL_V2.encode("utf-8")
 
 
 def _b64encode(data: bytes) -> str:
@@ -122,13 +125,14 @@ def encrypt(data_dir: Path, output: Path, secret_env: str) -> None:
     iv = os.urandom(IV_BYTES)
     key = _derive_key(secret, salt)
     plaintext = _pack_data_dir(data_dir)
-    ciphertext = AESGCM(key).encrypt(iv, plaintext, None)
+    ciphertext = AESGCM(key).encrypt(iv, plaintext, RETAINED_ARTIFACT_AAD_V2)
     payload = {
         "version": VERSION,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "kdf": "PBKDF2-SHA256",
         "iterations": KDF_ITERATIONS,
         "algorithm": "AES-256-GCM",
+        "aad": RETAINED_ARTIFACT_AAD_LABEL_V2,
         "salt": _b64encode(salt),
         "iv": _b64encode(iv),
         "ciphertext": _b64encode(ciphertext),
@@ -144,17 +148,28 @@ def decrypt(input_path: Path, data_dir: Path, secret_env: str) -> None:
         return
     secret = _load_secret(secret_env)
     payload = json.loads(input_path.read_text(encoding="utf-8"))
-    if payload.get("version") != VERSION:
+    version = payload.get("version")
+    if version not in {LEGACY_VERSION, VERSION}:
         raise ValueError(f"Unsupported encrypted artifact version: {payload.get('version')}")
+    aad = _aad_for_payload(payload)
     key = _derive_key(secret, _b64decode(payload["salt"]))
     plaintext = AESGCM(key).decrypt(
         _b64decode(payload["iv"]),
         _b64decode(payload["ciphertext"]),
-        None,
+        aad,
     )
     _safe_extract(plaintext, data_dir)
     input_path.unlink()
     print(f"Decrypted dashboard data artifact into {data_dir}")
+
+
+def _aad_for_payload(payload: dict[str, object]) -> bytes | None:
+    version = payload.get("version")
+    if version == LEGACY_VERSION:
+        return None
+    if payload.get("aad") != RETAINED_ARTIFACT_AAD_LABEL_V2:
+        raise ValueError("Unsupported encrypted artifact AAD label.")
+    return RETAINED_ARTIFACT_AAD_V2
 
 
 def main() -> None:

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { gzipSync } from 'node:zlib';
 
 import { createDashboardApp } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/app.js';
 import { installCharts } from '../../dashboard_action/runtime/scripts/render_dashboard_support/assets/static/dashboard/charts.js';
@@ -134,6 +135,10 @@ function validEncryptedData() {
       iterations: secureCore.EXPECTED_KDF_ITERATIONS,
     },
     encoding: 'gzip+json',
+    aad: {
+      summary: 'reponomics:dashboard:v3:summary',
+      chunk_prefix: 'reponomics:dashboard:v3:chunk:',
+    },
     salt: base64(new Uint8Array(16).fill(1)),
     summary: validEncryptedToken(),
     chunks: { c0001: validEncryptedToken() },
@@ -143,7 +148,7 @@ function validEncryptedData() {
 
 function validExportManifest() {
   return {
-    version: 1,
+    version: secureCore.EXPECTED_EXPORT_MANIFEST_VERSION,
     cipher: secureCore.EXPECTED_CIPHER,
     kdf: {
       name: secureCore.EXPECTED_KDF_NAME,
@@ -152,11 +157,78 @@ function validExportManifest() {
     },
     asset: 'assets/export-data-abcdef1234567890.enc',
     filename: 'traffic-export.zip',
+    aad: 'reponomics:export:v2:csv-zip',
     ciphertext_size: 3,
     ciphertext_sha256: 'a'.repeat(64),
     plaintext_sha256: 'b'.repeat(64),
     salt: base64(new Uint8Array(16).fill(1)),
     iv: base64(new Uint8Array(12).fill(2)),
+  };
+}
+
+async function encryptedJsonToken(key, payload, aad) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = gzipSync(Buffer.from(JSON.stringify(payload)));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: secureCore.EXPECTED_CIPHER, iv, additionalData: aad },
+    key,
+    plaintext,
+  );
+  return `${base64url(iv)}.${base64url(new Uint8Array(ciphertext))}`;
+}
+
+async function deriveAesKeyForEncryptionTest(dashboardKey, salt) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(dashboardKey),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: secureCore.EXPECTED_KDF_NAME,
+      salt,
+      iterations: secureCore.EXPECTED_KDF_ITERATIONS,
+      hash: secureCore.EXPECTED_KDF_HASH,
+    },
+    keyMaterial,
+    { name: secureCore.EXPECTED_CIPHER, length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+async function encryptedDashboardDataForAadTest(options = {}) {
+  const dashboardKey = options.dashboardKey || 'browser-aad-test-key';
+  const salt = new Uint8Array(16).fill(7);
+  const key = await deriveAesKeyForEncryptionTest(dashboardKey, salt);
+  const summary = {
+    repo_chunks: { 'owner/repo-a': 'c0001' },
+  };
+  const chunk = {
+    repo: 'owner/repo-a',
+  };
+  return {
+    dashboardKey,
+    data: {
+      ...validEncryptedData(),
+      salt: base64(salt),
+      summary: await encryptedJsonToken(
+        key,
+        summary,
+        options.summaryAad || secureCore.dashboardSummaryAad(),
+      ),
+      chunks: {
+        c0001: await encryptedJsonToken(
+          key,
+          chunk,
+          options.chunkAad || secureCore.dashboardChunkAad('c0001'),
+        ),
+      },
+      chunk_count: 1,
+    },
   };
 }
 
@@ -1028,6 +1100,16 @@ test('secure core validates encrypted dashboard and export metadata contracts', 
   assert.throws(
     () => secureCore.validateEncryptedDashboardData({
       ...data,
+      aad: {
+        ...data.aad,
+        summary: 'reponomics:dashboard:v3:summary:wrong',
+      },
+    }),
+    /Invalid encrypted dashboard data/,
+  );
+  assert.throws(
+    () => secureCore.validateEncryptedDashboardData({
+      ...data,
       chunks: { repo1: validEncryptedToken() },
     }),
     /Invalid encrypted dashboard data/,
@@ -1039,9 +1121,70 @@ test('secure core validates encrypted dashboard and export metadata contracts', 
   assert.throws(
     () => secureCore.validateEncryptedExportManifest({
       ...validExportManifest(),
+      aad: 'reponomics:export:v2:wrong',
+    }),
+    /Invalid encrypted export metadata/,
+  );
+  assert.throws(
+    () => secureCore.validateEncryptedExportManifest({
+      ...validExportManifest(),
       asset: 'assets/export-data-not-hex.enc',
     }),
     /Invalid encrypted export metadata/,
+  );
+});
+
+test('secure core decrypts dashboard data with fixed summary and chunk AAD', async () => {
+  const { dashboardKey, data } = await encryptedDashboardDataForAadTest();
+
+  const decrypted = await secureCore.decryptDashboardData(dashboardKey, data);
+  assert.deepEqual(decrypted.summary, {
+    repo_chunks: { 'owner/repo-a': 'c0001' },
+  });
+  assert.deepEqual(await decrypted.loadRepoChunk('owner/repo-a'), {
+    repo: 'owner/repo-a',
+  });
+});
+
+test('secure core rejects otherwise valid dashboard ciphertext encrypted with wrong AAD', async () => {
+  const wrongSummary = await encryptedDashboardDataForAadTest({
+    summaryAad: secureCore.dashboardChunkAad('c0001'),
+  });
+  await assert.rejects(
+    () => secureCore.decryptDashboardData(wrongSummary.dashboardKey, wrongSummary.data),
+    (error) => error.dashboardDataStage === 'decrypt' && error.stageTarget === 'summary',
+  );
+
+  const wrongChunk = await encryptedDashboardDataForAadTest({
+    chunkAad: secureCore.dashboardChunkAad('c9999'),
+  });
+  const decrypted = await secureCore.decryptDashboardData(wrongChunk.dashboardKey, wrongChunk.data);
+  await assert.rejects(
+    () => decrypted.loadRepoChunk('owner/repo-a'),
+    (error) => error.dashboardDataStage === 'decrypt' && error.chunkId === 'c0001',
+  );
+});
+
+test('secure core export decrypt requires the fixed export AAD', async () => {
+  const salt = new Uint8Array(16).fill(8);
+  const iv = new Uint8Array(12).fill(9);
+  const key = await deriveAesKeyForEncryptionTest('browser-export-aad-key', salt);
+  const plaintext = new TextEncoder().encode('export bytes');
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: secureCore.EXPECTED_CIPHER, iv, additionalData: secureCore.exportAad() },
+    key,
+    plaintext,
+  ));
+
+  const decrypted = new Uint8Array(await secureCore.decryptBytes(
+    key,
+    iv,
+    ciphertext,
+    secureCore.exportAad(),
+  ));
+  assert.deepEqual(Array.from(decrypted), Array.from(plaintext));
+  await assert.rejects(
+    () => secureCore.decryptBytes(key, iv, ciphertext, secureCore.dashboardSummaryAad()),
   );
 });
 

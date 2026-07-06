@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from doctor_support import (
+    EXPORT_AAD_LABEL,
     EXPECTED_EXPORT_MANIFEST_VERSION,
     EXPECTED_IV_BYTES,
     EXPECTED_KDF_HASH,
@@ -53,6 +54,8 @@ def _export_manifest_contract_errors(manifest: dict[str, Any]) -> list[str]:
         errors.append("invalid asset path")
     if not isinstance(manifest.get("filename"), str) or not manifest.get("filename"):
         errors.append("missing filename")
+    if manifest.get("aad") != EXPORT_AAD_LABEL:
+        errors.append("unsupported AAD")
     if not _positive_int(manifest.get("ciphertext_size")):
         errors.append("invalid ciphertext size")
     if not _sha256_value_valid(manifest.get("ciphertext_sha256")):

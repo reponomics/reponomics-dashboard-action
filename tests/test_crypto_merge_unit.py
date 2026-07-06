@@ -6,6 +6,7 @@ import json
 import tarfile
 from pathlib import Path
 
+from cryptography.exceptions import InvalidTag
 import pytest
 
 from dashboard_action import run
@@ -31,6 +32,42 @@ def _tar_with_member(member_name: str, content: bytes = b"payload") -> bytes:
         info.size = len(content)
         archive.addfile(info, io.BytesIO(content))
     return buffer.getvalue()
+
+
+def _write_minimal_retained_data(data_dir: Path) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    (data_dir / "manifest.json").write_text("{}", encoding="utf-8")
+
+
+def _retained_payload(
+    data_dir: Path,
+    *,
+    secret: str,
+    version: int,
+    aad: bytes | None,
+    declared_aad: str | None = None,
+) -> dict[str, object]:
+    salt = b"0" * run.crypto_artifact.SALT_BYTES
+    iv = b"1" * run.crypto_artifact.IV_BYTES
+    key = run.crypto_artifact._derive_key(secret.encode("utf-8"), salt)
+    ciphertext = run.crypto_artifact.AESGCM(key).encrypt(
+        iv,
+        run.crypto_artifact._pack_data_dir(data_dir),
+        aad,
+    )
+    payload: dict[str, object] = {
+        "version": version,
+        "created_at": "2026-07-05T00:00:00+00:00",
+        "kdf": "PBKDF2-SHA256",
+        "iterations": run.crypto_artifact.KDF_ITERATIONS,
+        "algorithm": "AES-256-GCM",
+        "salt": run.crypto_artifact._b64encode(salt),
+        "iv": run.crypto_artifact._b64encode(iv),
+        "ciphertext": run.crypto_artifact._b64encode(ciphertext),
+    }
+    if declared_aad is not None:
+        payload["aad"] = declared_aad
+    return payload
 
 
 def test_crypto_decrypt_missing_artifact_is_noop(tmp_path: Path) -> None:
@@ -62,6 +99,89 @@ def test_crypto_rejects_unsupported_payload_version(
 
     with pytest.raises(ValueError, match="Unsupported encrypted artifact version"):
         run.crypto_artifact.decrypt(encrypted, tmp_path / "data", "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+
+def test_crypto_encrypt_writes_v2_with_fixed_aad_and_decrypts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    _write_minimal_retained_data(data_dir)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", "test-secret")
+
+    encrypted = tmp_path / "dashboard-data.enc"
+    run.crypto_artifact.encrypt(data_dir, encrypted, "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+    payload = json.loads(encrypted.read_text(encoding="utf-8"))
+    assert payload["version"] == 2
+    assert payload["aad"] == run.crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2
+
+    restored = tmp_path / "restored"
+    run.crypto_artifact.decrypt(encrypted, restored, "DASHBOARD_SECRET_DO_NOT_REPLACE")
+    assert (restored / "manifest.json").read_text(encoding="utf-8") == "{}"
+
+
+def test_crypto_rejects_changed_retained_v2_declared_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    _write_minimal_retained_data(data_dir)
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", "test-secret")
+    encrypted = tmp_path / "dashboard-data.enc"
+    run.crypto_artifact.encrypt(data_dir, encrypted, "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+    payload = json.loads(encrypted.read_text(encoding="utf-8"))
+    payload["aad"] = "reponomics:retained-artifact:v2:wrong"
+    encrypted.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="AAD label"):
+        run.crypto_artifact.decrypt(encrypted, tmp_path / "restored", "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+
+def test_crypto_rejects_retained_v2_ciphertext_encrypted_with_wrong_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    _write_minimal_retained_data(data_dir)
+    secret = "test-secret"
+    payload = _retained_payload(
+        data_dir,
+        secret=secret,
+        version=run.crypto_artifact.VERSION,
+        aad=b"wrong-retained-aad",
+        declared_aad=run.crypto_artifact.RETAINED_ARTIFACT_AAD_LABEL_V2,
+    )
+    encrypted = tmp_path / "dashboard-data.enc"
+    encrypted.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", secret)
+
+    with pytest.raises(InvalidTag):
+        run.crypto_artifact.decrypt(encrypted, tmp_path / "restored", "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+
+def test_crypto_decrypts_legacy_retained_v1_without_aad(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    _write_minimal_retained_data(data_dir)
+    secret = "test-secret"
+    payload = _retained_payload(
+        data_dir,
+        secret=secret,
+        version=run.crypto_artifact.LEGACY_VERSION,
+        aad=None,
+    )
+    encrypted = tmp_path / "dashboard-data.enc"
+    encrypted.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setenv("DASHBOARD_SECRET_DO_NOT_REPLACE", secret)
+
+    restored = tmp_path / "restored"
+    run.crypto_artifact.decrypt(encrypted, restored, "DASHBOARD_SECRET_DO_NOT_REPLACE")
+
+    assert (restored / "manifest.json").read_text(encoding="utf-8") == "{}"
 
 
 def test_crypto_safe_extract_rejects_path_traversal(tmp_path: Path) -> None:

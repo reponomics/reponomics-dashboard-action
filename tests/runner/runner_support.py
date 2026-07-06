@@ -185,12 +185,12 @@ def _tamper_encrypted_token(token: str) -> str:
     return f"{iv_value}.{_b64url_encode(bytes(ciphertext))}"
 
 
-def _decrypt_dashboard_blob(blob: str, key: bytes) -> dict[str, Any]:
+def _decrypt_dashboard_blob(blob: str, key: bytes, aad: bytes) -> dict[str, Any]:
     iv_value, ciphertext_value = blob.split(".", 1)
     plaintext = run.render_dashboard.AESGCM(key).decrypt(
         _b64url_decode(iv_value),
         _b64url_decode(ciphertext_value),
-        None,
+        aad,
     )
     return json.loads(gzip.decompress(plaintext))
 
@@ -200,9 +200,17 @@ def _decrypt_encrypted_dashboard_data(
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     salt = base64.b64decode(encrypted_dashboard_data["salt"])
     key = run.render_dashboard._derive_key(dashboard_key, salt)
-    summary = _decrypt_dashboard_blob(encrypted_dashboard_data["summary"], key)
+    summary = _decrypt_dashboard_blob(
+        encrypted_dashboard_data["summary"],
+        key,
+        run.render_dashboard.DASHBOARD_SUMMARY_AAD,
+    )
     chunks = {
-        chunk_id: _decrypt_dashboard_blob(blob, key)
+        chunk_id: _decrypt_dashboard_blob(
+            blob,
+            key,
+            run.render_dashboard._dashboard_chunk_aad(chunk_id),
+        )
         for chunk_id, blob in encrypted_dashboard_data["chunks"].items()
     }
     return summary, chunks

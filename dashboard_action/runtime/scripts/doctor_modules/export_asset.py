@@ -10,6 +10,7 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from doctor_support import (
+    EXPORT_AAD,
     DoctorSecretResult,
     DoctorStage,
     DoctorStageStatus,
@@ -135,7 +136,7 @@ def _decrypt_export_with_secret(
     """Decrypt export ciphertext with one accepted dashboard secret."""
     export_key = _derive_key(secret, salt)
     try:
-        plaintext = AESGCM(export_key).decrypt(iv, ciphertext, None)
+        plaintext = AESGCM(export_key).decrypt(iv, ciphertext, EXPORT_AAD)
     except InvalidTag:
         stages.append(_stage("export_decrypts", "failed", "AES-GCM authentication failed", label))
         return None

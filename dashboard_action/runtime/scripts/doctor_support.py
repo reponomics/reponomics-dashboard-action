@@ -20,13 +20,20 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 ENCRYPTED_DASHBOARD_SCRIPT_ID = "encrypted-dashboard-data"
 PLAINTEXT_DASHBOARD_SCRIPT_ID = "plaintext-dashboard-data"
 EXPORT_MANIFEST_SCRIPT_ID = "export-manifest"
-EXPECTED_DASHBOARD_DATA_VERSION = 2
-EXPECTED_EXPORT_MANIFEST_VERSION = 1
+EXPECTED_DASHBOARD_DATA_VERSION = 3
+EXPECTED_ENCRYPTED_DASHBOARD_DATA_VERSION = 3
+EXPECTED_PLAINTEXT_DASHBOARD_DATA_VERSION = 2
+EXPECTED_EXPORT_MANIFEST_VERSION = 2
 EXPECTED_KDF_NAME = "PBKDF2"
 EXPECTED_KDF_HASH = "SHA-256"
 EXPECTED_KDF_ITERATIONS = 600_000
 EXPECTED_SALT_BYTES = 16
 EXPECTED_IV_BYTES = 12
+DASHBOARD_SUMMARY_AAD_LABEL = "reponomics:dashboard:v3:summary"
+DASHBOARD_CHUNK_AAD_PREFIX = "reponomics:dashboard:v3:chunk:"
+EXPORT_AAD_LABEL = "reponomics:export:v2:csv-zip"
+DASHBOARD_SUMMARY_AAD = DASHBOARD_SUMMARY_AAD_LABEL.encode("utf-8")
+EXPORT_AAD = EXPORT_AAD_LABEL.encode("utf-8")
 CHUNK_ID_RE = re.compile(r"^c[0-9]{4,}$")
 EXPORT_ASSET_RE = re.compile(r"^assets/export-data-[a-f0-9]{16}\.enc$")
 SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -321,11 +328,24 @@ def _derive_key(dashboard_key: str, salt: bytes) -> bytes:
     return kdf.derive(dashboard_key.encode("utf-8"))
 
 
-def _decrypt_blob(token: str, key: bytes) -> dict[str, Any]:
+def _dashboard_chunk_aad(chunk_id: str) -> bytes:
+    return f"{DASHBOARD_CHUNK_AAD_PREFIX}{chunk_id}".encode("utf-8")
+
+
+def _dashboard_aad_contract_valid(data: dict[str, Any]) -> bool:
+    aad = data.get("aad")
+    return (
+        isinstance(aad, dict)
+        and aad.get("summary") == DASHBOARD_SUMMARY_AAD_LABEL
+        and aad.get("chunk_prefix") == DASHBOARD_CHUNK_AAD_PREFIX
+    )
+
+
+def _decrypt_blob(token: str, key: bytes, aad: bytes | None = None) -> dict[str, Any]:
     """Compatibility helper returning a decrypted JSON object or a terminal error."""
     try:
         iv, ciphertext = _validate_encrypted_blob_token(token)
-        plaintext = AESGCM(key).decrypt(iv, ciphertext, None)
+        plaintext = AESGCM(key).decrypt(iv, ciphertext, aad)
     except InvalidTag as exc:
         raise DashboardDoctorError("decrypt", "AES-GCM authentication failed") from exc
     except Exception as exc:

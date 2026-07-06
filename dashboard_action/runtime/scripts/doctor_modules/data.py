@@ -13,8 +13,10 @@ from doctor_modules.schema import (
     _validate_summary_staged,
 )
 from doctor_support import (
+    DASHBOARD_SUMMARY_AAD,
     DoctorSecretResult,
     DoctorStage,
+    _dashboard_chunk_aad,
     _derive_key,
     _object_dict,
     _stage,
@@ -69,6 +71,7 @@ def _diagnose_encrypted_secret(
     summary, summary_stages = _decrypt_gzip_json_staged(
         data.get("summary"),
         key,
+        aad=DASHBOARD_SUMMARY_AAD,
         subject=label,
         auth_stage="summary_authenticates",
         decompress_stage="summary_decompresses",
@@ -152,6 +155,7 @@ def _diagnose_encrypted_chunk(
     chunk, chunk_decode_stages = _decrypt_gzip_json_staged(
         token,
         key,
+        aad=_dashboard_chunk_aad(chunk_id),
         subject=subject,
         auth_stage="chunk_authenticates",
         decompress_stage="chunk_decompresses",

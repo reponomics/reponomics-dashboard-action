@@ -26,6 +26,7 @@ def _decrypt_gzip_json_staged(
     token: Any,
     key: bytes,
     *,
+    aad: bytes,
     subject: str,
     auth_stage: str,
     decompress_stage: str,
@@ -34,7 +35,7 @@ def _decrypt_gzip_json_staged(
     """Decrypt, decompress, and parse one encrypted gzip+JSON object."""
     stage_names = _DecodeStages(auth=auth_stage, decompress=decompress_stage, json=json_stage)
     stages: list[DoctorStage] = []
-    plaintext, auth_stages = _decrypt_blob_staged(token, key, subject, stage_names)
+    plaintext, auth_stages = _decrypt_blob_staged(token, key, aad, subject, stage_names)
     stages.extend(auth_stages)
     if plaintext is None:
         return None, stages
@@ -52,13 +53,14 @@ def _decrypt_gzip_json_staged(
 def _decrypt_blob_staged(
     token: Any,
     key: bytes,
+    aad: bytes,
     subject: str,
     stage_names: _DecodeStages,
 ) -> tuple[bytes | None, list[DoctorStage]]:
     """Decrypt a token and return authentication stages."""
     try:
         iv, ciphertext = _validate_encrypted_blob_token(token)
-        plaintext = AESGCM(key).decrypt(iv, ciphertext, None)
+        plaintext = AESGCM(key).decrypt(iv, ciphertext, aad)
     except InvalidTag:
         return None, [
             _stage(stage_names.auth, "failed", "AES-GCM authentication failed", subject),

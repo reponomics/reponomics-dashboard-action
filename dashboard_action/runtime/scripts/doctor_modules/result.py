@@ -20,6 +20,7 @@ BROWSER_STAGE_NAMES = {
     "browser_envelope_version_valid",
     "browser_envelope_cipher_valid",
     "browser_envelope_kdf_valid",
+    "browser_envelope_aad_valid",
     "browser_envelope_encoding_valid",
     "browser_envelope_salt_valid",
     "browser_envelope_summary_token_valid",

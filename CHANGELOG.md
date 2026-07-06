@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.31.1...v0.32.0) (2026-07-06)
+
+
+### Features
+
+* add aad for crypto ([#203](https://github.com/reponomics/reponomics-dashboard-action/issues/203)) ([a4261de](https://github.com/reponomics/reponomics-dashboard-action/commit/a4261de6644c0ab277844a2d1a39433656e8eb92))
+
 ## [0.31.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.31.0...v0.31.1) (2026-07-05)
 
 

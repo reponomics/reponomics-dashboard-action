@@ -1,89 +1,63 @@
 # Frequently Asked Questions
 
-> [!NOTE]
-> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+## Why are there two Reponomics repositories?
 
-This FAQ explains user-facing privacy, storage, export, and trust-boundary concepts for repositories created from the Reponomics Dashboard template.
+`reponomics-dashboard` is the template repository users copy. `reponomics-dashboard-action` is the versioned runtime called by generated workflows.
 
-## Why are there several Reponomics repositories?
-
-`reponomics-dashboard` is the template repository users create their own dashboard repositories from. `reponomics-dashboard-action` is the versioned runtime used by generated dashboard workflows; it owns collection, artifact restore/upload, schema migration, encryption, README rendering, HTML dashboard rendering, CSV export packaging, key rotation, and release notices.
-
-This split keeps each generated user repository small and understandable while allowing the action runtime to receive fixes and features through normal version upgrades.
+This keeps copied dashboard repositories small while allowing collection, encryption, rendering, rotation, incident reset, CSV export, and docs updates to improve through action releases.
 
 ## What data mode should I choose?
 
-Use `encrypted` unless you have a specific reason not to. It encrypts retained artifacts and hosted dashboard output with `DASHBOARD_SECRET_DO_NOT_REPLACE`. This is the default, the only supported public-repository mode, and the right choice for hosted Pages dashboards or sensitive metrics.
+Use `encrypted` unless you have a specific reason not to. It is required for public repositories and Pages dashboards.
 
-Use `plaintext` only in private repositories where GitHub repository and artifact access are the intended privacy boundary. `plaintext` stores retained CSV files directly in the `dashboard-data` artifact and does not publish a hosted Pages dashboard. The publish workflow can still generate a downloadable HTML dashboard artifact, but that artifact is not a confidentiality boundary.
+Use `plaintext` only in private repositories where GitHub repository and Actions artifact access are the intended privacy boundary. Plaintext mode stores retained CSV files directly in `dashboard-data` and does not publish Pages.
 
-For the full matrix, see [Privacy Configuration Matrix](privacy-configuration-matrix.md).
+See [Privacy Configuration Matrix](privacy-configuration-matrix.md).
 
-## How do I turn on the hosted GitHub Pages dashboard?
+## How do I turn on the hosted Pages dashboard?
 
-Set `data_mode: encrypted` and `publish_pages_dashboard: true` in `config.yaml`, commit that change, and run the setup workflow. Then open the dashboard repository on GitHub and go to **Settings -> Pages**. Under **Build and deployment**, set **Source** to **GitHub Actions**. If GitHub suggests workflow templates, skip them; the Reponomics publish workflow already handles the Pages artifact upload and deployment.
+Set `data_mode: encrypted` and `publish_pages_dashboard: true`, commit `config.yaml`, and run setup. Then open repository **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 
-The action verifies the Pages configuration during publish. It does not enable Pages or change the publishing source for you.
+The action verifies the Pages setting during publish. It does not enable Pages or change the publishing source.
 
-## What sort of dashboard key do I need?
+## What dashboard key should I use?
 
-Encrypted mode requires a non-empty key. If your threat model includes public Pages, public repositories, sensitive data, or offline guessing by a targeted attacker, use a high-entropy random key such as a 32-byte random hex key generated with `openssl rand -hex 32`. Store it in your password manager and in the repository secret named `DASHBOARD_SECRET_DO_NOT_REPLACE`.
+Use a high-entropy random key such as:
 
-See [Security Info](security-info.md).
+```sh
+openssl rand -hex 32
+```
+
+Store it in a password manager, then save it as the repository secret `DASHBOARD_SECRET_DO_NOT_REPLACE`. See [Secure Dashboard Key](secure-dashboard-key.md).
 
 ## What does encryption protect?
 
-In encrypted mode, retained artifacts and hosted dashboard data objects are encrypted before they are stored or published. The hosted dashboard decrypts the summary after unlock and decrypts per-repository chunks as repos are selected for display. Plaintext dashboard artifacts use the same lazy summary/chunk shape, but without encryption.
+Encrypted mode encrypts retained artifacts and dashboard payloads before storage or publication. It does not hide the existence of a Pages site, publication timing, payload size, workflow metadata, or metrics committed to a private README dashboard.
 
-Encryption does not hide everything. A hosted encrypted dashboard can still disclose that the dashboard exists, update timing, artifact size, and the fact that the repository uses Reponomics. It also does not protect against malicious browser extensions, compromised devices, compromised CI/CD, malicious workflow changes, or people with repository control-plane access.
+Encryption also does not protect against people who can alter trusted workflows, manage repository secrets, or administer the dashboard repository. See [Repository Access And Trust Boundary](trust-boundary.md).
 
-## Is any dashboard data committed to git history?
+## Is dashboard data committed to git?
 
-Only if you enable metric README generation in a private repository. In that case, the README dashboard and its supporting assets become part of git history.
+Only if `publish_readme_dashboard: true` is enabled in a private repository. Otherwise retained dashboard data lives in GitHub Actions artifacts, and rendered HTML dashboards are either deployed through Pages or uploaded as workflow artifacts.
 
-Otherwise, retained dashboard data lives in GitHub Actions artifacts, not in the repository's tracked files. The HTML dashboard is rendered during workflow runs and is deployed only when hosted dashboard publication is enabled; otherwise it is uploaded as a downloadable artifact.
+## Who should get repository access?
 
-## Who should I trust with repository access?
+In a personal private dashboard repository, treat collaborators as trusted with the dashboard control plane, not merely as people who can read a report.
 
-Repository access is part of the dashboard security model. In personal private repositories, collaborators should be treated as trusted with the dashboard control plane, not merely as people who can read a report.
+Use an organization repository when you need real role separation between viewers, configuration editors, workflow operators, secret managers, and admins.
 
-Collaborators may not be able to read existing secret values directly, but if they can update repository secrets, run workflows, or affect trusted workflow behavior, they can exfiltrate dashboard data through workflow changes, replace dashboard keys, take over publication, rotation, or incident-response flows, delete retained workflow runs or artifacts, deny access to current encrypted state, or cause data loss. A hostile collaborator could exfiltrate retained data, rotate to a key they control, and delete prior GitHub-hosted history before the owner notices. Branch rulesets can protect branches, but they are not a clean data-access boundary.
+## Can browser devtools export CSV before unlock?
 
-Do not treat GitHub policy enforcement, support, or retained workflow history as a backup plan. If retained dashboard history matters, periodically export an independent copy outside the repository control plane.
+No. The encrypted export asset cannot produce plaintext ZIP bytes without the dashboard key. The browser verifies ciphertext size, ciphertext SHA-256, AES-GCM decryption, and plaintext ZIP SHA-256 before download.
 
-See [Repository Access And Trust Boundary](trust-boundary.md).
+## Why offer checksum copy if the browser verifies export integrity?
 
-## Can someone use browser devtools to export CSV before unlocking the dashboard?
+It gives users an independent verification record for support, audit, or local checksum workflows.
 
-Not in a way that yields plaintext data. The export flow is wired after successful unlock, and the runtime keeps an explicit key gate before export work proceeds. Even if someone manually invokes JavaScript in devtools, the export asset is encrypted and cannot produce plaintext ZIP bytes without the correct dashboard key.
+## How can I verify the action release?
 
-## If someone forces the export click path early, will plaintext ZIP download anyway?
-
-No. The downloadable export asset is encrypted. Plaintext ZIP bytes are only produced after successful decryption with the correct dashboard key and digest verification.
-
-## What checks does the browser run before CSV export download?
-
-For encrypted exports, the browser verifies:
-
-1. ciphertext size matches the embedded manifest
-2. ciphertext SHA-256 matches the embedded manifest
-3. AES-GCM decryption succeeds with the provided dashboard-key-derived key
-4. decrypted ZIP SHA-256 matches the embedded manifest
-
-Only then does the browser trigger the ZIP download.
-
-## Why offer manual checksum copy if the browser already verifies export integrity?
-
-Operational trust and auditability. Some users want an independent verification record or need to share verification details in support/debug workflows. The UI can copy a checksum line in the form `<sha256>  <filename>` so users can run local checksum checks.
-
-## Does CSV export integrity checking protect against all attacks?
-
-No. It protects export payload integrity within the client-side model. It does not replace broader trust in the action release, generated workflow, GitHub Actions execution, GitHub Pages deployment, browser, device, or dashboard key strength.
-
-## How can I verify the action release and supply chain?
-
-See [Provenance And Verification Materials](provenance.md) for the manifest files, workflow artifacts, release artifacts, and attestations available for inspection.
+See [Provenance And Verification Materials](provenance.md) for manifest files, release artifacts, attestations, vendored-asset metadata, dependency locks, and local verification commands.
 
 ## Does the action enforce key strength?
 
-No. Encrypted mode requires a non-empty key and leaves key strength to the repository owner. That is intentional: simple length thresholds are misleading, and separate visible key-quality modes can advertise which dashboards are easier to attack.
+No. Encrypted mode requires a non-empty key and leaves entropy to the repository owner. Simple thresholds can be misleading, and visible key-quality modes can advertise weaker dashboards.

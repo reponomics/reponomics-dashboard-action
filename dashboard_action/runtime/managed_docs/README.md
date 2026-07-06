@@ -1,32 +1,40 @@
 # Reponomics Managed Docs
 
-> [!NOTE]
-> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+These are the action-managed docs for Reponomics dashboard repositories in the `v0` beta line. They are written for early adopters who are comfortable with GitHub Actions, repository settings, secrets, and maintainer workflows.
+
+`docs/reponomics/.manifest.json` records the action version and file hashes for this managed-docs snapshot.
 
 > [!WARNING]
-> This directory is the default location for Reponomics managed documentation. Local edits in `docs/reponomics/` may be overwritten when the generated `update-docs` workflow runs. Disable or delete `.github/workflows/update-docs.yml` before editing if you want to own this directory manually.
+> Local edits in `docs/reponomics/` may be overwritten when `.github/workflows/update-docs.yml` runs. Disable or delete that workflow before editing this directory manually.
 
-The manifest at `docs/reponomics/.manifest.json` records the action version for this managed-docs snapshot.
+## Start And Setup
 
-`config.example.yaml` is the managed starter/reference configuration shape. New template repositories receive it once as root `config.yaml`; later update-docs runs update only this managed reference copy. Use it when your repository's active `config.yaml` has been edited and you want to compare it against the current action-bundled example. New keys shown in this managed example are only usable when your copied template workflows and local action wrapper can pass them through; update-docs cannot upgrade old workflow wiring by itself.
+- [Dashboard essentials](dashboard-essentials.md): first-run checklist and the decisions most users need before setup.
+- [Dashboard repository guide](repository-guide.md): repository model, data flow, tokens, storage, Pages, and CSV export.
+- [Configuration reference](configuration.md): supported `config.yaml` keys and rejected combinations.
+- [Configuration example](config.example.yaml): managed reference copy of the starter `config.yaml`.
 
-Start here:
+New template repositories receive `config.example.yaml` once as root `config.yaml`. Later docs updates refresh only this managed reference copy. If your active root `config.yaml` is older, compare it with this file before opting into newer keys.
 
-- [Dashboard essentials](dashboard-essentials.md)
-- [Troubleshooting](troubleshooting.md)
-- [Dashboard repository guide](repository-guide.md)
-- [Generated workflow contract](workflow-contract.md)
-- [Configuration example](config.example.yaml)
-- [Upgrade notes](upgrade.md)
-- [Configuration reference](configuration.md)
-- [Security info](security-info.md)
-- [Secure dashboard key](secure-dashboard-key.md)
-- [Privacy configuration matrix](privacy-configuration-matrix.md)
-- [Privacy and artifacts](privacy-and-artifacts.md)
-- [Repository access and trust boundary](trust-boundary.md)
-- [FAQ](faq.md)
-- [Provenance and verification materials](provenance.md)
-- [Security guidance](security.md)
-- [Support guidance](support.md)
+## Workflows And Operations
 
-For complete release history, see the upstream Reponomics Dashboard Action releases.
+- [Generated workflow contract](workflow-contract.md): workflow modes, secrets, permissions, artifacts, outputs, and expected failures.
+- [Troubleshooting](troubleshooting.md): first checks for setup, collection, publish, Pages, and unlock failures.
+- [Upgrade notes](upgrade.md): action refs, `v0` beta upgrades, and full-SHA pinning.
+- [Support guidance](support.md): where to report problems and what diagnostic material to include.
+
+## Security And Privacy
+
+- [Security guidance](security.md): vulnerability reporting, supported beta line, and data-loss boundaries.
+- [Secure dashboard key](secure-dashboard-key.md): key generation, storage, rotation, and recovery limits.
+- [Security info](security-info.md): encryption model, key strength, recovery, and trust boundaries.
+- [Privacy configuration matrix](privacy-configuration-matrix.md): encrypted vs plaintext behavior by repository visibility.
+- [Privacy and artifacts](privacy-and-artifacts.md): where dashboard data is stored and who can read artifacts.
+- [Repository access and trust boundary](trust-boundary.md): collaborator, organization, and public-repository access implications.
+
+## Verification And Background
+
+- [Provenance and verification materials](provenance.md): manifests, attestations, release materials, and local checks.
+- [FAQ](faq.md): concise answers for common beta-user questions.
+
+For complete release history, see the [Reponomics Dashboard Action releases](https://github.com/reponomics/reponomics-dashboard-action/releases).

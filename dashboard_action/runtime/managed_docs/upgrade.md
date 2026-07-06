@@ -1,13 +1,8 @@
 # Upgrade Notes
 
-> [!NOTE]
-> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
-
 The manifest at `docs/reponomics/.manifest.json` records the action version that last refreshed these managed docs.
 
-During the external beta, generated dashboard repositories use the `v0` action line. If your workflow pins an exact action version such as `reponomics/reponomics-dashboard-action@v0.31.0`, you choose when to upgrade. If your workflow uses a floating major or minor ref such as `@v0`, a compatible beta release can run in your repository without a workflow edit. Managed docs update records that the newer action ran and that current local guidance is available.
-
-Future `v1` examples describe the stable public release model, not the current beta setup target.
+During the pre-wide-release beta, generated dashboard repositories use the `v0` action line. If your workflow pins an exact action version such as `reponomics/reponomics-dashboard-action@v0.31.0`, you choose when to upgrade. If your workflow uses a floating major or minor ref such as `@v0`, a compatible beta release can run in your repository without a workflow edit. Managed docs update records that the newer action ran and that current local guidance is available.
 
 Use released action refs for generated dashboard repositories: floating major or minor release refs, exact release tags, or full commit SHAs for released action commits. Branch refs such as `@main` may run unreleased action behavior and are outside the generated template's compatibility guarantees.
 

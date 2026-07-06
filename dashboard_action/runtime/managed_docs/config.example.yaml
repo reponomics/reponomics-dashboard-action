@@ -1,64 +1,57 @@
-###   <<<<<-- reponomics. ( ( ( <<< *|* >>> ) ) ) .configuration -->>>>>>>>   #
-# $#$#$#$#$#$////////////. . .|||||||||||||||. . . \\\\\\\\\\\\$#$#$#$#$#$#   #
-# $#$#$#$#$#$\\\\\\\\\\\\.....REQUIRED FIELDS......////////////$#$#$#$#$#$#   #
-#                                                                             #
-# Set to true if you have read the README.md                                  #
-i_have_read_the_readme: # true/false                                          #
-#                                                                             #
-# If you select `encrypted`, your data will be encrypted with the repository  #
-# secret that *you* have generated - please read dashboard-essentials.md      #
-# so that you can make an informed decision.                                  #
-# If you select `plaintext`, your data will be stored in unencrypted form.    #
-# In order to prevent "Compromise through Configuration",                     #
-# this option is only allowed for *private* repositories.                     #
-# This choice does not have any impact on what type of data you collect.      #
-data_mode: # encrypted/plaintext                                              #
-#                                                                             #
-# Set to `true` if you want to publish an HTML dashboard to the repo's        #
-# GitHub Pages site. You must also manually enable GitHub Pages in            #
-# the repository settings. See dashboard-essentials.md for more info.         #
-# This option is only available in combination with encrypted data-mode.      #
-publish_pages_dashboard: # true/false                                         #
-#                                                                             #
-# Set to `true` if you want to publish a markdown + SVG dashboard to          #
-# the repository README. Only available for private repos.                    #
-publish_readme_dashboard: # true/false                                        #
-#                                                                             #
-# $#$#$#$#$#$\\\\\\\\\\\\\\\ ?????????????????? ///////////////$#$#$#$#$#$#   #
-# $#$#$#$#$#$/////////////// ?????????????????? \\\\\\\\\\\\\\\$#$#$#$#$#$#   #
+# Reponomics dashboard configuration.
 #
-# The number of days that a specific set of dashboard data will be stored in
-# GitHub artifact storage before it is deleted - this pertains to how long
-# backup data will be saved if there is a long-term dashboard outage.
+# New template repositories receive this file once as root config.yaml.
+# The managed copy at docs/reponomics/config.example.yaml may be refreshed by
+# update-docs, but your root config.yaml remains user-owned.
+
+# Required: set to true after reading the setup README.
+i_have_read_the_readme: # true/false
+
+# Required: encrypted or plaintext.
+#
+# encrypted:
+#   - required for public repositories
+#   - required for GitHub Pages dashboards
+#   - uses DASHBOARD_SECRET_DO_NOT_REPLACE
+#
+# plaintext:
+#   - private repositories only
+#   - stores retained CSV files directly in the dashboard-data artifact
+#   - does not publish a Pages dashboard
+data_mode: # encrypted/plaintext
+
+# Required: publish an encrypted HTML dashboard through GitHub Pages.
+# Requires data_mode: encrypted and repository Pages source set to GitHub Actions.
+publish_pages_dashboard: # true/false
+
+# Required: publish markdown/SVG metrics into the repository README.
+# Private repositories only. Output is committed to git history.
+publish_readme_dashboard: # true/false
+
+# GitHub Actions artifact expiry for each uploaded artifact.
+# This is not the dashboard history window.
 # Must be between 14 and 90 days.
-# See dashboard-essentials.md for more details.
 artifact_retention_days: 90
-#
-# Set to `true` if you prefer to use a GitHub App installation token
-# to query the GitHub API instead of a Personal Access Token (PAT).
-# Reponomics does not offer a public app for the Reponomics Dashboard.
+
+# Use a user-owned GitHub App installation token instead of COLLECTION_TOKEN.
+# Reponomics does not provide a shared collection app.
 use_github_app: false
-#
-# Set to 0 to disable automatic doctor diagnostics, or choose an integer from
-# 1 to 30 to run doctor as part of the collect-and-publish cadence when at
-# least that many UTC days have elapsed since the last successful auto-doctor.
+
+# 0 disables automatic Doctor diagnostics.
+# 1 through 30 runs Doctor during collect-and-publish when at least that many
+# UTC days have elapsed since the last successful auto-doctor.
 auto_doctor_every_n_days: 0
-# * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
-# REPOSITORY SELECTION ------------------------------------------------------- *
-# * * * * * * -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-* * * * * *
-#
-# Reponomics only collects repositories you list explicitly.
-#
+
+# Reponomics only collects repositories listed here.
 # Use bare repo names for repositories owned by this dashboard repository's
-# owner. Use owner/repo names when collecting from another owner.
-#
+# owner. Use owner/repo names for repositories owned elsewhere.
 collect:
   repositories:
 #   - repo-name
 #   - other-owner/repo-name
-#
-# The published dashboard is intentionally narrow. It must be a subset of
-# collect.repositories and can contain at most 8 repositories.
+
+# Repositories shown in README and Pages dashboards.
+# Must be a subset of collect.repositories and can contain at most 8 entries.
 publish:
   repositories:
 #   - repo-name

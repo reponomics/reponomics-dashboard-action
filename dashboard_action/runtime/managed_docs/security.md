@@ -1,41 +1,45 @@
 # Security Guidance
 
-> [!NOTE]
-> These docs describe the official Reponomics generated workflows for the `v0` external beta. Repository owners can modify their copies; modified workflows may behave differently from what these docs describe.
+This page is for vulnerability reporting and security-sensitive beta support. For normal key setup, see [Secure Dashboard Key](secure-dashboard-key.md). For the encryption model, see [Security Info](security-info.md).
 
-## Reporting Security Issues
+## Report Security Issues Privately
 
-Do not open a public issue for a suspected vulnerability.
+Do not open a public issue for suspected vulnerabilities, exploit details, secret exposure, or private retained dashboard data.
 
 For the Reponomics action/runtime, use GitHub private vulnerability reporting in the development repository:
 
 <https://github.com/reponomics/reponomics-dashboard-action/security/advisories/new>
 
-For a dashboard repository copied from the template, repository owners remain responsible for their own repository policies, access control, secrets, Pages settings, and workflow changes.
+For a dashboard repository copied from the template, repository owners remain responsible for repository policies, access control, secrets, Pages settings, and local workflow changes.
 
-## What Not To Publish
+## Do Not Publish
 
-Do not publish these in public issues, discussions, comments, or screenshots:
+Do not include these in public issues, discussions, comments, screenshots, or shared logs:
 
-- `COLLECTION_TOKEN` or other GitHub tokens;
-- `DASHBOARD_SECRET_DO_NOT_REPLACE` or rotation secrets;
+- `COLLECTION_TOKEN`, app private keys, or other GitHub tokens;
+- `DASHBOARD_SECRET_DO_NOT_REPLACE`, `DASHBOARD_NEXT_SECRET`, or comparison keys;
 - retained `dashboard-data` artifact contents;
 - private workflow logs or generated dashboard data;
 - exploit details for a suspected vulnerability before private triage.
 
 ## Supported Beta Line
 
-The external beta uses the `v0` action line. Security fixes may land as new `v0.x.y` releases before the stable `v1` line exists.
+The pre-wide-release beta uses the `v0` action line. Security fixes may ship as new `v0.x.y` releases before a stable `v1` line exists.
 
-Generated dashboard repositories call the versioned action through the local wrapper at `.github/actions/reponomics/action.yml`. If you pin that wrapper to an exact action tag or commit SHA, you own manual upgrades until you update it.
+Generated dashboard repositories call the action through `.github/actions/reponomics/action.yml`. If you pin that nested action ref to an exact tag or commit SHA, you own manual upgrades until you update it.
 
 ## Data-Loss Boundaries
 
 Reponomics cannot recover:
 
-- a lost dashboard key that was never saved outside GitHub secrets;
+- a dashboard key that was never saved outside GitHub secrets;
 - retained history after all usable `dashboard-data` artifacts expire or are deleted;
-- encrypted retained artifacts after the only valid key is overwritten without using **Rotate Key**;
-- private repository data that was exposed by local workflow edits, broad repository access, or public issue comments.
+- encrypted retained artifacts after the only valid key is overwritten without **Rotate Key**;
+- data exposed by local workflow edits, broad repository access, or public support material.
 
-General background is available in [Dashboard Essentials](dashboard-essentials.md), [Secure Dashboard Key Generation](secure-dashboard-key.md), [Repository Access And Trust Boundary](trust-boundary.md), and [Provenance And Verification Materials](provenance.md).
+## Related Docs
+
+- [Dashboard Essentials](dashboard-essentials.md)
+- [Secure Dashboard Key](secure-dashboard-key.md)
+- [Repository Access And Trust Boundary](trust-boundary.md)
+- [Provenance And Verification Materials](provenance.md)

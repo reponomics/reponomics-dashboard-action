@@ -1,45 +1,5 @@
 # Security Guidance
 
-This page is for vulnerability reporting and security-sensitive beta support. For normal key setup, see [Secure Dashboard Key](secure-dashboard-key.md). For the encryption model, see [Security Info](security-info.md).
+Security-sensitive reporting guidance now lives in [Vulnerability Reporting](security-privacy/vulnerability-reporting.md).
 
-## Report Security Issues Privately
-
-Do not open a public issue for suspected vulnerabilities, exploit details, secret exposure, or private retained dashboard data.
-
-For the Reponomics action/runtime, use GitHub private vulnerability reporting in the development repository:
-
-<https://github.com/reponomics/reponomics-dashboard-action/security/advisories/new>
-
-For a dashboard repository copied from the template, repository owners remain responsible for repository policies, access control, secrets, Pages settings, and local workflow changes.
-
-## Do Not Publish
-
-Do not include these in public issues, discussions, comments, screenshots, or shared logs:
-
-- `COLLECTION_TOKEN`, app private keys, or other GitHub tokens;
-- `DASHBOARD_SECRET_DO_NOT_REPLACE`, `DASHBOARD_NEXT_SECRET`, or comparison keys;
-- retained `dashboard-data` artifact contents;
-- private workflow logs or generated dashboard data;
-- exploit details for a suspected vulnerability before private triage.
-
-## Supported Beta Line
-
-The pre-wide-release beta uses the `v0` action line. Security fixes may ship as new `v0.x.y` releases before a stable `v1` line exists.
-
-Generated dashboard repositories call the action through `.github/actions/reponomics/action.yml`. If you pin that nested action ref to an exact tag or commit SHA, you own manual upgrades until you update it.
-
-## Data-Loss Boundaries
-
-Reponomics cannot recover:
-
-- a dashboard key that was never saved outside GitHub secrets;
-- retained history after all usable `dashboard-data` artifacts expire or are deleted;
-- encrypted retained artifacts after the only valid key is overwritten without **Rotate Key**;
-- data exposed by local workflow edits, broad repository access, or public support material.
-
-## Related Docs
-
-- [Dashboard Essentials](dashboard-essentials.md)
-- [Secure Dashboard Key](secure-dashboard-key.md)
-- [Repository Access And Trust Boundary](trust-boundary.md)
-- [Provenance And Verification Materials](provenance.md)
+For normal dashboard privacy and key operations, see [Privacy And Security](security-privacy/privacy-and-security.md) and [Dashboard Key And Recovery](security-privacy/dashboard-key-and-recovery.md).

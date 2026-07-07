@@ -900,7 +900,7 @@ def build_encrypted_html(
           <div class="auth-status" id="unlock-status" aria-live="polite"></div>
 
           <div class="auth-help-row">
-            <a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">Problems unlocking your dashboard? Click here</a>
+            <a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-privacy/dashboard-key-and-recovery.md">Problems unlocking your dashboard? Click here</a>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ For external beta use, the guide should act as a bridge between the live synthet
 
 - live demo: `https://reponomics.github.io/reponomics-dashboard-demo/`
 - copy-template path: `https://github.com/reponomics/reponomics-dashboard/generate`
-- setup checklist: `https://github.com/reponomics/reponomics-dashboard/blob/main/docs/reponomics/dashboard-essentials.md`
+- setup checklist: `https://github.com/reponomics/reponomics-dashboard/blob/main/docs/reponomics/getting-started/setup.md`
 - support/feedback: `https://github.com/reponomics/reponomics-dashboard-action`
 
 The guide should say that the demo uses synthetic data and a public demo key, that the beta line is `v0`, and that the intended beta users are maintainers comfortable with GitHub Actions, repository secrets, and a bounded repository set. Do not imply that the demo is a hosted Reponomics service or that demo unlock behavior applies to real dashboards.

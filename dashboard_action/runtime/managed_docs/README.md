@@ -26,11 +26,10 @@ New template repositories receive `config.example.yaml` once as root `config.yam
 
 ## Operations
 
-- [Workflows](workflows.md): maintainer guide to setup, collection, publishing, diagnostics, updates, rotation, reset, and keepalive.
+- [Workflows](workflows.md): setup, collection, publishing, diagnostics, updates, rotation, reset, keepalive, permissions, artifacts, outputs, and expected failures.
 - [Troubleshooting](troubleshooting.md): Doctor-first checks for setup, collection, publish, Pages, unlock, and mode failures.
 - [Maintenance](maintenance.md): scheduled workflow liveness, artifact expiry, auto-doctor cadence, and routine preservation tasks.
 - [Upgrades](upgrades.md): action refs, `v0` beta upgrades, full-SHA pinning, and docs update behavior.
-- [Workflow contract](workflow-contract.md): strict workflow-mode, permission, artifact, output, and expected-failure reference.
 
 ## Security And Privacy
 

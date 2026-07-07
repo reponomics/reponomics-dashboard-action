@@ -34,4 +34,4 @@ The workflow `GITHUB_TOKEN` is separate from the collection credential. Generate
 ## Continue
 
 - [Dashboard key and recovery](dashboard-key-and-recovery.md)
-- [Workflow contract](workflow-contract.md)
+- [Workflows](workflows.md)

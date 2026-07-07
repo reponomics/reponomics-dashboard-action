@@ -25,12 +25,6 @@ Collected data is not stored in git unless you enable `publish_readme_dashboard`
 
 History can keep growing as long as scheduled collection restores the current artifact and uploads the next one before expiry. If workflows stop, download the latest `dashboard-data` artifact before it expires.
 
-## Artifact Visibility
-
-Workflow artifacts are readable by anyone with repository read access. In public repositories, treat Actions artifacts as public according to GitHub's artifact visibility rules. In private repositories, collaborators who can read workflow runs can read artifacts.
-
-Anyone who can modify trusted workflows and run them with repository secrets is inside the dashboard trust boundary.
-
 ## CSV Export
 
 Encrypted dashboards expose CSV export only after unlock. The browser downloads an encrypted export asset, decrypts it locally with the dashboard key, verifies SHA-256 digests, and downloads a ZIP of retained CSV files. Plaintext CSV is not uploaded back to GitHub during export.

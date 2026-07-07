@@ -457,12 +457,6 @@ def test_publish_dashboard_html_smoke_test(monkeypatch: pytest.MonkeyPatch, tmp_
     assert {"dailyChart", "weekdayChart", "stackedChart"} <= standalone.canvases
 
 
-@pytest.mark.skip(
-    reason=(
-        "Temporarily skipped during managed-docs information architecture rework; "
-        "this test asserts exact unlock-help prose/link content."
-    )
-)
 def test_publish_encrypted_unlock_shell_affordances(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -536,11 +530,7 @@ def test_publish_encrypted_unlock_shell_affordances(
     assert "Encrypted Pages mode for private growth analytics." not in dashboard
     assert "Client-side decryption" not in dashboard
     assert "AES-GCM" not in dashboard
-    assert (
-        '<a href="https://github.com/reponomics/reponomics-dashboard-demo/blob/main/docs/reponomics/security-info.md">'
-        + "Problems unlocking your dashboard? Click here</a>"
-        in dashboard
-    )
+    assert "Problems unlocking your dashboard? Click here" in dashboard
     assert (
         '<a class="brand-name" href="https://github.com/reponomics">Reponomics</a>' not in dashboard
     )

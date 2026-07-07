@@ -44,5 +44,5 @@ The generated HTML dashboard is not committed to the repository. To view an encr
 ## Continue
 
 - [Publication](publication.md)
-- [Privacy and security](../security-privacy/privacy-and-security.md)
-- [Maintenance](../operations/maintenance.md)
+- [Privacy and security](privacy-and-security.md)
+- [Maintenance](maintenance.md)

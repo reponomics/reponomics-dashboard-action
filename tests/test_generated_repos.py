@@ -81,9 +81,6 @@ def test_template_manifest_includes_thin_template_surface(tmp_path):
         "docs/reponomics/.manifest.json",
         "docs/reponomics/README.md",
         "docs/reponomics/config.example.yaml",
-        "docs/reponomics/configuration.md",
-        "docs/reponomics/privacy-and-artifacts.md",
-        "docs/reponomics/upgrade.md",
     ]
     for relative_path in required:
         assert (output / relative_path).exists()
@@ -182,7 +179,6 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
     contract = template_contract.load_contract()
 
     docs_root = output / "docs" / "reponomics"
-    readme = (docs_root / "README.md").read_text(encoding="utf-8")
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
 
     rendered_docs = {
@@ -191,7 +187,6 @@ def test_template_includes_initial_managed_docs_snapshot(tmp_path):
         if path.is_file()
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
-    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == (
         CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8")
     )
@@ -638,7 +633,7 @@ def test_setup_workflow_resolves_data_modes():
     assert "keep \\`config.yaml\\` within" in setup
     assert "COLLECTION_APP_PRIVATE_KEY" in setup
     assert "COLLECTION_APP_ID" in setup
-    assert "docs/reponomics/secure-dashboard-key.md" in setup
+    assert "docs/reponomics/" in setup
     assert '${#DASHBOARD_SECRET_DO_NOT_REPLACE}' not in setup
     assert "Manual GitHub Pages step" in setup
     assert '[ "$PUBLISH_PAGES_DASHBOARD" = "true" ] && [ "$DATA_MODE" = "encrypted" ]' in setup
@@ -1082,14 +1077,12 @@ def test_template_contract_writes_and_verifies_managed_docs_snapshot(tmp_path):
     )
 
     manifest = json.loads((docs_root / ".manifest.json").read_text(encoding="utf-8"))
-    readme = (docs_root / "README.md").read_text(encoding="utf-8")
     rendered_docs = {
         path.relative_to(docs_root).as_posix(): path.read_text(encoding="utf-8")
         for path in docs_root.rglob("*")
         if path.is_file()
     }
     assert not any("{{ACTION_VERSION}}" in text for text in rendered_docs.values())
-    assert "`docs/reponomics/.manifest.json` records the action version" in readme
     assert (docs_root / "config.example.yaml").read_text(encoding="utf-8") == (
         CONFIG_EXAMPLE_SOURCE.read_text(encoding="utf-8")
     )

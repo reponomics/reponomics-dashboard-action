@@ -48,5 +48,5 @@ For repository access implications, see [Repository Access And Trust Boundary](t
 ## Continue
 
 - [Dashboard key and recovery](dashboard-key-and-recovery.md)
-- [Data and artifacts](../concepts/data-and-artifacts.md)
-- [Publication](../concepts/publication.md)
+- [Data and artifacts](data-and-artifacts.md)
+- [Publication](publication.md)

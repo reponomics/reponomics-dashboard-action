@@ -1,6 +1,6 @@
 # Workflows
 
-Generated Reponomics dashboard repositories use a small set of GitHub Actions workflows. This page explains how a maintainer should think about them. The strict mode, permission, artifact, output, and failure contract lives in [Workflow Contract](../reference/workflow-contract.md).
+Generated Reponomics dashboard repositories use a small set of GitHub Actions workflows. This page explains how a maintainer should think about them. The strict mode, permission, artifact, output, and failure contract lives in [Workflow Contract](workflow-contract.md).
 
 ## Setup
 
@@ -44,4 +44,4 @@ Incident reset re-encrypts retained state with `DASHBOARD_NEXT_SECRET`, uploads 
 
 - [Troubleshooting](troubleshooting.md)
 - [Maintenance](maintenance.md)
-- [Workflow Contract](../reference/workflow-contract.md)
+- [Workflow Contract](workflow-contract.md)

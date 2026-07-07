@@ -33,6 +33,6 @@ Periodically confirm:
 
 ## Continue
 
-- [Data and artifacts](../concepts/data-and-artifacts.md)
+- [Data and artifacts](data-and-artifacts.md)
 - [Workflows](workflows.md)
 - [Troubleshooting](troubleshooting.md)

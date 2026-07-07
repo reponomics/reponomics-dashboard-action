@@ -32,6 +32,6 @@ The **Collect and Publish** workflow can run with `skip_collect: true` to republ
 
 ## Continue
 
-- [Configuration](../getting-started/configuration.md)
+- [Configuration](configuration.md)
 - [Data and artifacts](data-and-artifacts.md)
-- [Troubleshooting](../operations/troubleshooting.md)
+- [Troubleshooting](troubleshooting.md)

@@ -55,4 +55,4 @@ Reponomics cannot recover:
 ## Continue
 
 - [Privacy and security](privacy-and-security.md)
-- [Troubleshooting](../operations/troubleshooting.md)
+- [Troubleshooting](troubleshooting.md)

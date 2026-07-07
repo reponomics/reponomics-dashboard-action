@@ -29,12 +29,8 @@ If you want to keep local edits under `docs/reponomics/`, disable or delete `.gi
 
 If docs update reports `permission_missing`, grant `contents: write` to the update-docs job or disable the workflow.
 
-## Compatibility Pages
-
-Some root-level pages in this namespace are short compatibility entries that point to canonical grouped pages. They exist so older links remain useful while the documentation is organized by conceptual domain.
-
 ## Continue
 
 - [Repository ownership](repository-ownership.md)
-- [Upgrades](../operations/upgrades.md)
-- [Provenance and verification](../reference/provenance.md)
+- [Upgrades](upgrades.md)
+- [Provenance and verification](provenance.md)

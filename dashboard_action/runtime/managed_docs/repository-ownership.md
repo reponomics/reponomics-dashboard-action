@@ -45,7 +45,7 @@ Collect and publish runs are serialized for `main`. A later scheduled run waits 
 
 ## Continue
 
-- [Setup](../getting-started/setup.md)
-- [Configuration](../getting-started/configuration.md)
-- [Workflows](../operations/workflows.md)
+- [Setup](setup.md)
+- [Configuration](configuration.md)
+- [Workflows](workflows.md)
 - [Data and artifacts](data-and-artifacts.md)

@@ -2,7 +2,7 @@
 
 These options apply to the official generated Reponomics `v0` workflows. Local workflow edits can change behavior.
 
-For configuration concepts and recommended choices, start with [Configuration](../getting-started/configuration.md).
+For configuration concepts and recommended choices, start with [Configuration](configuration.md).
 
 `config.yaml` is the active repository configuration. Reponomics reads it during setup, collection, publication, rotation, incident reset, Doctor, and docs updates.
 
@@ -59,6 +59,6 @@ Pages publication also requires repository **Settings -> Pages -> Build and depl
 
 ## Related Topics
 
-- [Credentials](../getting-started/credentials.md)
-- [Publication](../concepts/publication.md)
-- [Privacy and security](../security-privacy/privacy-and-security.md)
+- [Credentials](credentials.md)
+- [Publication](publication.md)
+- [Privacy and security](privacy-and-security.md)

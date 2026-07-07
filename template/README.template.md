@@ -20,7 +20,7 @@ If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.man
 1. Fill in the required setup fields at the top of `config.yaml`, commit that change, and decide which repositories this dashboard should track.
 2. Create a collection credential and store it as the repository secret `COLLECTION_TOKEN`. Most single-owner dashboards should use a fine-grained personal access token with repository `Administration: read`.
 3. Choose a data mode in `config.yaml`: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
-4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Dashboard Key And Recovery](docs/reponomics/security-privacy/dashboard-key-and-recovery.md) for the security tradeoffs.
+4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Dashboard Key And Recovery](docs/reponomics/dashboard-key-and-recovery.md) for the security tradeoffs.
 5. Run **Actions -> Setup -> Run workflow**.
 6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 7. Run **Actions -> Collect and Publish -> Run workflow** once to create the first dashboard immediately.
@@ -60,7 +60,7 @@ use_github_app: false
 
 The template starts with `artifact_retention_days: 90`, `use_github_app: false`, and `auto_doctor_every_n_days: 0`; these are validated by setup and workflow runs. Set `auto_doctor_every_n_days` to `1` through `30` to check the marker and run doctor as part of the collect-and-publish cadence when that many UTC days have elapsed since the last successful auto-doctor.
 
-Add repositories to `collect.repositories` when you want Reponomics to keep history for them. Add up to 8 of those same repositories to `publish.repositories` when you want them shown in the README and Pages dashboards. For more detail, see [Configuration](docs/reponomics/getting-started/configuration.md) and [Repository Ownership](docs/reponomics/concepts/repository-ownership.md).
+Add repositories to `collect.repositories` when you want Reponomics to keep history for them. Add up to 8 of those same repositories to `publish.repositories` when you want them shown in the README and Pages dashboards. For more detail, see [Configuration](docs/reponomics/configuration.md) and [Repository Ownership](docs/reponomics/repository-ownership.md).
 
 ### Token Scope And Repository Owners
 
@@ -81,7 +81,7 @@ The canonical store is the `dashboard-data` Actions artifact.
 - Metric README dashboard generation is only available in private repositories.
 - `artifact_retention_days` configures the retention period for dashboard data workflow artifacts, in the event that there is an interruption in the collection routine. Normally, only a small number of data artifacts are stored in the repository's artifact storage, and each time collection runs, the oldest artifact is deleted. `artifact_retention_days` can be thought of as the number of days GitHub should save your backup artifacts if the repository workflows stop functioning, credentials expire, etc.
 
-For the one-minute setup checklist, see [Setup](docs/reponomics/getting-started/setup.md). If a workflow fails, start with [Troubleshooting](docs/reponomics/operations/troubleshooting.md). For publication choices, see [Publication](docs/reponomics/concepts/publication.md). For data-mode and privacy tradeoffs, see [Privacy And Security](docs/reponomics/security-privacy/privacy-and-security.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/security-privacy/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/reference/faq.md).
+For the one-minute setup checklist, see [Setup](docs/reponomics/setup.md). If a workflow fails, start with [Troubleshooting](docs/reponomics/troubleshooting.md). For publication choices, see [Publication](docs/reponomics/publication.md). For data-mode and privacy tradeoffs, see [Privacy And Security](docs/reponomics/privacy-and-security.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
 
 ## Managed Docs
 

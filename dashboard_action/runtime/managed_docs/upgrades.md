@@ -24,5 +24,5 @@ If docs update reports `permission_missing`, grant `contents: write` to the upda
 
 ## Continue
 
-- [Managed documentation](../concepts/managed-docs.md)
-- [Provenance and verification](../reference/provenance.md)
+- [Managed documentation](managed-docs.md)
+- [Provenance and verification](provenance.md)

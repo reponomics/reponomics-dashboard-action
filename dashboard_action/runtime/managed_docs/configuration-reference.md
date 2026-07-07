@@ -59,6 +59,6 @@ Pages publication also requires repository **Settings -> Pages -> Build and depl
 
 ## Related Topics
 
-- [Credentials](credentials.md)
+- [Configuration](configuration.md)
 - [Publication](publication.md)
 - [Privacy and security](privacy-and-security.md)

@@ -50,6 +50,5 @@ Setup does not collect traffic data. Collection runs on the configured schedule 
 ## Next Reads
 
 - [Configuration](configuration.md)
-- [Credentials](credentials.md)
 - [Publication](publication.md)
 - [Troubleshooting](troubleshooting.md)

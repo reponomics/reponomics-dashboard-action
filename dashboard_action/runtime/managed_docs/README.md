@@ -10,8 +10,7 @@ These are the action-managed docs for generated Reponomics dashboard repositorie
 ## Start Here
 
 - [Setup](setup.md): first-run sequence, setup marker, and the shortest path to a working dashboard.
-- [Configuration](configuration.md): how to make the main `config.yaml` choices without reading the full reference.
-- [Credentials](credentials.md): collection tokens, GitHub App mode, and dashboard secrets.
+- [Configuration](configuration.md): `config.yaml` choices, collection credentials, GitHub App mode, and workflow tokens.
 - [Configuration reference](configuration-reference.md): supported keys, defaults, secrets, variables, and rejected combinations.
 - [Configuration example](config.example.yaml): managed reference copy of the starter `config.yaml`.
 
@@ -28,14 +27,12 @@ New template repositories receive `config.example.yaml` once as root `config.yam
 
 - [Workflows](workflows.md): setup, collection, publishing, diagnostics, updates, rotation, reset, keepalive, permissions, artifacts, outputs, and expected failures.
 - [Troubleshooting](troubleshooting.md): Doctor-first checks for setup, collection, publish, Pages, unlock, and mode failures.
-- [Maintenance](maintenance.md): scheduled workflow liveness, artifact expiry, auto-doctor cadence, and routine preservation tasks.
 - [Upgrades](upgrades.md): action refs, `v0` beta upgrades, full-SHA pinning, and docs update behavior.
 
 ## Security And Privacy
 
-- [Privacy and security](privacy-and-security.md): data modes, artifact visibility, Pages exposure, browser-side limits, and shared-secret boundaries.
+- [Privacy and security](privacy-and-security.md): data modes, artifact visibility, Pages exposure, browser-side limits, shared-secret boundaries, and repository access.
 - [Dashboard key and recovery](dashboard-key-and-recovery.md): key generation, storage, rotation, lost-key limits, and incident reset.
-- [Repository access and trust boundary](trust-boundary.md): collaborator, organization, and public-repository access implications.
 - [Vulnerability reporting](vulnerability-reporting.md): private reporting, sensitive support material, and supported beta line.
 
 ## Reference

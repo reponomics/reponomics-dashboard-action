@@ -43,7 +43,21 @@ Encrypted artifacts can be downloaded and attacked offline by anyone who obtains
 
 Encryption does not protect against people or systems that can run trusted workflows with access to repository secrets. Anyone who can alter trusted workflows, manage repository secrets, approve protected environments, or administer the repository can affect the dashboard control plane.
 
-For repository access implications, see [Repository Access And Trust Boundary](trust-boundary.md).
+Only add a collaborator to a personal dashboard repository if you trust them with the dashboard control plane: data confidentiality, workflow integrity, key rotation, retained history, publication settings, and operational continuity. That is stronger than trusting someone to read a report.
+
+Personal private repositories have a coarse collaborator model. Branch rulesets and branch protection can protect refs, but they do not turn collaborators into read-only dashboard viewers. Collaborators can potentially affect private repository contents, Actions artifacts and logs, workflow dispatch, secrets and variables where GitHub grants access, workflow files, generated outputs, key rotation, incident reset, publication flows, and retained workflow runs or artifacts.
+
+Use an organization repository when more than one person needs access and roles matter. Organizations support read, triage, write, maintain, and admin roles, plus teams, branch protections, rulesets, environments, and organization policies. This does not remove every trust concern: anyone who can manage Actions secrets, alter trusted workflows, approve protected environments, or administer the repository can still affect the dashboard control plane.
+
+Public repository Actions artifacts should be treated as public. Reponomics requires `data_mode: encrypted`, rejects `data_mode: plaintext`, and rejects README dashboard generation for public repositories. Hosted encrypted Pages dashboards can still disclose metadata such as existence, update timing, and payload size.
+
+Safer operating patterns:
+
+- Keep personal dashboard collaborator lists short.
+- Use organization repositories for role separation before the dashboard becomes operationally important.
+- Share rendered outputs outside the repository boundary for less-trusted viewers.
+- Periodically export an independent copy if retained dashboard history matters.
+- Do not treat GitHub policy enforcement, support, or retained workflow history as a recovery plan.
 
 ## Continue
 

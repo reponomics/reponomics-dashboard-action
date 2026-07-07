@@ -22,6 +22,25 @@ Use **INCIDENT - Reset** only for suspected key exposure. Make the dashboard rep
 
 **Keep Alive** runs monthly to create repository activity and a persistent data safety reminder. It is a best-effort guard against scheduled workflows becoming inactive; it is not a backup strategy.
 
+## Maintenance And Liveness
+
+The dashboard is low-maintenance only if scheduled workflows keep running, credentials stay valid, retained artifacts do not expire without a successor, and the repository owner preserves the dashboard key.
+
+Collection runs on the generated schedule after setup. GitHub may disable scheduled workflows in inactive public repositories, and inactive schedules are an operational risk for any dashboard repository. The generated keepalive workflow runs monthly, commits `.reponomics/keepalive.md`, and tries to create one persistent data safety reminder issue.
+
+`artifact_retention_days` controls how long each uploaded artifact remains downloadable. It is not the dashboard history window. If scheduled workflows stop unexpectedly, download the latest `dashboard-data` artifact before it expires, then re-enable workflows from the Actions tab.
+
+`auto_doctor_every_n_days` can run Doctor during the collect-and-publish cadence when the configured number of UTC days has elapsed since the last successful auto-doctor. Use this as routine validation, not as a substitute for investigating workflow failures.
+
+Periodically confirm:
+
+- scheduled Collect and Publish runs are still completing;
+- `COLLECTION_TOKEN` or GitHub App credentials have not expired or lost repository access;
+- encrypted dashboards still unlock with the saved dashboard key;
+- `DASHBOARD_NEXT_SECRET` is unset outside active rotation or incident reset;
+- Update Docs has not reported `permission_missing` or `manifest_inconsistent`;
+- important retained history has an independent export if artifact loss would matter.
+
 ## Modes And Workflows
 
 | Workflow | Action mode | What it does |
@@ -93,5 +112,4 @@ When one of these occurs, run **Doctor** when artifacts exist, then use the work
 ## Continue
 
 - [Troubleshooting](troubleshooting.md)
-- [Maintenance](maintenance.md)
 - [Data and artifacts](data-and-artifacts.md)

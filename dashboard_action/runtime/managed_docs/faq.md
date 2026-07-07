@@ -32,7 +32,7 @@ Store it in a password manager, then save it as the repository secret `DASHBOARD
 
 Encrypted mode encrypts retained artifacts and dashboard payloads before storage or publication. It does not hide the existence of a Pages site, publication timing, payload size, workflow metadata, or metrics committed to a private README dashboard.
 
-Encryption also does not protect against people who can alter trusted workflows, manage repository secrets, or administer the dashboard repository. See [Repository Access And Trust Boundary](trust-boundary.md).
+Encryption also does not protect against people who can alter trusted workflows, manage repository secrets, or administer the dashboard repository. See [Privacy And Security](privacy-and-security.md).
 
 ## Is dashboard data committed to git?
 

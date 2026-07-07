@@ -81,7 +81,7 @@ The canonical store is the `dashboard-data` Actions artifact.
 - Metric README dashboard generation is only available in private repositories.
 - `artifact_retention_days` configures the retention period for dashboard data workflow artifacts, in the event that there is an interruption in the collection routine. Normally, only a small number of data artifacts are stored in the repository's artifact storage, and each time collection runs, the oldest artifact is deleted. `artifact_retention_days` can be thought of as the number of days GitHub should save your backup artifacts if the repository workflows stop functioning, credentials expire, etc.
 
-For the one-minute setup checklist, see [Setup](docs/reponomics/setup.md). If a workflow fails, start with [Troubleshooting](docs/reponomics/troubleshooting.md). For publication choices, see [Publication](docs/reponomics/publication.md). For data-mode and privacy tradeoffs, see [Privacy And Security](docs/reponomics/privacy-and-security.md). For repository access implications, see [Repository Access And Trust Boundary](docs/reponomics/trust-boundary.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
+For the one-minute setup checklist, see [Setup](docs/reponomics/setup.md). If a workflow fails, start with [Troubleshooting](docs/reponomics/troubleshooting.md). For publication choices, see [Publication](docs/reponomics/publication.md). For data-mode, privacy, and repository access tradeoffs, see [Privacy And Security](docs/reponomics/privacy-and-security.md). Common questions are answered in the [FAQ](docs/reponomics/faq.md).
 
 ## Managed Docs
 

@@ -336,7 +336,7 @@ def main() -> int:
         _summary(
             "## Reponomics setup required",
             "",
-            "Fill in `config.yaml`, run **Actions -> Set up Reponomics dashboard**, "
+            "Fill in `config.yaml`, run **Actions -> Setup -> Run workflow**, "
             + "and let setup validate the config and write the setup marker "
             + "before this workflow does work.",
         )

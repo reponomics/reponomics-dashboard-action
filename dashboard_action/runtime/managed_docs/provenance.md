@@ -21,8 +21,8 @@ This page lists the provenance and verification material Reponomics publishes or
 | Publication commit trailer     | generated template commit message `Source-Commit`                                                             | source repository commit used for publication                                  |
 | Template provenance file       | `.reponomics/template-provenance.json` in the generated template tree                                         | source commit, template version, action ref metadata, canonical payload digest |
 | Managed-docs manifest          | `docs/reponomics/.manifest.json` in the generated template tree                                               | action version and managed-doc hashes for the shipped docs snapshot            |
-| Template release artifacts     | `publish-template.yml` workflow artifact named `reponomics-dashboard-template-release-<template-release-tag>` | deterministic template archive, canonical tree manifest, `SHA256SUMS`          |
-| Template artifact attestations | GitHub artifact attestations from `publish-template.yml`                                                      | attestations for the template archive, tree manifest, and checksum file        |
+| Template release artifacts     | `template-release.yml` workflow artifact named `reponomics-dashboard-template-release-<template-release-tag>` | deterministic template archive, canonical tree manifest, `SHA256SUMS`          |
+| Template artifact attestations | GitHub artifact attestations from `template-release.yml`                                                      | attestations for the template archive, tree manifest, and checksum file        |
 
 Template release artifact names are derived from `template-contract.yml` and the `reponomics-dashboard-v<template_version>` release tag. The canonical tree manifest excludes `.reponomics/template-provenance.json`; the provenance file records that exclusion.
 
@@ -42,7 +42,7 @@ Template release artifact names are derived from `template-contract.yml` and the
 
 Generated dashboard repositories use the compatible `v0` action line by default so compatible fixes can arrive without a workflow edit. Many users should keep that default.
 
-If your organization requires full-SHA GitHub Action refs, pin the nested Reponomics action reference in `.github/actions/reponomics/action.yml`. Use `.reponomics/template-provenance.json` and `docs/reponomics/.manifest.json` to identify the action repository and version for the template snapshot, resolve that release tag to a commit SHA, and replace the `uses:` value with that SHA.
+If your organization requires full-SHA GitHub Action refs, pin the nested Reponomics action reference in `.github/actions/reponomics/action.yml`. Use `.reponomics/template-provenance.json` and `docs/reponomics/.manifest.json` to identify the action repository and version for the template snapshot, resolve that release tag to a commit SHA, and replace the Reponomics `uses:` value with that SHA. Organization-wide SHA policies may also require pinning other workflow action refs in the generated workflow files.
 
 When you pin to an exact tag or SHA, you choose when to upgrade. Dependabot or an organization policy workflow can help track updates, but the generated repository will not receive compatible Reponomics fixes until the pinned ref is changed.
 

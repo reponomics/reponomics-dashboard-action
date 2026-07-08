@@ -35,7 +35,7 @@ In what follows, we provide basic information about the inputs and outputs of th
 | `collection-token` | When using a PAT for `collect` (default case) | `""` | GitHub API token for repository data collection. Template workflows pass `secrets.COLLECTION_TOKEN`. Must have `Administration: Read` privileges to access repository traffic data. |
 | `use-github-app` | Not required | `""` | Set to `true` in order to use a personal GitHub App installation token for `collect`, instead of a PAT (advanced usage). |
 | `github-token` | Required | `""` | Token used for all internal dashboard-repository operations.. |
-| `dashboard-secret` | Required when `data-mode: encrypted` | `""` | Current dashboard/artifact encryption key. In template workflows, stored under `secrets.DAASHBOARD_SECRET_DO_NOT_REPLACE`. |
+| `dashboard-secret` | Required when `data-mode: encrypted` | `""` | Current dashboard/artifact encryption key. In template workflows, stored under `secrets.DASHBOARD_SECRET_DO_NOT_REPLACE`. |
 | `dashboard-next-secret` | Required for `rotate-key` and `incident-reset` | `""` | When resetting/rotating a key, this value will be used to re-encrypt the data. |
 | `comparison-secret` | Optional `doctor` key check | `""` | Second dashboard key used in `doctor` mode to test a user-held key without changing the main secret. |
 | `incident-confirm-mode` | `incident-reset` | `""` | Must be `INCIDENT_RESET_CONFIRMED`. |

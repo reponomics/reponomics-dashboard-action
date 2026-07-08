@@ -19,7 +19,7 @@ New template repositories receive `config.example.yaml` once as root `config.yam
 ## Concepts
 
 - [Repository ownership](repository-ownership.md): what the copied repository owns and what the versioned action owns.
-- [Managed documentation](managed-docs.md): how docs updates work, what Reponomics owns, and how to opt out.
+- [Managed documentation](managed-docs.md): how docs updates work and what namespace Reponomics owns.
 - [Data and artifacts](data-and-artifacts.md): retained state, artifact retention, lineage, CSV export, and offline viewing.
 - [Publication](publication.md): Pages, README metrics, and downloadable dashboard artifacts.
 

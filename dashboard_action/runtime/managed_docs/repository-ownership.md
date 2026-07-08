@@ -19,7 +19,7 @@ The copied dashboard repository owns:
 - retained `dashboard-data` workflow artifacts
 - static setup README output
 - optional private-repository README dashboard output
-- optional managed docs under `docs/reponomics/`
+- action-managed docs under `docs/reponomics/`
 
 The versioned action owns collection, artifact restore/upload, schema migration, encryption, dashboard rendering, CSV export packaging, key rotation, incident reset behavior, and managed docs payload generation.
 
@@ -35,7 +35,7 @@ Root repository policy files such as `README.md`, `SECURITY.md`, `CONTRIBUTING.m
 
 The manifest at `docs/reponomics/.manifest.json` records the action repository, action version, managed namespace, update timestamp, and file hashes for the managed docs snapshot.
 
-See [Managed Documentation](managed-docs.md) for the write boundary and opt-out behavior.
+See [Managed Documentation](managed-docs.md) for the write boundary and update behavior.
 
 ## Normal Operation
 

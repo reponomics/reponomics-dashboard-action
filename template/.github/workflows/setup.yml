@@ -35,7 +35,7 @@ jobs:
 
           token_url="https://github.com/settings/personal-access-tokens/new?name=COLLECTION_TOKEN&description=Read%20repository%20data%20for%20Reponomics%20Dashboard&target_name=$GITHUB_REPOSITORY_OWNER&expires_in=366&administration=read"
           app_url="https://github.com/settings/apps/new"
-          key_doc_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/secure-dashboard-key.md"
+          key_doc_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/reponomics/dashboard-key-and-recovery.md"
           collection_app_id="${COLLECTION_APP_ID_VAR:-}"
           if [ -z "$collection_app_id" ] && [ -n "${COLLECTION_APP_ID_SECRET:-}" ]; then
             collection_app_id="${COLLECTION_APP_ID_SECRET:-}"
@@ -104,7 +104,7 @@ jobs:
                 echo
                 echo "\`data_mode=$DATA_MODE\` needs a repository secret named \`DASHBOARD_SECRET_DO_NOT_REPLACE\`."
                 echo
-                echo "See [Secure Dashboard Key]($key_doc_url) for key generation options."
+                echo "See [Dashboard Key And Recovery]($key_doc_url) for key generation options."
               } >> "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
@@ -128,9 +128,9 @@ jobs:
 
           The Reponomics Dashboard provides users with a convenient, private, and cost-free way to store and aggregate key metrics about their GitHub repos. Because this data is private, we do not publish any metrics to the README for public repositories.
 
-          Reponomics may update managed local documentation under `docs/reponomics/` after successful collect-and-publish runs. Disable or delete `.github/workflows/update-docs.yml` before editing that directory yourself.
+          Reponomics updates action-managed local documentation under `docs/reponomics/` after successful collect-and-publish runs so local guidance matches the action version this repository runs. If you choose to own that directory yourself, disable or delete `.github/workflows/update-docs.yml` before editing it.
 
-          If you'd like to learn more about the Reponomics Dashboard and create one for yourself, check out our doc-site at [reponomics/reponomics](https://github.com/reponomics/reponomics), or view a demo dashboard [here](https://github.com/reponomics/reponomics-demo).
+          If you'd like to learn more about the Reponomics Dashboard, file issues, or star the project, visit [reponomics/reponomics-dashboard-action](https://github.com/reponomics/reponomics-dashboard-action). You can also view the demo dashboard repository at [reponomics/reponomics-dashboard-demo](https://github.com/reponomics/reponomics-dashboard-demo).
 
           Thanks!
           MD

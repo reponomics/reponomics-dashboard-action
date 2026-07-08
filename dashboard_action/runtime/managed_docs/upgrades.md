@@ -18,7 +18,7 @@ If your organization requires full-SHA-pinned actions, update that nested `uses:
 
 When a new action version introduces optional features, the action may add or update documentation here. It will not change your `config.yaml` for you. Review the relevant docs, then opt into new configuration when you want the behavior.
 
-If you want to keep local edits in `docs/reponomics/`, disable or delete `.github/workflows/update-docs.yml` before making those edits. When that workflow is enabled, Reponomics may regenerate this directory during action upgrades.
+If you choose to own local edits in `docs/reponomics/`, disable or delete `.github/workflows/update-docs.yml` before making those edits. When that workflow is enabled, Reponomics may regenerate this directory during action upgrades.
 
 If docs update reports `permission_missing`, grant `contents: write` to the update-docs job or disable the update-docs workflow.
 

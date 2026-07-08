@@ -5,7 +5,7 @@
 
 This is the setup README for your Reponomics dashboard repository. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without sending the data to a Reponomics-hosted service.
 
-After you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action version pinned by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
+After you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action ref configured by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
 
 The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs update are owned by the versioned action referenced by the local wrapper.
 
@@ -13,7 +13,7 @@ The dashboard collects GitHub traffic and growth data, stores retained state in 
 uses: ./.github/actions/reponomics
 ```
 
-If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates.
+If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested Reponomics `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates. Organization-wide SHA policies may also require pinning other workflow action refs, such as `actions/checkout`, in the generated workflow files.
 
 ## Get Started
 
@@ -85,6 +85,6 @@ For the one-minute setup checklist, see [Setup](docs/reponomics/setup.md). If a 
 
 ## Managed Docs
 
-Reponomics may update managed local documentation under `docs/reponomics/` after successful collect-and-publish runs. It writes only that namespace and commits with `[skip ci]`. Disable or delete `.github/workflows/update-docs.yml` before editing `docs/reponomics/` yourself.
+Reponomics updates action-managed local documentation under `docs/reponomics/` after successful collect-and-publish runs so local guidance matches the action version this repository runs. It writes only that namespace and commits with `[skip ci]`. If you choose to own that directory yourself, disable or delete `.github/workflows/update-docs.yml` before editing it.
 
 The generated repository ships this setup README as `README.backup.md` before setup writes the shorter post-setup README. That backup is user-owned historical context; it is not managed by docs update.

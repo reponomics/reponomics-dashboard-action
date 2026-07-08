@@ -1,6 +1,6 @@
-# Maintainer Security Checks
+# Reponomics Dashoard Project Security Practices
 
-This maintainer document describes the security checks and public signals used for the Reponomics action source repository. The action handles sensitive repository metrics and encrypted artifacts, so the source repository combines source-tree CI gates, GitHub repository policy, and independently visible supply-chain signals.
+This document describes the security checks and public signals used for the Reponomics Dashboard development repository. The action handles sensitive repository metrics and encrypted artifacts, so the source repository combines source-tree CI gates, GitHub repository policy, and independently visible supply-chain signals.
 
 ## Security Signals
 
@@ -19,8 +19,6 @@ Public visibility for this posture comes from:
 
 - OpenSSF Scorecard, which includes action pinning in its broader supply-chain checks.
 - PolicyChecks, a Reponomics-maintained badge service that reports selected repository settings with proof JSON. The README links to PolicyChecks badges for SHA pinning and immutable releases as additional public evidence of the current app-visible repository settings.
-
-PolicyChecks is intentionally narrow: it makes selected repository settings easier for reviewers to inspect. It is an additional public signal, not a replacement for the repository policy or for OpenSSF Scorecard.
 
 Generated dashboard template repositories are different. They intentionally default to the compatible Reponomics action channel, such as `reponomics/reponomics-dashboard-action@v0`, through the local wrapper at `.github/actions/reponomics/action.yml`, so most users receive compatible bug fixes and security fixes without self-managing SHA updates. Users with stricter organization policy can pin that nested wrapper reference to an exact tag or SHA, but they then own the upgrade cadence.
 

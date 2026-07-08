@@ -4,7 +4,7 @@
 
 `reponomics-dashboard` is the template repository users copy. `reponomics-dashboard-action` is the versioned runtime called by generated workflows.
 
-This keeps copied dashboard repositories small while allowing collection, encryption, rendering, rotation, incident reset, CSV export, and docs updates to improve through action releases. See [Repository Ownership](repository-ownership.md).
+This keeps copied dashboard repositories small while allowing collection, encryption, rendering, rotation, incident reset, CSV export, and docs updates to improve through action releases. See [Workflows](workflows.md).
 
 ## What data mode should I choose?
 

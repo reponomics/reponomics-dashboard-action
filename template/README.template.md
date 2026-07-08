@@ -60,7 +60,7 @@ use_github_app: false
 
 The template starts with `artifact_retention_days: 90`, `use_github_app: false`, and `auto_doctor_every_n_days: 0`; these are validated by setup and workflow runs. Set `auto_doctor_every_n_days` to `1` through `30` to check the marker and run doctor as part of the collect-and-publish cadence when that many UTC days have elapsed since the last successful auto-doctor.
 
-Add repositories to `collect.repositories` when you want Reponomics to keep history for them. Add up to 8 of those same repositories to `publish.repositories` when you want them shown in the README and Pages dashboards. For more detail, see [Configuration](docs/reponomics/configuration.md) and [Repository Ownership](docs/reponomics/repository-ownership.md).
+Add repositories to `collect.repositories` when you want Reponomics to keep history for them. Add up to 8 of those same repositories to `publish.repositories` when you want them shown in the README and Pages dashboards. For more detail, see [Configuration](docs/reponomics/configuration.md) and [Workflows](docs/reponomics/workflows.md).
 
 ### Token Scope And Repository Owners
 

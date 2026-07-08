@@ -31,6 +31,5 @@ If docs update reports `permission_missing`, grant `contents: write` to the upda
 
 ## Continue
 
-- [Repository ownership](repository-ownership.md)
 - [Upgrades](upgrades.md)
 - [Provenance and verification](provenance.md)

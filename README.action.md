@@ -1,115 +1,50 @@
 # Reponomics Dashboard Action
 
-Collect GitHub repository traffic and growth data, retain it in workflow artifacts, and render Reponomics dashboard outputs from GitHub Actions.
+The Reponomics Dashboard Action is a special-purpose GitHub action specifically designed to integrate with the Reponomics Dashboard template repository. It serves as the main runtime for the primary features and functionality of Dashboard repositories, which are shipped with workflows that are also designed specifically to consume this action. Although you may find the action to be useful for whatever purpose you deem fit, development and maintenance efforts by the Reponomics organization will be focused exclusively on serving the Dashboard template repository and its users. The two public entities (the action and the template repo) are simply two surfaces of the same product, and neither one has much independent value. If you are interested in creating your own Dashboard repository, you are encouraged to visit the [template repo](https://github.com/reponomics/reponomics-dashboard) and create your own repository based on that template, which is already engineered for the specific purpose of interacting with this action. The Dashboard Action:
 
-Most users should start from the [Reponomics Dashboard template](https://github.com/reponomics/reponomics-dashboard). The template supplies the workflows, configuration file, and managed docs that call this action correctly. This README documents the action runtime for Marketplace-style review, generated-template maintainers, and advanced users wiring the action directly.
-
-> [!NOTE]
-> The pre-wide-release beta uses the `v0` action line. The generated template follows that compatible line. The direct workflow examples below pin the current `v0.32.0` release SHA; replace it with a newer release SHA when you upgrade.
-
-## What It Does
-
-- Collects repository views, clones, referrers, popular paths, growth counters, and community-health profile signals from the GitHub API.
-- Retains dashboard history in a `dashboard-data` workflow artifact instead of committing retained CSV data to git.
-- Renders encrypted or plaintext HTML dashboard artifacts.
-- Optionally deploys encrypted dashboard output through GitHub Pages.
-- Optionally commits a private-repository README metrics dashboard.
-- Rotates encrypted dashboard keys and supports incident reset for suspected key exposure.
-- Refreshes Reponomics-managed local docs in generated dashboard repositories.
-- Runs Doctor diagnostics against retained data and rendered dashboard artifacts.
+- Queries the GitHub API on a regular (by default, daily) cadence to obtain growth and traffic metrics about the repository owner's projects across GitHub.
+- Retains and aggregates the collected data in a common CSV format, which it stores in GitHub workflow artifact storage.
+- Generates the HTML analytics dashboard that users/owners may elect to serve via GitHub Pages.
+- Generates the lightweight Markdown+SVG dashboards that users who own a private repository may elect to publish to their repo's README.
+- Handles the encryption and decryption of dashboard artifacts so that data is never exposed in plaintext form. (Those who own a private repo may opt to store the data in plaintext if they wish, relying instead on the privacy boundary offered by GitHub's authentication protocols.)
 
 ## Recommended Use
 
-Create a repository from the [dashboard template](https://github.com/reponomics/reponomics-dashboard), edit `config.yaml`, add the required secrets, and run the generated setup workflow.
+There is only one recommended way to use this action, and that is by way of the free and open-source Reponomics Dashboard template repository. You are free to adapt it to your own purposes as you see fit, but in its current shape, all maintainance efforts will be directed at the officially recommended workflows provided by the Reponomics organization. As mentioned above, these are really two parts of a single product - the Reponomics Dashboard - but for a variety of logistical reasons, it is necessary to split the product into two public surfaces. The action is published to the GitHub marketplace to ensure visibility and accessibility for owners of a dashboard repo, and we do not wish to mislead anyone into thinking it has some other purpose.
 
-Use this action directly only if you are prepared to own the surrounding workflow contract: checkout, job permissions, secrets, Pages settings, artifact retention, scheduling, setup gating, and repository configuration.
+For information about the Reponomics Dashboard project, and to view the development repository for this action, you may visit [reponomics-dashboard-action](https://github.com/reponomics/reponomics-dashboard-action). This is also where all issues, bug reports, feature requests, security disclosures, or other communication should be directed.
+
+In what follows, we provide basic information about the inputs and outputs of this composite action - for more detail, and to understand these details in their full context, you are encouraged to visit the repository mentioned above, which has more extensive documentation about this project. 
 
 ## Modes
 
 | Mode | Purpose |
 | --- | --- |
-| `collect` | Collect GitHub data, merge retained history, upload `dashboard-data`, and clean up one older superseded retained artifact when safe. |
-| `publish` | Restore retained data and render dashboard output; deploy encrypted Pages output or upload a downloadable dashboard artifact. |
-| `rotate-key` | Re-encrypt retained state and dashboard output with `dashboard-next-secret`. |
-| `incident-reset` | Re-encrypt retained state after suspected key exposure and purge old workflow history associated with prior retained artifacts. |
-| `update-docs` | Refresh Reponomics-managed docs under `docs/reponomics/` in generated dashboard repositories. |
-| `doctor` | Check retained artifacts, rendered dashboards, keys, and upload `reponomics-doctor-report`. |
-
-## Minimal Example
-
-```yaml
-name: Reponomics Collect
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  collect:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-
-      - uses: reponomics/reponomics-dashboard-action@4dc56246357cb60605cc7169e8df115222e81e92 # v0.32.0
-        with:
-          mode: collect
-          collection-token: ${{ secrets.COLLECTION_TOKEN }}
-          github-token: ${{ github.token }}
-          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
-          data-mode: encrypted
-          config-path: config.yaml
-          retention-days: "90"
-```
-
-## Publish Example
-
-```yaml
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: read
-      pages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-
-      - uses: reponomics/reponomics-dashboard-action@4dc56246357cb60605cc7169e8df115222e81e92 # v0.32.0
-        with:
-          mode: publish
-          github-token: ${{ github.token }}
-          dashboard-secret: ${{ secrets.DASHBOARD_SECRET_DO_NOT_REPLACE }}
-          data-mode: encrypted
-          publish-pages: "true"
-          generate-readme: "false"
-```
-
-For Pages deployment, the repository Pages source must already be set to **GitHub Actions**. The action verifies that setting; it does not enable Pages for you.
+| `collect` | Collect GitHub data about the owner's GitHub repositories, according to the options and token permissions enabled by the repo owner; merge newly collected data with retained history; upload the data to GitHub's artifact storage for persistence; and manage the cleanup of older artifacts as new data is collected. |
+| `publish` | Render the repository data in HTML form and optionally deploy a static HTML page to GitHub Pages. |
+| `rotate-key` | Allow the user to change their encryption key by creating a new repository secret, which is then used to re-encrypt the existing data. This is also the way in which users/owners may recover their data using a new encryption secret if they have lost access to the existing secret (assuming that the previous secret is still present as a GitHub secret.)  |
+| `incident-reset` | In the event of a compromise of the user/owner's encryption key, allow the key to be rotated, and additionally delete any previously retained artifacts encrypted under the previous secret. |
+| `update-docs` | Deliver updated Dashboard documentation to a designated path in the repository, so that users may stay up-to-date and well informed of any new features, bug fixes, or security updates. |
+| `doctor` | Check retained artifacts, rendered dashboards, keys, and provide the user with a report summarizing the health of their dashboard - especially useful in the case of debugging any issues encountered. |
 
 ## Inputs
 
-| Input | Required when | Default | Description |
+| Input | Required | Default | Description |
 | --- | --- | --- | --- |
 | `mode` | Always | `collect` | Runtime mode: `collect`, `publish`, `rotate-key`, `incident-reset`, `update-docs`, or `doctor`. |
-| `collection-token` | `collect` with PAT collection | `""` | GitHub API token for repository data collection. Template workflows pass `secrets.COLLECTION_TOKEN`. |
-| `use-github-app` | Optional collect mode | `""` | Set `true` when `collection-token` is a user-owned GitHub App installation token. |
-| `github-token` | `collect`, `incident-reset`, artifact/repository operations | `""` | Workflow token for artifact cleanup, artifact restore, repository writes, and incident purge operations. |
-| `dashboard-secret` | `data-mode: encrypted` | `""` | Current dashboard/artifact encryption key. |
-| `dashboard-next-secret` | `rotate-key`, `incident-reset` | `""` | Next dashboard/artifact encryption key. |
-| `comparison-secret` | Optional `doctor` key check | `""` | Second dashboard key used by Doctor to test a user-held key without changing the main secret. |
+| `collection-token` | When using a PAT for `collect` (default case) | `""` | GitHub API token for repository data collection. Template workflows pass `secrets.COLLECTION_TOKEN`. Must have `Administration: Read` privileges to access repository traffic data. |
+| `use-github-app` | Not required | `""` | Set to `true` in order to use a personal GitHub App installation token for `collect`, instead of a PAT (advanced usage). |
+| `github-token` | Required | `""` | Token used for all internal dashboard-repository operations.. |
+| `dashboard-secret` | Required when `data-mode: encrypted` | `""` | Current dashboard/artifact encryption key. In template workflows, stored under `secrets.DAASHBOARD_SECRET_DO_NOT_REPLACE`. |
+| `dashboard-next-secret` | Required for `rotate-key` and `incident-reset` | `""` | When resetting/rotating a key, this value will be used to re-encrypt the data. |
+| `comparison-secret` | Optional `doctor` key check | `""` | Second dashboard key used in `doctor` mode to test a user-held key without changing the main secret. |
 | `incident-confirm-mode` | `incident-reset` | `""` | Must be `INCIDENT_RESET_CONFIRMED`. |
 | `incident-confirm-purge` | `incident-reset` | `""` | Must be `PURGE_OLD_HISTORY_CONFIRMED`. |
 | `incident-confirm-next-secret` | `incident-reset` | `""` | Must be `NEXT_SECRET_CONFIRMED`. |
 | `incident-confirm-irreversible` | `incident-reset` | `""` | Must be `IRREVERSIBLE_ACTION_CONFIRMED`. |
-| `data-mode` | Recommended for all modes | `""` | `encrypted` or `plaintext`. Public repositories must use `encrypted`; `plaintext` is private-repository only. |
+| `data-mode` | Required | `""` | `encrypted` or `plaintext`. Public repositories must use `encrypted`. |
 | `config-path` | Collection and README rendering | `config.yaml` | Repository selection config path. |
-| `retention-days` | Optional artifact upload setting | `""` | GitHub Actions artifact retention period, from 14 to 90 days. |
+| `retention-days` | Not required | `""` | GitHub Actions artifact retention period, from 14 to 90 days. |
 | `publish-pages` | `publish`, `rotate-key` | `""` | Set `false` to render dashboard output without deploying GitHub Pages. Plaintext mode always disables Pages deployment. |
 | `artifact-run-id` | Optional publish/doctor restore target | `""` | Workflow run ID whose `dashboard-data` artifact should be restored. Blank restores the latest available artifact. |
 | `require-collect-provenance` | Deprecated compatibility only | `false` | Ignored by the runtime. Kept for older generated templates. |
@@ -164,7 +99,10 @@ Encrypted mode uses `DASHBOARD_SECRET_DO_NOT_REPLACE`. Save this key outside Git
 | `encrypted` | public or private | encrypted `dashboard-data.enc` | supported |
 | `plaintext` | private only | plaintext retained CSV files | disabled |
 
-Encrypted mode requires a non-empty dashboard key, but this action does not enforce key strength. Use a high-entropy random key for public repositories, Pages dashboards, sensitive metrics, or any threat model that includes offline guessing of downloaded artifacts.
+In `encrypted` mode, the action will encrypt dashboard data upon collection, using AES-256-GCM and PDKDF2 with 600,000 iterations, and AAD for each "chunk" of encrypted data.
+
+> [!IMPORTANT]
+> In order for these encryption protocols to serve their purpose, a high-entropy (256-bit random) encryption key must be generated and supplied _by the repo owner_. 
 
 ## Artifacts
 

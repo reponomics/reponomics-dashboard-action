@@ -102,7 +102,7 @@ def test_action_descriptions_do_not_contain_actions_expressions() -> None:
 
 def test_readme_documents_action_inputs_and_outputs() -> None:
     action = _action()
-    readme = Path("README.md").read_text(encoding="utf-8")
+    readme = Path("README.action.md").read_text(encoding="utf-8")
 
     missing_inputs = [
         name

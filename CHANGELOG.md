@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.33.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.32.0...v0.33.0) (2026-07-08)
+
+
+### Documentation
+
+* clarify docs for public viewing ([#208](https://github.com/reponomics/reponomics-dashboard-action/issues/208)) ([810e491](https://github.com/reponomics/reponomics-dashboard-action/commit/810e491a7e6e57385812459d04d3dae322f0d1c1))
+
 ## [0.32.0](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.31.1...v0.32.0) (2026-07-06)
 
 

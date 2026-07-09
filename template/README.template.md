@@ -3,23 +3,25 @@
 > [!NOTE]
 > This template is on the `v0` external beta line. These instructions describe the official generated workflows; after copying the template, the repository owner may modify them.
 
-This is the setup README for your Reponomics dashboard repository. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without sending the data to a Reponomics-hosted service.
+Welcome to your personal repository analytics dashboard. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without involving any third-party services.
 
-After you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action ref configured by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated metrics README dashboard.
+Once you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action ref configured by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated README dashboard for a quick overview of your repo metrics.
 
-The dashboard collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The repository stays intentionally thin: collection, encryption, rendering, key rotation, incident reset behavior, CSV export, and managed docs update are owned by the versioned action referenced by the local wrapper.
+This repository contains a number of workflow files that integrate with the Reponomics Dashboard GitHub Action in order to provide the functionality that makes the dashboard possible. The workflows collects GitHub traffic and growth data, stores retained state in GitHub Actions artifacts, and renders optional dashboard outputs through GitHub Actions. The action itself is imported into all of the necessary workflows as a local action at a single path:
 
 ```yaml
 uses: ./.github/actions/reponomics
 ```
 
-If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested Reponomics `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates. Organization-wide SHA policies may also require pinning other workflow action refs, such as `actions/checkout`, in the generated workflow files.
+This allows you to manage the version of the action uniformly in a single place. By default the action is configured to follow the current major line (`@v0`), so that new features, bug fixes, and security patches will flow automatically into your repo. If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.manifest.json` to find the action repository and action version for this template snapshot, resolve that version tag to a commit SHA, and update the nested Reponomics `uses:` line in `.github/actions/reponomics/action.yml` only if you intend to own manual action updates. Organization-wide SHA policies may also require pinning other workflow action refs, such as `actions/checkout`, in the generated workflow files.
 
 ## Get Started
 
+Before proceeding, please read through this README file, and take a moment to review some of the other documentation in the repository, in particular those pertaining to privacy, security, and secure key generation. Then proceed as follows:
+
 ### 1. Enter your preferences in `config.yaml`. REQUIRED: `encrypted` or `plain` data-mode; whether to publish a Pages dashboard and/or a README dashboard; which repositories to track and publish in your dashboard.
 ### 2. Create the following: (a) a Personal Access Token with `Administration: read` permissions for every repository that you would like to include in collection - store that as a repo secret named `COLLECTION_TOKEN`; (b) a high-entropy encryption key (`openssl rand --hex 32`) - store that as `DASHBOARD_SECRET_DO_NOT_REPLACE`.
-### 3. If you want a Pages dashboard (must choose `encrypted` data-mode): Go to Settings > Pages > Build and Deployment - select Source: GitHub Actions
+### 3. If you want a Pages dashboard (must choose `encrypted` data-mode): Go to Settings > Pages > Build and Deployment - select Source: GitHub Actions.
 ### 4. Go to the Actions tab, click on the `Setup` workflow from the side, then dispatch the workflow.
 ### 5. If everything passes, you can go ahead and run the `Collect and Publish` workflow manually to start gathering some data. Within minutes you'll have two weeks of traffic data to admire. Click over to your Pages site and use your encryption key to unlock the vault.
 

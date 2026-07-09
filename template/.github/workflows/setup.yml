@@ -72,13 +72,13 @@ jobs:
                 echo
                 echo "[Create a fine-grained personal access token]($token_url)"
                 echo "with repository \`Administration: read\` for \`$GITHUB_REPOSITORY_OWNER\`."
-                echo "Choose **All repositories** for broad automatic discovery, or"
-                echo "**Only selected repositories** if you want to limit collection."
-                echo "If you choose selected repositories, keep \`config.yaml\` within"
-                echo "that token's repository access."
+                echo "To minimize exposure, we recommend restricting the token's access to only"
+                echo "repos that are within the your collection set."
+                echo "When you create a new repository, and you wish to run collection on it,"
+                echo "be sure to add it to the token's permission set."
                 echo "Then save the token as repository secret \`COLLECTION_TOKEN\` and run setup again."
               } >> "$GITHUB_STEP_SUMMARY"
-              exit 1
+              exit 1 
             fi
 
             if ! GH_TOKEN="$COLLECTION_TOKEN" gh api rate_limit >/dev/null 2>&1; then

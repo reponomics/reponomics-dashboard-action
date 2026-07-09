@@ -17,13 +17,11 @@ If your organization requires full-SHA-pinned Actions, use `docs/reponomics/.man
 
 ## Get Started
 
-1. Fill in the required setup fields at the top of `config.yaml`, commit that change, and decide which repositories this dashboard should track.
-2. Create a collection credential and store it as the repository secret `COLLECTION_TOKEN`. Most single-owner dashboards should use a fine-grained personal access token with repository `Administration: read`.
-3. Choose a data mode in `config.yaml`: `encrypted` or `plaintext`. Public repositories must use `encrypted`.
-4. For `encrypted`, generate and save `DASHBOARD_SECRET_DO_NOT_REPLACE`, then add it as a repository secret. The action requires this value to be non-empty; see [Dashboard Key And Recovery](docs/reponomics/dashboard-key-and-recovery.md) for the security tradeoffs.
-5. Run **Actions -> Setup -> Run workflow**.
-6. If you enable hosted dashboard publication, open **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
-7. Run **Actions -> Collect and Publish -> Run workflow** once to create the first dashboard immediately.
+### 1. Enter your preferences in `config.yaml`. REQUIRED: `encrypted` or `plain` data-mode; whether to publish a Pages dashboard and/or a README dashboard; which repositories to track and publish in your dashboard.
+### 2. Create the following: (a) a Personal Access Token with `Administration: read` permissions for every repository that you would like to include in collection - store that as a repo secret named `COLLECTION_TOKEN`; (b) a high-entropy encryption key (`openssl rand --hex 32`) - store that as `DASHBOARD_SECRET_DO_NOT_REPLACE`.
+### 3. If you want a Pages dashboard (must choose `encrypted` data-mode): Go to Settings > Pages > Build and Deployment - select Source: GitHub Actions
+### 4. Go to the Actions tab, click on the `Setup` workflow from the side, then dispatch the workflow.
+### 5. If everything passes, you can go ahead and run the `Collect and Publish` workflow manually to start gathering some data. Within minutes you'll have two weeks of traffic data to admire. Click over to your Pages site and use your encryption key to unlock the vault.
 
 Setup validates `config.yaml`, creates the empty `.reponomics/setup-complete` marker, and replaces this README. Operational workflows are present before setup but do no work until that marker exists. Setup does not collect traffic immediately. Collection runs on the configured schedule and stores retained data in the `dashboard-data` Actions artifact; run **Collect and Publish** manually after setup when you want the first dashboard without waiting for the schedule.
 

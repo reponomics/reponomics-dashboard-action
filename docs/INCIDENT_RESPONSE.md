@@ -1,6 +1,6 @@
 # Incident Response
 
-This guide provides guidance on how to respond to incidents where a dasbhoard repository's encryption secret may have been exposed, or if a hostile actor has gained access.
+This guide provides guidance on how to respond to incidents where a dashboard repository's encryption secret may have been exposed, or if a hostile actor has gained access.
 
 ## Primary Response: Incident Reset
 

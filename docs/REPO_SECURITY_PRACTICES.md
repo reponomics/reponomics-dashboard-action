@@ -1,4 +1,4 @@
-# Reponomics Dashoard Project Security Practices
+# Reponomics Dashboard Project Security Practices
 
 This document describes the security checks and public signals used for the Reponomics Dashboard development repository. The action handles sensitive repository metrics and encrypted artifacts, so the source repository combines source-tree CI gates, GitHub repository policy, and independently visible supply-chain signals.
 

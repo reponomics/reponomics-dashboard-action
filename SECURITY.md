@@ -1,8 +1,8 @@
 # Security Policy
 
-The Reponomics Dashboard project is in public development, but is not intended or recommend for general public use at this time. We invite anyone who is interested in joining the pre-release beta period to contact dashboard-beta@reponomics.org.
+The Reponomics Dashboard project is in public development, but is not intended or recommended for general public use at this time. We invite anyone who is interested in joining the pre-release beta period to contact dashboard-beta@reponomics.org.
 
-The project involves handling of GitHub traffic data (which is privileged to repo admins), retained workflow artifacts, generated dashboard HTML pages, and dashboard encryption keys - privacy and security are at the core of the product's design, and any vulnerability reports based on personal investigation or by security experts is strongly welcomed. That being said, the Reponomics organization does not store any user/owner-collected whatsoever. 
+The project involves handling of GitHub traffic data (which is privileged to repo admins), retained workflow artifacts, generated dashboard HTML pages, and dashboard encryption keys - privacy and security are at the core of the product's design, and any vulnerability reports based on personal investigation or by security experts is strongly welcomed. That being said, the Reponomics organization does not store any user/owner-collected data whatsoever. 
 
 ## Supported Versions
 

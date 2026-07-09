@@ -217,3 +217,11 @@ End to end, the demo publication flow is:
 - GitHub Pages publishes the rendered encrypted HTML dashboard site from that Pages artifact.
 
 The key boundary is: the demo repo commit contains the README dashboard and SVG README assets, but the HTML dashboard and retained data are not committed. The retained data lives as an encrypted Actions artifact, and the HTML dashboard is generated during the target publish workflow and handed to GitHub Pages as a Pages artifact.
+
+## Pages Enablement Recovery
+
+Normal demo dashboard deployments use the target workflow's `GITHUB_TOKEN` to upload and deploy the Pages artifact. That token is enough when the demo repository already has a Pages site configured for GitHub Actions deployments.
+
+If the Pages site is missing or disabled, `GITHUB_TOKEN` is not enough to create it. The source `publish-demo.yml` workflow uses the existing demo publication GitHub App credentials to mint a short-lived token with `administration: write` and `pages: write`, then creates or updates the `reponomics-dashboard-demo` Pages site with `build_type: workflow` before dispatching the target seed-and-publish workflow.
+
+That repair still depends on the organization-level setting at **Settings -> Member privileges -> Pages creation**. Public Pages creation must be enabled for the `reponomics` organization, otherwise GitHub rejects repo-level Pages creation with `GitHub organization administrators disabled Pages creation`.

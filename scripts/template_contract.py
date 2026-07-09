@@ -44,10 +44,12 @@ REQUIRED_TEMPLATE_WRAPPER_INPUTS = {
     "incident-confirm-next-secret",
     "incident-confirm-purge",
     "mode",
+    "pages-token",
     "publish-pages",
     "retention-days",
     "use-github-app",
 }
+OPTIONAL_TEMPLATE_WRAPPER_ONLY_INPUTS = {"pages-token"}
 SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 ACTION_REF_RE = re.compile(r"reponomics/reponomics-dashboard-action@[^\s'\"<>)\]}]+")
 INPUT_EXPR_RE = re.compile(r"\$\{\{\s*inputs\.([A-Za-z0-9_-]+)\s*\}\}")
@@ -412,7 +414,9 @@ def _validate_template_action_wrapper(
             "generated workflows pass inputs not declared by the template action wrapper: "
             + details
         )
-    unused_wrapper_inputs = wrapper_inputs - workflow_inputs
+    unused_wrapper_inputs = (
+        wrapper_inputs - workflow_inputs - OPTIONAL_TEMPLATE_WRAPPER_ONLY_INPUTS
+    )
     if unused_wrapper_inputs:
         raise TemplateContractError(
             "template action wrapper declares input(s) not consumed by generated workflows: "

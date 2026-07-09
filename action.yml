@@ -22,6 +22,10 @@ inputs:
     description: "Token used for GitHub artifact/repository workflow operations. Required for collect artifact cleanup and incident-reset history purge; pass the caller workflow token through this input."
     required: false
     default: ""
+  pages-token:
+    description: "Optional token used only to enable GitHub Pages before deployment. Leave blank to verify an existing Pages site with the caller workflow token."
+    required: false
+    default: ""
   dashboard-secret:
     description: Current dashboard/artifact encryption secret. Required when data-mode is encrypted.
     required: false
@@ -195,7 +199,8 @@ runs:
       if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}
       uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       with:
-        enablement: "false"
+        token: ${{ inputs.pages-token || github.token }}
+        enablement: ${{ inputs.pages-token != '' }}
 
     - name: Upload GitHub Pages artifact
       if: ${{ (inputs.mode == 'publish' || inputs.mode == 'rotate-key') && steps.runtime.outputs.publish-pages == 'true' }}

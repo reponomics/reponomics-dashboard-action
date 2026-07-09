@@ -185,6 +185,9 @@ End to end, the demo publication flow is:
 
 - The source workflow mints a dedicated GitHub App token scoped to `reponomics/reponomics-dashboard-demo`.
 
+- It ensures the demo repository has a GitHub Pages site configured for workflow deployments.
+  This requires organization **Settings -> Member privileges -> Pages creation** to allow public Pages creation.
+
 - It initializes a temporary git repo from the generated tree, commits it, and force-pushes with lease to `reponomics-dashboard-demo/main`.
 
 - After pushing the repo tree, it dispatches the generated target workflow in `reponomics-dashboard-demo`, passing the source repository and source workflow run ID.

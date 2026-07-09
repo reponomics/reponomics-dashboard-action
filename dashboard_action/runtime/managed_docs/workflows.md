@@ -79,7 +79,7 @@ The generated workflows keep top-level permissions at `contents: read` and decla
 | `doctor` | `contents: read`, `actions: read` | Restore selected dashboard and retained artifacts and upload the diagnostic report. |
 | `update-docs` | `contents: write` | Commit refreshed managed documentation. |
 
-Pages publication also requires repository **Settings -> Pages -> Build and deployment -> Source** to be set to **GitHub Actions**. The action verifies this; it does not enable Pages or change the source setting.
+Pages publication also requires repository **Settings -> Pages -> Build and deployment -> Source** to be set to **GitHub Actions**. Ordinary generated workflows verify this existing setting. Advanced workflows may pass a dedicated `pages-token` to let the action enable or reconfigure Pages before deployment.
 
 ## Artifacts And Outputs
 

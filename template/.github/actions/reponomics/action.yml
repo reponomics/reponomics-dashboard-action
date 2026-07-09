@@ -17,6 +17,10 @@ inputs:
     description: Token used for GitHub artifact and repository workflow operations.
     required: false
     default: ""
+  pages-token:
+    description: Optional token used to enable GitHub Pages before deployment.
+    required: false
+    default: ""
   dashboard-secret:
     description: Current dashboard or artifact encryption secret.
     required: false
@@ -77,6 +81,7 @@ runs:
         collection-token: ${{ inputs.collection-token }}
         use-github-app: ${{ inputs.use-github-app }}
         github-token: ${{ inputs.github-token }}
+        pages-token: ${{ inputs.pages-token }}
         dashboard-secret: ${{ inputs.dashboard-secret }}
         dashboard-next-secret: ${{ inputs.dashboard-next-secret }}
         comparison-secret: ${{ inputs.comparison-secret }}

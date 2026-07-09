@@ -35,6 +35,7 @@ In what follows, we provide basic information about the inputs and outputs of th
 | `collection-token` | When using a PAT for `collect` (default case) | `""` | GitHub API token for repository data collection. Template workflows pass `secrets.COLLECTION_TOKEN`. Must have `Administration: Read` privileges to access repository traffic data. |
 | `use-github-app` | Not required | `""` | Set to `true` in order to use a personal GitHub App installation token for `collect`, instead of a PAT (advanced usage). |
 | `github-token` | Required | `""` | Token used for all internal dashboard-repository operations.. |
+| `pages-token` | Optional Pages enablement | `""` | Token used only to enable GitHub Pages before deployment. Leave blank to verify an existing Pages site with the caller workflow token. |
 | `dashboard-secret` | Required when `data-mode: encrypted` | `""` | Current dashboard/artifact encryption key. In template workflows, stored under `secrets.DASHBOARD_SECRET_DO_NOT_REPLACE`. |
 | `dashboard-next-secret` | Required for `rotate-key` and `incident-reset` | `""` | When resetting/rotating a key, this value will be used to re-encrypt the data. |
 | `comparison-secret` | Optional `doctor` key check | `""` | Second dashboard key used in `doctor` mode to test a user-held key without changing the main secret. |
@@ -89,6 +90,8 @@ Keep top-level workflow permissions minimal, then grant write permissions only a
 `COLLECTION_TOKEN` is for GitHub repository data collection. For PAT collection, use a fine-grained token with repository `Administration: read` for the repositories listed in `collect.repositories`. It does not need Pages, Actions, or write permissions.
 
 Advanced users may pass a user-owned GitHub App installation token as `collection-token` and set `use-github-app: true`. Reponomics does not provide or operate a shared collection app.
+
+`pages-token` is only for workflows that intentionally allow the action to create or reconfigure the repository's GitHub Pages site. For GitHub App tokens, GitHub requires `administration: write` and `pages: write`; ordinary generated workflows leave this blank and expect Pages to already be enabled for GitHub Actions deployments.
 
 Encrypted mode uses `DASHBOARD_SECRET_DO_NOT_REPLACE`. Save this key outside GitHub secrets, for example in a password manager. Do not overwrite it for normal rotation; set `DASHBOARD_NEXT_SECRET` and run `rotate-key` instead.
 

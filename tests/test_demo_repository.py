@@ -336,6 +336,12 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert step_names.index("Validate downloaded demo artifact") < step_names.index(
         "Create demo publication app token"
     )
+    assert step_names.index("Create demo publication app token") < step_names.index(
+        "Ensure demo Pages site is enabled"
+    )
+    assert step_names.index("Ensure demo Pages site is enabled") < step_names.index(
+        "Publish generated demo repository"
+    )
     validation_step = next(
         step for step in steps if step["name"] == "Validate downloaded demo artifact"
     )
@@ -349,9 +355,18 @@ def test_source_demo_publish_workflow_is_manual_or_scheduled_and_repo_scoped() -
     assert token_step["with"]["client-id"] == "${{ vars.DEMO_PUBLISH_APP_CLIENT_ID }}"
     assert token_step["with"]["private-key"] == "${{ secrets.DEMO_PUBLISH_APP_PRIVATE_KEY }}"
     assert token_step["with"]["repositories"] == "reponomics-dashboard-demo"
+    assert token_step["with"]["permission-administration"] == "write"
     assert token_step["with"]["permission-contents"] == "write"
-    assert token_step["with"]["permission-workflows"] == "write"
+    assert token_step["with"]["permission-pages"] == "write"
     assert token_step["with"]["permission-actions"] == "write"
+    assert token_step["with"]["permission-workflows"] == "write"
+    pages_step = next(step for step in steps if step["name"] == "Ensure demo Pages site is enabled")
+    pages_script = pages_step["run"]
+    assert pages_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
+    assert "repos/${DEMO_EXPECTED_REPO}/pages" in pages_script
+    assert "-f build_type=workflow" in pages_script
+    assert "Pages creation" in pages_script
+    assert "GITHUB_STEP_SUMMARY" in pages_script
     publish_step = next(
         step for step in steps if step["name"] == "Publish generated demo repository"
     )

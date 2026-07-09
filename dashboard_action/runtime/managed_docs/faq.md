@@ -16,7 +16,7 @@ Use `plaintext` only in private repositories where GitHub repository and Actions
 
 Set `data_mode: encrypted` and `publish_pages_dashboard: true`, commit `config.yaml`, and run setup. Then open repository **Settings -> Pages** and set **Build and deployment -> Source** to **GitHub Actions**.
 
-The action verifies the Pages setting during publish. It does not enable Pages or change the publishing source. See [Publication](publication.md).
+The ordinary generated workflow verifies the Pages setting during publish. Advanced workflows may pass a dedicated `pages-token` to let the action enable or reconfigure Pages. See [Publication](publication.md).
 
 ## What dashboard key should I use?
 

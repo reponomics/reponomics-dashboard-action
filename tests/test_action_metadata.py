@@ -580,13 +580,15 @@ def test_prepare_template_release_workflow_opens_release_pr() -> None:
     assert '--base "${BASE_REF#refs/heads/}"' in commands
 
 
-def test_configure_pages_verifies_existing_pages_setup_without_enablement() -> None:
+def test_configure_pages_enables_pages_only_with_dedicated_token() -> None:
+    action = _action()
     step = _step_by_uses("actions/configure-pages@")
 
     assert step["name"] == "Verify GitHub Pages configuration"
     assert step["if"] == PAGES_DEPLOYMENT_IF
-    assert step["with"]["enablement"] == "false"
-    assert "token" not in step.get("with", {})
+    assert action["inputs"]["pages-token"]["default"] == ""
+    assert step["with"]["token"] == "${{ inputs.pages-token || github.token }}"
+    assert step["with"]["enablement"] == "${{ inputs.pages-token != '' }}"
 
     serialized = yaml.safe_dump(step)
     assert "collection-token" not in serialized

@@ -10,7 +10,7 @@ Hosted Pages dashboards require:
 - `publish_pages_dashboard: true`;
 - repository **Settings -> Pages -> Build and deployment -> Source** set to **GitHub Actions**.
 
-The publish workflow verifies the Pages source setting during deployment. It does not enable Pages or change the source setting.
+The ordinary generated publish workflow verifies the Pages source setting during deployment. Advanced workflows may pass a dedicated `pages-token` to let the action enable or reconfigure Pages before deployment.
 
 Unless your GitHub plan provides Pages access controls, a GitHub Pages site is reachable on the internet even when the repository is private. Encrypted mode protects dashboard payloads from readers who do not have the dashboard key, but it does not hide the existence of the site, publication timing, workflow metadata, or encrypted payload size.
 

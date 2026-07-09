@@ -161,9 +161,51 @@ jobs:
           private-key: ${{ secrets.DEMO_PUBLISH_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: reponomics-dashboard-demo
+          permission-administration: write
           permission-contents: write
-          permission-workflows: write
+          permission-pages: write
           permission-actions: write
+          permission-workflows: write
+
+      - name: Ensure demo Pages site is enabled
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          explain_pages_failure() {
+            {
+              echo "## Demo Pages enablement failed"
+              echo
+              echo "GitHub rejected Pages enablement for \`${DEMO_EXPECTED_REPO}\`."
+              echo "Check organization **Settings -> Member privileges -> Pages creation**"
+              echo "and allow public Pages creation before rerunning this workflow."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          if pages_json="$(gh api "repos/${DEMO_EXPECTED_REPO}/pages" 2>/dev/null)"; then
+            build_type="$(jq -r '.build_type // ""' <<<"$pages_json")"
+            if [[ "$build_type" == "workflow" ]]; then
+              exit 0
+            fi
+            if ! gh api \
+              --method PUT \
+              "repos/${DEMO_EXPECTED_REPO}/pages" \
+              -f build_type=workflow; then
+              explain_pages_failure
+              exit 1
+            fi
+            exit 0
+          fi
+
+          if ! gh api \
+            --method POST \
+            "repos/${DEMO_EXPECTED_REPO}/pages" \
+            -f build_type=workflow; then
+            explain_pages_failure
+            exit 1
+          fi
 
       - name: Publish generated demo repository
         shell: bash

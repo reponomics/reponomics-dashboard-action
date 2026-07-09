@@ -18,7 +18,7 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - There is no manual production `publish-template.yml` workflow. Production generated-template publication is intentionally centralized in [`template-release.yml`](template-release.yml); operator repair should be explicit and separate from routine release automation.
 
-- [`publish-demo.yml`](publish-demo.yml) builds the generated public demo repository and publishes it to `reponomics-dashboard-demo`. It supports manual publication and scheduled daily refresh. Scheduled refresh uses an approved source ref, imports the encrypted synthetic data seed into the demo repository's Actions artifact storage, and deploys the committed Pages dashboard shell without requiring daily human approval.
+- [`publish-demo.yml`](publish-demo.yml) builds the generated public demo repository and publishes it to `reponomics-dashboard-demo`. It supports manual publication and scheduled daily refresh. Scheduled refresh uses an approved source ref, ensures the demo repository's Pages site is configured for workflow deployments, imports the encrypted synthetic data seed into the demo repository's Actions artifact storage, and deploys the committed Pages dashboard shell without requiring daily human approval.
 
 - [`promotional-dashboard-guide.yml`](promotional-dashboard-guide.yml) is a manual skeleton for refreshing the promotional HTML/PDF dashboard guide. It runs the same `make dashboard-guide-refresh` path used locally, with ephemeral `npx` guide tooling and hash-pinned Python guide dependencies, and intentionally does not publish or commit artifacts by default.
 

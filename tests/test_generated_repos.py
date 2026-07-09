@@ -321,7 +321,9 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
         if step.get("uses") == action_ref
     )
     assert template_contract.REQUIRED_TEMPLATE_WRAPPER_INPUTS <= wrapper_inputs
-    assert wrapper_inputs == workflow_inputs
+    assert wrapper["inputs"]["pages-token"]["default"] == ""
+    assert remote_steps[0]["with"]["pages-token"] == "${{ inputs.pages-token }}"
+    assert wrapper_inputs == workflow_inputs | {"pages-token"}
     assert 'REPONOMICS_ACTION_REF: "' not in collect_publish
     assert 'REPONOMICS_ACTION_SHA: "' not in collect_publish
     assert 'GENERATE_HTML_DASHBOARD: "false"' not in collect_publish

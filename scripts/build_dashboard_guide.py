@@ -29,44 +29,44 @@ class SectionPage(TypedDict):
 OVERVIEW_ITEMS = [
     (
         "Scope, controls, and summary",
-        "Last updated, selected window, theme/export controls, the 8 published repos "
-        "premise, and the first metrics overview.",
+        ("Last updated, selected window, theme/export controls, the 8 published repos "
+        "premise, and the first metrics overview."),
         "blue",
     ),
     (
         "Lead story and next moves",
-        "A focused article carousel plus queue, both generated from the same rules-based "
-        "prompts that connect metrics to repo context.",
+        ("A focused article carousel plus queue, both generated from the same rules-based "
+        "prompts that connect metrics to repo context."),
         "green",
     ),
     (
         "Opportunity map",
-        "Attention on the x-axis, downstream growth on the y-axis, and clone activity as "
-        "mark size.",
+        ("Attention on the x-axis, downstream growth on the y-axis, and clone activity as "
+        "mark size."),
         "gold",
     ),
     (
         "Code activity ribbon",
-        "Commit and release clusters sit near the traffic timeline without implying branch "
-        "topology. Markers focus a repo when the cluster belongs to one repo.",
+        ("Commit and release clusters sit near the traffic timeline without implying branch "
+        "topology. Markers focus a repo when the cluster belongs to one repo."),
         "blue",
     ),
     (
         "Readiness queue",
-        "Community-health checks translated into practical setup fixes for the visible "
-        "published repos.",
+        ("Community-health checks translated into practical setup fixes for the visible "
+        "published repos."),
         "green",
     ),
     (
         "Growth model",
-        "Attention, interest, and adoption cards summarize the path from visibility to "
-        "downstream project response.",
+        ("Attention, interest, and adoption cards summarize the path from visibility to "
+        "downstream project response."),
         "gold",
     ),
     (
         "Repo strip and momentum",
-        "Published repo chips focus or compare the 8 selected repos; momentum summarizes "
-        "streaks and notable days.",
+        ("Published repo chips focus or compare the 8 selected repos; momentum summarizes "
+        "streaks and notable days."),
         "blue",
     ),
     (
@@ -89,14 +89,14 @@ SECTION_PAGES: list[SectionPage] = [
         "notes": [
             (
                 "Purpose",
-                "Create an above-the-fold story without inventing analysis: the lead card "
-                "reframes existing rules-based prompts as a focused read.",
+                ("Create an above-the-fold story without inventing analysis: the lead card "
+                "reframes existing rules-based prompts as a focused read."),
                 "green",
             ),
             (
                 "Carousel",
-                "Story tabs and arrow controls rotate through the strongest prompts for the "
-                "selected window.",
+                ("Story tabs and arrow controls rotate through the strongest prompts for the "
+                "selected window."),
                 "blue",
             ),
             (
@@ -106,8 +106,8 @@ SECTION_PAGES: list[SectionPage] = [
             ),
             (
                 "Use case",
-                "Useful for flat or mixed windows because it emphasizes what to do next, not "
-                "only what already spiked.",
+                ("Useful for flat or mixed windows because it emphasizes what to do next, not "
+                "only what already spiked."),
                 "green",
             ),
         ],
@@ -120,14 +120,14 @@ SECTION_PAGES: list[SectionPage] = [
         "notes": [
             (
                 "Axes",
-                "Right means more attention; up means more downstream growth from stars, "
-                "forks, and subscribers.",
+                ("Right means more attention; up means more downstream growth from stars, "
+                "forks, and subscribers."),
                 "blue",
             ),
             (
                 "Bubble size",
-                "Size follows clone activity. The scale is compact so crowded portfolios "
-                "still read cleanly.",
+                ("Size follows clone activity. The scale is compact so crowded portfolios "
+                "still read cleanly."),
                 "green",
             ),
             (
@@ -137,8 +137,8 @@ SECTION_PAGES: list[SectionPage] = [
             ),
             (
                 "Affordance",
-                "Points and right-side notes focus the repo. Hover/title text carries exact "
-                "values.",
+                ("Points and right-side notes focus the repo. Hover/title text carries exact "
+                "values."),
                 "blue",
             ),
         ],
@@ -151,14 +151,14 @@ SECTION_PAGES: list[SectionPage] = [
         "notes": [
             (
                 "Purpose",
-                "Bring default-branch commits and releases into the same time window as "
-                "traffic, so maintainers can inspect temporal adjacency.",
+                ("Bring default-branch commits and releases into the same time window as "
+                "traffic, so maintainers can inspect temporal adjacency."),
                 "green",
             ),
             (
                 "Encoding",
-                "Daily clusters aggregate commits and releases; releases use the stronger "
-                "diamond marker.",
+                ("Daily clusters aggregate commits and releases; releases use the stronger "
+                "diamond marker."),
                 "blue",
             ),
             (
@@ -168,8 +168,8 @@ SECTION_PAGES: list[SectionPage] = [
             ),
             (
                 "Affordance",
-                "Single-repo clusters and log rows focus the repo inside the dashboard; "
-                "multi-repo clusters stay as contextual hover targets.",
+                ("Single-repo clusters and log rows focus the repo inside the dashboard; "
+                "multi-repo clusters stay as contextual hover targets."),
                 "green",
             ),
         ],
@@ -182,8 +182,8 @@ SECTION_PAGES: list[SectionPage] = [
         "notes": [
             (
                 "Purpose",
-                "Convert attention into practical maintenance actions: README, license, "
-                "contributing guide, templates, and conduct files.",
+                ("Convert attention into practical maintenance actions: README, license, "
+                "contributing guide, templates, and conduct files."),
                 "green",
             ),
             (
@@ -211,14 +211,14 @@ SECTION_PAGES: list[SectionPage] = [
         "notes": [
             (
                 "Referrers",
-                "Shows where attention came from in the selected window; column headers sort "
-                "the table.",
+                ("Shows where attention came from in the selected window; column headers sort "
+                "the table."),
                 "blue",
             ),
             (
                 "Popular paths",
-                "Useful for spotting docs, release notes, or entry pages that deserve a "
-                "clearer next step.",
+                ("Useful for spotting docs, release notes, or entry pages that deserve a "
+                "clearer next step."),
                 "green",
             ),
             (
@@ -693,8 +693,8 @@ def build_pdf() -> None:
             ("8 published repos", "Publication is scoped to the selected set.", "green"),
             (
                 "Summary cards",
-                "The first metrics strip anchors the lead story in visible counts before "
-                "the user reads recommendations.",
+                ("The first metrics strip anchors the lead story in visible counts before "
+                "the user reads recommendations."),
                 "blue",
             ),
             (
@@ -704,8 +704,8 @@ def build_pdf() -> None:
             ),
             (
                 "Repo chips",
-                "Click a published repo chip or card to focus it; modifier keys support "
-                "compare-style selection where enabled.",
+                ("Click a published repo chip or card to focus it; modifier keys support "
+                "compare-style selection where enabled."),
                 "green",
             ),
             (

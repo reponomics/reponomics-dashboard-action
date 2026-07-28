@@ -205,7 +205,7 @@ def test_ci_runs_javascript_dashboard_gates() -> None:
     assert job["name"] == "JavaScript dashboard"
     assert job["runs-on"] == "ubuntu-24.04"
     assert setup_node["uses"] == (
-        "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
+        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
     )
     assert setup_node["with"]["node-version"] == "24"
     assert "make js-test" in commands
@@ -278,7 +278,7 @@ def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
     assert "COLLECTION_TOKEN" not in workflow_text
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow_text
     assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in workflow_text
-    assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow_text
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow_text
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
     assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in workflow_text
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard-staging"

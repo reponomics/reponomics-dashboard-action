@@ -8,9 +8,10 @@ REQUEST_PACING_MIN_SECONDS = 0.5
 REQUEST_PACING_MAX_SECONDS = 1.0
 SECONDARY_LIMIT_FALLBACK_SECONDS = 60
 NOT_FOUND_RETRIES = 2
-TOKEN_VALIDATION_URL = "https://api.github.com/user"
+# Public API endpoints; their names describe which credential is validated.
+TOKEN_VALIDATION_URL = "https://api.github.com/user"  # nosec B105
 APP_TOKEN_VALIDATION_URL = (
-    "https://api.github.com/installation/repositories?per_page=1&page=1"
+    "https://api.github.com/installation/repositories?per_page=1&page=1"  # nosec B105
 )
 TOKEN_CREATION_URL = "".join(
     [

@@ -8,6 +8,8 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 - [`open-source-security.yml`](open-source-security.yml) runs `pip-audit` against the resolved Python environment and the hash-pinned runtime dependency lock, then verifies the hash-pinned promotional guide tooling lock. It provides an independent open-source dependency vulnerability signal rather than relying only on GitHub-native Dependabot or CodeQL surfaces.
 
+- [`bandit.yml`](bandit.yml) runs Bandit against the owned Python action and maintenance-script sources on pull requests, pushes to `main`, and a weekly schedule. It uploads SARIF before enforcing a zero-finding baseline; vendored, generated, distribution, and test sources remain outside its explicit `dashboard_action scripts` scan roots.
+
 - [`osv-scanner.yml`](osv-scanner.yml) runs OSV-Scanner recursively and uploads SARIF to GitHub code scanning. The workflow inlines the scanner, reporter, artifact upload, and SARIF upload steps so this repository's full-SHA action-pinning policy applies to every imported action.
 
 - [`release-please.yml`](release-please.yml) creates or updates Release Please PRs and publishes GitHub Releases when a release PR is merged. It manages the root Marketplace action release, keeps bare `v*` release tags and floating major/minor action tags for action consumers, then opens or updates a template acceptance PR when an action release is published. That PR records the released action version, tag, SHA, and default compatible ref in `template-contract.yml`; merging it is the maintainer approval for the corresponding template release.

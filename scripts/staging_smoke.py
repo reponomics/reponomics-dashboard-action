@@ -7,7 +7,8 @@ import json
 import os
 import re
 import shutil
-import subprocess
+# Subprocess is required for controlled git and Python argv without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -59,11 +60,18 @@ class StagingSmokeResult:
 
 
 def _run(args: list[str], cwd: Path, *, env: dict[str, str] | None = None) -> None:
-    subprocess.run(args, cwd=cwd, env=env, check=True)
+    # Every caller supplies a fixed git executable and an argument vector.
+    subprocess.run(  # nosec B603
+        args,
+        cwd=cwd,
+        env=env,
+        check=True,
+    )
 
 
 def _output(args: list[str], cwd: Path) -> str:
-    return subprocess.check_output(
+    # Every caller supplies a fixed git executable and an argument vector.
+    return subprocess.check_output(  # nosec B603
         args,
         cwd=cwd,
         text=True,
@@ -170,7 +178,8 @@ def _validate_generated_config(output_dir: Path) -> dict[str, str]:
         "GITHUB_REPOSITORY": DEFAULT_EXPECTED_REPO,
         "REPOSITORY_PRIVATE": "false",
     }
-    result = subprocess.run(
+    # The current interpreter runs a fixed resolver path in the generated tree.
+    result = subprocess.run(  # nosec B603
         [sys.executable, ".github/scripts/resolve-reponomics-config.py"],
         cwd=output_dir,
         env=env,
@@ -342,7 +351,8 @@ gh workflow run collect-and-publish.yml --repo {target_repo} --ref {branch} -f s
 
 def _remote_url(remote: str) -> str:
     try:
-        return subprocess.check_output(
+        # git is fixed; the remote is a distinct argument and is repository-checked before use.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", "remote", "get-url", remote],
             cwd=ROOT,
             text=True,
@@ -411,7 +421,12 @@ def _replace_worktree_contents(worktree: Path, output_dir: Path) -> None:
 
 
 def _has_staged_changes(worktree: Path) -> bool:
-    result = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=worktree, check=False)
+    # git is the fixed executable and this command has no dynamic arguments.
+    result = subprocess.run(  # nosec B603, B607
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=worktree,
+        check=False,
+    )
     if result.returncode == 0:
         return False
     if result.returncode == 1:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
+# Security: subprocess use below is restricted to list-form Git commands without a shell.
+import subprocess  # nosec B404
 
 from .core import MANAGED_DOCS_NAMESPACE, VERSION, RuntimeConfig
 
@@ -69,7 +70,13 @@ def _is_push_race(text: str) -> bool:
 
 
 def _run_git_capture(args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, check=True, capture_output=True, text=True)
+    # Security: private callers provide fixed Git argv; no shell parsing occurs.
+    return subprocess.run(  # nosec B603
+        args,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _push_managed_docs_with_retry() -> None:
@@ -126,7 +133,8 @@ def _git_commit_managed_docs(
 
 
 def _inside_git_worktree() -> bool:
-    in_repo = subprocess.run(
+    # Security: Git is runner-provided and receives fixed argv without shell parsing.
+    in_repo = subprocess.run(  # nosec B603, B607
         ["git", "rev-parse", "--is-inside-work-tree"],
         check=False,
         capture_output=True,
@@ -137,17 +145,22 @@ def _inside_git_worktree() -> bool:
 
 
 def _commit_managed_docs_namespace(namespace: str, message: str) -> bool:
-    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
-    subprocess.run(
+    # Security: Git is runner-provided; variable values are argv data and paths follow `--`.
+    subprocess.run(  # nosec B603, B607
+        ["git", "config", "user.name", "github-actions[bot]"], check=True
+    )
+    subprocess.run(  # nosec B603, B607
         ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
         check=True,
     )
-    subprocess.run(["git", "add", "--", namespace], check=True)
-    diff = subprocess.run(
+    subprocess.run(["git", "add", "--", namespace], check=True)  # nosec B603, B607
+    diff = subprocess.run(  # nosec B603, B607
         ["git", "diff", "--cached", "--quiet", "--", namespace],
         check=False,
     )
     if diff.returncode == 0:
         return False
-    subprocess.run(["git", "commit", "-m", message, "--", namespace], check=True)
+    subprocess.run(  # nosec B603, B607
+        ["git", "commit", "-m", message, "--", namespace], check=True
+    )
     return True

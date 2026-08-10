@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
+# Subprocess is required for controlled git argv without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 import tomllib
@@ -238,7 +239,8 @@ def _github_repo_url(repository: str) -> str:
 
 def _git_output(args: list[str], *, cwd: Path) -> str:
     try:
-        return subprocess.check_output(
+        # Every caller supplies a fixed git executable and an argument vector.
+        return subprocess.check_output(  # nosec B603
             args,
             cwd=cwd,
             stderr=subprocess.STDOUT,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import subprocess
+# Subprocess is required for fixed git argv; shell execution is not used.
+import subprocess  # nosec B404
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -528,7 +529,8 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
 
 def _source_timestamp() -> str:
     try:
-        timestamp = subprocess.check_output(
+        # git is the fixed executable and this command has no dynamic arguments.
+        timestamp = subprocess.check_output(  # nosec B603, B607
             ["git", "log", "-1", "--format=%cI"],
             cwd=ROOT,
             text=True,

@@ -6,7 +6,8 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import shutil
-import subprocess
+# Subprocess is required for fixed git argv; shell execution is not used.
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import Any
@@ -154,7 +155,8 @@ def iter_include_file_entries(manifest: dict[str, Any]) -> list[tuple[Path, Path
 
 def _git_value(*args: str) -> str:
     try:
-        return subprocess.check_output(
+        # git is the fixed executable and all values remain separate arguments.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", *args],
             cwd=ROOT,
             text=True,

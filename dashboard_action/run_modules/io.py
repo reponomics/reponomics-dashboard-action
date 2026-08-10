@@ -6,7 +6,9 @@ import csv
 import hashlib
 import os
 import shutil
-import subprocess
+
+# Security: subprocess use below is restricted to list-form runner commands without a shell.
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -58,7 +60,10 @@ def _restore_artifact(
         env["ARTIFACT_REQUIRED"] = str(required).lower()
     if config.github_token:
         env["GH_TOKEN"] = config.github_token
-    subprocess.run(["bash", str(script)], check=True, env=env)
+    # Security: Bash is runner-provided and executes only the package-owned restore script.
+    subprocess.run(  # nosec B603, B607
+        ["bash", str(script)], check=True, env=env
+    )
 
 
 def _decrypt_if_needed(config: RuntimeConfig, *, secret_env: str) -> None:
@@ -137,7 +142,8 @@ def _readme_svg_asset_paths(config: RuntimeConfig) -> list[str]:
 def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
     if not config.generate_readme:
         return
-    in_repo = subprocess.run(
+    # Security: Git is runner-provided and receives fixed argv without shell parsing.
+    in_repo = subprocess.run(  # nosec B603, B607
         ["git", "rev-parse", "--is-inside-work-tree"],
         check=False,
         capture_output=True,
@@ -148,18 +154,23 @@ def _git_commit_readme(config: RuntimeConfig, message: str) -> None:
         print("Skipping README commit outside a git worktree.")
         return
     paths = [config.readme_path.as_posix(), *_readme_svg_asset_paths(config)]
-    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
-    subprocess.run(
+    # Security: variable values are argv data; configurable paths follow the option terminator.
+    subprocess.run(  # nosec B603, B607
+        ["git", "config", "user.name", "github-actions[bot]"], check=True
+    )
+    subprocess.run(  # nosec B603, B607
         ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
         check=True,
     )
-    subprocess.run(["git", "add", *paths], check=True)
-    diff = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False)
+    subprocess.run(["git", "add", "--", *paths], check=True)  # nosec B603, B607
+    diff = subprocess.run(  # nosec B603, B607
+        ["git", "diff", "--cached", "--quiet"], check=False
+    )
     if diff.returncode == 0:
         print("No generated output changes to commit.")
         return
-    subprocess.run(["git", "commit", "-m", message], check=True)
-    subprocess.run(["git", "push"], check=True)
+    subprocess.run(["git", "commit", "-m", message], check=True)  # nosec B603, B607
+    subprocess.run(["git", "push"], check=True)  # nosec B603, B607
 
 
 def _tracked_repos(data_dir: Path) -> list[str]:

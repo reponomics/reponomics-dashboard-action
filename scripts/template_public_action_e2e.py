@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
+# Subprocess is required for controlled git argv without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from pathlib import Path
@@ -35,7 +36,8 @@ class TemplatePublicActionE2EError(RuntimeError):
 
 def _run(args: list[str], *, cwd: Path) -> str:
     try:
-        return subprocess.check_output(
+        # Every caller supplies a fixed git executable and an argument vector.
+        return subprocess.check_output(  # nosec B603
             args,
             cwd=cwd,
             stderr=subprocess.STDOUT,

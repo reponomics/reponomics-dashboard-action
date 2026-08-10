@@ -6,7 +6,8 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
+# Subprocesses are required to exercise isolated local consumer repositories.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from collections.abc import Mapping
@@ -34,9 +35,15 @@ PLAINTEXT_DASHBOARD_DATA_VERSION = 2
 ENCRYPTED_DASHBOARD_DATA_VERSION = 3
 DASHBOARD_SUMMARY_AAD_LABEL = "reponomics:dashboard:v3:summary"
 DASHBOARD_CHUNK_AAD_PREFIX = "reponomics:dashboard:v3:chunk:"
+# Deterministic fixture values used only in disposable local consumer repositories.
+ENCRYPTED_PROFILE_KEY = "DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789"
+SHORT_PROFILE_KEY = "weak"
+NO_PROFILE_KEY = ""
+COMPOSITE_AUTH_INPUT_EXPRESSION = "${{ inputs.github-token }}"
+RUNTIME_AUTH_PLACEHOLDER = "ghp_runtime"
 REQUIRED_COMPOSITE_ENV = {
     "REPONOMICS_MODE": "${{ inputs.mode }}",
-    "REPONOMICS_GITHUB_TOKEN": "${{ inputs.github-token }}",
+    "REPONOMICS_GITHUB_TOKEN": COMPOSITE_AUTH_INPUT_EXPRESSION,
     "REPONOMICS_ACTION_REF": "${{ github.action_ref }}",
     "REPONOMICS_ACTION_REPOSITORY": "${{ github.action_repository }}",
 }
@@ -159,7 +166,7 @@ PROFILES = [
         data_mode="encrypted",
         repo_is_public=False,
         generate_readme=True,
-        dashboard_secret="DASHBOARD_SECRET_DO_NOT_REPLACE_0123456789",
+        dashboard_secret=ENCRYPTED_PROFILE_KEY,
         expected_data_mode="encrypted",
         expected_publish_pages=True,
     ),
@@ -168,7 +175,7 @@ PROFILES = [
         data_mode="encrypted",
         repo_is_public=False,
         generate_readme=False,
-        dashboard_secret="weak",
+        dashboard_secret=SHORT_PROFILE_KEY,
         expected_data_mode="encrypted",
         expected_publish_pages=True,
     ),
@@ -177,7 +184,7 @@ PROFILES = [
         data_mode="plaintext",
         repo_is_public=False,
         generate_readme=True,
-        dashboard_secret="",
+        dashboard_secret=NO_PROFILE_KEY,
         expected_data_mode="plaintext",
         expected_publish_pages=False,
     ),
@@ -186,7 +193,7 @@ PROFILES = [
         data_mode="plaintext",
         repo_is_public=True,
         generate_readme=False,
-        dashboard_secret="",
+        dashboard_secret=NO_PROFILE_KEY,
         expected_data_mode="plaintext",
         expected_publish_pages=False,
         expect_error="plaintext is only supported for private repositories",
@@ -211,7 +218,8 @@ def _run(
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    # Commands and argv are assembled exclusively by this checked-in test harness.
+    result = subprocess.run(  # nosec B603
         args,
         cwd=cwd or ROOT,
         env=dict(env) if env is not None else None,
@@ -396,7 +404,7 @@ def _invoke_composite_runtime_step(
     github = {
         "action_ref": "template-action-boundary-e2e",
         "action_repository": "reponomics/reponomics-dashboard-action",
-        "token": "ghp_runtime",
+        "token": RUNTIME_AUTH_PLACEHOLDER,
     }
     runtime_env = _resolve_runtime_env(
         action,

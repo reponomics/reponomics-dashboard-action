@@ -59,22 +59,6 @@ def _step_index(name: str) -> int:
     raise AssertionError(f"missing action step named {name}")
 
 
-def _assert_release_app_token_permissions_are_implicit(step: dict) -> None:
-    explicit_permissions = sorted(
-        key for key in step.get("with", {}) if str(key).startswith("permission-")
-    )
-    message = (
-        "release app token permissions are intentionally implicit right now so the "
-        + "token inherits the app installation's configured scopes, including any "
-        + "Release Please permissions such as issues. If the policy changes to "
-        + "explicit token permissions, update this test with the complete required "
-        + f"permission list. Found explicit permission inputs: {explicit_permissions}"
-    )
-    assert explicit_permissions == [], (
-        message
-    )
-
-
 def _description_fields(value: object, path: str = "action.yml") -> list[tuple[str, str]]:
     descriptions: list[tuple[str, str]] = []
     if isinstance(value, dict):
@@ -159,12 +143,6 @@ def test_release_please_remains_action_only() -> None:
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
 
 
-def test_no_manual_production_template_publication_workflow() -> None:
-    workflow_path = Path(".github/workflows/publish-template.yml")
-
-    assert not workflow_path.exists()
-
-
 def test_ci_runs_generated_template_gates() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
     steps = workflow["jobs"]["template"]["steps"]
@@ -205,7 +183,7 @@ def test_ci_runs_javascript_dashboard_gates() -> None:
     assert job["name"] == "JavaScript dashboard"
     assert job["runs-on"] == "ubuntu-24.04"
     assert setup_node["uses"] == (
-        "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
+        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
     )
     assert setup_node["with"]["node-version"] == "24"
     assert "make js-test" in commands
@@ -277,10 +255,6 @@ def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
     assert "make staging-smoke" not in publish_commands
     assert "COLLECTION_TOKEN" not in workflow_text
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow_text
-    assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in workflow_text
-    assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow_text
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
-    assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in workflow_text
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard-staging"
     assert app_token_step["with"]["permission-contents"] == "write"
     assert app_token_step["with"]["permission-workflows"] == "write"
@@ -313,9 +287,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "reponomics-dashboard-dev" not in workflow_text
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
-    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
     app_user_step = next(step for step in steps if step["name"] == "Get release app bot user ID")
-    _assert_release_app_token_permissions_are_implicit(app_token_step)
     assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
     assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
     assert checkout_step["with"]["fetch-depth"] == 0

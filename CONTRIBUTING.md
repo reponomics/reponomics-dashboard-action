@@ -71,7 +71,10 @@ make type-check
 make validate
 make test
 make coverage
+make complexity
 ```
+
+Complexity tooling is optional because it is not formally incorporated into CI/CD and is not supported in every environment.
 
 Focused fixture checks are also available:
 

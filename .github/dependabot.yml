@@ -8,6 +8,11 @@ updates:
       time: "09:00"
       timezone: America/New_York
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
     commit-message:
       prefix: build
       include: scope

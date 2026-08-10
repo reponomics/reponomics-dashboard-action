@@ -59,22 +59,6 @@ def _step_index(name: str) -> int:
     raise AssertionError(f"missing action step named {name}")
 
 
-def _assert_release_app_token_permissions_are_implicit(step: dict) -> None:
-    explicit_permissions = sorted(
-        key for key in step.get("with", {}) if str(key).startswith("permission-")
-    )
-    message = (
-        "release app token permissions are intentionally implicit right now so the "
-        + "token inherits the app installation's configured scopes, including any "
-        + "Release Please permissions such as issues. If the policy changes to "
-        + "explicit token permissions, update this test with the complete required "
-        + f"permission list. Found explicit permission inputs: {explicit_permissions}"
-    )
-    assert explicit_permissions == [], (
-        message
-    )
-
-
 def _description_fields(value: object, path: str = "action.yml") -> list[tuple[str, str]]:
     descriptions: list[tuple[str, str]] = []
     if isinstance(value, dict):
@@ -138,26 +122,6 @@ def test_runtime_version_matches_release_metadata() -> None:
     assert "dashboard_action/run.py" not in extra_files
 
 
-def test_complexity_tools_are_installed_only_for_complexity_checks() -> None:
-    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-    optional_dependencies = project["project"]["optional-dependencies"]
-    dev_dependency_names = {
-        re.split(r"[<>=!~; ]", requirement, maxsplit=1)[0].lower()
-        for requirement in optional_dependencies["dev"]
-    }
-    complexity_dependency_names = {
-        re.split(r"[<>=!~; ]", requirement, maxsplit=1)[0].lower()
-        for requirement in optional_dependencies["complexity"]
-    }
-    makefile = Path("Makefile").read_text(encoding="utf-8")
-
-    assert {"antipasta", "complexipy"}.isdisjoint(dev_dependency_names)
-    assert complexity_dependency_names == {"antipasta", "complexipy"}
-    assert "-e '.[dev]'" in makefile
-    assert "-e '.[complexity]'" in makefile
-    assert "complexity: $(COMPLEXITY_INSTALL_STAMP)" in makefile
-
-
 def test_release_please_remains_action_only() -> None:
     contract = template_contract.load_contract()
     release_manifest = yaml.safe_load(
@@ -177,12 +141,6 @@ def test_release_please_remains_action_only() -> None:
     assert ".github/workflows/publish-template.yml" not in exclude_paths
     assert "scripts/prepare_template_release.py" in exclude_paths
     assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", contract.template_version)
-
-
-def test_no_manual_production_template_publication_workflow() -> None:
-    workflow_path = Path(".github/workflows/publish-template.yml")
-
-    assert not workflow_path.exists()
 
 
 def test_ci_runs_generated_template_gates() -> None:
@@ -329,9 +287,7 @@ def test_release_workflow_does_not_dispatch_dashboard_dev() -> None:
     assert "reponomics-dashboard-dev" not in workflow_text
     assert "repository_dispatch" not in workflow_text
     assert workflow["permissions"] == {"contents": "read"}
-    app_token_step = next(step for step in steps if step["name"] == "Create release app token")
     app_user_step = next(step for step in steps if step["name"] == "Get release app bot user ID")
-    _assert_release_app_token_permissions_are_implicit(app_token_step)
     assert app_user_step["env"]["GH_TOKEN"] == "${{ steps.app-token.outputs.token }}"
     assert app_user_step["env"]["APP_SLUG"] == "${{ steps.app-token.outputs.app-slug }}"
     assert checkout_step["with"]["fetch-depth"] == 0

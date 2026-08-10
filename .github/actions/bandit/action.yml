@@ -38,7 +38,7 @@ runs:
       with:
         sarif_file: results.sarif
 
-    - name: Enforce clean Bandit result
+    - name: Enforce successful, clean Bandit result
       shell: bash
       run: |
         python - <<'PY'
@@ -46,7 +46,35 @@ runs:
         from pathlib import Path
 
         report = json.loads(Path("results.sarif").read_text(encoding="utf-8"))
-        findings = sum(len(run.get("results", [])) for run in report.get("runs", []))
+        runs = report.get("runs", [])
+        invocations = [
+            invocation
+            for run in runs
+            for invocation in run.get("invocations", [])
+        ]
+        failed_invocations = sum(
+            invocation.get("executionSuccessful") is not True
+            for invocation in invocations
+        )
+        error_notifications = sum(
+            notification.get("level") == "error"
+            for invocation in invocations
+            for key in (
+                "toolConfigurationNotifications",
+                "toolExecutionNotifications",
+            )
+            for notification in invocation.get(key, [])
+        )
+        if not runs or not invocations or failed_invocations or error_notifications:
+            raise SystemExit(
+                "Bandit did not complete a successful scan "
+                f"({len(runs)} run(s), {len(invocations)} invocation(s), "
+                f"{failed_invocations} unsuccessful invocation(s), "
+                f"{error_notifications} error notification(s)); "
+                "review the uploaded SARIF report."
+            )
+
+        findings = sum(len(run.get("results", [])) for run in runs)
         if findings:
             raise SystemExit(
                 f"Bandit reported {findings} finding(s); review the uploaded SARIF report."

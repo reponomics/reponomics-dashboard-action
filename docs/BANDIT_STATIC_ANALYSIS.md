@@ -7,7 +7,7 @@ The upstream action's useful behavior is small: install Bandit, produce a SARIF 
 - `requirements-analysis.in` pins the intended Bandit release and SARIF support.
 - `requirements-analysis.txt` pins and hashes Bandit and every transitive dependency, including `setuptools`.
 - The artifact and SARIF upload actions use verified full commit SHAs.
-- Bandit exits successfully long enough for both uploads to complete; the final action step then fails when the SARIF report contains findings.
+- Bandit exits successfully long enough for both uploads to complete; the final action step then rejects missing or unsuccessful invocations, error-level scanner notifications, and SARIF reports containing findings.
 
 The scan roots are deliberately fixed to `dashboard_action` and `scripts`. These contain the first-party production action and repository-maintenance Python code. Tests, generated output, distribution output, and vendored browser code such as Chart.js are outside those roots and are covered by their own purpose-built checks.
 

@@ -18,8 +18,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "antipasta>=1.1.2",
-    "complexipy>=5.4.1",
     "mypy>=1.18",
     "numpy<2.5",
     "pip-audit>=2.10",
@@ -30,6 +28,10 @@ dev = [
     "ruff>=0.8",
     "types-PyYAML>=6.0.12",
     "types-requests>=2.33.0",
+]
+complexity = [
+    "antipasta>=1.1.2",
+    "complexipy>=5.4.1",
 ]
 
 [tool.setuptools.packages.find]

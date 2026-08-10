@@ -18,6 +18,7 @@ This document describes how dependencies are declared, locked, checked, and upda
 | Surface | Source files | Runtime use | Update entry point | Automated checks |
 | --- | --- | --- | --- | --- |
 | Python package and dev environment | `pyproject.toml` | Local `venv`, lint, type check, tests, `pip-audit` environment audit | Edit `pyproject.toml`, then run `make install` or recreate `venv` when needed | `ci.yml`, `open-source-security.yml`, `make security-audit` |
+| Optional complexity tooling | `pyproject.toml` `complexity` extra | Maintainer-invoked complexity metrics; not installed by normal development setup or CI | Edit the `complexity` extra, then run `make complexity` | `make complexity` |
 | Composite action runtime lock | `requirements-runtime.txt` | Installed by `action.yml` with `python -m pip install --require-hashes` | Run `make lock-runtime` after dependency-range changes or runtime-lock alerts | `validate-runtime-lock.yml`, `open-source-security.yml`, `make validate-runtime-lock`, `make audit-runtime-lock`, Dependabot pip alerts |
 | GitHub Actions used by this source repo | `.github/workflows/*.yml`, `action.yml` | CI, release, publishing, validation, repository security signals | Update action refs by full commit SHA with nearby version comments | Dependabot `github-actions`, workflow validation, repository policy, Scorecard/PolicyChecks visibility |
 | Generated template workflow actions | `template/.github/workflows/*.yml` | Workflows in generated dashboard repositories | Update template workflow sources and run template gates | Template and generated-output tests; not the root source-repo action pinning policy alone |
@@ -33,6 +34,8 @@ make install
 ```
 
 The `make install` target is stamp-based and depends on both `pyproject.toml` and `requirements-runtime.txt`. When either file changes, `make install` refreshes the local `venv` with an eager upgrade from `pyproject.toml`, so local source/development checks are less likely to run against stale package versions. CI starts from a fresh runner and resolves from `pyproject.toml`.
+
+Complexity analysis is intentionally outside the development extra because it is not part of the required CI suite and its native tooling may not support every development platform. Run `make complexity` to install the `complexity` extra into `venv` on demand and execute the metrics check. Normal `make install` and `.[dev]` installations do not install `antipasta` or `complexipy`.
 
 The local `venv` is still not the action runtime environment. The composite action runtime is checked separately from `requirements-runtime.txt` through `make validate-runtime-lock` and `make audit-runtime-lock`.
 

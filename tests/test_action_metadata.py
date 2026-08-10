@@ -138,6 +138,26 @@ def test_runtime_version_matches_release_metadata() -> None:
     assert "dashboard_action/run.py" not in extra_files
 
 
+def test_complexity_tools_are_installed_only_for_complexity_checks() -> None:
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    optional_dependencies = project["project"]["optional-dependencies"]
+    dev_dependency_names = {
+        re.split(r"[<>=!~; ]", requirement, maxsplit=1)[0].lower()
+        for requirement in optional_dependencies["dev"]
+    }
+    complexity_dependency_names = {
+        re.split(r"[<>=!~; ]", requirement, maxsplit=1)[0].lower()
+        for requirement in optional_dependencies["complexity"]
+    }
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+
+    assert {"antipasta", "complexipy"}.isdisjoint(dev_dependency_names)
+    assert complexity_dependency_names == {"antipasta", "complexipy"}
+    assert "-e '.[dev]'" in makefile
+    assert "-e '.[complexity]'" in makefile
+    assert "complexity: $(COMPLEXITY_INSTALL_STAMP)" in makefile
+
+
 def test_release_please_remains_action_only() -> None:
     contract = template_contract.load_contract()
     release_manifest = yaml.safe_load(

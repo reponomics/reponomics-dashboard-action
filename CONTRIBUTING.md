@@ -33,7 +33,10 @@ make type-check
 make validate
 make test
 make coverage
+make complexity
 ```
+
+Complexity tooling is optional because some of its native dependencies are not required for normal development and may not support every development platform. `make complexity` installs the dedicated `complexity` extra into `venv` on demand before running the metrics check.
 
 Focused fixture checks are also available:
 

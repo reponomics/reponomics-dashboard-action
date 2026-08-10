@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: ISC
+# Adapted from shundor/python-bandit-scan at commit
+# 9955228c1cbdc5aeb5e511e0fa232154e2ed2b67. See LICENSE in this directory.
+
+name: Python Bandit Scan
+description: Run Bandit against the repository-owned Python source trees
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: >-
+        python -m pip install
+        --disable-pip-version-check
+        --require-hashes
+        --requirement "$GITHUB_WORKSPACE/requirements-analysis.txt"
+
+    - name: Run Bandit scan
+      shell: bash
+      run: >-
+        bandit
+        -f sarif
+        -o results.sarif
+        -r dashboard_action scripts
+        --exit-zero
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: results.sarif
+        path: results.sarif
+        if-no-files-found: error
+        overwrite: true
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      with:
+        sarif_file: results.sarif
+
+    - name: Enforce clean Bandit result
+      shell: bash
+      run: |
+        python - <<'PY'
+        import json
+        from pathlib import Path
+
+        report = json.loads(Path("results.sarif").read_text(encoding="utf-8"))
+        findings = sum(len(run.get("results", [])) for run in report.get("runs", []))
+        if findings:
+            raise SystemExit(
+                f"Bandit reported {findings} finding(s); review the uploaded SARIF report."
+            )
+        PY

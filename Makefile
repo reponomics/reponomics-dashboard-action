@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help install pre-commit-install pre-commit-run ci prebeta-check
-.PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock update-vendored-assets
+.PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock lock-analysis validate-analysis-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template staging-smoke build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
@@ -30,9 +30,13 @@ COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
 GUIDE_TOOLING_IN := requirements-guide-tooling.in
 GUIDE_TOOLING_LOCK := requirements-guide-tooling.txt
+ANALYSIS_IN := requirements-analysis.in
+ANALYSIS_LOCK := requirements-analysis.txt
 PIP_INSTALL_FLAGS := --upgrade --upgrade-strategy eager
 PIP_COMPILE_RUNTIME_FLAGS := --generate-hashes --strip-extras --resolver=backtracking --no-header --quiet
 PIP_COMPILE_RUNTIME_UPGRADE_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --upgrade
+PIP_COMPILE_ANALYSIS_FLAGS := $(PIP_COMPILE_RUNTIME_FLAGS) --allow-unsafe
+PIP_COMPILE_ANALYSIS_UPGRADE_FLAGS := $(PIP_COMPILE_ANALYSIS_FLAGS) --upgrade
 MDFORMAT_VERSION ?= 1.0.0
 MDFORMAT_GFM_VERSION ?= 1.0.0
 MDFORMAT_SPEC ?= mdformat==$(MDFORMAT_VERSION)
@@ -122,7 +126,7 @@ security-audit: install ## Audit Python dependencies for known vulnerabilities
 audit-runtime-lock: install ## Audit hash-pinned runtime dependency lock
 	$(PIP_AUDIT) --requirement $(RUNTIME_LOCK) --no-deps --progress-spinner off
 
-security: security-audit audit-runtime-lock validate-runtime-lock validate-guide-tooling-lock validate-vendored-assets ## Run open-source security checks
+security: security-audit audit-runtime-lock validate-runtime-lock validate-guide-tooling-lock validate-analysis-lock validate-vendored-assets ## Run open-source security checks
 
 lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml
@@ -162,6 +166,25 @@ validate-guide-tooling-lock: install ## Verify promotional guide workflow toolin
 	trap 'rm -rf "$$tmp_site"' EXIT; \
 	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(GUIDE_TOOLING_LOCK)
 
+lock-analysis: install ## Regenerate hash-pinned static-analysis dependency lock
+	$(PIP_COMPILE) $(PIP_COMPILE_ANALYSIS_UPGRADE_FLAGS) --output-file $(ANALYSIS_LOCK) $(ANALYSIS_IN)
+
+validate-analysis-lock: install ## Verify static-analysis dependency lock is current and hash-installable
+	set -e; \
+	tmp_lock=$$(mktemp); \
+	trap 'rm -f "$$tmp_lock"' EXIT; \
+	cp "$(ANALYSIS_LOCK)" "$$tmp_lock"; \
+	$(PIP_COMPILE) $(PIP_COMPILE_ANALYSIS_FLAGS) --output-file "$$tmp_lock" $(ANALYSIS_IN); \
+	if ! cmp -s "$(ANALYSIS_LOCK)" "$$tmp_lock"; then \
+		echo "$(ANALYSIS_LOCK) is stale; run make lock-analysis"; \
+		diff -u "$(ANALYSIS_LOCK)" "$$tmp_lock" || true; \
+		exit 1; \
+	fi
+	set -e; \
+	tmp_site=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp_site"' EXIT; \
+	$(PYTHON) -m pip install --require-hashes --target "$$tmp_site" -r $(ANALYSIS_LOCK)
+
 lint: install ## Run lint checks
 	$(PYTHON) -m ruff check dashboard_action tests scripts
 
@@ -174,7 +197,7 @@ markdown-format: ## Format tracked Markdown with mdformat via pipx
 validate: validate-action validate-workflows validate-runtime-lock validate-vendored-assets ## Run validation checks
 
 validate-action: install ## Validate action.yml
-	$(PYTHON) -c "import pathlib, yaml; data = yaml.safe_load(pathlib.Path('action.yml').read_text()); assert data['runs']['using'] == 'composite'"
+	$(PYTHON) -c "import pathlib, yaml; paths = [pathlib.Path('action.yml'), pathlib.Path('.github/actions/bandit/action.yml')]; assert all(yaml.safe_load(path.read_text())['runs']['using'] == 'composite' for path in paths)"
 
 validate-workflows: install ## Validate GitHub workflow YAML
 	$(PYTHON) -c "import pathlib, yaml; [yaml.safe_load(path.read_text()) for path in pathlib.Path('.github/workflows').glob('*.yml')]"

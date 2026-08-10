@@ -34,6 +34,8 @@ jobs:
             requirements-runtime.txt
             requirements-guide-tooling.in
             requirements-guide-tooling.txt
+            requirements-analysis.in
+            requirements-analysis.txt
 
       - name: Audit installed Python dependencies
         run: make security-audit
@@ -43,3 +45,6 @@ jobs:
 
       - name: Validate guide tooling dependency lock
         run: make validate-guide-tooling-lock
+
+      - name: Validate static-analysis dependency lock
+        run: make validate-analysis-lock

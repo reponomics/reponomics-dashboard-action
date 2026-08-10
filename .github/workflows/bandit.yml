@@ -1,7 +1,4 @@
-# This workflow uses an action that is not certified by GitHub. It is provided
-# by a third party and is governed by separate terms of service, privacy policy,
-# and support documentation.
-
+# See docs/BANDIT_STATIC_ANALYSIS.md for the local action and dependency-lock rationale.
 name: Bandit static analysis
 
 on:
@@ -39,23 +36,4 @@ jobs:
           python-version: "3.11"
 
       - name: Run Bandit scan
-        uses: shundor/python-bandit-scan@9955228c1cbdc5aeb5e511e0fa232154e2ed2b67 # main, 2026-07-29
-        with:
-          # Let the action upload SARIF before the following step enforces the result.
-          exit_zero: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          path: dashboard_action scripts
-
-      - name: Enforce clean Bandit result
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          report = json.loads(Path("results.sarif").read_text(encoding="utf-8"))
-          findings = sum(len(run.get("results", [])) for run in report.get("runs", []))
-          if findings:
-              raise SystemExit(
-                  f"Bandit reported {findings} finding(s); review the uploaded SARIF report."
-              )
-          PY
+        uses: ./.github/actions/bandit

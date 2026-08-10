@@ -72,6 +72,7 @@ install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
 $(INSTALL_STAMP): pyproject.toml $(RUNTIME_LOCK) Makefile
 	$(BOOTSTRAP_PYTHON) -m venv $(VENV)
+	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	$(PIP) install $(PIP_INSTALL_FLAGS) -e '.[dev]'
 	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	touch $(INSTALL_STAMP)

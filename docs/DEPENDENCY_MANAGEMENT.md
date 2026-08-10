@@ -93,8 +93,8 @@ When investigating a vulnerability, use all three signals deliberately:
 
 `.github/dependabot.yml` configures two ecosystems:
 
-- `github-actions` for action refs in the repository workflow surface.
-- `pip` for Python dependency manifests in the repository root.
+- `github-actions` for action refs in the repository workflow surface. Routine version updates are grouped into one pull request so the pinned refs can be verified and tested together.
+- `pip` for Python dependency manifests in the repository root. Python updates remain ungrouped because direct ranges, development tooling, and the action runtime lock can require different review and validation paths.
 
 Dependabot security updates can bypass version-update ignore rules. For example, the repository ignores routine semver-major `cryptography` version updates because runtime crypto upgrades need maintainer review, but a security update may still propose or require a major version.
 

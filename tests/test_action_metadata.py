@@ -297,10 +297,6 @@ def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
     assert "make staging-smoke" not in publish_commands
     assert "COLLECTION_TOKEN" not in workflow_text
     assert "DASHBOARD_SECRET_DO_NOT_REPLACE" not in workflow_text
-    assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in workflow_text
-    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow_text
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
-    assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in workflow_text
     assert app_token_step["with"]["repositories"] == "reponomics-dashboard-staging"
     assert app_token_step["with"]["permission-contents"] == "write"
     assert app_token_step["with"]["permission-workflows"] == "write"

@@ -8,8 +8,10 @@
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide-assets dashboard-guide dashboard-guide-refresh clean
 
 VENV := venv
+BOOTSTRAP_PYTHON ?= python3
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
+PIP_VERSION ?= 26.1.2
 NODE ?= node
 NPX ?= npx
 PIPX ?= pipx
@@ -69,9 +71,9 @@ help: ## Show available commands
 install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
 $(INSTALL_STAMP): pyproject.toml $(RUNTIME_LOCK) Makefile
-	python3 -m venv $(VENV)
-	$(PYTHON) -m pip install --upgrade pip
+	$(BOOTSTRAP_PYTHON) -m venv $(VENV)
 	$(PIP) install $(PIP_INSTALL_FLAGS) -e '.[dev]'
+	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	touch $(INSTALL_STAMP)
 
 $(COMPLEXITY_INSTALL_STAMP): $(INSTALL_STAMP) pyproject.toml Makefile

@@ -27,13 +27,15 @@ This document describes how dependencies are declared, locked, checked, and upda
 
 ## Python Dependencies
 
-`pyproject.toml` declares the Python package metadata, direct runtime dependencies, and development extras. `make install` creates `venv`, upgrades `pip`, and installs the package in editable mode with development extras:
+`pyproject.toml` declares the Python package metadata, direct runtime dependencies, and development extras. `make install` creates `venv`, installs the pinned `pip` version, and installs the package in editable mode with development extras:
 
 ```bash
 make install
 ```
 
 The `make install` target is stamp-based and depends on both `pyproject.toml` and `requirements-runtime.txt`. When either file changes, `make install` refreshes the local `venv` with an eager upgrade from `pyproject.toml`, so local source/development checks are less likely to run against stale package versions. CI starts from a fresh runner and resolves from `pyproject.toml`.
+
+Lock generation temporarily pairs `pip==26.1.2` with `pip-tools==7.6.0`. `pip-tools` 7.6.0 imports a pip internal that was removed in pip 26.2, so allowing `make install` to upgrade pip independently makes `pip-compile` fail before it can resolve either lock. Keep these versions paired until a compatible `pip-tools` release is available, then update both pins together.
 
 Complexity analysis is intentionally outside the development extra because it is not part of the required CI suite and its native tooling may not support every development platform. Run `make complexity` to install the `complexity` extra into `venv` on demand and execute the metrics check. Normal `make install` and `.[dev]` installations do not install `antipasta` or `complexipy`.
 

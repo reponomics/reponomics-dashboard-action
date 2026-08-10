@@ -36,7 +36,7 @@ make coverage
 make complexity
 ```
 
-Complexity tooling is optional because some of its native dependencies are not required for normal development and may not support every development platform. `make complexity` installs the dedicated `complexity` extra into `venv` on demand before running the metrics check.
+Complexity tooling is optional because it is not formally incorporated into CI/CD and is not supported in every environment.
 
 Focused fixture checks are also available:
 

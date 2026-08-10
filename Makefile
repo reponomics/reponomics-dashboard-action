@@ -8,8 +8,10 @@
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide-assets dashboard-guide dashboard-guide-refresh clean
 
 VENV := venv
+BOOTSTRAP_PYTHON ?= python3
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
+PIP_VERSION ?= 26.1.2
 NODE ?= node
 NPX ?= npx
 PIPX ?= pipx
@@ -23,6 +25,7 @@ PIP_AUDIT := $(VENV)/bin/pip-audit
 PIP_COMPILE := $(VENV)/bin/pip-compile
 PRE_COMMIT := $(VENV)/bin/pre-commit
 INSTALL_STAMP := $(VENV)/.install.stamp
+COMPLEXITY_INSTALL_STAMP := $(VENV)/.complexity-install.stamp
 COVERAGE_FAIL_UNDER ?= 70
 RUNTIME_LOCK := requirements-runtime.txt
 GUIDE_TOOLING_IN := requirements-guide-tooling.in
@@ -68,10 +71,15 @@ help: ## Show available commands
 install: $(INSTALL_STAMP) ## Create venv and install dependencies
 
 $(INSTALL_STAMP): pyproject.toml $(RUNTIME_LOCK) Makefile
-	python3 -m venv $(VENV)
-	$(PYTHON) -m pip install --upgrade pip
+	$(BOOTSTRAP_PYTHON) -m venv $(VENV)
+	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	$(PIP) install $(PIP_INSTALL_FLAGS) -e '.[dev]'
+	$(PYTHON) -m pip install --upgrade "pip==$(PIP_VERSION)"
 	touch $(INSTALL_STAMP)
+
+$(COMPLEXITY_INSTALL_STAMP): $(INSTALL_STAMP) pyproject.toml Makefile
+	$(PIP) install $(PIP_INSTALL_FLAGS) -e '.[complexity]'
+	touch $(COMPLEXITY_INSTALL_STAMP)
 
 pre-commit-install: install ## Install local pre-commit hooks
 	GIT_CONFIG_GLOBAL=/dev/null $(PRE_COMMIT) install --install-hooks --hook-type pre-commit --hook-type pre-push
@@ -105,7 +113,7 @@ dashboard-guide-refresh: dashboard-guide-assets dashboard-guide ## Refresh dashb
 coverage: install ## Run tests with coverage report
 	$(PYTHON) -m pytest tests -v --cov=dashboard_action --cov-report=term-missing --cov-report=xml --cov-fail-under=$(COVERAGE_FAIL_UNDER)
 
-complexity: install ## Run complexity metrics
+complexity: $(COMPLEXITY_INSTALL_STAMP) ## Install optional complexity tooling and run metrics
 	$(ANTIPASTA) metrics --directory dashboard_action
 
 security-audit: install ## Audit Python dependencies for known vulnerabilities

@@ -88,4 +88,4 @@ Do not commit generated local state such as `venv`, coverage reports, caches, re
 
 ## Markdown Formatting
 
-Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so future edits produce smaller diffs. The `LICENSE` file is the exception and may keep conventional license-text wrapping.
+Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so future edits produce smaller diffs. The [LICENSE](LICENSE) file is the exception and may keep conventional license-text wrapping.

@@ -169,7 +169,8 @@ def _pace_request() -> None:
     if _LAST_REQUEST_COMPLETED_AT is None:
         return
 
-    target_gap = random.uniform(
+    # This jitter spaces API requests; it is not used for a security decision.
+    target_gap = random.uniform(  # nosec B311
         REQUEST_PACING_MIN_SECONDS,
         REQUEST_PACING_MAX_SECONDS,
     )

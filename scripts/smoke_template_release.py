@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
+# Subprocess is required for reviewed developer-tool argv without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 import uuid
@@ -24,7 +25,8 @@ class SmokeTestError(RuntimeError):
 
 
 def _run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
+    # Callers construct reviewed git, Go, Python, or actionlint argument vectors.
+    result = subprocess.run(  # nosec B603
         args,
         cwd=cwd or ROOT,
         text=True,

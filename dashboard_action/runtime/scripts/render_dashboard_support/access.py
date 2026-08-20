@@ -8,7 +8,8 @@ import os
 ACCESS_MODE_ENV = "DASHBOARD_ACCESS_MODE"
 ACCESS_MODE_PUBLIC = "public"
 ACCESS_MODE_ENCRYPTED = "encrypted"
-ACCESS_MODE_LEGACY_SHARED_SECRET = "shared-secret"
+# Public legacy mode label, not a credential value.
+ACCESS_MODE_LEGACY_SHARED_SECRET = "shared-secret"  # nosec B105
 
 
 def load_access_mode() -> str:

@@ -41,9 +41,44 @@ def _verify_sri(integrity: str, data: bytes) -> None:
         raise ValueError(f"tarball {algorithm} integrity mismatch")
 
 
+def _require_https_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme.lower() != "https" or not parsed.hostname:
+        raise ValueError("vendored asset requests require an absolute HTTPS URL")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("vendored asset request URLs must not contain credentials")
+    return url
+
+
+class _HttpsRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        return super().redirect_request(
+            req,
+            fp,
+            code,
+            msg,
+            headers,
+            _require_https_url(newurl),
+        )
+
+
+_HTTPS_OPENER = urllib.request.build_opener(_HttpsRedirectHandler())
+
+
 def _download(url: str) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "reponomics-vendor-verify"})
-    with urllib.request.urlopen(request, timeout=60) as response:
+    request = urllib.request.Request(
+        _require_https_url(url),
+        headers={"User-Agent": "reponomics-vendor-verify"},
+    )
+    with _HTTPS_OPENER.open(request, timeout=60) as response:
         return response.read()
 
 
@@ -54,7 +89,7 @@ def _read_json(url: str) -> dict[str, Any]:
 def _post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(
-        url,
+        _require_https_url(url),
         data=body,
         headers={
             "Content-Type": "application/json",
@@ -62,7 +97,7 @@ def _post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
         },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
+    with _HTTPS_OPENER.open(request, timeout=60) as response:
         return json.loads(response.read())
 
 

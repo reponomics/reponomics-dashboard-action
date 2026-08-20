@@ -534,6 +534,7 @@ def test_generate_readme_stages_readme_and_svg_assets_only(
     assert [
         "git",
         "add",
+        "--",
         config.readme_path.as_posix(),
         light_svg_asset.as_posix(),
         svg_asset.as_posix(),

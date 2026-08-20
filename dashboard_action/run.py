@@ -6,7 +6,9 @@ from __future__ import annotations
 import os
 import json
 import shutil
-import subprocess
+
+# Security: compatibility alias for tests patching the list-form runners in extracted modules.
+import subprocess  # nosec B404
 import sys
 import tempfile
 import time
@@ -124,6 +126,9 @@ import version_status  # noqa: E402
 
 VERSION = _CORE_VERSION
 _RUN_SET_MANAGED_DOCS_LINK_ENV = _set_managed_docs_link_env
+# Security: these literals are public environment-variable names, not credential values.
+_DASHBOARD_SECRET_ENV = "DASHBOARD_SECRET_DO_NOT_REPLACE"  # nosec B105
+_DASHBOARD_NEXT_SECRET_ENV = "DASHBOARD_NEXT_SECRET"  # nosec B105
 
 
 def _sync_version() -> None:
@@ -303,9 +308,9 @@ def run_verify_retained_upload(config: RuntimeConfig) -> None:
             shutil.copy2(source, copied)
             extracted = Path(tmp) / "data"
             secret_env = (
-                "DASHBOARD_NEXT_SECRET"
+                _DASHBOARD_NEXT_SECRET_ENV
                 if config.mode in {"rotate-key", "incident-reset"}
-                else "DASHBOARD_SECRET_DO_NOT_REPLACE"
+                else _DASHBOARD_SECRET_ENV
             )
             try:
                 crypto_artifact.decrypt(copied, extracted, secret_env)
@@ -334,7 +339,7 @@ def run_collect(
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    _decrypt_if_needed(config, secret_env=_DASHBOARD_SECRET_ENV)
     restored_parent = lineage.snapshot_payload(config.data_dir)
     _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
@@ -346,7 +351,7 @@ def run_collect(
             raise ActionError(str(exc)) from exc
     merge.main()
     _write_verified_lineage(config, parent, operation="collect")
-    _encrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    _encrypt_if_needed(config, secret_env=_DASHBOARD_SECRET_ENV)
     _write_outputs(config, before)
 
 
@@ -356,7 +361,7 @@ def run_publish(config: RuntimeConfig, *, restore_artifact: bool = True) -> None
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config, required=bool(config.artifact_run_id))
-    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    _decrypt_if_needed(config, secret_env=_DASHBOARD_SECRET_ENV)
     _prepare_data_schema(config)
     merge.materialize_reporting_coverage()
     _set_version_status_env(config)
@@ -371,7 +376,7 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    _decrypt_if_needed(config, secret_env=_DASHBOARD_SECRET_ENV)
     restored_parent = lineage.snapshot_payload(config.data_dir)
     _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
@@ -379,7 +384,7 @@ def run_rotate_key(config: RuntimeConfig, *, restore_artifact: bool = True) -> N
     _write_verified_lineage(config, parent, operation="rotate-key")
     _set_runtime_env(config, next_key=True)
     _render_outputs(config, generate_readme=config.generate_readme)
-    _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
+    _encrypt_if_needed(config, secret_env=_DASHBOARD_NEXT_SECRET_ENV)
     _git_commit_readme(config, "chore: rotate Reponomics README dashboard key [skip ci]")
     _summarize_rotation()
     _write_outputs(config, before)
@@ -391,14 +396,14 @@ def run_incident_reset(config: RuntimeConfig, *, restore_artifact: bool = True) 
     before = _snapshot_outputs(config)
     if restore_artifact:
         _restore_artifact(config)
-    _decrypt_if_needed(config, secret_env="DASHBOARD_SECRET_DO_NOT_REPLACE")
+    _decrypt_if_needed(config, secret_env=_DASHBOARD_SECRET_ENV)
     restored_parent = lineage.snapshot_payload(config.data_dir)
     _validate_parent_lineage(restored_parent)
     _prepare_data_schema(config)
     parent = lineage.snapshot_payload(config.data_dir)
     _set_runtime_env(config, next_key=True)
     _write_verified_lineage(config, parent, operation="incident-reset")
-    _encrypt_if_needed(config, secret_env="DASHBOARD_NEXT_SECRET")
+    _encrypt_if_needed(config, secret_env=_DASHBOARD_NEXT_SECRET_ENV)
     _summarize_incident_reset_prepared()
     _write_outputs(config, before)
 
@@ -636,7 +641,7 @@ def _diagnose_dashboard_artifact_for_doctor(
 def run_doctor(config: RuntimeConfig) -> None:
     """Run read-only dashboard artifact diagnostics."""
     key_checks = [
-        ("DASHBOARD_SECRET_DO_NOT_REPLACE", config.dashboard_secret),
+        (_DASHBOARD_SECRET_ENV, config.dashboard_secret),
         ("COMPARISON_SECRET", config.comparison_secret),
     ]
     result = _diagnose_dashboard_artifact_for_doctor(config, key_checks)

@@ -36,12 +36,6 @@ class _ExportManifestResult:
     salt: bytes | None = None
     iv: bytes | None = None
 
-    @property
-    def is_usable(self) -> bool:
-        """Return whether the manifest can drive export asset checks."""
-        return self.manifest is not None and self.salt is not None and self.iv is not None
-
-
 def _diagnose_export_artifact(
     html: str,
     dashboard_html_path: Path,
@@ -56,28 +50,26 @@ def _diagnose_export_artifact(
 
     manifest_result = _load_export_manifest(html, dashboard_html_path)
     stages = manifest_result.stages
-    if not manifest_result.is_usable:
+    manifest = manifest_result.manifest
+    salt = manifest_result.salt
+    iv = manifest_result.iv
+    if manifest is None or salt is None or iv is None:
         return stages, "failed"
 
-    assert manifest_result.manifest is not None
-    assert manifest_result.salt is not None
-    assert manifest_result.iv is not None
-    ciphertext, asset_stages = _read_export_ciphertext(
-        dashboard_html_path, manifest_result.manifest
-    )
+    ciphertext, asset_stages = _read_export_ciphertext(dashboard_html_path, manifest)
     stages.extend(asset_stages)
     if ciphertext is None:
         return stages, "failed"
 
-    if not _record_export_ciphertext_integrity(stages, ciphertext, manifest_result.manifest):
+    if not _record_export_ciphertext_integrity(stages, ciphertext, manifest):
         return stages, "failed"
 
     export_status = _diagnose_export_decryption(
         stages,
         ciphertext,
-        manifest_result.manifest,
-        manifest_result.salt,
-        manifest_result.iv,
+        manifest,
+        salt,
+        iv,
         secret_inputs,
         secret_results,
     )

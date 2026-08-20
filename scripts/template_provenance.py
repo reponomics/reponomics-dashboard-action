@@ -8,7 +8,8 @@ import hashlib
 import json
 import os
 import stat
-import subprocess
+# Subprocess is required for fixed git argv; shell execution is not used.
+import subprocess  # nosec B404
 import sys
 import tarfile
 from dataclasses import dataclass
@@ -55,7 +56,8 @@ class ReleaseArtifacts:
 
 def _git_value(*args: str) -> str:
     try:
-        return subprocess.check_output(
+        # git is the fixed executable and all values remain separate arguments.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", *args],
             cwd=ROOT,
             text=True,

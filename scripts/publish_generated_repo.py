@@ -6,7 +6,8 @@ import argparse
 import json
 import re
 import shutil
-import subprocess
+# Subprocess is required for controlled git operations without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from pathlib import Path
@@ -30,11 +31,17 @@ class PublishError(RuntimeError):
 
 
 def _run(args: list[str], cwd: Path) -> None:
-    subprocess.run(args, cwd=cwd, check=True)
+    # Every caller supplies a fixed git executable and an argument vector.
+    subprocess.run(  # nosec B603
+        args,
+        cwd=cwd,
+        check=True,
+    )
 
 
 def _output(args: list[str], cwd: Path) -> str:
-    return subprocess.check_output(
+    # Every caller supplies a fixed git executable and an argument vector.
+    return subprocess.check_output(  # nosec B603
         args,
         cwd=cwd,
         text=True,
@@ -59,7 +66,8 @@ def _output_files(output_dir: Path) -> list[str]:
 
 def _remote_url(remote: str) -> str:
     try:
-        return subprocess.check_output(
+        # git is fixed; the remote is a distinct argument and can be repository-checked.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", "remote", "get-url", remote],
             cwd=ROOT,
             text=True,
@@ -142,7 +150,8 @@ def _commit_message(
 
 
 def _remote_tag_commit(worktree: Path, tag: str) -> str:
-    result = subprocess.run(
+    # git is fixed and the release tag remains a distinct argument.
+    result = subprocess.run(  # nosec B603, B607
         [
             "git",
             "ls-remote",
@@ -294,7 +303,8 @@ def _replace_worktree_contents(worktree: Path, output_dir: Path) -> None:
 
 
 def _has_staged_changes(worktree: Path) -> bool:
-    result = subprocess.run(
+    # git is the fixed executable and this command has no dynamic arguments.
+    result = subprocess.run(  # nosec B603, B607
         ["git", "diff", "--cached", "--quiet"],
         cwd=worktree,
         check=False,

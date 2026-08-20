@@ -117,7 +117,8 @@ def _load_config_yaml(config_path: Path) -> dict[str, object]:
     if not config_path.exists():
         raise ActionError(f"Required config file is missing: {config_path}.")
     try:
-        payload = yaml.load(
+        # _UniqueKeyLoader subclasses yaml.SafeLoader and only adds duplicate-key rejection.
+        payload = yaml.load(  # nosec B506
             config_path.read_text(encoding="utf-8"),
             Loader=_UniqueKeyLoader,
         )

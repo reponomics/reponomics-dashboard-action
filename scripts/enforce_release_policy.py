@@ -6,7 +6,8 @@ import argparse
 import json
 from pathlib import Path
 import re
-import subprocess
+# Subprocess is required for fixed git argv; shell execution is not used.
+import subprocess  # nosec B404
 import sys
 
 
@@ -73,7 +74,8 @@ def enforce_major_release_policy(
 
 def _git_output(args: list[str], *, cwd: Path) -> str:
     try:
-        return subprocess.check_output(
+        # git is the fixed executable and all values remain separate arguments.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", *args],
             cwd=cwd,
             stderr=subprocess.PIPE,

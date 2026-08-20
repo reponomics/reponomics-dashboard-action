@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess
+# Subprocess is required for controlled git and Python argv without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -245,7 +246,8 @@ def _command_output(
     env: dict[str, str] | None = None,
 ) -> str:
     try:
-        return subprocess.check_output(
+        # Callers use fixed git or explicit operator-selected Python executable paths.
+        return subprocess.check_output(  # nosec B603
             args,
             cwd=cwd,
             env=env,
@@ -317,7 +319,8 @@ def _checkout_ref(template_ref: str, destination: Path) -> str:
 def _remove_worktree(path: Path) -> None:
     if not path.exists():
         return
-    subprocess.run(
+    # git is fixed and the validated worktree path remains a distinct argument.
+    subprocess.run(  # nosec B603, B607
         ["git", "-C", ROOT.as_posix(), "worktree", "remove", path.as_posix()],
         check=False,
         stdout=subprocess.DEVNULL,

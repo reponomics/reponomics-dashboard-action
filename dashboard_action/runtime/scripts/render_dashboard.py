@@ -109,7 +109,8 @@ _render_update_docs_status = dashboard_status.render_update_docs_status
 _render_version_badges = dashboard_status.render_version_badges
 
 DASHBOARD_KEY_ENV = "DASHBOARD_KEY"
-LEGACY_PASSPHRASE_ENV = "DASHBOARD_PASSPHRASE"
+# Public environment-variable name retained for backward compatibility.
+LEGACY_PASSPHRASE_ENV = "DASHBOARD_PASSPHRASE"  # nosec B105
 
 PBKDF2_ITERATIONS = 600_000
 PBKDF2_SALT_BYTES = 16

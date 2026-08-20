@@ -144,7 +144,8 @@ def is_retryable_throttle(resp: requests.Response) -> bool:
 def retry_delay_with_jitter(attempt: int) -> float:
     """Compute exponential backoff with jitter for retryable throttling/errors."""
     base = RETRY_BACKOFF * (2 ** (attempt - 1))
-    return base + random.uniform(0, base / 2)
+    # Backoff jitter is operational timing, not security-sensitive randomness.
+    return base + random.uniform(0, base / 2)  # nosec B311
 
 
 def fetch_json(

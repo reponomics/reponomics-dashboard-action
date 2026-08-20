@@ -15,6 +15,44 @@ Issues and pull requests that are most likely to be useful during pre-release:
 
 Please do not submit speculative integrations, large rewrites, new product features, formatting-only changes, or dependency churn unless a maintainer has asked for them.
 
+## Windows
+
+The current development workflow assumes a POSIX shell and Python virtual environments whose executables are stored under `venv/bin`. Native PowerShell, Command Prompt, and MSYS2 development environments are not currently validated.
+
+On Windows, use WSL 2 with Ubuntu 24.04. From an elevated PowerShell session, install WSL and Ubuntu:
+
+```powershell
+wsl --install -d Ubuntu-24.04
+```
+
+Restart Windows if prompted, then launch Ubuntu and complete its initial setup. See Microsoft's [WSL installation guide](https://learn.microsoft.com/windows/wsl/install) for additional guidance.
+
+Within Ubuntu, install the required system tools:
+
+```bash
+sudo apt update
+sudo apt install --yes git make python3 python3-venv python-is-python3
+```
+
+Install Node.js 24 using [nvm](https://github.com/nvm-sh/nvm#installing-and-updating). After installing nvm, run:
+
+```bash
+nvm install 24
+nvm alias default 24
+```
+
+Verify the development toolchain:
+
+```bash
+python3 --version
+node --version
+make --version
+```
+
+Python must be version 3.11, 3.12, or 3.13, and Node.js must be version 24.
+
+Clone the repository into the WSL filesystem—for example, somewhere under `~/src`—and run all Make commands from the Ubuntu shell. Do not run the documented Make workflow from PowerShell, Command Prompt, or an MSYS2 shell.
+
 ## Development Setup
 
 Use the project Makefile for local development. The repository expects a local `venv` virtual environment.
@@ -50,4 +88,4 @@ Do not commit generated local state such as `venv`, coverage reports, caches, re
 
 ## Markdown Formatting
 
-Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so future edits produce smaller diffs. The `LICENSE` file is the exception and may keep conventional license-text wrapping.
+Do not hard-wrap Markdown prose. Keep paragraphs as single logical lines so future edits produce smaller diffs. The [LICENSE](LICENSE) file is the exception and may keep conventional license-text wrapping.

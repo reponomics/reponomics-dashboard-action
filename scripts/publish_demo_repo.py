@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
+# Subprocess is required for controlled git operations without shell execution.
+import subprocess  # nosec B404
 import sys
 import tempfile
 from pathlib import Path
@@ -26,11 +27,22 @@ class DemoPublishError(RuntimeError):
 
 
 def _run(args: list[str], cwd: Path) -> None:
-    subprocess.run(args, cwd=cwd, check=True)
+    # Every caller supplies a fixed git executable and an argument vector.
+    subprocess.run(  # nosec B603
+        args,
+        cwd=cwd,
+        check=True,
+    )
 
 
 def _output(args: list[str], cwd: Path) -> str:
-    return subprocess.check_output(args, cwd=cwd, text=True, stderr=subprocess.DEVNULL).strip()
+    # Every caller supplies a fixed git executable and an argument vector.
+    return subprocess.check_output(  # nosec B603
+        args,
+        cwd=cwd,
+        text=True,
+        stderr=subprocess.DEVNULL,
+    ).strip()
 
 
 def _git_value(*args: str) -> str:
@@ -42,7 +54,8 @@ def _git_value(*args: str) -> str:
 
 def _remote_url(remote: str) -> str:
     try:
-        return subprocess.check_output(
+        # git is fixed; the remote is a distinct argument and is repository-checked before use.
+        return subprocess.check_output(  # nosec B603, B607
             ["git", "remote", "get-url", remote],
             cwd=ROOT,
             text=True,
@@ -115,7 +128,8 @@ def _assert_publish_tree_shape(output_dir: Path) -> None:
 
 
 def _git_ls_files(cwd: Path) -> list[str]:
-    raw = subprocess.check_output(
+    # git is the fixed executable and this command has no dynamic arguments.
+    raw = subprocess.check_output(  # nosec B603, B607
         ["git", "ls-files", "-z"],
         cwd=cwd,
         stderr=subprocess.DEVNULL,

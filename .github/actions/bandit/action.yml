@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: ISC
+# Adapted from shundor/python-bandit-scan at commit
+# 9955228c1cbdc5aeb5e511e0fa232154e2ed2b67. See LICENSE in this directory.
+
+name: Python Bandit Scan
+description: Run Bandit against the repository-owned Python source trees
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: >-
+        python -m pip install
+        --disable-pip-version-check
+        --require-hashes
+        --requirement "$GITHUB_WORKSPACE/requirements-analysis.txt"
+
+    - name: Run Bandit scan
+      shell: bash
+      run: >-
+        bandit
+        -f sarif
+        -o results.sarif
+        -r dashboard_action scripts
+        --exit-zero
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: results.sarif
+        path: results.sarif
+        if-no-files-found: error
+        overwrite: true
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      with:
+        sarif_file: results.sarif
+
+    - name: Enforce successful, clean Bandit result
+      shell: bash
+      run: |
+        python - <<'PY'
+        import json
+        from pathlib import Path
+
+        report = json.loads(Path("results.sarif").read_text(encoding="utf-8"))
+        runs = report.get("runs", [])
+        invocations = [
+            invocation
+            for run in runs
+            for invocation in run.get("invocations", [])
+        ]
+        failed_invocations = sum(
+            invocation.get("executionSuccessful") is not True
+            for invocation in invocations
+        )
+        error_notifications = sum(
+            notification.get("level") == "error"
+            for invocation in invocations
+            for key in (
+                "toolConfigurationNotifications",
+                "toolExecutionNotifications",
+            )
+            for notification in invocation.get(key, [])
+        )
+        if not runs or not invocations or failed_invocations or error_notifications:
+            raise SystemExit(
+                "Bandit did not complete a successful scan "
+                f"({len(runs)} run(s), {len(invocations)} invocation(s), "
+                f"{failed_invocations} unsuccessful invocation(s), "
+                f"{error_notifications} error notification(s)); "
+                "review the uploaded SARIF report."
+            )
+
+        findings = sum(len(run.get("results", [])) for run in runs)
+        if findings:
+            raise SystemExit(
+                f"Bandit reported {findings} finding(s); review the uploaded SARIF report."
+            )
+        PY

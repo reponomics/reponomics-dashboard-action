@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import subprocess
+# Subprocess is required for Node syntax checks; shell execution is not used.
+import subprocess  # nosec B404
 import sys
 
 
@@ -25,7 +26,11 @@ SMOKE_DIR = ROOT / ".tmp" / "js-smoke"
 
 def _run_node_check(path: Path) -> None:
     node = os.environ.get("NODE", "node")
-    subprocess.run([node, "--check", str(path)], check=True)
+    # NODE is an explicit operator tool override and is invoked without a shell.
+    subprocess.run(  # nosec B603
+        [node, "--check", str(path)],
+        check=True,
+    )
 
 
 def _assert_flattened_runtime_contract(source: str) -> None:

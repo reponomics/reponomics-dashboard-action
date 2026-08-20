@@ -37,7 +37,7 @@ make install
 
 The `make install` target is stamp-based and depends on both `pyproject.toml` and `requirements-runtime.txt`. When either file changes, `make install` refreshes the local `venv` with an eager upgrade from `pyproject.toml`, so local source/development checks are less likely to run against stale package versions. CI starts from a fresh runner and resolves from `pyproject.toml`.
 
-Lock generation temporarily pairs `pip==26.1.2` with `pip-tools==7.6.0`. `pip-tools` 7.6.0 imports a pip internal that was removed in pip 26.2, so allowing `make install` to upgrade pip independently makes `pip-compile` fail before it can resolve the repository's locks. Keep these versions paired until a compatible `pip-tools` release is available, then update both pins together.
+Lock generation pairs `pip==26.2.1` with `pip-tools==7.6.1`. `pip-tools` 7.6.1 is the first release in this line that supports pip 26.2 after pip removed an internal API used by `pip-tools` 7.6.0. Keep the explicit pins paired and update them together so `make install` cannot leave `pip-compile` with an incompatible pip version.
 
 Complexity analysis is intentionally outside the development extra because it is not part of the required CI suite and its native tooling may not support every development platform. Run `make complexity` to install the `complexity` extra into `venv` on demand and execute the metrics check. Normal `make install` and `.[dev]` installations do not install `antipasta` or `complexipy`.
 

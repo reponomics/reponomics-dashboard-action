@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.33.2](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.33.1...v0.33.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **deps:** update dependencies and close security gaps ([#266](https://github.com/reponomics/reponomics-dashboard-action/issues/266)) ([cd8e6c1](https://github.com/reponomics/reponomics-dashboard-action/commit/cd8e6c14c648b9403398be6dba77f9d74aa662da))
+* **security:** restrict candidate workflow cache access ([#268](https://github.com/reponomics/reponomics-dashboard-action/issues/268)) ([421ceec](https://github.com/reponomics/reponomics-dashboard-action/commit/421ceecd82d9e1c0f4e19a84a03533374d242f61))
+
 ## [0.33.1](https://github.com/reponomics/reponomics-dashboard-action/compare/v0.33.0...v0.33.1) (2026-07-09)
 
 

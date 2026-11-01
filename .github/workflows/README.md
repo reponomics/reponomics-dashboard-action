@@ -44,4 +44,6 @@ This directory contains the repository's CI, release, dependency, and supply-cha
 
 Imported third-party actions in this source repository should be pinned by full commit SHA with a nearby version comment for maintainability. Repository/organization policy is the control; OpenSSF Scorecard and PolicyChecks provide public visibility into that posture. Workflows should keep workflow-level permissions minimal and grant write permissions only at the job level that needs them.
 
+Workflows that execute independently selected source refs must also restrict the runner's cache token: `GITHUB_TOKEN` permissions alone do not prevent cache poisoning. `pre-release-validation.yml` uses `cache-mode: read` to retain pip cache restores without allowing candidate code to save caches; `publish-demo.yml` uses `cache-mode: none` because neither job needs caching. Both source checkouts disable persisted credentials. See [GitHub's cache access controls](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#cache-mode).
+
 Where a workflow exists partly to support a public badge or external security signal, keep the executable workflow small and put longer rationale in repository documentation such as [`../../docs/SECURITY_CHECKS.md`](../../docs/SECURITY_CHECKS.md) or [`../../docs/PROVENANCE.md`](../../docs/PROVENANCE.md).

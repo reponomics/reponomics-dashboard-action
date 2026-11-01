@@ -121,6 +121,8 @@ Publication refuses targets other than `reponomics/reponomics-dashboard-demo` un
 
 Manual publication and scheduled daily refresh use the same demo-only publication app. The scheduled source ref defaults to `main`; set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` or an allowed release tag if the demo should follow a promoted ref instead of main.
 
+The workflow sets `cache-mode: none`, denying both jobs cache restore and save access through GitHub's scoped cache tokens. This prevents selected source code from poisoning shared caches, independently of `GITHUB_TOKEN` permissions. The source checkout also disables persisted credentials. These controls preserve the selected-ref build and the separate publication job. See [GitHub's cache access controls](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#cache-mode).
+
 ## External Beta Promotion Posture
 
 For the external beta, the public demo should be treated as beta-facing only after the replacement copied-repository staging smoke has current evidence. At that point, set `vars.DEMO_DAILY_SOURCE_REF` to `demo-stable` so scheduled refresh follows a promoted source ref rather than whatever is currently on `main`.

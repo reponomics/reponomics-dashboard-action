@@ -183,7 +183,7 @@ def test_ci_runs_javascript_dashboard_gates() -> None:
     assert job["name"] == "JavaScript dashboard"
     assert job["runs-on"] == "ubuntu-24.04"
     assert setup_node["uses"] == (
-        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"
+        "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"
     )
     assert setup_node["with"]["node-version"] == "24"
     assert "make js-test" in commands
@@ -211,7 +211,7 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "make publish-template-dry-run" in commands
     assert "scripts/publish_generated_repo.py" not in workflow_text
     assert "--push" not in workflow_text
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow_text
+    assert "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9" in workflow_text
 
 
 def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:
@@ -417,7 +417,7 @@ def test_template_release_workflow_cuts_template_releases_after_main_acceptance(
     assert "--verify-ref \"refs/tags/${TEMPLATE_TAG}\"" in gates_commands
     assert 'echo "should_publish=true" >> "$GITHUB_OUTPUT"' in publication_step["run"]
     assert "tar -C dist -czf dist/publication-handoff/template-publication.tgz" in handoff_step["run"]
-    assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in workflow_text
+    assert "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333" in workflow_text
     assert download_handoff_step["with"]["name"] == handoff_artifact_name
     assert "tar -C dist -xzf .tmp/publication-handoff/template-publication.tgz" in publish_commands
     assert "gh release create" in publish_commands

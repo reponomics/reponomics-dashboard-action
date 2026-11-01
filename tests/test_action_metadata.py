@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 import tomllib
 
+import pytest
 import yaml
 
 from dashboard_action.run_modules.config_options import ACTION_CONFIG_OPTIONS
@@ -212,6 +213,22 @@ def test_pre_release_validation_runs_action_template_candidate_gates() -> None:
     assert "scripts/publish_generated_repo.py" not in workflow_text
     assert "--push" not in workflow_text
     assert "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9" in workflow_text
+
+
+@pytest.mark.parametrize("workflow_name", ["pre-release-validation", "publish-demo"])
+def test_selected_source_workflows_cannot_write_shared_caches(workflow_name: str) -> None:
+    workflow = yaml.safe_load(
+        Path(f".github/workflows/{workflow_name}.yml").read_text(encoding="utf-8")
+    )
+
+    # GITHUB_TOKEN permissions do not restrict the runner's cache token.
+    # Check effective job access too, so an override cannot reopen cache writes.
+    assert workflow["cache-mode"] in {"read", "none"}
+    for job in workflow["jobs"].values():
+        assert job.get("cache-mode", workflow["cache-mode"]) in {"read", "none"}
+        for step in job["steps"]:
+            if step.get("uses", "").startswith("actions/checkout@"):
+                assert step["with"]["persist-credentials"] is False
 
 
 def test_staging_smoke_workflow_dry_runs_and_publishes_manually() -> None:

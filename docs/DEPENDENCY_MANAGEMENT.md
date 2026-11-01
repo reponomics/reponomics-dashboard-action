@@ -21,7 +21,7 @@ This document describes how dependencies are declared, locked, checked, and upda
 | Python package and dev environment        | `pyproject.toml`                                        | Local `venv`, lint, type check, tests, `pip-audit` environment audit                   | Edit `pyproject.toml`, then run `make install` or recreate `venv` when needed | `ci.yml`, `open-source-security.yml`, `make security-audit`                                                                             |
 | Optional complexity tooling               | `pyproject.toml` `complexity` extra                     | Maintainer-invoked complexity metrics; not installed by normal development setup or CI | Edit the `complexity` extra, then run `make complexity`                       | `make complexity`                                                                                                                       |
 | Composite action runtime lock             | `requirements-runtime.txt`                              | Installed by `action.yml` with `python -m pip install --require-hashes`                | Run `make lock-runtime` after dependency-range changes or runtime-lock alerts | `validate-runtime-lock.yml`, `open-source-security.yml`, `make validate-runtime-lock`, `make audit-runtime-lock`, Dependabot pip alerts |
-| Static-analysis toolchain                 | `requirements-analysis.in`, `requirements-analysis.txt` | Installed by `.github/actions/bandit/action.yml` for source-repository Bandit scans    | Edit the input and run `make lock-analysis`                                   | `bandit.yml`, `open-source-security.yml`, `make validate-analysis-lock`, Dependabot and OSV alerts                                      |
+| Static-analysis toolchain                 | `requirements-analysis.in`, `requirements-analysis.txt` | Installed by `.github/actions/bandit/action.yml` for source-repository Bandit scans    | Edit the input and run `make lock-analysis`                                   | `bandit.yml`, `open-source-security.yml`, `make validate-analysis-lock`, `make audit-analysis-lock`, Dependabot and OSV alerts                                      |
 | GitHub Actions used by this source repo   | `.github/workflows/*.yml`, `action.yml`                 | CI, release, publishing, validation, repository security signals                       | Update action refs by full commit SHA with nearby version comments            | Dependabot `github-actions`, workflow validation, repository policy, Scorecard/PolicyChecks visibility                                  |
 | Generated template workflow actions       | `template/.github/workflows/*.yml`                      | Workflows in generated dashboard repositories                                          | Update template workflow sources and run template gates                       | Template and generated-output tests; not the root source-repo action pinning policy alone                                               |
 | Vendored browser assets                   | `vendor/*/manifest.json`, vendored asset files          | Inlined or copied into generated dashboard outputs                                     | Run `make update-vendored-assets`                                             | `validate-vendored-assets.yml`, `update-vendored-assets.yml`, OSV checks inside `scripts/validate_vendored_assets.py`                   |
@@ -37,7 +37,7 @@ make install
 
 The `make install` target is stamp-based and depends on both `pyproject.toml` and `requirements-runtime.txt`. When either file changes, `make install` refreshes the local `venv` with an eager upgrade from `pyproject.toml`, so local source/development checks are less likely to run against stale package versions. CI starts from a fresh runner and resolves from `pyproject.toml`.
 
-Lock generation pairs `pip==26.2.1` with `pip-tools==7.6.1`. `pip-tools` 7.6.1 is the first release in this line that supports pip 26.2 after pip removed an internal API used by `pip-tools` 7.6.0. Keep the explicit pins paired and update them together so `make install` cannot leave `pip-compile` with an incompatible pip version.
+Lock generation pairs `pip==26.2.2` with `pip-tools==7.6.2`. `pip-tools` 7.6.1 is the first release in this line that supports pip 26.2 after pip removed an internal API used by `pip-tools` 7.6.0. Keep the explicit pins paired and update them together so `make install` cannot leave `pip-compile` with an incompatible pip version.
 
 Complexity analysis is intentionally outside the development extra because it is not part of the required CI suite and its native tooling may not support every development platform. Run `make complexity` to install the `complexity` extra into `venv` on demand and execute the metrics check. Normal `make install` and `.[dev]` installations do not install `antipasta` or `complexipy`.
 
@@ -74,11 +74,15 @@ This check proves the lock is synchronized with the declared dependency ranges a
 
 `make audit-runtime-lock` runs `pip-audit` against `requirements-runtime.txt`. It checks the hash-pinned dependency set installed by the composite action in user workflows.
 
+`make audit-guide-tooling-lock` and `make audit-analysis-lock` audit the hash-pinned guide and static-analysis dependencies, including packages absent from the development environment. CI runs both audits in `open-source-security.yml`. Guide tooling requires Pillow 13.0.0 or newer to retain the security fixes from that release.
+
 `make security` runs:
 
 ```bash
 make security-audit
 make audit-runtime-lock
+make audit-guide-tooling-lock
+make audit-analysis-lock
 make validate-runtime-lock
 make validate-guide-tooling-lock
 make validate-analysis-lock
@@ -90,7 +94,7 @@ make validate-vendored-assets
 When investigating a vulnerability, use all three signals deliberately:
 
 - Dependabot: authoritative for GitHub's dependency graph alert surface and specific manifest path.
-- `pip-audit`: independent audit of the resolved Python environment and the runtime requirements lock.
+- `pip-audit`: independent audit of the resolved Python environment and all three requirements locks.
 - OSV-Scanner: repository-level OSV signal for supported manifests and locks.
 
 ## Dependabot

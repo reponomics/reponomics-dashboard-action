@@ -397,7 +397,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert "workflow_call:" in doctor
     assert "artifact_run_id:" in doctor
     assert "Validate artifact run ID" in doctor
-    assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in doctor
+    assert "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333" in doctor
     assert "run-id: ${{ env.ARTIFACT_RUN_ID }}" in doctor
     assert "Restoring dashboard artifacts from workflow run \\`$ARTIFACT_RUN_ID\\`" in doctor
     assert "name: html-dashboard-encrypted" in doctor
@@ -414,7 +414,7 @@ def test_template_workflows_delegate_to_reponomics_action(tmp_path):
     assert r"this workflow has \`actions: read\` permission" in doctor
     assert "github-token: ${{ github.token }}" in collect_publish
     assert 'USE_GITHUB_APP: "false"' not in collect_publish
-    assert "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1" in collect_publish
+    assert "actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510" in collect_publish
     assert "app-id: ${{ vars.COLLECTION_APP_ID || secrets.COLLECTION_APP_ID }}" in collect_publish
     assert "use-github-app: ${{ env.USE_GITHUB_APP }}" in collect_publish
     assert "mode: incident-reset" in incident_reset

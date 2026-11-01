@@ -3,6 +3,7 @@
 .PHONY: help install pre-commit-install pre-commit-run ci prebeta-check
 .PHONY: test js-test js-coverage js-smoke coverage complexity security security-audit audit-runtime-lock lock-runtime validate-runtime-lock lock-guide-tooling validate-guide-tooling-lock lock-analysis validate-analysis-lock update-vendored-assets
 .PHONY: lint type-check markdown-format
+.PHONY: audit-guide-tooling-lock audit-analysis-lock
 .PHONY: validate validate-action validate-workflows validate-vendored-assets
 .PHONY: build-template verify-template build-and-verify-generated verify-workflow-classification validate-template-action-ref validate-template-accepted-action template-smoke template-consumer-e2e template-action-boundary-e2e template-compat-e2e template-public-action-e2e template-accepted-action-e2e template-release-gates package-template-release publish-template-dry-run publish-template staging-smoke build-demo verify-demo render-demo-preview preview-demo preview-demo-site publish-demo-dry-run publish-demo
 .PHONY: fixtures fixture-collect fixture-publish fixture-rotate-key preview-collection-quality-dashboard dashboard-scenario-snapshots update-dashboard-scenario-snapshots dashboard-guide-assets dashboard-guide dashboard-guide-refresh clean
@@ -11,7 +12,7 @@ VENV := venv
 BOOTSTRAP_PYTHON ?= python3
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
-PIP_VERSION ?= 26.2.1
+PIP_VERSION ?= 26.2.2
 NODE ?= node
 NPX ?= npx
 PIPX ?= pipx
@@ -126,7 +127,13 @@ security-audit: install ## Audit Python dependencies for known vulnerabilities
 audit-runtime-lock: install ## Audit hash-pinned runtime dependency lock
 	$(PIP_AUDIT) --requirement $(RUNTIME_LOCK) --no-deps --progress-spinner off
 
-security: security-audit audit-runtime-lock validate-runtime-lock validate-guide-tooling-lock validate-analysis-lock validate-vendored-assets ## Run open-source security checks
+audit-guide-tooling-lock: install ## Audit hash-pinned promotional guide dependencies
+	$(PIP_AUDIT) --requirement $(GUIDE_TOOLING_LOCK) --no-deps --progress-spinner off
+
+audit-analysis-lock: install ## Audit hash-pinned static-analysis dependencies
+	$(PIP_AUDIT) --requirement $(ANALYSIS_LOCK) --no-deps --progress-spinner off
+
+security: security-audit audit-runtime-lock audit-guide-tooling-lock audit-analysis-lock validate-runtime-lock validate-guide-tooling-lock validate-analysis-lock validate-vendored-assets ## Run open-source security checks
 
 lock-runtime: install ## Regenerate hash-pinned runtime dependency lock
 	$(PIP_COMPILE) $(PIP_COMPILE_RUNTIME_UPGRADE_FLAGS) --output-file $(RUNTIME_LOCK) pyproject.toml

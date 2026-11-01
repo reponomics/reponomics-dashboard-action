@@ -72,7 +72,7 @@ Run it locally with:
 make audit-runtime-lock
 ```
 
-CI runs this check through `.github/workflows/open-source-security.yml` alongside the installed-environment audit. Together, those checks keep the source/development dependency surface and the action runtime lock visible as separate audit claims.
+CI runs this check through `.github/workflows/open-source-security.yml` alongside the installed-environment audit. The workflow also runs `make audit-guide-tooling-lock` and `make audit-analysis-lock`, so all three committed dependency locks are audited even when their packages are absent from the development environment.
 
 ## Runtime Dependency Lock
 

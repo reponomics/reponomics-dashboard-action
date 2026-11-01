@@ -3,7 +3,7 @@
 > [!NOTE]
 > This template is on the `v0` external beta line. These instructions describe the official generated workflows; after copying the template, the repository owner may modify them.
 
-Welcome to your personal repository analytics dashboard. Reponomics helps maintainers collect GitHub traffic and growth data, keep that data in their own repository's workflow artifacts, and render a dashboard without involving any third-party services.
+Welcome to your personal repository analytics and growth dashboard!
 
 Once you copy the template, the repository is yours. The generated workflows use your credentials, your repository secrets, and the action ref configured by the local wrapper at `.github/actions/reponomics/action.yml`. This README helps you configure collection, data storage, and dashboard publication before the first setup run. Setup may replace this file with a shorter post-setup README, and private repositories can later opt into a generated README dashboard for a quick overview of your repo metrics.
 

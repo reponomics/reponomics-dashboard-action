@@ -11,7 +11,6 @@ data/
 !tests/fixtures/**/data/
 !tests/fixtures/**/data/**
 dist/
-docs/assets/
 docs/index.html
 README.generated.md
 .DS_Store

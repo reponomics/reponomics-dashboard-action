@@ -1,13 +1,13 @@
 {
   "package": "chart.js",
   "ecosystem": "npm",
-  "version": "4.6.1",
+  "version": "4.6.2",
   "registry": "https://registry.npmjs.org/",
-  "tarball": "https://registry.npmjs.org/chart.js/-/chart.js-4.6.1.tgz",
-  "tarball_integrity": "sha512-hJyniucsFmq//EvXYvJ6c6mahPoI3kaxdjVH8awTaJ/fDNWeSqqqArixMJWkWNN6fcYvPU3HneSANFNYtRi61g==",
+  "tarball": "https://registry.npmjs.org/chart.js/-/chart.js-4.6.2.tgz",
+  "tarball_integrity": "sha512-xachB+pPHjp0syJi7llUBA1w3kMYl6NF3o7eVrvjnWCT+IB2zMaF2pX5UYDiwbbfsioFEIRnAjreNOMsGj5TIA==",
   "source_path": "package/dist/chart.umd.min.js",
   "vendored_path": "vendor/chart.js/chart.umd.min.js",
-  "sha256": "87364cc2b2a76a6684929e7d6b80b18a897794db38400caff1fcf1791c6925d2",
+  "sha256": "3f288f4f26882c26b58931fb586a9b4f30370b5de38d69dc005b0bd05b08e113",
   "license_source_path": "package/LICENSE.md",
   "license_path": "vendor/chart.js/LICENSE.md",
   "license_sha256": "41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce"
